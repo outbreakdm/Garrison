@@ -1,11 +1,12 @@
 import { type Interaction, MessageFlags } from "discord.js";
-import { buttons, commandsByName } from "./commands/index.js";
+import { buttons, commandsByName, modals } from "./commands/index.js";
 import type { BotContext } from "./commands/types.js";
 
 const FAILURE = "Something went wrong on my side. Try again in a moment.";
 
 export async function handleInteraction(interaction: Interaction, ctx: BotContext) {
-  if (!interaction.isChatInputCommand() && !interaction.isButton()) return;
+  if (!interaction.isChatInputCommand() && !interaction.isButton() && !interaction.isModalSubmit())
+    return;
 
   if (!interaction.inCachedGuild()) {
     if (interaction.isRepliable()) {
@@ -22,6 +23,11 @@ export async function handleInteraction(interaction: Interaction, ctx: BotContex
       const command = commandsByName.get(interaction.commandName);
       if (!command) return;
       await command.execute(interaction, ctx);
+      return;
+    }
+    if (interaction.isModalSubmit()) {
+      const modal = modals.find((m) => interaction.customId.startsWith(`${m.prefix}:`));
+      if (modal) await modal.execute(interaction, ctx);
       return;
     }
     const handler = buttons.find((b) => interaction.customId.startsWith(`${b.prefix}:`));

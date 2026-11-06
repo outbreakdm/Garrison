@@ -26,6 +26,7 @@ describe("command definitions", () => {
       "security",
       "health",
       "lfg",
+      "raid",
     ]);
     expect(new Set(names).size).toBe(names.length);
   });

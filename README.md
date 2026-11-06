@@ -24,7 +24,7 @@ Planned: `apps/web` (Next.js dashboard and marketing site, using `@garrison/bran
 | Gatehouse     | Security          | **Built** | `/lockdown` `/verify` `/security`                                           |
 | Ledger        | Logs              | Planned   | `/logs`                                                                     |
 | Rally         | Looking for group | **Built** | `/lfg`                                                                      |
-| Ops           | Events            | Planned   | `/event` `/raid`                                                            |
+| Ops           | Events            | **Built** | `/raid`                                                                     |
 | Barracks      | Members           | Planned   | `/link` `/roster`                                                           |
 | Ranks         | Leveling          | Planned   | `/rank` `/leaderboard`                                                      |
 | Quartermaster | AI builder        | Planned   | `/qm`                                                                       |
@@ -54,6 +54,15 @@ Planned: `apps/web` (Next.js dashboard and marketing site, using `@garrison/bran
 - When the squad fills, Garrison opens a voice channel only the squad can join, and pings just those members: "Squad's full. Voice is open." Empty squad channels are removed after 5 min. Garrison only deletes channels it recorded creating.
 - One open group per person per server. Groups close 3 h after they start, or when the host leaves.
 - `/lfg list` shows open groups; `/lfg close` closes yours. The host or anyone with Manage Messages can close a card.
+
+### Ops
+
+- **`/raid create`** (Manage Events) posts a roster card: `when:2026-11-12 8pm` in the server's time zone (set once with `/raid timezone America/Chicago`, or per raid with `timezone:`), `roles:Tank 4, Healer 8, DPS 28`, an optional note and `repeat_weekly`.
+- **Sign up as …** asks for an optional class or spec ("Prot", "Resto"). A full role puts you on the **bench**; when someone withdraws, the earliest benched player for that role moves up and is told so.
+- The card shows each role's cap ("Tank · 2/4"), who's in with their spec, the bench, and a shortage badge ("2 Tank short") or Ready.
+- **Reminders** 24 h and 30 min before ping only the players signed up, never the bench or anyone else.
+- Weekly raids repost themselves after each run at the same local time, across daylight-saving changes.
+- `/raid list` shows what's coming up. The host or anyone with Manage Events can cancel. A server can hold 25 scheduled raids.
 
 ### Health
 

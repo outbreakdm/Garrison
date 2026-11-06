@@ -277,3 +277,72 @@ export const lfgMembers = pgTable(
 export type LfgPost = typeof lfgPosts.$inferSelect;
 export type LfgMember = typeof lfgMembers.$inferSelect;
 export type LfgStatus = (typeof lfgStatus.enumValues)[number];
+
+// ---------------------------------------------------------------------------
+// Ops (events and raids)
+// ---------------------------------------------------------------------------
+
+export const opsStatus = pgEnum("ops_status", ["scheduled", "cancelled", "done"]);
+
+export const opsSettings = pgTable("ops_settings", {
+  guildId: text("guild_id")
+    .primaryKey()
+    .references(() => guilds.id, { onDelete: "cascade" }),
+  /** IANA time zone used when /raid create gets a date without one. */
+  timezone: text("timezone").notNull().default("UTC"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
+
+export const opsEvents = pgTable(
+  "ops_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** Weekly repeats share a series ID. */
+    seriesId: uuid("series_id").notNull().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    channelId: text("channel_id").notNull(),
+    messageId: text("message_id"),
+    hostId: text("host_id").notNull(),
+    title: text("title").notNull(),
+    note: text("note"),
+    slots: jsonb("slots").$type<LfgSlotGroup[]>().notNull(),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    timezone: text("timezone").notNull(),
+    repeatWeekly: boolean("repeat_weekly").notNull().default(false),
+    status: opsStatus("status").notNull().default("scheduled"),
+    reminded24hAt: timestamp("reminded_24h_at", { withTimezone: true }),
+    reminded30mAt: timestamp("reminded_30m_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("ops_events_guild_starts").on(t.guildId, t.startsAt),
+    index("ops_events_scheduled_starts").on(t.startsAt).where(sql`${t.status} = 'scheduled'`),
+    // A series has at most one scheduled occurrence, so a repeat is created once.
+    uniqueIndex("ops_events_one_scheduled_per_series")
+      .on(t.seriesId)
+      .where(sql`${t.status} = 'scheduled'`),
+  ],
+).enableRLS();
+
+/** A signup. `role` is the role they want; `bench` is true while they wait for a spot. Withdrawing sets `leftAt`. */
+export const opsSignups = pgTable(
+  "ops_signups",
+  {
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => opsEvents.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    role: text("role").notNull(),
+    spec: text("spec"),
+    bench: boolean("bench").notNull().default(false),
+    signedUpAt: timestamp("signed_up_at", { withTimezone: true }).notNull().defaultNow(),
+    leftAt: timestamp("left_at", { withTimezone: true }),
+  },
+  (t) => [primaryKey({ columns: [t.eventId, t.userId] })],
+).enableRLS();
+
+export type OpsEvent = typeof opsEvents.$inferSelect;
+export type OpsSignup = typeof opsSignups.$inferSelect;
+export type OpsSettings = typeof opsSettings.$inferSelect;

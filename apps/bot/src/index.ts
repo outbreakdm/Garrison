@@ -7,6 +7,7 @@ import { ensureGuild, forgetGuild } from "./lib/guild-registry.js";
 import { createLogger } from "./lib/logger.js";
 import { handleAuditLogEntry } from "./modules/gatehouse/anti-nuke.js";
 import { handleMemberJoin, sweepExpiredLockdowns } from "./modules/gatehouse/service.js";
+import { sweepOps } from "./modules/ops/service.js";
 import { sweepRally } from "./modules/rally/service.js";
 
 const env = loadEnv();
@@ -46,6 +47,7 @@ client.once(Events.ClientReady, async (ready) => {
       logger.error("Lockdown sweep failed", { error }),
     );
     await sweepRally(ctx, ready).catch((error) => logger.error("Rally sweep failed", { error }));
+    await sweepOps(ctx, ready).catch((error) => logger.error("Ops sweep failed", { error }));
   };
   await sweep();
   sweepTimer = setInterval(sweep, SWEEP_INTERVAL_MS);
