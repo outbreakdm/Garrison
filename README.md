@@ -94,7 +94,9 @@ packages/
 
 ## Dashboard
 
-`apps/web` is a Next.js 16 dashboard. Sign in with Discord to see the servers you manage: an **Overview** (mod actions, open groups, next raid, Gatehouse status, recent cases), **Watch** (the latest 50 cases), **Gatehouse** (lockdown, anti-raid and anti-nuke settings) and **Rally** (open groups and raid rosters) and **Settings**: Watch, Gatehouse anti-raid and the raid time zone, with a history of every change and one-click **Undo**. Anti-nuke and the trusted list stay owner-only commands in Discord.
+`apps/web` serves the public landing page at `/` and the dashboard. The landing page covers the modules, security and early-access pricing, with an **Add to Discord** button that requests exactly the permissions `/health` checks (set `DISCORD_CLIENT_ID`).
+
+The dashboard: Sign in with Discord to see the servers you manage: an **Overview** (mod actions, open groups, next raid, Gatehouse status, recent cases), **Watch** (the latest 50 cases), **Gatehouse** (lockdown, anti-raid and anti-nuke settings) and **Rally** (open groups and raid rosters) and **Settings**: Watch, Gatehouse anti-raid and the raid time zone, with a history of every change and one-click **Undo**. Anti-nuke and the trusted list stay owner-only commands in Discord.
 
 ```sh
 pnpm --filter @garrison/web dev     # http://localhost:3000

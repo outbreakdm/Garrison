@@ -115,3 +115,40 @@ export const ledgerTypeLabels: Record<string, string> = {
   voice_disconnect: "Voice disconnect",
   voice_move: "Voice move",
 };
+
+/**
+ * The Discord permissions Garrison asks for when invited: exactly what its
+ * modules use, never Administrator. Bit values from Discord's documentation;
+ * a bot test checks this equals the set /health verifies.
+ */
+const bit = (n: number) => 1n << BigInt(n);
+export const inviteSettings = {
+  scopes: "bot applications.commands",
+  permissions:
+    bit(1) | // Kick Members
+    bit(2) | // Ban Members
+    bit(4) | // Manage Channels
+    bit(5) | // Manage Server
+    bit(7) | // View Audit Log
+    bit(10) | // View Channel
+    bit(11) | // Send Messages
+    bit(13) | // Manage Messages
+    bit(14) | // Embed Links
+    bit(16) | // Read Message History
+    bit(20) | // Connect
+    bit(28) | // Manage Roles
+    bit(40), // Moderate Members
+} as const;
+
+export function inviteUrl(clientId: string, guildId?: string) {
+  const params = new URLSearchParams({
+    client_id: clientId,
+    scope: inviteSettings.scopes,
+    permissions: inviteSettings.permissions.toString(),
+  });
+  if (guildId) {
+    params.set("guild_id", guildId);
+    params.set("disable_guild_select", "true");
+  }
+  return `https://discord.com/oauth2/authorize?${params}`;
+}

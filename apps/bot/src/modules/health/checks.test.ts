@@ -96,3 +96,10 @@ describe("fixPermissionsUrl", () => {
     expect(url.searchParams.get("guild_id")).toBe("456");
   });
 });
+
+describe("invite permissions", () => {
+  it("match exactly what /health checks, so the website's invite button is right", async () => {
+    const { inviteSettings } = await import("@garrison/brand");
+    expect(inviteSettings.permissions).toBe(ALL_REQUIRED);
+  });
+});
