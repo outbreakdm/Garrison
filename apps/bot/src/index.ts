@@ -4,6 +4,7 @@ import type { BotContext } from "./commands/types.js";
 import { loadEnv } from "./env.js";
 import { handleInteraction } from "./interactions.js";
 import { createLogger } from "./lib/logger.js";
+import { handleMemberJoin, sweepExpiredLockdowns } from "./modules/gatehouse/service.js";
 import { ensureGuild, forgetGuild } from "./modules/watch/service.js";
 
 const env = loadEnv();
@@ -11,8 +12,12 @@ const logger = createLogger(env.LOG_LEVEL);
 const { db, close } = createDb(env.DATABASE_URL);
 const ctx: BotContext = { db, logger };
 
-// Only the non-privileged Guilds intent so far. Automod will need Message Content later.
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+// Guild Members is privileged: turn on "Server Members Intent" in the Developer Portal.
+// Gatehouse needs it to see joins. Automod will need Message Content later.
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
+
+const SWEEP_INTERVAL_MS = 60_000;
+let sweepTimer: NodeJS.Timeout | undefined;
 
 client.once(Events.ClientReady, async (ready) => {
   logger.info(`Online as ${ready.user.tag} in ${ready.guilds.cache.size} servers`);
@@ -21,7 +26,20 @@ client.once(Events.ClientReady, async (ready) => {
       logger.error("Could not register guild", { guildId: guild.id, error }),
     );
   }
+  // Lift lockdowns whose time is up, including any that expired while we were offline.
+  const sweep = () =>
+    sweepExpiredLockdowns(ctx, ready).catch((error) =>
+      logger.error("Lockdown sweep failed", { error }),
+    );
+  await sweep();
+  sweepTimer = setInterval(sweep, SWEEP_INTERVAL_MS);
 });
+
+client.on(Events.GuildMemberAdd, (member) =>
+  handleMemberJoin(ctx, member).catch((error) =>
+    logger.error("Join handling failed", { guildId: member.guild.id, error }),
+  ),
+);
 
 client.on(Events.GuildCreate, async (guild) => {
   logger.info("Joined server", { guildId: guild.id, members: guild.memberCount });
@@ -44,6 +62,7 @@ client.on(Events.Error, (error) => logger.error("Discord client error", { error 
 
 async function shutdown(signal: string) {
   logger.info(`Received ${signal}, shutting down`);
+  clearInterval(sweepTimer);
   await client.destroy();
   await close();
   process.exit(0);

@@ -10,7 +10,7 @@ import {
 import { commands } from "./index.js";
 
 describe("command definitions", () => {
-  it("registers the Watch commands with unique names", () => {
+  it("registers every command with a unique name", () => {
     const names = commands.map((c) => c.data.name);
     expect(names).toEqual([
       "warn",
@@ -21,6 +21,9 @@ describe("command definitions", () => {
       "case",
       "history",
       "moderation",
+      "lockdown",
+      "verify",
+      "security",
     ]);
     expect(new Set(names).size).toBe(names.length);
   });

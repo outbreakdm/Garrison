@@ -110,3 +110,72 @@ export type NewModCase = Omit<typeof modCases.$inferInsert, "id" | "caseNumber" 
 export type EscalationRule = typeof escalationRules.$inferSelect;
 export type CaseAction = (typeof caseAction.enumValues)[number];
 export type EscalationAction = (typeof escalationAction.enumValues)[number];
+
+// ---------------------------------------------------------------------------
+// Gatehouse (security)
+// ---------------------------------------------------------------------------
+
+export const raidResponse = pgEnum("raid_response", ["alert", "lockdown"]);
+export const lockdownSource = pgEnum("lockdown_source", ["manual", "anti_raid"]);
+
+/** Gatehouse settings, one row per guild. */
+export const gatehouseSettings = pgTable("gatehouse_settings", {
+  guildId: text("guild_id")
+    .primaryKey()
+    .references(() => guilds.id, { onDelete: "cascade" }),
+  /** Channel for raid alerts, lockdown notices and new-account flags. Null falls back to the Watch log channel. */
+  alertChannelId: text("alert_channel_id"),
+  antiRaidEnabled: boolean("anti_raid_enabled").notNull().default(true),
+  /** A raid is `raidJoinCount` joins within `raidWindowSeconds`. */
+  raidJoinCount: integer("raid_join_count").notNull().default(10),
+  raidWindowSeconds: integer("raid_window_seconds").notNull().default(30),
+  raidResponse: raidResponse("raid_response").notNull().default("lockdown"),
+  /** Anti-raid lockdowns lift on their own after this long. */
+  autoUnlockMinutes: integer("auto_unlock_minutes").notNull().default(15),
+  /** Flag joining accounts younger than this many days. 0 turns flags off. */
+  flagAccountAgeDays: integer("flag_account_age_days").notNull().default(7),
+  /** Roles that keep talking during a lockdown. */
+  staffRoleIds: text("staff_role_ids").array().notNull().default(sql`'{}'::text[]`),
+  /** Role the verification button gives. Null means verification is off. */
+  verifyRoleId: text("verify_role_id"),
+  verifyMinAccountAgeDays: integer("verify_min_account_age_days").notNull().default(0),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
+
+/** One permission overwrite as it was before a lockdown. `before: null` means there was none. */
+export interface LockdownSnapshotEntry {
+  channelId: string;
+  targetId: string;
+  /** 0 = role, 1 = member (Discord's overwrite types). */
+  type: 0 | 1;
+  before: { allow: string; deny: string } | null;
+}
+
+/** A lockdown, with the exact overwrites needed to restore every channel. */
+export const lockdowns = pgTable(
+  "lockdowns",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    source: lockdownSource("source").notNull(),
+    reason: text("reason"),
+    startedById: text("started_by_id").notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    /** When it lifts on its own. Null means it waits for /lockdown end. */
+    endsAt: timestamp("ends_at", { withTimezone: true }),
+    invitesPaused: boolean("invites_paused").notNull().default(false),
+    snapshot: jsonb("snapshot").$type<LockdownSnapshotEntry[]>().notNull().default([]),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    endedById: text("ended_by_id"),
+  },
+  (t) => [
+    uniqueIndex("lockdowns_one_active_per_guild").on(t.guildId).where(sql`${t.endedAt} is null`),
+    index("lockdowns_active_ends_at").on(t.endsAt).where(sql`${t.endedAt} is null`),
+  ],
+).enableRLS();
+
+export type GatehouseSettings = typeof gatehouseSettings.$inferSelect;
+export type Lockdown = typeof lockdowns.$inferSelect;
+export type RaidResponse = (typeof raidResponse.enumValues)[number];

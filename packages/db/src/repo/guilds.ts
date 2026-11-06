@@ -1,6 +1,12 @@
 import { and, asc, eq } from "drizzle-orm";
 import type { Db } from "../client.js";
-import { escalationRules, guilds, type WatchSettings, watchSettings } from "../schema.js";
+import {
+  escalationRules,
+  gatehouseSettings,
+  guilds,
+  type WatchSettings,
+  watchSettings,
+} from "../schema.js";
 
 /** Rules every new guild starts with. Staff can change them later. */
 export const DEFAULT_ESCALATION_RULES = [
@@ -28,6 +34,7 @@ export async function upsertGuild(db: Db, guild: { id: string; name: string }) {
     }
 
     await tx.insert(watchSettings).values({ guildId: guild.id }).onConflictDoNothing();
+    await tx.insert(gatehouseSettings).values({ guildId: guild.id }).onConflictDoNothing();
     await tx
       .insert(escalationRules)
       .values(DEFAULT_ESCALATION_RULES.map((r) => ({ ...r, guildId: guild.id })))

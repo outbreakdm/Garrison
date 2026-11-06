@@ -37,7 +37,18 @@ Planned: `apps/web` (Next.js dashboard and marketing site, using `@garrison/bran
 - **Role checks before acting**, with errors that name the fix ("Drag Garrison above it in Server Settings → Roles").
 - Members get a neutral DM with the reason and how to appeal (`/moderation dm_members` and `appeal_text`).
 - `/moderation log_channel:#mod-log` posts every case to a channel.
-- Uses only the non-privileged `Guilds` intent.
+
+### Gatehouse
+
+- **Anti-raid**: watches the join rate. By default, 10 joins in 30 s is a raid. Garrison then locks the server, pauses invites and lifts the lockdown after 15 min, or only alerts if you set `raid_response:Alert only`. One raid gives one alert.
+- **`/lockdown start|end|status`**: denies posting, threads, reactions and polls to @everyone in every channel it can see, while staff roles (`/security staff_role_add`) keep talking. Every overwrite it changes is saved first, so `/lockdown end` restores each channel exactly as it was. Private channels are left alone.
+- **New-account flags**: joins from accounts under 7 days old get an alert ("Flagged a 2-day-old account on join").
+- **`/verify setup`**: posts a Verify button that gives a role, with an optional minimum account age.
+- Alerts go to `/security alert_channel`, or to the Watch log channel if none is set.
+
+### Intents
+
+`Guilds` plus **Server Members** (privileged). Turn on *Server Members Intent* under Bot in the Developer Portal, or login fails with "Used disallowed intents".
 
 ## Getting started
 
@@ -51,9 +62,9 @@ pnpm commands:deploy        # register slash commands
 pnpm dev                    # run the bot with reload
 ```
 
-**Discord app setup:** create an application in the [Developer Portal](https://discord.com/developers/applications), add a bot, and invite it with the `bot` and `applications.commands` scopes plus these permissions: Moderate Members, Kick Members, Ban Members, Manage Messages, Read Message History, Send Messages, Embed Links. Drag Garrison's role above the roles it moderates.
+**Discord app setup:** create an application in the [Developer Portal](https://discord.com/developers/applications), add a bot, and invite it with the `bot` and `applications.commands` scopes plus these permissions: Moderate Members, Kick Members, Ban Members, Manage Messages, Manage Channels, Manage Roles, Manage Server (to pause invites), Read Message History, Send Messages, Embed Links. Drag Garrison's role above the roles it moderates.
 
-**Supabase:** every table has row-level security on with no policies, so the public API exposes nothing. The bot connects with the database connection string, not the anon key.
+**Supabase:** project `Garrison` (`pijtbyfnhdxhtyidgcda`, us-west-2) has every migration applied. Every table has row-level security on with no policies, so the public API exposes nothing. The bot connects with the database connection string, not the anon key.
 
 ## Scripts
 

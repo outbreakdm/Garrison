@@ -1,9 +1,5 @@
-import {
-  type ChatInputCommandInteraction,
-  InteractionContextType,
-  MessageFlags,
-  SlashCommandBuilder,
-} from "discord.js";
+import type { ChatInputCommandInteraction } from "discord.js";
+import { ephemeral } from "../../../commands/builders.js";
 import type { BotContext } from "../../../commands/types.js";
 import { canUndo, type MemberAction } from "../copy.js";
 import { confirmationEmbed, undoRow } from "../embeds.js";
@@ -11,16 +7,7 @@ import { applyMemberAction, checkMemberAction } from "../service.js";
 
 export const REASON_MAX = 512;
 
-/** Base builder for Watch commands: guild-only, hidden from members without `permission`. */
-export function watchCommand(name: string, description: string, permission: bigint) {
-  return new SlashCommandBuilder()
-    .setName(name)
-    .setDescription(description)
-    .setDefaultMemberPermissions(permission)
-    .setContexts(InteractionContextType.Guild);
-}
-
-export const ephemeral = { flags: MessageFlags.Ephemeral } as const;
+export { ephemeral, guildCommand as watchCommand } from "../../../commands/builders.js";
 
 /** Shared flow for /warn, /timeout, /kick and /ban. */
 export async function runMemberAction(
