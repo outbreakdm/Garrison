@@ -2,7 +2,7 @@ import { getGatehouseSettings, updateGatehouseSettings } from "@garrison/db";
 import { ChannelType, PermissionFlagsBits } from "discord.js";
 import { ephemeral, guildCommand } from "../../../commands/builders.js";
 import type { ButtonHandler, Command } from "../../../commands/types.js";
-import { ensureGuild } from "../../watch/service.js";
+import { ensureGuild } from "../../../lib/guild-registry.js";
 import { VERIFY_BUTTON_ID, verifyPanel } from "../embeds.js";
 import { invalidateGatehouseSettings, verifyMember } from "../service.js";
 

@@ -6,11 +6,12 @@ import {
 import { ChannelType, PermissionFlagsBits } from "discord.js";
 import { ephemeral, guildCommand } from "../../../commands/builders.js";
 import type { Command } from "../../../commands/types.js";
-import { ensureGuild } from "../../watch/service.js";
+import { ensureGuild } from "../../../lib/guild-registry.js";
 import { settingsEmbed } from "../embeds.js";
 import { invalidateGatehouseSettings } from "../service.js";
 
 const MAX_STAFF_ROLES = 10;
+const MAX_TRUSTED = 10;
 
 export const security: Command = {
   data: guildCommand(
@@ -73,6 +74,34 @@ export const security: Command = {
         .setName("clear_alert_channel")
         .setDescription("Send alerts to the Watch log channel instead"),
     )
+    // Anti-nuke options are owner-only: a compromised admin must not be able to switch it off.
+    .addBooleanOption((o) =>
+      o
+        .setName("anti_nuke")
+        .setDescription("Owner only. Stop mass deletions, bans and permission grabs"),
+    )
+    .addUserOption((o) =>
+      o.setName("trusted_add").setDescription("Owner only. A user or bot anti-nuke never acts on"),
+    )
+    .addUserOption((o) =>
+      o.setName("trusted_remove").setDescription("Owner only. Stop trusting them"),
+    )
+    .addIntegerOption((o) =>
+      o
+        .setName("nuke_delete_threshold")
+        .setDescription(
+          "Owner only. Channel or role deletions per minute that trigger it (default: 3)",
+        )
+        .setMinValue(2)
+        .setMaxValue(50),
+    )
+    .addIntegerOption((o) =>
+      o
+        .setName("nuke_ban_threshold")
+        .setDescription("Owner only. Bans and kicks per minute that trigger it (default: 5)")
+        .setMinValue(2)
+        .setMaxValue(100),
+    )
     .toJSON(),
   async execute(interaction, ctx) {
     await ensureGuild(ctx, interaction.guild);
@@ -118,6 +147,45 @@ export const security: Command = {
         roles = [...roles, add.id];
       }
       patch.staffRoleIds = roles;
+    }
+
+    const nukeOptions = [
+      "anti_nuke",
+      "trusted_add",
+      "trusted_remove",
+      "nuke_delete_threshold",
+      "nuke_ban_threshold",
+    ];
+    if (nukeOptions.some((name) => o.get(name) !== null)) {
+      if (interaction.user.id !== interaction.guild.ownerId) {
+        await interaction.reply({
+          content: "Only the server owner can change anti-nuke settings. Nothing was saved.",
+          ...ephemeral,
+        });
+        return;
+      }
+      const antiNuke = o.getBoolean("anti_nuke");
+      if (antiNuke !== null) patch.antiNukeEnabled = antiNuke;
+      const deletes = o.getInteger("nuke_delete_threshold");
+      if (deletes !== null) patch.nukeDeleteThreshold = deletes;
+      const bans = o.getInteger("nuke_ban_threshold");
+      if (bans !== null) patch.nukeBanThreshold = bans;
+      const trustAdd = o.getUser("trusted_add");
+      const trustRemove = o.getUser("trusted_remove");
+      if (trustAdd || trustRemove) {
+        let trusted = current.antiNukeTrustedIds.filter((id) => id !== trustRemove?.id);
+        if (trustAdd && !trusted.includes(trustAdd.id)) {
+          if (trusted.length >= MAX_TRUSTED) {
+            await interaction.reply({
+              content: `You can trust ${MAX_TRUSTED} users at most. Remove one first.`,
+              ...ephemeral,
+            });
+            return;
+          }
+          trusted = [...trusted, trustAdd.id];
+        }
+        patch.antiNukeTrustedIds = trusted;
+      }
     }
 
     const changed = Object.keys(patch).length > 0;

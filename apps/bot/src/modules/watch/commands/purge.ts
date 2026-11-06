@@ -1,8 +1,9 @@
 import { createCase, getWatchSettings } from "@garrison/db";
 import { type Collection, type Message, PermissionFlagsBits } from "discord.js";
 import type { Command } from "../../../commands/types.js";
+import { ensureGuild } from "../../../lib/guild-registry.js";
 import { confirmationEmbedForPurge } from "../embeds.js";
-import { ensureGuild, postCaseLog } from "../service.js";
+import { postCaseLog } from "../service.js";
 import { ephemeral, REASON_MAX, watchCommand } from "./shared.js";
 
 const BULK_DELETE_MAX_AGE_MS = 14 * 86_400_000;

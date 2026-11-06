@@ -2,8 +2,8 @@ import { getWatchSettings, updateWatchSettings, type WatchSettingsPatch } from "
 import { ChannelType, PermissionFlagsBits } from "discord.js";
 import type { Command } from "../../../commands/types.js";
 import { brandEmbed } from "../../../lib/embeds.js";
+import { ensureGuild } from "../../../lib/guild-registry.js";
 import { DEFAULT_APPEAL_TEXT } from "../copy.js";
-import { ensureGuild } from "../service.js";
 import { ephemeral, watchCommand } from "./shared.js";
 
 export const moderation: Command = {

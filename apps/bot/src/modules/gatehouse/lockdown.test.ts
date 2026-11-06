@@ -3,8 +3,8 @@ import { createTestDb } from "@garrison/db/testing";
 import { ChannelType, type Guild, PermissionFlagsBits } from "discord.js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { BotContext } from "../../commands/types.js";
+import { ensureGuild } from "../../lib/guild-registry.js";
 import { createLogger } from "../../lib/logger.js";
-import { ensureGuild } from "../watch/service.js";
 import { LOCK_BITS } from "./plan.js";
 import { invalidateGatehouseSettings, lockGuild, unlockGuild } from "./service.js";
 

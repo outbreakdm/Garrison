@@ -3,9 +3,10 @@ import { Client, Events, GatewayIntentBits } from "discord.js";
 import type { BotContext } from "./commands/types.js";
 import { loadEnv } from "./env.js";
 import { handleInteraction } from "./interactions.js";
+import { ensureGuild, forgetGuild } from "./lib/guild-registry.js";
 import { createLogger } from "./lib/logger.js";
+import { handleAuditLogEntry } from "./modules/gatehouse/anti-nuke.js";
 import { handleMemberJoin, sweepExpiredLockdowns } from "./modules/gatehouse/service.js";
-import { ensureGuild, forgetGuild } from "./modules/watch/service.js";
 
 const env = loadEnv();
 const logger = createLogger(env.LOG_LEVEL);
@@ -13,9 +14,14 @@ const { db, close } = createDb(env.DATABASE_URL);
 const ctx: BotContext = { db, logger };
 
 // Guild Members is privileged: turn on "Server Members Intent" in the Developer Portal.
-// Gatehouse needs it to see joins. Automod will need Message Content later.
+// Gatehouse needs it to see joins, and Guild Moderation (not privileged) for the
+// audit-log stream anti-nuke watches. Automod will need Message Content later.
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildModeration,
+  ],
   // Never ping from bot messages. Reasons and other user-typed text are echoed
   // back, and must not be able to trigger @everyone, role or user pings.
   allowedMentions: { parse: [], repliedUser: false },
@@ -39,6 +45,12 @@ client.once(Events.ClientReady, async (ready) => {
   await sweep();
   sweepTimer = setInterval(sweep, SWEEP_INTERVAL_MS);
 });
+
+client.on(Events.GuildAuditLogEntryCreate, (entry, guild) =>
+  handleAuditLogEntry(ctx, entry, guild).catch((error) =>
+    logger.error("Anti-nuke handling failed", { guildId: guild.id, error }),
+  ),
+);
 
 client.on(Events.GuildMemberAdd, (member) =>
   handleMemberJoin(ctx, member).catch((error) =>

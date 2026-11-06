@@ -11,6 +11,8 @@ import {
   startLockdown,
 } from "@garrison/db";
 import {
+  type ActionRowBuilder,
+  type ButtonBuilder,
   ChannelType,
   type Client,
   type EmbedBuilder,
@@ -20,7 +22,7 @@ import {
   Routes,
 } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
-import { ensureGuild } from "../watch/service.js";
+import { ensureGuild } from "../../lib/guild-registry.js";
 import {
   lockdownEndedEmbed,
   lockdownStartedEmbed,
@@ -69,14 +71,19 @@ export function invalidateGatehouseSettings(guildId: string) {
 // --- Alerts ----------------------------------------------------------------
 
 /** Post to the Gatehouse alert channel, falling back to the Watch log channel. */
-export async function sendAlert(ctx: BotContext, guild: Guild, embed: EmbedBuilder) {
+export async function sendAlert(
+  ctx: BotContext,
+  guild: Guild,
+  embed: EmbedBuilder,
+  components: ActionRowBuilder<ButtonBuilder>[] = [],
+) {
   const settings = await cachedGatehouseSettings(ctx, guild.id);
   const channelId =
     settings.alertChannelId ?? (await getWatchSettings(ctx.db, guild.id)).logChannelId;
   if (!channelId) return;
   try {
     const channel = guild.channels.cache.get(channelId) ?? (await guild.channels.fetch(channelId));
-    if (channel?.isSendable()) await channel.send({ embeds: [embed] });
+    if (channel?.isSendable()) await channel.send({ embeds: [embed], components });
   } catch (error) {
     ctx.logger.warn("Could not post a Gatehouse alert", { guildId: guild.id, channelId, error });
   }

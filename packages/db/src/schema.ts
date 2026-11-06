@@ -139,6 +139,15 @@ export const gatehouseSettings = pgTable("gatehouse_settings", {
   /** Role the verification button gives. Null means verification is off. */
   verifyRoleId: text("verify_role_id"),
   verifyMinAccountAgeDays: integer("verify_min_account_age_days").notNull().default(0),
+  /** Anti-nuke: stop one actor deleting channels/roles or mass-banning. Owner-only to change. */
+  antiNukeEnabled: boolean("anti_nuke_enabled").notNull().default(true),
+  /** Users and bots anti-nuke never acts on. The owner is always trusted. Owner-only to change. */
+  antiNukeTrustedIds: text("anti_nuke_trusted_ids").array().notNull().default(sql`'{}'::text[]`),
+  /** Channel or role deletions by one actor within the window that count as a nuke. */
+  nukeDeleteThreshold: integer("nuke_delete_threshold").notNull().default(3),
+  /** Bans plus kicks by one actor within the window that count as a nuke. */
+  nukeBanThreshold: integer("nuke_ban_threshold").notNull().default(5),
+  nukeWindowSeconds: integer("nuke_window_seconds").notNull().default(60),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
 
@@ -179,3 +188,29 @@ export const lockdowns = pgTable(
 export type GatehouseSettings = typeof gatehouseSettings.$inferSelect;
 export type Lockdown = typeof lockdowns.$inferSelect;
 export type RaidResponse = (typeof raidResponse.enumValues)[number];
+
+/**
+ * A member anti-nuke stripped of roles (or a bot it kicked). `removedRoleIds`
+ * lets the owner put the roles back if it was a false alarm.
+ */
+export const quarantines = pgTable(
+  "quarantines",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    userTag: text("user_tag").notNull(),
+    reason: text("reason").notNull(),
+    removedRoleIds: text("removed_role_ids").array().notNull().default(sql`'{}'::text[]`),
+    /** True when the actor was a bot and was kicked instead. */
+    kicked: boolean("kicked").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    restoredAt: timestamp("restored_at", { withTimezone: true }),
+    restoredById: text("restored_by_id"),
+  },
+  (t) => [index("quarantines_guild_user").on(t.guildId, t.userId)],
+).enableRLS();
+
+export type Quarantine = typeof quarantines.$inferSelect;

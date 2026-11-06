@@ -12,6 +12,7 @@ export type {
   LockdownSnapshotEntry,
   ModCase,
   NewModCase,
+  Quarantine,
   RaidResponse,
   WatchSettings,
 } from "./schema.js";

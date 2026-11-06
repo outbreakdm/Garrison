@@ -147,6 +147,18 @@ export function settingsEmbed(s: GatehouseSettings, saved: boolean): EmbedBuilde
         value: s.staffRoleIds.length ? s.staffRoleIds.map((id) => `<@&${id}>`).join(" ") : "None",
       },
       {
+        name: "Anti-nuke",
+        value: s.antiNukeEnabled
+          ? `On · ${s.nukeDeleteThreshold} deletions or ${s.nukeBanThreshold} bans in ${s.nukeWindowSeconds} s`
+          : "Off",
+      },
+      {
+        name: "Trusted (owner sets)",
+        value: s.antiNukeTrustedIds.length
+          ? s.antiNukeTrustedIds.map((id) => `<@${id}>`).join(" ")
+          : "Owner only",
+      },
+      {
         name: "Verification",
         value: s.verifyRoleId
           ? `Gives <@&${s.verifyRoleId}>${s.verifyMinAccountAgeDays ? ` · accounts ${s.verifyMinAccountAgeDays}+ days old` : ""}`

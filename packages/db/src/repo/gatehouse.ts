@@ -5,6 +5,7 @@ import {
   gatehouseSettings,
   type LockdownSnapshotEntry,
   lockdowns,
+  quarantines,
 } from "../schema.js";
 
 export async function getGatehouseSettings(db: Db, guildId: string): Promise<GatehouseSettings> {
@@ -91,4 +92,37 @@ export async function listExpiredLockdowns(db: Db, now = new Date()) {
     .select()
     .from(lockdowns)
     .where(and(isNull(lockdowns.endedAt), isNotNull(lockdowns.endsAt), lte(lockdowns.endsAt, now)));
+}
+
+export interface CreateQuarantineInput {
+  guildId: string;
+  userId: string;
+  userTag: string;
+  reason: string;
+  removedRoleIds: string[];
+  kicked: boolean;
+}
+
+export async function createQuarantine(db: Db, input: CreateQuarantineInput) {
+  const [row] = await db.insert(quarantines).values(input).returning();
+  if (!row) throw new Error("Quarantine insert returned no row");
+  return row;
+}
+
+export async function getQuarantine(db: Db, guildId: string, id: string) {
+  const [row] = await db
+    .select()
+    .from(quarantines)
+    .where(and(eq(quarantines.guildId, guildId), eq(quarantines.id, id)));
+  return row ?? null;
+}
+
+/** Mark a quarantine restored. Returns null if it was already restored. */
+export async function markQuarantineRestored(db: Db, id: string, restoredById: string) {
+  const [row] = await db
+    .update(quarantines)
+    .set({ restoredAt: new Date(), restoredById })
+    .where(and(eq(quarantines.id, id), isNull(quarantines.restoredAt)))
+    .returning();
+  return row ?? null;
 }

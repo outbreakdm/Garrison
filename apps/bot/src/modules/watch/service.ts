@@ -6,7 +6,6 @@ import {
   listEscalationRules,
   type ModCase,
   revokeCase,
-  upsertGuild,
   type WatchSettings,
 } from "@garrison/db";
 import {
@@ -18,6 +17,8 @@ import {
   type User,
 } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
+import { ensureGuild } from "../../lib/guild-registry.js";
+import { recordModeratorAction } from "../gatehouse/anti-nuke.js";
 import { canUndo, escalationReason, hierarchyError, type MemberAction, NO_REASON } from "./copy.js";
 import { caseEmbed, dmEmbed } from "./embeds.js";
 import { pickEscalation } from "./escalation.js";
@@ -40,19 +41,6 @@ const undoPermission: Partial<Record<ModCase["action"], bigint>> = {
 export interface Actor {
   id: string;
   tag: string;
-}
-
-const knownGuilds = new Set<string>();
-
-/** Make sure the guild row exists before writing cases. Cached per process. */
-export async function ensureGuild(ctx: BotContext, guild: Guild) {
-  if (knownGuilds.has(guild.id)) return;
-  await upsertGuild(ctx.db, { id: guild.id, name: guild.name });
-  knownGuilds.add(guild.id);
-}
-
-export function forgetGuild(guildId: string) {
-  knownGuilds.delete(guildId);
 }
 
 /**
@@ -212,6 +200,14 @@ export async function applyMemberAction(
     details: req.deleteMessageSeconds ? { deleteMessageSeconds: req.deleteMessageSeconds } : {},
   });
   await postCaseLog(ctx, req.guild, settings, created);
+
+  // Bans and kicks through Garrison show Garrison as the audit-log executor,
+  // so count them against the moderator here or anti-nuke would never see them.
+  if ((req.action === "ban" || req.action === "kick") && (req.source ?? "manual") === "manual") {
+    await recordModeratorAction(ctx, req.guild, req.actor.id).catch((error: unknown) =>
+      ctx.logger.error("Anti-nuke check failed", { guildId: req.guild.id, error }),
+    );
+  }
 
   const escalated = req.action === "warn" ? await runEscalation(ctx, req) : null;
   return { ok: true, case: created, dmSent, escalated };

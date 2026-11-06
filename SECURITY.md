@@ -52,7 +52,9 @@ Then set `DATABASE_URL` to the pooled connection string with user `garrison_bot.
 
 ## Discord
 
-- Intents: `Guilds` and `Server Members` only. Message Content is not requested until automod needs it.
+- Intents: `Guilds`, `Guild Moderation` and `Server Members` only. Message Content is not requested until automod needs it.
+- Anti-nuke trusts only the owner, Garrison itself and the owner's trusted list. Changing anti-nuke settings and restoring a quarantine are owner/trusted-only, checked in code on every command and click. At the database level `garrison_bot` can update settings; the owner check lives in the bot.
+- Actions taken through Garrison are attributed to the moderator who ran them, not to Garrison, so Garrison can't be used to launder a mass ban.
 - Invite permissions are listed in the README; never request Administrator.
 - Reset the bot token in the Developer Portal immediately if it is ever exposed. Discord also auto-revokes tokens found in public GitHub repositories.
 

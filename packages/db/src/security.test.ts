@@ -9,10 +9,13 @@ import {
   revokeCase,
 } from "./repo/cases.js";
 import {
+  createQuarantine,
   endLockdown,
   getActiveLockdown,
   getGatehouseSettings,
+  getQuarantine,
   listExpiredLockdowns,
+  markQuarantineRestored,
   saveLockdownSnapshot,
   startLockdown,
   updateGatehouseSettings,
@@ -24,7 +27,7 @@ import {
   updateWatchSettings,
   upsertGuild,
 } from "./repo/guilds.js";
-import { guilds, modCases } from "./schema.js";
+import { guilds, modCases, quarantines } from "./schema.js";
 import { createTestDb } from "./testing.js";
 
 /**
@@ -84,6 +87,19 @@ describe("garrison_bot can do everything the bot does", () => {
     expect(await listExpiredLockdowns(db)).toHaveLength(1);
     expect(await endLockdown(db, l?.id ?? "", "1")).not.toBeNull();
 
+    const q = await createQuarantine(db, {
+      guildId: G,
+      userId: "66",
+      userTag: "rogue",
+      reason: "Deleted 3 channels in 60 s",
+      removedRoleIds: ["1", "2"],
+      kicked: false,
+    });
+    expect((await getQuarantine(db, G, q.id))?.removedRoleIds).toEqual(["1", "2"]);
+    expect(await markQuarantineRestored(db, q.id, "owner")).not.toBeNull();
+    expect(await markQuarantineRestored(db, q.id, "owner")).toBeNull();
+    await updateGatehouseSettings(db, G, { antiNukeTrustedIds: ["77"] });
+
     await markGuildLeft(db, G);
   });
 });
@@ -103,6 +119,8 @@ describe("garrison_bot cannot tamper with history", () => {
   it("can't delete cases or guilds", async () => {
     await expectDenied(db.delete(modCases));
     await expectDenied(db.delete(guilds).where(eq(guilds.id, G)));
+    await expectDenied(db.delete(quarantines));
+    await expectDenied(db.update(quarantines).set({ removedRoleIds: [] }));
   });
 
   it("can't touch the migration journal", async () => {
