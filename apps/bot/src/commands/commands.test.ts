@@ -30,6 +30,7 @@ describe("command definitions", () => {
       "rank",
       "leaderboard",
       "ranks",
+      "logs",
     ]);
     expect(new Set(names).size).toBe(names.length);
   });

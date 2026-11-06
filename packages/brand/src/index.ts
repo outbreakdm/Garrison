@@ -81,3 +81,37 @@ export const brand = {
   oneLiner:
     "Moderation, security, LFG and raid signups in one fast bot, with everything a server needs to stay safe included free.",
 } as const;
+
+/** Ledger event types and their labels, shared by bot embeds and the dashboard filter. */
+export const ledgerTypeLabels: Record<string, string> = {
+  member_join: "Joined",
+  member_leave: "Left",
+  member_kick: "Kick",
+  member_ban: "Ban",
+  member_unban: "Unban",
+  member_roles: "Roles",
+  member_timeout: "Timeout",
+  member_timeout_end: "Timeout removed",
+  member_nick: "Nickname",
+  channel_create: "Channel created",
+  channel_delete: "Channel deleted",
+  channel_update: "Channel edited",
+  channel_permissions: "Channel permissions",
+  role_create: "Role created",
+  role_delete: "Role deleted",
+  role_update: "Role edited",
+  invite_create: "Invite created",
+  invite_delete: "Invite deleted",
+  webhook_create: "Webhook created",
+  webhook_delete: "Webhook deleted",
+  bot_add: "Bot added",
+  server_update: "Server edited",
+  message_delete: "Message deleted",
+  message_delete_by_mod: "Message removed",
+  message_bulk_delete: "Bulk delete",
+  voice_join: "Voice join",
+  voice_leave: "Voice leave",
+  voice_switch: "Voice switch",
+  voice_disconnect: "Voice disconnect",
+  voice_move: "Voice move",
+};

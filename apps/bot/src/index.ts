@@ -1,5 +1,5 @@
 import { createDb, markGuildLeft, upsertGuild } from "@garrison/db";
-import { Client, Events, GatewayIntentBits } from "discord.js";
+import { Client, Events, GatewayIntentBits, Partials } from "discord.js";
 import type { BotContext } from "./commands/types.js";
 import { loadEnv } from "./env.js";
 import { handleInteraction } from "./interactions.js";
@@ -7,6 +7,14 @@ import { ensureGuild, forgetGuild } from "./lib/guild-registry.js";
 import { createLogger } from "./lib/logger.js";
 import { handleAuditLogEntry } from "./modules/gatehouse/anti-nuke.js";
 import { handleMemberJoin, sweepExpiredLockdowns } from "./modules/gatehouse/service.js";
+import {
+  maybePruneLedger,
+  onAuditEntry,
+  onMemberJoin,
+  onMemberLeave,
+  onMessageDelete,
+  onVoiceUpdate,
+} from "./modules/ledger/service.js";
 import { sweepOps } from "./modules/ops/service.js";
 import { sweepRally } from "./modules/rally/service.js";
 import { handleMessage } from "./modules/ranks/service.js";
@@ -32,6 +40,8 @@ const client = new Client({
   // Never ping from bot messages. Reasons and other user-typed text are echoed
   // back, and must not be able to trigger @everyone, role or user pings.
   allowedMentions: { parse: [], repliedUser: false },
+  // Ledger needs leave and delete events for members and messages that aren't cached.
+  partials: [Partials.GuildMember, Partials.Message],
 });
 
 const SWEEP_INTERVAL_MS = 60_000;
@@ -51,16 +61,18 @@ client.once(Events.ClientReady, async (ready) => {
     );
     await sweepRally(ctx, ready).catch((error) => logger.error("Rally sweep failed", { error }));
     await sweepOps(ctx, ready).catch((error) => logger.error("Ops sweep failed", { error }));
+    await maybePruneLedger(ctx).catch((error) => logger.error("Ledger prune failed", { error }));
   };
   await sweep();
   sweepTimer = setInterval(sweep, SWEEP_INTERVAL_MS);
 });
 
-client.on(Events.GuildAuditLogEntryCreate, (entry, guild) =>
+client.on(Events.GuildAuditLogEntryCreate, (entry, guild) => {
   handleAuditLogEntry(ctx, entry, guild).catch((error) =>
     logger.error("Anti-nuke handling failed", { guildId: guild.id, error }),
-  ),
-);
+  );
+  void onAuditEntry(ctx, entry, guild);
+});
 
 client.on(Events.MessageCreate, (message) =>
   handleMessage(ctx, message).catch((error) =>
@@ -68,11 +80,15 @@ client.on(Events.MessageCreate, (message) =>
   ),
 );
 
-client.on(Events.GuildMemberAdd, (member) =>
+client.on(Events.GuildMemberAdd, (member) => {
   handleMemberJoin(ctx, member).catch((error) =>
     logger.error("Join handling failed", { guildId: member.guild.id, error }),
-  ),
-);
+  );
+  void onMemberJoin(ctx, member);
+});
+client.on(Events.GuildMemberRemove, (member) => void onMemberLeave(ctx, member));
+client.on(Events.MessageDelete, (message) => void onMessageDelete(ctx, message));
+client.on(Events.VoiceStateUpdate, (before, after) => void onVoiceUpdate(ctx, before, after));
 
 client.on(Events.GuildCreate, async (guild) => {
   logger.info("Joined server", { guildId: guild.id, members: guild.memberCount });

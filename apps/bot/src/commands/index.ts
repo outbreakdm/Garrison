@@ -1,5 +1,6 @@
 import { gatehouseButtons, gatehouseCommands } from "../modules/gatehouse/commands/index.js";
 import { health } from "../modules/health/command.js";
+import { logs } from "../modules/ledger/commands.js";
 import { opsButtons, opsModals, raid } from "../modules/ops/commands.js";
 import { lfg, rallyButtons } from "../modules/rally/commands.js";
 import { leaderboard, rank, ranks } from "../modules/ranks/commands.js";
@@ -15,6 +16,7 @@ export const commands: Command[] = [
   rank,
   leaderboard,
   ranks,
+  logs,
 ];
 export const buttons: ButtonHandler[] = [
   ...watchButtons,

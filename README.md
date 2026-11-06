@@ -21,7 +21,7 @@ packages/
 | ------------- | ----------------- | --------- | --------------------------------------------------------------------------- |
 | Watch         | Moderation        | **Built** | `/warn` `/timeout` `/kick` `/ban` `/purge` `/case` `/history` `/moderation` |
 | Gatehouse     | Security          | **Built** | `/lockdown` `/verify` `/security`                                           |
-| Ledger        | Logs              | Planned   | `/logs`                                                                     |
+| Ledger        | Logs              | **Built** | `/logs`                                                                     |
 | Rally         | Looking for group | **Built** | `/lfg`                                                                      |
 | Ops           | Events            | **Built** | `/raid`                                                                     |
 | Barracks      | Members           | Planned   | `/link` `/roster`                                                           |
@@ -62,6 +62,12 @@ packages/
 - **Reminders** 24 h and 30 min before ping only the players signed up, never the bench or anyone else.
 - Weekly raids repost themselves after each run at the same local time, across daylight-saving changes.
 - `/raid list` shows what's coming up. The host or anyone with Manage Events can cancel. A server can hold 25 scheduled raids.
+
+### Ledger
+
+- Records **who did what, when**: joins and leaves (with account age), kicks, bans, timeouts, role and nickname changes, channel, role and permission edits (with exactly which permissions changed), invites, webhooks, bots added, deleted messages (author and channel), and voice joins, leaves and moves. The actor comes from Discord's audit log. **Message content is never stored.**
+- `/logs settings channel:#mod-log` posts each event there; `/logs search user:@member` shows a member's recent events. The dashboard's Ledger page filters by member and event type, with paging.
+- Events are kept 30 days by default (`keep_days` 7–365). Expired events are removed by a database function that the bot may call but that only deletes rows past retention, and never newer than 7 days, so a compromised bot can't erase recent history.
 
 ### Ranks
 

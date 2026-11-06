@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  bigserial,
   boolean,
   index,
   integer,
@@ -468,3 +469,52 @@ export const memberXp = pgTable(
 export type RanksSettings = typeof ranksSettings.$inferSelect;
 export type RankReward = typeof rankRewards.$inferSelect;
 export type MemberXp = typeof memberXp.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Ledger (logs)
+// ---------------------------------------------------------------------------
+
+export const ledgerSettings = pgTable("ledger_settings", {
+  guildId: text("guild_id")
+    .primaryKey()
+    .references(() => guilds.id, { onDelete: "cascade" }),
+  /** Channel that gets a line for each event. Null keeps events in the dashboard only. */
+  channelId: text("channel_id"),
+  /** Events older than this are removed by ledger_prune(). */
+  retentionDays: integer("retention_days").notNull().default(30),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
+
+/**
+ * Server events: who did what, when. Never message content. Rows are
+ * insert-only for the bot; only ledger_prune() removes them, and only once
+ * they're past the server's retention.
+ */
+export const ledgerEvents = pgTable(
+  "ledger_events",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    /** e.g. member_join, member_ban, role_update, message_delete, voice_join. */
+    type: text("type").notNull(),
+    actorId: text("actor_id"),
+    targetId: text("target_id"),
+    channelId: text("channel_id"),
+    /** Short, human summary written by the bot, e.g. "Added @Raider". No message content. */
+    summary: text("summary").notNull(),
+    data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("ledger_events_guild_id").on(t.guildId, t.id),
+    index("ledger_events_guild_target").on(t.guildId, t.targetId, t.id),
+    index("ledger_events_guild_actor").on(t.guildId, t.actorId, t.id),
+    index("ledger_events_created").on(t.createdAt),
+  ],
+).enableRLS();
+
+export type LedgerSettings = typeof ledgerSettings.$inferSelect;
+export type LedgerEvent = typeof ledgerEvents.$inferSelect;
+export type NewLedgerEvent = Omit<typeof ledgerEvents.$inferInsert, "id" | "createdAt">;

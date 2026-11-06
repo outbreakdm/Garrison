@@ -2,6 +2,7 @@ export * from "./client";
 export * from "./repo/cases";
 export * from "./repo/gatehouse";
 export * from "./repo/guilds";
+export * from "./repo/ledger";
 export * from "./repo/ops";
 export * from "./repo/rally";
 export * from "./repo/ranks";
@@ -13,6 +14,8 @@ export type {
   EscalationRule,
   GatehouseSettings,
   Guild,
+  LedgerEvent,
+  LedgerSettings,
   LfgMember,
   LfgPost,
   LfgSlotGroup,
@@ -21,6 +24,7 @@ export type {
   LockdownSnapshotEntry,
   MemberXp,
   ModCase,
+  NewLedgerEvent,
   NewModCase,
   OpsEvent,
   OpsSettings,

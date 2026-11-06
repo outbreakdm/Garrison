@@ -241,3 +241,15 @@ textarea.g-input {
 .g-table form {
   margin: 0;
 }
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: flex-end;
+}
+.filter-row .g-field {
+  flex: 1 1 220px;
+}
+.pager {
+  align-self: flex-start;
+}
