@@ -18,16 +18,16 @@ Planned: `apps/web` (Next.js dashboard and marketing site, using `@garrison/bran
 
 ## Modules
 
-| Module        | Plain label       | Status    | Commands                                                                    |
-| ------------- | ----------------- | --------- | --------------------------------------------------------------------------- |
-| Watch         | Moderation        | **Built** | `/warn` `/timeout` `/kick` `/ban` `/purge` `/case` `/history` `/moderation` |
-| Gatehouse     | Security          | Planned   | `/lockdown` `/verify`                                                       |
-| Ledger        | Logs              | Planned   | `/logs`                                                                     |
-| Rally         | Looking for group | Planned   | `/lfg`                                                                      |
-| Ops           | Events            | Planned   | `/event` `/raid`                                                            |
-| Barracks      | Members           | Planned   | `/link` `/roster`                                                           |
-| Ranks         | Leveling          | Planned   | `/rank` `/leaderboard`                                                      |
-| Quartermaster | AI builder        | Planned   | `/qm`                                                                       |
+| Module        | Plain label       | Status                     | Commands                                                                    |
+| ------------- | ----------------- | -------------------------- | --------------------------------------------------------------------------- |
+| Watch         | Moderation        | **Built**                  | `/warn` `/timeout` `/kick` `/ban` `/purge` `/case` `/history` `/moderation` |
+| Gatehouse     | Security          | **Built** (anti-nuke next) | `/lockdown` `/verify` `/security`                                           |
+| Ledger        | Logs              | Planned                    | `/logs`                                                                     |
+| Rally         | Looking for group | Planned                    | `/lfg`                                                                      |
+| Ops           | Events            | Planned                    | `/event` `/raid`                                                            |
+| Barracks      | Members           | Planned                    | `/link` `/roster`                                                           |
+| Ranks         | Leveling          | Planned                    | `/rank` `/leaderboard`                                                      |
+| Quartermaster | AI builder        | Planned                    | `/qm`                                                                       |
 
 ### Watch
 
@@ -48,7 +48,7 @@ Planned: `apps/web` (Next.js dashboard and marketing site, using `@garrison/bran
 
 ### Intents
 
-`Guilds` plus **Server Members** (privileged). Turn on *Server Members Intent* under Bot in the Developer Portal, or login fails with "Used disallowed intents".
+`Guilds` plus **Server Members** (privileged). Turn on _Server Members Intent_ under Bot in the Developer Portal, or login fails with "Used disallowed intents".
 
 ## Getting started
 
