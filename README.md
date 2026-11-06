@@ -9,12 +9,11 @@ Garrison is an all-in-one Discord bot for gaming communities: moderation, securi
 ```
 apps/
   bot/          discord.js bot (slash commands, events)
+  web/          Next.js dashboard (Discord login, read-only server views)
 packages/
   brand/        design tokens (CSS + TS), embed colours, module names
   db/           Drizzle schema, SQL migrations and queries for Supabase Postgres
 ```
-
-Planned: `apps/web` (Next.js dashboard and marketing site, using `@garrison/brand`).
 
 ## Modules
 
@@ -71,6 +70,16 @@ Planned: `apps/web` (Next.js dashboard and marketing site, using `@garrison/bran
 ### Intents
 
 `Guilds`, `Guild Moderation` (audit log, for anti-nuke), `Guild Voice States` (Rally) and **Server Members** (privileged). Turn on _Server Members Intent_ under Bot in the Developer Portal, or login fails with "Used disallowed intents".
+
+## Dashboard
+
+`apps/web` is a Next.js 16 dashboard. Sign in with Discord to see the servers you manage: an **Overview** (mod actions, open groups, next raid, Gatehouse status, recent cases), **Watch** (the latest 50 cases), **Gatehouse** (lockdown, anti-raid and anti-nuke settings) and **Rally** (open groups and raid rosters). It is read-only for now: settings change through slash commands.
+
+```sh
+pnpm --filter @garrison/web dev     # http://localhost:3000
+```
+
+Set `APP_URL`, `DISCORD_CLIENT_SECRET` and `WEB_DATABASE_URL` in `.env`, and add `APP_URL/auth/callback` as an OAuth2 redirect in the Developer Portal. See SECURITY.md for how sign-in is protected.
 
 ## Getting started
 

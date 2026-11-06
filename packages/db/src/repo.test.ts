@@ -1,19 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { Db } from "./client.js";
+import type { Db } from "./client";
 import {
   countActiveWarnings,
   createCase,
   getCase,
   listCasesForTarget,
   revokeCase,
-} from "./repo/cases.js";
+} from "./repo/cases";
 import {
   getWatchSettings,
   listEscalationRules,
   updateWatchSettings,
   upsertGuild,
-} from "./repo/guilds.js";
-import { createTestDb } from "./testing.js";
+} from "./repo/guilds";
+import { createTestDb } from "./testing";
 
 const GUILD = { id: "100", name: "Scapewatch" };
 const mod = { moderatorId: "1", moderatorTag: "taner" };

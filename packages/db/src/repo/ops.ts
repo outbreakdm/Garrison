@@ -1,5 +1,5 @@
 import { and, asc, eq, gt, isNull, lte, sql } from "drizzle-orm";
-import type { Db } from "../client.js";
+import type { Db } from "../client";
 import {
   type LfgSlotGroup,
   type OpsEvent,
@@ -7,8 +7,8 @@ import {
   opsEvents,
   opsSettings,
   opsSignups,
-} from "../schema.js";
-import { addWeeksInZone } from "../time.js";
+} from "../schema";
+import { addWeeksInZone } from "../time";
 
 export async function getOpsTimezone(db: Db, guildId: string) {
   const [row] = await db.select().from(opsSettings).where(eq(opsSettings.guildId, guildId));

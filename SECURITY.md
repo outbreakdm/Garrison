@@ -18,19 +18,23 @@ Email the maintainer rather than opening a public issue. We'll confirm receipt w
 
 ## Database
 
-| Role                    | Used by                                    | Can do                                                                                                                      |
-| ----------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| `postgres`              | Migrations only (`DATABASE_MIGRATION_URL`) | Everything                                                                                                                  |
-| `garrison_bot`          | The bot at runtime (`DATABASE_URL`)        | Exactly the grants in `0002_security.sql`. No `DELETE` anywhere. Case updates are limited to `revoked_at` / `revoked_by_id` |
-| `anon`, `authenticated` | Supabase Data API                          | Nothing: no grants, and no RLS policy matches them                                                                          |
+| Role                    | Used by                                    | Can do                                                                                                                                    |
+| ----------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `postgres`              | Migrations only (`DATABASE_MIGRATION_URL`) | Everything                                                                                                                                |
+| `garrison_bot`          | The bot at runtime (`DATABASE_URL`)        | Exactly the grants in `0002_security.sql`. No `DELETE` anywhere. Case updates are limited to `revoked_at` / `revoked_by_id`               |
+| `garrison_web`          | The dashboard (`WEB_DATABASE_URL`)         | `SELECT` on module tables, nothing else. Creates sessions and can only mark them seen or revoked. Can't write a single row of module data |
+| `anon`, `authenticated` | Supabase Data API                          | Nothing: no grants, and no RLS policy matches them                                                                                        |
 
-### Enabling the bot role
+### Enabling the bot and dashboard roles
 
 `garrison_bot` is created without a login so no password lives in the repo. In the Supabase SQL editor, run this once, with a long random password from your password manager:
 
 ```sql
 ALTER ROLE garrison_bot WITH LOGIN PASSWORD '<generated password>';
+ALTER ROLE garrison_web WITH LOGIN PASSWORD '<a different generated password>';
 ```
+
+Use `garrison_web.<project-ref>` in `WEB_DATABASE_URL`.
 
 Then set `DATABASE_URL` to the pooled connection string with user `garrison_bot.<project-ref>` and that password. Keep the `postgres` string only in `DATABASE_MIGRATION_URL`, and only where migrations run.
 
@@ -51,6 +55,17 @@ Then set `DATABASE_URL` to the pooled connection string with user `garrison_bot.
 - [ ] Prefer ephemeral replies for moderator-only information.
 - [ ] Run every piece of user-typed text through `safeText` before showing it.
 - [ ] Commands open to everyone (`guildCommand(..., null)`) need a spam limit, like Rally's one open group per person.
+
+## Dashboard
+
+- **Sign-in:** Discord OAuth2 authorization code flow with PKCE (S256) and a random `state` compared in constant time. Scopes are `identify guilds` only.
+- **No Discord tokens kept.** The access token is used for two reads at login and then revoked at Discord.
+- **Sessions:** a 256-bit random token in a `__Host-` cookie (`HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`). Only its SHA-256 is stored, so a database leak can't be replayed. Sessions last 7 days and are revoked server-side on sign-out.
+- **Authorization on every request.** Each server page calls `requireGuildAccess`, which checks the session, the server ID's shape, that Garrison is in the server, and the user's **live** Manage Server permission via the bot token (cached 30 s, fails closed). Failures are 404s, so the dashboard never confirms which servers exist. Auth is never left to the proxy or a layout alone.
+- **CSRF:** sign-out is POST-only and checks `Origin`; the dashboard has no other state-changing routes yet. Cookies are `SameSite=Lax`.
+- **Open redirects:** `?next=` accepts only same-site paths.
+- **Headers:** a per-request nonce CSP (`script-src 'nonce-…' 'strict-dynamic'`, no `unsafe-inline`, `frame-ancestors 'none'`), HSTS, `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: same-origin`, COOP, a locked-down Permissions-Policy, and no `X-Powered-By`. Fonts are self-hosted, so nothing loads from third parties.
+- Secret-holding modules import `server-only`, so they can't reach the browser bundle. User text is rendered by React, which escapes it.
 
 ## Discord
 

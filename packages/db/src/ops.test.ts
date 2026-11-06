@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { Db } from "./client.js";
-import { upsertGuild } from "./repo/guilds.js";
+import type { Db } from "./client";
+import { upsertGuild } from "./repo/guilds";
 import {
   cancelOpsEvent,
   claimDueReminders,
@@ -14,10 +14,10 @@ import {
   setOpsTimezone,
   signUp,
   withdraw,
-} from "./repo/ops.js";
-import { opsSignups } from "./schema.js";
-import { createTestDb } from "./testing.js";
-import { addWeeksInZone, isValidTimeZone, wallTimeIn, zonedToUtc } from "./time.js";
+} from "./repo/ops";
+import { opsSignups } from "./schema";
+import { createTestDb } from "./testing";
+import { addWeeksInZone, isValidTimeZone, wallTimeIn, zonedToUtc } from "./time";
 
 describe("time zones", () => {
   it("converts Chicago wall time to UTC on both sides of daylight saving", () => {

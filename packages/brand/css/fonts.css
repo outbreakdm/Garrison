@@ -1,0 +1,2 @@
+/* Google Fonts for pages without a strict CSP. The dashboard self-hosts these via next/font instead. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Saira+Semi+Condensed:wght@600;700&display=swap');

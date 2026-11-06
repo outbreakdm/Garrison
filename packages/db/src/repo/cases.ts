@@ -1,6 +1,6 @@
 import { and, count, desc, eq, gte, isNull, sql } from "drizzle-orm";
-import type { Db } from "../client.js";
-import { guilds, type ModCase, modCases, type NewModCase } from "../schema.js";
+import type { Db } from "../client";
+import { guilds, type ModCase, modCases, type NewModCase } from "../schema";
 
 /**
  * Create a case with the guild's next case number. The counter update and the

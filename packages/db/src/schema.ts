@@ -346,3 +346,30 @@ export const opsSignups = pgTable(
 export type OpsEvent = typeof opsEvents.$inferSelect;
 export type OpsSignup = typeof opsSignups.$inferSelect;
 export type OpsSettings = typeof opsSettings.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Dashboard sessions
+// ---------------------------------------------------------------------------
+
+/**
+ * Dashboard login sessions. The cookie holds a random 256-bit token; only its
+ * SHA-256 hash is stored, so a database leak can't be replayed as sessions.
+ * Discord OAuth tokens are never stored.
+ */
+export const webSessions = pgTable(
+  "web_sessions",
+  {
+    tokenHash: text("token_hash").primaryKey(),
+    userId: text("user_id").notNull(),
+    username: text("username").notNull(),
+    /** Servers the user could manage at login, for the server picker only. Access is re-checked live. */
+    manageableGuildIds: text("manageable_guild_ids").array().notNull().default(sql`'{}'::text[]`),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (t) => [index("web_sessions_user").on(t.userId)],
+).enableRLS();
+
+export type WebSession = typeof webSessions.$inferSelect;

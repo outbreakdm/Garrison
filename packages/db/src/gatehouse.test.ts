@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { Db } from "./client.js";
+import type { Db } from "./client";
 import {
   endLockdown,
   getActiveLockdown,
@@ -8,9 +8,9 @@ import {
   saveLockdownSnapshot,
   startLockdown,
   updateGatehouseSettings,
-} from "./repo/gatehouse.js";
-import { upsertGuild } from "./repo/guilds.js";
-import { createTestDb } from "./testing.js";
+} from "./repo/gatehouse";
+import { upsertGuild } from "./repo/guilds";
+import { createTestDb } from "./testing";
 
 // One database for the file; each test uses its own guild ID.
 let db: Db;

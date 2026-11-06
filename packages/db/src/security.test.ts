@@ -1,13 +1,13 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { Db } from "./client.js";
+import type { Db } from "./client";
 import {
   countActiveWarnings,
   createCase,
   getCase,
   listCasesForTarget,
   revokeCase,
-} from "./repo/cases.js";
+} from "./repo/cases";
 import {
   createQuarantine,
   endLockdown,
@@ -19,16 +19,16 @@ import {
   saveLockdownSnapshot,
   startLockdown,
   updateGatehouseSettings,
-} from "./repo/gatehouse.js";
+} from "./repo/gatehouse";
 import {
   getWatchSettings,
   listEscalationRules,
   markGuildLeft,
   updateWatchSettings,
   upsertGuild,
-} from "./repo/guilds.js";
-import { guilds, modCases, quarantines } from "./schema.js";
-import { createTestDb } from "./testing.js";
+} from "./repo/guilds";
+import { guilds, modCases, quarantines } from "./schema";
+import { createTestDb } from "./testing";
 
 /**
  * Everything here runs as the least-privilege `garrison_bot` role, not the

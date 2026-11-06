@@ -1,12 +1,12 @@
 import { and, asc, eq } from "drizzle-orm";
-import type { Db } from "../client.js";
+import type { Db } from "../client";
 import {
   escalationRules,
   gatehouseSettings,
   guilds,
   type WatchSettings,
   watchSettings,
-} from "../schema.js";
+} from "../schema";
 
 /** Rules every new guild starts with. Staff can change them later. */
 export const DEFAULT_ESCALATION_RULES = [

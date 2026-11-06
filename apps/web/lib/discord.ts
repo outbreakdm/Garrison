@@ -1,0 +1,121 @@
+import "server-only";
+import { env } from "./env";
+import { canManage, type GuildSnapshot, memberPermissions } from "./permissions";
+
+const API = "https://discord.com/api/v10";
+export const OAUTH_SCOPES = "identify guilds";
+
+export function authorizeUrl(state: string, codeChallenge: string) {
+  const { DISCORD_CLIENT_ID, APP_URL } = env();
+  const params = new URLSearchParams({
+    client_id: DISCORD_CLIENT_ID,
+    response_type: "code",
+    redirect_uri: `${APP_URL}/auth/callback`,
+    scope: OAUTH_SCOPES,
+    state,
+    code_challenge: codeChallenge,
+    code_challenge_method: "S256",
+    prompt: "none",
+  });
+  return `https://discord.com/oauth2/authorize?${params}`;
+}
+
+async function discord<T>(path: string, init: RequestInit): Promise<T> {
+  const res = await fetch(`${API}${path}`, {
+    ...init,
+    cache: "no-store",
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!res.ok) throw new DiscordError(res.status, path);
+  return (await res.json()) as T;
+}
+
+export class DiscordError extends Error {
+  constructor(
+    readonly status: number,
+    path: string,
+  ) {
+    super(`Discord returned ${status} for ${path.split("?")[0]}`);
+  }
+}
+
+/** Exchange an OAuth code for a token. The token is used for two reads, then revoked. */
+export async function exchangeCode(code: string, codeVerifier: string) {
+  const { DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, APP_URL } = env();
+  return discord<{ access_token: string }>("/oauth2/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: `${APP_URL}/auth/callback`,
+      code_verifier: codeVerifier,
+      client_id: DISCORD_CLIENT_ID,
+      client_secret: DISCORD_CLIENT_SECRET,
+    }),
+  });
+}
+
+/** Revoke the user's token as soon as login is done: Garrison never keeps it. */
+export async function revokeToken(token: string) {
+  const { DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET } = env();
+  await fetch(`${API}/oauth2/token/revoke`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      token,
+      token_type_hint: "access_token",
+      client_id: DISCORD_CLIENT_ID,
+      client_secret: DISCORD_CLIENT_SECRET,
+    }),
+    signal: AbortSignal.timeout(8000),
+  }).catch(() => {});
+}
+
+export const fetchMe = (token: string) =>
+  discord<{ id: string; username: string; global_name: string | null }>("/users/@me", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+export const fetchMyGuilds = (token: string) =>
+  discord<{ id: string; owner: boolean; permissions: string }[]>("/users/@me/guilds", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+// --- Live permission checks, with the bot token ------------------------------
+
+const ACCESS_TTL_MS = 30_000;
+const accessCache = new Map<string, { ok: boolean; at: number }>();
+
+/**
+ * Can this user manage this server right now? Asked of Discord with the bot
+ * token, not taken from the login snapshot, so losing the role locks them out
+ * within ACCESS_TTL_MS. Fails closed on any error.
+ */
+export async function canManageGuildNow(guildId: string, userId: string): Promise<boolean> {
+  const key = `${guildId}:${userId}`;
+  const hit = accessCache.get(key);
+  if (hit && Date.now() - hit.at < ACCESS_TTL_MS) return hit.ok;
+
+  const bot = { headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` } };
+  let ok = false;
+  try {
+    const [guild, member] = await Promise.all([
+      discord<{ id: string; owner_id: string; roles: { id: string; permissions: string }[] }>(
+        `/guilds/${guildId}`,
+        bot,
+      ),
+      discord<{ roles: string[] }>(`/guilds/${guildId}/members/${userId}`, bot),
+    ]);
+    const snapshot: GuildSnapshot = {
+      ownerId: guild.owner_id,
+      everyoneRoleId: guild.id,
+      roles: guild.roles,
+    };
+    ok = canManage(memberPermissions(snapshot, userId, member.roles));
+  } catch {
+    ok = false;
+  }
+  accessCache.set(key, { ok, at: Date.now() });
+  return ok;
+}

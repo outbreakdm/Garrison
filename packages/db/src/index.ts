@@ -1,9 +1,10 @@
-export * from "./client.js";
-export * from "./repo/cases.js";
-export * from "./repo/gatehouse.js";
-export * from "./repo/guilds.js";
-export * from "./repo/ops.js";
-export * from "./repo/rally.js";
+export * from "./client";
+export * from "./repo/cases";
+export * from "./repo/gatehouse";
+export * from "./repo/guilds";
+export * from "./repo/ops";
+export * from "./repo/rally";
+export * from "./repo/web";
 export type {
   CaseAction,
   EscalationAction,
@@ -24,6 +25,7 @@ export type {
   Quarantine,
   RaidResponse,
   WatchSettings,
-} from "./schema.js";
-export * as schema from "./schema.js";
-export * from "./time.js";
+  WebSession,
+} from "./schema";
+export * as schema from "./schema";
+export * from "./time";

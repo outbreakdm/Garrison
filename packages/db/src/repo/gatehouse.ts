@@ -1,12 +1,12 @@
 import { and, eq, isNotNull, isNull, lte } from "drizzle-orm";
-import type { Db } from "../client.js";
+import type { Db } from "../client";
 import {
   type GatehouseSettings,
   gatehouseSettings,
   type LockdownSnapshotEntry,
   lockdowns,
   quarantines,
-} from "../schema.js";
+} from "../schema";
 
 export async function getGatehouseSettings(db: Db, guildId: string): Promise<GatehouseSettings> {
   const [row] = await db

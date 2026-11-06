@@ -1,6 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Saira+Semi+Condensed:wght@600;700&display=swap');
-
-/* Garrison components. Every value comes from tokens.css. Prefix: g- */
+/* Garrison components. Fonts load separately: css/fonts.css, or next/font in the dashboard. */
+/* Every value comes from tokens.css. Prefix: g- */
 
 .g-root { background: var(--bg); color: var(--text); font-family: var(--font-sans); font-size: 15px; line-height: 22px; padding: var(--space-4); }
 .g-row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }

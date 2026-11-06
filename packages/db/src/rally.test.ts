@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { Db } from "./client.js";
-import { upsertGuild } from "./repo/guilds.js";
+import type { Db } from "./client";
+import { upsertGuild } from "./repo/guilds";
 import {
   closeLfg,
   createLfgPost,
@@ -14,9 +14,9 @@ import {
   pickSlot,
   setLfgMessage,
   setLfgVoice,
-} from "./repo/rally.js";
-import { lfgMembers } from "./schema.js";
-import { createTestDb } from "./testing.js";
+} from "./repo/rally";
+import { lfgMembers } from "./schema";
+import { createTestDb } from "./testing";
 
 // Runs as garrison_bot, so missing grants fail here first.
 let db: Db;

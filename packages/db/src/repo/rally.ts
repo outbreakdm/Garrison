@@ -1,12 +1,6 @@
 import { and, asc, eq, inArray, isNotNull, isNull, lte } from "drizzle-orm";
-import type { Db } from "../client.js";
-import {
-  type LfgMember,
-  type LfgPost,
-  type LfgSlotGroup,
-  lfgMembers,
-  lfgPosts,
-} from "../schema.js";
+import type { Db } from "../client";
+import { type LfgMember, type LfgPost, type LfgSlotGroup, lfgMembers, lfgPosts } from "../schema";
 
 export const capacity = (slots: LfgSlotGroup[]) => slots.reduce((n, g) => n + g.count, 0);
 
