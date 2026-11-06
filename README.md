@@ -48,6 +48,10 @@ Planned: `apps/web` (Next.js dashboard and marketing site, using `@garrison/bran
 - Anti-nuke settings and the trusted list (`/security anti_nuke`, `trusted_add`…) are **owner-only**, so a compromised admin can't switch it off first. Keep Garrison's role at the top of the role list, or it can't strip roles above it.
 - Alerts go to `/security alert_channel`, or to the Watch log channel if none is set.
 
+### Health
+
+`/health` checks Garrison's permissions per module, its role position (roles with moderation powers above Garrison are anti-nuke's blind spot), the log and alert channels, the verify and staff roles, and whether protections are on. If permissions are wrong, a **Fix permissions** button re-invites Garrison with exactly the set it uses (never Administrator, and it warns if Garrison has it).
+
 ### Intents
 
 `Guilds`, `Guild Moderation` (audit log, for anti-nuke) and **Server Members** (privileged). Turn on _Server Members Intent_ under Bot in the Developer Portal, or login fails with "Used disallowed intents".

@@ -24,6 +24,7 @@ describe("command definitions", () => {
       "lockdown",
       "verify",
       "security",
+      "health",
     ]);
     expect(new Set(names).size).toBe(names.length);
   });
