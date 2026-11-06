@@ -3,6 +3,7 @@ import { PermissionFlagsBits } from "discord.js";
 import type { Command } from "../../../commands/types.js";
 import { formatDuration } from "../../../lib/duration.js";
 import { brandEmbed } from "../../../lib/embeds.js";
+import { safeText } from "../../../lib/text.js";
 import { actionNoun, NO_REASON } from "../copy.js";
 import { ephemeral, watchCommand } from "./shared.js";
 
@@ -31,7 +32,7 @@ export const history: Command = {
         `\`#${c.caseNumber}\``,
         actionNoun(c.action),
         c.durationSeconds ? formatDuration(c.durationSeconds) : null,
-        c.reason ?? NO_REASON,
+        c.reason ? safeText(c.reason) : NO_REASON,
         `<t:${Math.floor(c.createdAt.getTime() / 1000)}:R>`,
       ].filter(Boolean);
       const line = parts.join(" · ");

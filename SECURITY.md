@@ -13,7 +13,7 @@ Email the maintainer rather than opening a public issue. We'll confirm receipt w
 3. **History is tamper-evident.** The bot can create moderation cases and mark them undone, never edit or delete them.
 4. **Check before acting.** Role hierarchy and Garrison's own permissions are verified before any Discord action, and every action is recorded.
 5. **Reversible by default.** Destructive changes (lockdowns, timeouts, bans) save what they need to undo themselves.
-6. **User text is data.** Reasons and other input are echoed back without pinging anyone (`allowedMentions: { parse: [] }`), and never interpolated into SQL (Drizzle parameterises every query).
+6. **User text is data.** Anything a user typed goes through `safeText` (`apps/bot/src/lib/text.ts`) before it is shown, which escapes markdown, masked links ("[Free Nitro](evil)"), headings and mentions. Messages never ping by default (`allowedMentions: { parse: [] }`); the only exception pings an explicit list of user IDs. User text is never interpolated into SQL (Drizzle parameterises every query), and channel names built from it are reduced to plain letters and numbers.
 7. **Secrets stay out of git and logs.** `.env` is ignored; the logger redacts tokens, passwords and connection strings.
 
 ## Database
@@ -49,10 +49,12 @@ Then set `DATABASE_URL` to the pooled connection string with user `garrison_bot.
 - [ ] Check Garrison's own permissions and role position before acting, and say how to fix them.
 - [ ] Record the action (case, lockdown row or log) and post it to the log channel.
 - [ ] Prefer ephemeral replies for moderator-only information.
+- [ ] Run every piece of user-typed text through `safeText` before showing it.
+- [ ] Commands open to everyone (`guildCommand(..., null)`) need a spam limit, like Rally's one open group per person.
 
 ## Discord
 
-- Intents: `Guilds`, `Guild Moderation` and `Server Members` only. Message Content is not requested until automod needs it.
+- Intents: `Guilds`, `Guild Moderation`, `Guild Voice States` and `Server Members` only. Message Content is not requested until automod needs it.
 - Anti-nuke trusts only the owner, Garrison itself and the owner's trusted list. Changing anti-nuke settings and restoring a quarantine are owner/trusted-only, checked in code on every command and click. At the database level `garrison_bot` can update settings; the owner check lives in the bot.
 - Actions taken through Garrison are attributed to the moderator who ran them, not to Garrison, so Garrison can't be used to launder a mass ban.
 - Invite permissions are listed in the README; never request Administrator.

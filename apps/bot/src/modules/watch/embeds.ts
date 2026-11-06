@@ -3,6 +3,7 @@ import type { ModCase } from "@garrison/db";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, type EmbedBuilder } from "discord.js";
 import { formatDuration } from "../../lib/duration.js";
 import { brandEmbed } from "../../lib/embeds.js";
+import { safeText } from "../../lib/text.js";
 import {
   actionNoun,
   confirmationTitle,
@@ -42,7 +43,7 @@ function caseFields(c: ModCase) {
     const d = c.details as { channelId?: string; deleted?: number };
     fields.push({ name: "Deleted", value: `${d.deleted ?? 0} in <#${d.channelId}>`, inline: true });
   }
-  fields.push({ name: "Reason", value: c.reason ?? NO_REASON });
+  fields.push({ name: "Reason", value: c.reason ? safeText(c.reason) : NO_REASON });
   if (c.revokedAt) {
     fields.push({ name: "Undone", value: `by <@${c.revokedById}> ${ts(c.revokedAt)}` });
   }
@@ -68,7 +69,7 @@ export function confirmationEmbed(
   opts: { dmSent: boolean | null; escalated?: ModCase | null },
 ): EmbedBuilder {
   const action = c.action as MemberAction;
-  const lines = [`**Reason:** ${c.reason ?? NO_REASON}`];
+  const lines = [`**Reason:** ${c.reason ? safeText(c.reason) : NO_REASON}`];
   if (opts.dmSent === false) lines.push("I couldn't DM them: their DMs are closed.");
   if (opts.escalated) {
     const e = opts.escalated;
@@ -97,7 +98,7 @@ export function dmEmbed(opts: {
     tone: opts.action === "kick" || opts.action === "ban" ? "alert" : "caution",
     title: dmTitle(opts.action, opts.guildName, opts.durationSeconds),
     fields: [
-      { name: "Reason", value: opts.reason ?? NO_REASON },
+      { name: "Reason", value: opts.reason ? safeText(opts.reason) : NO_REASON },
       { name: "How to appeal", value: opts.appealText || DEFAULT_APPEAL_TEXT },
     ],
     module: "watch",

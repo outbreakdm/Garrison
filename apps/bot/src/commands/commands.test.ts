@@ -25,14 +25,17 @@ describe("command definitions", () => {
       "verify",
       "security",
       "health",
+      "lfg",
     ]);
     expect(new Set(names).size).toBe(names.length);
   });
 
-  it("keeps every command guild-only and permission-gated", () => {
+  it("keeps every command guild-only, and permission-gated unless it's meant for everyone", () => {
+    const forEveryone = new Set(["lfg"]);
     for (const { data } of commands) {
       expect(data.contexts).toEqual([0]);
-      expect(data.default_member_permissions).toMatch(/^\d+$/);
+      if (forEveryone.has(data.name)) expect(data.default_member_permissions).toBeNull();
+      else expect(data.default_member_permissions).toMatch(/^\d+$/);
       expect(data.description.length).toBeLessThanOrEqual(100);
     }
   });

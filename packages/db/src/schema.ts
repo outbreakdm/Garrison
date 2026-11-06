@@ -6,6 +6,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -214,3 +215,65 @@ export const quarantines = pgTable(
 ).enableRLS();
 
 export type Quarantine = typeof quarantines.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Rally (LFG)
+// ---------------------------------------------------------------------------
+
+export const lfgStatus = pgEnum("lfg_status", ["open", "full", "closed", "expired"]);
+
+/** A slot group on an LFG post, e.g. { name: "Tank", count: 1 }. Unnamed groups use "". */
+export interface LfgSlotGroup {
+  name: string;
+  count: number;
+}
+
+export const lfgPosts = pgTable(
+  "lfg_posts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    channelId: text("channel_id").notNull(),
+    /** The card message. Set right after posting it. */
+    messageId: text("message_id"),
+    hostId: text("host_id").notNull(),
+    title: text("title").notNull(),
+    note: text("note"),
+    slots: jsonb("slots").$type<LfgSlotGroup[]>().notNull(),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    status: lfgStatus("status").notNull().default("open"),
+    /** Voice channel Garrison created for the full squad. Garrison deletes only channels recorded here. */
+    voiceChannelId: text("voice_channel_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("lfg_posts_guild_status").on(t.guildId, t.status),
+    // One open group per host per server keeps /lfg from being a spam vector.
+    uniqueIndex("lfg_posts_one_open_per_host")
+      .on(t.guildId, t.hostId)
+      .where(sql`${t.status} in ('open', 'full')`),
+  ],
+).enableRLS();
+
+/** Who joined which post. Leaving sets `leftAt` instead of deleting, so the bot needs no DELETE. */
+export const lfgMembers = pgTable(
+  "lfg_members",
+  {
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => lfgPosts.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    slotName: text("slot_name").notNull(),
+    joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
+    leftAt: timestamp("left_at", { withTimezone: true }),
+  },
+  (t) => [primaryKey({ columns: [t.postId, t.userId] })],
+).enableRLS();
+
+export type LfgPost = typeof lfgPosts.$inferSelect;
+export type LfgMember = typeof lfgMembers.$inferSelect;
+export type LfgStatus = (typeof lfgStatus.enumValues)[number];

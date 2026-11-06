@@ -2,12 +2,17 @@ export * from "./client.js";
 export * from "./repo/cases.js";
 export * from "./repo/gatehouse.js";
 export * from "./repo/guilds.js";
+export * from "./repo/rally.js";
 export type {
   CaseAction,
   EscalationAction,
   EscalationRule,
   GatehouseSettings,
   Guild,
+  LfgMember,
+  LfgPost,
+  LfgSlotGroup,
+  LfgStatus,
   Lockdown,
   LockdownSnapshotEntry,
   ModCase,

@@ -23,7 +23,7 @@ Planned: `apps/web` (Next.js dashboard and marketing site, using `@garrison/bran
 | Watch         | Moderation        | **Built** | `/warn` `/timeout` `/kick` `/ban` `/purge` `/case` `/history` `/moderation` |
 | Gatehouse     | Security          | **Built** | `/lockdown` `/verify` `/security`                                           |
 | Ledger        | Logs              | Planned   | `/logs`                                                                     |
-| Rally         | Looking for group | Planned   | `/lfg`                                                                      |
+| Rally         | Looking for group | **Built** | `/lfg`                                                                      |
 | Ops           | Events            | Planned   | `/event` `/raid`                                                            |
 | Barracks      | Members           | Planned   | `/link` `/roster`                                                           |
 | Ranks         | Leveling          | Planned   | `/rank` `/leaderboard`                                                      |
@@ -48,13 +48,20 @@ Planned: `apps/web` (Next.js dashboard and marketing site, using `@garrison/bran
 - Anti-nuke settings and the trusted list (`/security anti_nuke`, `trusted_add`…) are **owner-only**, so a compromised admin can't switch it off first. Keep Garrison's role at the top of the role list, or it can't strip roles above it.
 - Alerts go to `/security alert_channel`, or to the Watch log channel if none is set.
 
+### Rally
+
+- **`/lfg create`** posts a card anyone can join: numbered slots (`size:5`) or roles (`roles:Tank 1, Healer 1, DPS 3`), a start time (`starts:10m`) and a note (`note:rank Gold+`). Buttons: **Join as …**, **Leave**, **Close group**. The card shows Open, 1 left or Full.
+- When the squad fills, Garrison opens a voice channel only the squad can join, and pings just those members: "Squad's full. Voice is open." Empty squad channels are removed after 5 min. Garrison only deletes channels it recorded creating.
+- One open group per person per server. Groups close 3 h after they start, or when the host leaves.
+- `/lfg list` shows open groups; `/lfg close` closes yours. The host or anyone with Manage Messages can close a card.
+
 ### Health
 
 `/health` checks Garrison's permissions per module, its role position (roles with moderation powers above Garrison are anti-nuke's blind spot), the log and alert channels, the verify and staff roles, and whether protections are on. If permissions are wrong, a **Fix permissions** button re-invites Garrison with exactly the set it uses (never Administrator, and it warns if Garrison has it).
 
 ### Intents
 
-`Guilds`, `Guild Moderation` (audit log, for anti-nuke) and **Server Members** (privileged). Turn on _Server Members Intent_ under Bot in the Developer Portal, or login fails with "Used disallowed intents".
+`Guilds`, `Guild Moderation` (audit log, for anti-nuke), `Guild Voice States` (Rally) and **Server Members** (privileged). Turn on _Server Members Intent_ under Bot in the Developer Portal, or login fails with "Used disallowed intents".
 
 ## Getting started
 
@@ -68,7 +75,7 @@ pnpm commands:deploy        # register slash commands
 pnpm dev                    # run the bot with reload
 ```
 
-**Discord app setup:** create an application in the [Developer Portal](https://discord.com/developers/applications), add a bot, and invite it with the `bot` and `applications.commands` scopes plus these permissions: Moderate Members, Kick Members, Ban Members, Manage Messages, Manage Channels, Manage Roles, Manage Server (to pause invites), View Audit Log (for anti-nuke), Read Message History, Send Messages, Embed Links. Drag Garrison's role above the roles it moderates.
+**Discord app setup:** create an application in the [Developer Portal](https://discord.com/developers/applications), add a bot, and invite it with the `bot` and `applications.commands` scopes plus these permissions: Moderate Members, Kick Members, Ban Members, Manage Messages, Manage Channels, Manage Roles, Manage Server (to pause invites), View Audit Log (for anti-nuke), Connect (Rally voice), Read Message History, Send Messages, Embed Links. Drag Garrison's role above the roles it moderates.
 
 **Supabase:** project `Garrison` (`pijtbyfnhdxhtyidgcda`, us-west-2) has every migration applied. The bot runs as the least-privilege `garrison_bot` role, and the public Data API can reach nothing. Enable the role's login once as described in [SECURITY.md](SECURITY.md#enabling-the-bot-role).
 

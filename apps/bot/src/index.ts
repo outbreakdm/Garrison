@@ -7,6 +7,7 @@ import { ensureGuild, forgetGuild } from "./lib/guild-registry.js";
 import { createLogger } from "./lib/logger.js";
 import { handleAuditLogEntry } from "./modules/gatehouse/anti-nuke.js";
 import { handleMemberJoin, sweepExpiredLockdowns } from "./modules/gatehouse/service.js";
+import { sweepRally } from "./modules/rally/service.js";
 
 const env = loadEnv();
 const logger = createLogger(env.LOG_LEVEL);
@@ -21,6 +22,8 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildModeration,
+    // Not privileged. Rally needs it to see when a squad voice channel is empty.
+    GatewayIntentBits.GuildVoiceStates,
   ],
   // Never ping from bot messages. Reasons and other user-typed text are echoed
   // back, and must not be able to trigger @everyone, role or user pings.
@@ -38,10 +41,12 @@ client.once(Events.ClientReady, async (ready) => {
     );
   }
   // Lift lockdowns whose time is up, including any that expired while we were offline.
-  const sweep = () =>
-    sweepExpiredLockdowns(ctx, ready).catch((error) =>
+  const sweep = async () => {
+    await sweepExpiredLockdowns(ctx, ready).catch((error) =>
       logger.error("Lockdown sweep failed", { error }),
     );
+    await sweepRally(ctx, ready).catch((error) => logger.error("Rally sweep failed", { error }));
+  };
   await sweep();
   sweepTimer = setInterval(sweep, SWEEP_INTERVAL_MS);
 });

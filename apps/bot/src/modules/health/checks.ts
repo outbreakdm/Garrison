@@ -21,6 +21,7 @@ export const REQUIRED_PERMISSIONS: { module: string; bits: bigint; why: string }
     bits: P.ManageChannels | P.ManageRoles | P.ManageGuild | P.ViewAuditLog,
     why: "for lockdowns, verification, pausing invites and anti-nuke",
   },
+  { module: "Rally", bits: P.Connect, why: "to open voice channels for full squads" },
 ];
 
 export const ALL_REQUIRED = REQUIRED_PERMISSIONS.reduce((acc, r) => acc | r.bits, 0n);

@@ -2,6 +2,7 @@ import type { GatehouseSettings, Lockdown } from "@garrison/db";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, type EmbedBuilder } from "discord.js";
 import { formatDuration } from "../../lib/duration.js";
 import { brandEmbed } from "../../lib/embeds.js";
+import { safeText } from "../../lib/text.js";
 import { describeAccountAge } from "./plan.js";
 
 export const VERIFY_BUTTON_ID = "gate:verify";
@@ -33,7 +34,7 @@ export function lockdownStartedEmbed(
     tone: "alert",
     title: opts.raid ? "Server locked: raid detected" : "Server locked",
     description: lines.join("\n"),
-    fields: [{ name: "Reason", value: l.reason ?? "No reason given" }],
+    fields: [{ name: "Reason", value: l.reason ? safeText(l.reason) : "No reason given" }],
     module: "gatehouse",
     ref: lockdownRef(l),
     timestamp: l.startedAt,
