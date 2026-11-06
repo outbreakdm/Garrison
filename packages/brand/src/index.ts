@@ -152,3 +152,26 @@ export function inviteUrl(clientId: string, guildId?: string) {
   }
   return `https://discord.com/oauth2/authorize?${params}`;
 }
+
+/**
+ * Game accounts Barracks understands. `discord` ones arrive through the
+ * member's Discord Connections; the rest are linked directly.
+ */
+export const linkProviders = {
+  steam: { label: "Steam", via: "discord" },
+  battlenet: { label: "Battle.net", via: "discord" },
+  riotgames: { label: "Riot Games", via: "discord" },
+  leagueoflegends: { label: "League of Legends", via: "discord" },
+  xbox: { label: "Xbox", via: "discord" },
+  playstation: { label: "PlayStation", via: "discord" },
+  epicgames: { label: "Epic Games", via: "discord" },
+  bungie: { label: "Bungie", via: "discord" },
+  roblox: { label: "Roblox", via: "discord" },
+  osrs: { label: "Old School RuneScape", via: "claimed" },
+  wow: { label: "World of Warcraft", via: "battlenet" },
+} as const;
+
+export type LinkProvider = keyof typeof linkProviders;
+export const discordConnectionProviders = Object.entries(linkProviders)
+  .filter(([, p]) => p.via === "discord")
+  .map(([key]) => key);

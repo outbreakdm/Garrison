@@ -17,7 +17,7 @@ export function proxy(request: NextRequest) {
     "connect-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
-    "form-action 'self' https://discord.com",
+    "form-action 'self' https://discord.com https://oauth.battle.net",
     "frame-ancestors 'none'",
     ...(isDev ? [] : ["upgrade-insecure-requests"]),
   ].join("; ");

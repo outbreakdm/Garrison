@@ -24,7 +24,7 @@ packages/
 | Ledger        | Logs              | **Built** | `/logs`                                                                     |
 | Rally         | Looking for group | **Built** | `/lfg`                                                                      |
 | Ops           | Events            | **Built** | `/raid`                                                                     |
-| Barracks      | Members           | Planned   | `/link` `/roster`                                                           |
+| Barracks      | Members           | **Built** | `/link` `/unlink` `/roster`                                                 |
 | Ranks         | Leveling          | **Built** | `/rank` `/leaderboard`                                                      |
 | Quartermaster | AI builder        | **Built** | `/qm`                                                                       |
 
@@ -62,6 +62,14 @@ packages/
 - **Reminders** 24 h and 30 min before ping only the players signed up, never the bench or anyone else.
 - Weekly raids repost themselves after each run at the same local time, across daylight-saving changes.
 - `/raid list` shows what's coming up. The host or anyone with Manage Events can cancel. A server can hold 25 scheduled raids.
+
+### Barracks
+
+- **Opt-in per server.** `/link` in a server shares your linked accounts with that server's roster; `/link share visible:false` hides them. Members can remove any link or stop sharing on their dashboard **Account** page.
+- **Verified, from Discord Connections:** `/link accounts` opens the Account page, where **Link from Discord Connections** imports the verified game accounts in Discord → Settings → Connections (Steam, Battle.net, Riot, Xbox, PlayStation, Epic, Bungie, Roblox). Only this flow asks Discord for `connections`; ordinary sign-in never does.
+- **Verified, World of Warcraft:** Battle.net sign-in imports characters with level, class and realm. Turns on when `BNET_CLIENT_ID` and `BNET_CLIENT_SECRET` are set; register `APP_URL/auth/battlenet/callback` as the redirect.
+- **Claimed, Old School RuneScape:** `/link osrs name:Zezima` shows total and combat level from the public hiscores, refreshed every 6 h. OSRS can't prove ownership, so it's labelled claimed.
+- `/roster [game]` lists what members shared; the dashboard's Barracks page shows the same with verified or claimed badges. No Discord or Battle.net token is ever stored.
 
 ### Quartermaster
 

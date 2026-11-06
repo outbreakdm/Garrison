@@ -1,4 +1,5 @@
 export * from "./client";
+export * from "./repo/barracks";
 export * from "./repo/cases";
 export * from "./repo/gatehouse";
 export * from "./repo/guilds";
@@ -21,6 +22,7 @@ export type {
   LfgPost,
   LfgSlotGroup,
   LfgStatus,
+  LinkedAccount,
   Lockdown,
   LockdownSnapshotEntry,
   MemberXp,
@@ -38,6 +40,7 @@ export type {
   RaidResponse,
   RankReward,
   RanksSettings,
+  RosterShare,
   SettingsChange,
   SettingsDiff,
   SettingsModule,

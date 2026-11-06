@@ -4,13 +4,14 @@ import { canManage, type GuildSnapshot, memberPermissions } from "./permissions"
 
 export const OAUTH_SCOPES = "identify guilds";
 
-export function authorizeUrl(state: string, codeChallenge: string) {
+/** `scope` defaults to sign-in. Linking accounts asks for `identify connections` instead, and only then. */
+export function authorizeUrl(state: string, codeChallenge: string, scope: string = OAUTH_SCOPES) {
   const { DISCORD_CLIENT_ID, APP_URL } = env();
   const params = new URLSearchParams({
     client_id: DISCORD_CLIENT_ID,
     response_type: "code",
     redirect_uri: `${APP_URL}/auth/callback`,
-    scope: OAUTH_SCOPES,
+    scope,
     state,
     code_challenge: codeChallenge,
     code_challenge_method: "S256",
@@ -75,6 +76,9 @@ export const fetchMe = (token: string) =>
   discord<{ id: string; username: string; global_name: string | null }>("/users/@me", {
     headers: { Authorization: `Bearer ${token}` },
   });
+
+export const fetchMyConnections = (token: string) =>
+  discord<unknown>("/users/@me/connections", { headers: { Authorization: `Bearer ${token}` } });
 
 export const fetchMyGuilds = (token: string) =>
   discord<{ id: string; owner: boolean; permissions: string }[]>("/users/@me/guilds", {

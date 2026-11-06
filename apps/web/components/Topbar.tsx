@@ -8,7 +8,9 @@ export function Topbar({ username, guildName }: { username: string; guildName?: 
       </a>
       {guildName ? <span className="g-badge">{guildName}</span> : null}
       <span className="topbar__spacer" />
-      <span className="topbar__user">{username}</span>
+      <a className="topbar__user" href="/account">
+        {username}
+      </a>
       {/* POST + Origin check + SameSite cookie: logout can't be triggered cross-site. */}
       <form method="post" action="/auth/logout">
         <button type="submit" className="g-btn g-btn--ghost">

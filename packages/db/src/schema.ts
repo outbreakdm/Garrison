@@ -587,3 +587,58 @@ export const qmBuilds = pgTable(
 
 export type QmBuild = typeof qmBuilds.$inferSelect;
 export type QmStatus = (typeof qmStatus.enumValues)[number];
+
+// ---------------------------------------------------------------------------
+// Barracks (linked game accounts)
+// ---------------------------------------------------------------------------
+
+export const linkSource = pgEnum("link_source", ["discord", "battlenet", "claimed"]);
+
+/**
+ * A game account a member linked. User-level, not per server: whether a
+ * server can see it is decided by roster_shares. Never stores tokens.
+ * Removing a link sets removed_at.
+ */
+export const linkedAccounts = pgTable(
+  "linked_accounts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    /** steam, battlenet, riotgames, xbox, playstation, epicgames, osrs, wow, ... */
+    provider: text("provider").notNull(),
+    /** The provider's ID, or for OSRS the lowercased name, or for WoW region:realm:name. */
+    accountId: text("account_id").notNull(),
+    displayName: text("display_name").notNull(),
+    /** True when the provider proved ownership (Discord Connections, Battle.net sign-in). */
+    verified: boolean("verified").notNull(),
+    source: linkSource("source").notNull(),
+    /** Game details shown in rosters, e.g. OSRS total level, WoW level and class. */
+    details: jsonb("details").$type<Record<string, unknown>>().notNull().default({}),
+    refreshedAt: timestamp("refreshed_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("linked_accounts_unique").on(t.userId, t.provider, t.accountId),
+    index("linked_accounts_user").on(t.userId),
+  ],
+).enableRLS();
+
+/** A member's consent to show their linked accounts in one server's roster. */
+export const rosterShares = pgTable(
+  "roster_shares",
+  {
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    /** Last-known username, for rosters. */
+    username: text("username").notNull().default(""),
+    sharedAt: timestamp("shared_at", { withTimezone: true }).notNull().defaultNow(),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+  },
+  (t) => [primaryKey({ columns: [t.guildId, t.userId] }), index("roster_shares_user").on(t.userId)],
+).enableRLS();
+
+export type LinkedAccount = typeof linkedAccounts.$inferSelect;
+export type RosterShare = typeof rosterShares.$inferSelect;

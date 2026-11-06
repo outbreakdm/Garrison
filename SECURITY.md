@@ -70,6 +70,14 @@ Then set `DATABASE_URL` to the pooled connection string with user `garrison_bot.
 - **Headers:** a per-request nonce CSP (`script-src 'nonce-…' 'strict-dynamic'`, no `unsafe-inline`, `frame-ancestors 'none'`), HSTS, `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: same-origin`, COOP, a locked-down Permissions-Policy, and no `X-Powered-By`. Fonts are self-hosted, so nothing loads from third parties.
 - Secret-holding modules import `server-only`, so they can't reach the browser bundle. User text is rendered by React, which escapes it.
 
+## Barracks (linked accounts)
+
+- **Consent per server:** a member's links appear in a server's roster only after they share with it, and they can stop at any time. The dashboard cannot share on a member's behalf (no `INSERT` on `roster_shares` for `garrison_web`).
+- **Least data:** Discord Connections are imported only from a separate sign-in that asks for `identify connections`, and only verified, non-revoked game accounts are kept. Battle.net imports character name, realm, level, class and faction. Tokens are used once and never stored.
+- **Honest labels:** links proven by Discord or Battle.net are "verified"; OSRS links are "claimed".
+- Members can only remove their own links: every dashboard action is scoped to the signed-in user's ID, and the end-to-end check tries to remove someone else's.
+- External APIs are called politely: OSRS hiscores at most one request every 1.5 s, refreshed in small batches.
+
 ## Quartermaster (AI)
 
 - **The model proposes; Garrison decides.** Claude returns a structured plan (`output_config.format` with a Zod schema), and `validatePlan` then enforces every rule itself: known kinds only, refs that point backwards, existing IDs that really exist, cleaned names, numeric limits, Discord's channel and role caps. One problem rejects the whole plan.

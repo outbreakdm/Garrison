@@ -10,6 +10,7 @@ const ITEMS = [
   { group: null, href: "/gatehouse", name: modules.gatehouse.name, plain: modules.gatehouse.plain },
   { group: null, href: "/ledger", name: modules.ledger.name, plain: modules.ledger.plain },
   { group: "Rally", href: "/rally", name: modules.rally.name, plain: "LFG and events" },
+  { group: null, href: "/barracks", name: modules.barracks.name, plain: modules.barracks.plain },
   { group: null, href: "/ranks", name: modules.ranks.name, plain: modules.ranks.plain },
   {
     group: "Configure",

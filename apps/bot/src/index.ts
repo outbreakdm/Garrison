@@ -5,6 +5,7 @@ import { loadEnv } from "./env.js";
 import { handleInteraction } from "./interactions.js";
 import { ensureGuild, forgetGuild } from "./lib/guild-registry.js";
 import { createLogger } from "./lib/logger.js";
+import { refreshOsrs } from "./modules/barracks/refresh.js";
 import { handleAuditLogEntry } from "./modules/gatehouse/anti-nuke.js";
 import { handleMemberJoin, sweepExpiredLockdowns } from "./modules/gatehouse/service.js";
 import {
@@ -70,6 +71,7 @@ client.once(Events.ClientReady, async (ready) => {
     await sweepRally(ctx, ready).catch((error) => logger.error("Rally sweep failed", { error }));
     await sweepOps(ctx, ready).catch((error) => logger.error("Ops sweep failed", { error }));
     await maybePruneLedger(ctx).catch((error) => logger.error("Ledger prune failed", { error }));
+    await refreshOsrs(ctx).catch((error) => logger.error("OSRS refresh failed", { error }));
   };
   await sweep();
   sweepTimer = setInterval(sweep, SWEEP_INTERVAL_MS);

@@ -8,6 +8,8 @@ const ERRORS: Record<string, string> = {
   denied: "Discord sign-in was cancelled.",
   state: "That sign-in link expired or was tampered with. Try again.",
   discord: "Discord didn't answer. Try again in a moment.",
+  mismatch:
+    "You approved with a different Discord account than the one signed in here. Sign in with that account first.",
 };
 
 export default async function LoginPage({

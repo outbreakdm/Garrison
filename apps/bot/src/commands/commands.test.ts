@@ -32,12 +32,15 @@ describe("command definitions", () => {
       "ranks",
       "logs",
       "qm",
+      "link",
+      "unlink",
+      "roster",
     ]);
     expect(new Set(names).size).toBe(names.length);
   });
 
   it("keeps every command guild-only, and permission-gated unless it's meant for everyone", () => {
-    const forEveryone = new Set(["lfg", "rank", "leaderboard"]);
+    const forEveryone = new Set(["lfg", "rank", "leaderboard", "link", "unlink", "roster"]);
     for (const { data } of commands) {
       expect(data.contexts).toEqual([0]);
       if (forEveryone.has(data.name)) expect(data.default_member_permissions).toBeNull();

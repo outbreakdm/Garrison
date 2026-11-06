@@ -1,3 +1,4 @@
+import { link, roster, unlink } from "../modules/barracks/commands.js";
 import { gatehouseButtons, gatehouseCommands } from "../modules/gatehouse/commands/index.js";
 import { health } from "../modules/health/command.js";
 import { logs } from "../modules/ledger/commands.js";
@@ -19,6 +20,9 @@ export const commands: Command[] = [
   ranks,
   logs,
   qm,
+  link,
+  unlink,
+  roster,
 ];
 export const buttons: ButtonHandler[] = [
   ...watchButtons,

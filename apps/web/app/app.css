@@ -424,3 +424,18 @@ textarea.g-input {
     display: none;
   }
 }
+a.topbar__user {
+  text-decoration: none;
+  color: var(--text-muted);
+}
+a.topbar__user:hover {
+  color: var(--text);
+}
+.list-row {
+  align-items: center;
+}
+.g-table td:has(form) {
+  padding-top: 4px;
+  padding-bottom: 4px;
+  vertical-align: middle;
+}
