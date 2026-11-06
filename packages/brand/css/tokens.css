@@ -1,0 +1,51 @@
+/* Garrison design tokens. Source of truth: the Garrison design system (tokens.json). */
+:root, [data-theme="dark"] {
+  --accent: #d4ff3a;
+  --accent-strong: #d4ff3a;
+  --accent-ink: #0b0d10;
+  --bg: #0b0d10;
+  --surface: #12161b;
+  --surface-raised: #1a2028;
+  --line: #2a323d;
+  --text: #e8ecf1;
+  --text-muted: #8c96a3;
+  --go: #2bd99f;
+  --caution: #ffb547;
+  --alert: #ff5c5c;
+  --intel: #5ab0ff;
+  --focus: var(--accent);
+  --shadow-overlay: 0 8px 24px rgba(0,0,0,0.5);
+}
+[data-theme="light"] {
+  --accent: #d4ff3a;
+  --accent-strong: #4d6b00;
+  --accent-ink: #0b0d10;
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --surface-raised: #edf0f3;
+  --line: #d5dbe2;
+  --text: #11151a;
+  --text-muted: #5a6472;
+  --go: #0b7a57;
+  --caution: #9a5b00;
+  --alert: #c62828;
+  --intel: #1f6fc5;
+  --focus: var(--accent-strong);
+  --shadow-overlay: 0 8px 24px rgba(17,21,26,0.12);
+}
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --chamfer: 8px;
+  --font-display: "Saira Semi Condensed", "Arial Narrow", sans-serif;
+  --font-sans: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}

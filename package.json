@@ -1,0 +1,27 @@
+{
+  "name": "garrison",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @garrison/bot dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "db:generate": "pnpm --filter @garrison/db generate",
+    "db:migrate": "pnpm --filter @garrison/db migrate",
+    "commands:deploy": "pnpm --filter @garrison/bot commands:deploy"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.6",
+    "@types/node": "^22.20.5",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  },
+  "type": "module"
+}
