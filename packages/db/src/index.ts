@@ -4,6 +4,7 @@ export * from "./repo/gatehouse";
 export * from "./repo/guilds";
 export * from "./repo/ops";
 export * from "./repo/rally";
+export * from "./repo/ranks";
 export * from "./repo/settings";
 export * from "./repo/web";
 export type {
@@ -18,6 +19,7 @@ export type {
   LfgStatus,
   Lockdown,
   LockdownSnapshotEntry,
+  MemberXp,
   ModCase,
   NewModCase,
   OpsEvent,
@@ -25,6 +27,8 @@ export type {
   OpsSignup,
   Quarantine,
   RaidResponse,
+  RankReward,
+  RanksSettings,
   SettingsChange,
   SettingsDiff,
   SettingsModule,

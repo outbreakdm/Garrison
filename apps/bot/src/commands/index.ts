@@ -2,10 +2,20 @@ import { gatehouseButtons, gatehouseCommands } from "../modules/gatehouse/comman
 import { health } from "../modules/health/command.js";
 import { opsButtons, opsModals, raid } from "../modules/ops/commands.js";
 import { lfg, rallyButtons } from "../modules/rally/commands.js";
+import { leaderboard, rank, ranks } from "../modules/ranks/commands.js";
 import { watchButtons, watchCommands } from "../modules/watch/commands/index.js";
 import type { ButtonHandler, Command, ModalHandler } from "./types.js";
 
-export const commands: Command[] = [...watchCommands, ...gatehouseCommands, health, lfg, raid];
+export const commands: Command[] = [
+  ...watchCommands,
+  ...gatehouseCommands,
+  health,
+  lfg,
+  raid,
+  rank,
+  leaderboard,
+  ranks,
+];
 export const buttons: ButtonHandler[] = [
   ...watchButtons,
   ...gatehouseButtons,

@@ -9,6 +9,7 @@ import { handleAuditLogEntry } from "./modules/gatehouse/anti-nuke.js";
 import { handleMemberJoin, sweepExpiredLockdowns } from "./modules/gatehouse/service.js";
 import { sweepOps } from "./modules/ops/service.js";
 import { sweepRally } from "./modules/rally/service.js";
+import { handleMessage } from "./modules/ranks/service.js";
 
 const env = loadEnv();
 const logger = createLogger(env.LOG_LEVEL);
@@ -25,6 +26,8 @@ const client = new Client({
     GatewayIntentBits.GuildModeration,
     // Not privileged. Rally needs it to see when a squad voice channel is empty.
     GatewayIntentBits.GuildVoiceStates,
+    // Not privileged, and without Message Content: Ranks only needs who posted and when.
+    GatewayIntentBits.GuildMessages,
   ],
   // Never ping from bot messages. Reasons and other user-typed text are echoed
   // back, and must not be able to trigger @everyone, role or user pings.
@@ -56,6 +59,12 @@ client.once(Events.ClientReady, async (ready) => {
 client.on(Events.GuildAuditLogEntryCreate, (entry, guild) =>
   handleAuditLogEntry(ctx, entry, guild).catch((error) =>
     logger.error("Anti-nuke handling failed", { guildId: guild.id, error }),
+  ),
+);
+
+client.on(Events.MessageCreate, (message) =>
+  handleMessage(ctx, message).catch((error) =>
+    logger.error("Ranks failed", { guildId: message.guildId, error }),
   ),
 );
 

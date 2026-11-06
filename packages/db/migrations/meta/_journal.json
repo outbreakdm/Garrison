@@ -64,6 +64,13 @@
       "when": 1793994914615,
       "tag": "0008_settings_history",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793995746537,
+      "tag": "0009_ranks",
+      "breakpoints": true
     }
   ]
 }

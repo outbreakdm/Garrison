@@ -25,7 +25,7 @@ packages/
 | Rally         | Looking for group | **Built** | `/lfg`                                                                      |
 | Ops           | Events            | **Built** | `/raid`                                                                     |
 | Barracks      | Members           | Planned   | `/link` `/roster`                                                           |
-| Ranks         | Leveling          | Planned   | `/rank` `/leaderboard`                                                      |
+| Ranks         | Leveling          | **Built** | `/rank` `/leaderboard`                                                      |
 | Quartermaster | AI builder        | Planned   | `/qm`                                                                       |
 
 ### Watch
@@ -63,13 +63,21 @@ packages/
 - Weekly raids repost themselves after each run at the same local time, across daylight-saving changes.
 - `/raid list` shows what's coming up. The host or anyone with Manage Events can cancel. A server can hold 25 scheduled raids.
 
+### Ranks
+
+- **Off by default.** Turn it on with `/ranks settings enabled:true`. Members then earn 15–25 XP for chatting, at most once a minute. The cooldown is enforced in the database, so spam and multiple bot processes can't farm XP. Only who posted and when is used: no message content.
+- **`/rank [user]`** shows level, progress, rank, total XP and messages. **`/leaderboard`** shows the top 10. Both are open to everyone, one lookup per person every 10 s.
+- **Level-ups** are announced where the member leveled up, in one channel, or not at all, and never ping.
+- **Rewards:** `/ranks reward level:10 role:@Veteran` gives a role at a level (`unreward`, `rewards` to manage). Roles with moderation or admin powers, integration roles and roles above Garrison are refused when set _and_ skipped at grant time, so editing a reward role later can't hand out power.
+- The dashboard has a Ranks page with the leaderboard and rewards.
+
 ### Health
 
 `/health` checks Garrison's permissions per module, its role position (roles with moderation powers above Garrison are anti-nuke's blind spot), the log and alert channels, the verify and staff roles, and whether protections are on. If permissions are wrong, a **Fix permissions** button re-invites Garrison with exactly the set it uses (never Administrator, and it warns if Garrison has it).
 
 ### Intents
 
-`Guilds`, `Guild Moderation` (audit log, for anti-nuke), `Guild Voice States` (Rally) and **Server Members** (privileged). Turn on _Server Members Intent_ under Bot in the Developer Portal, or login fails with "Used disallowed intents".
+`Guilds`, `Guild Moderation` (audit log, for anti-nuke), `Guild Voice States` (Rally), `Guild Messages` (Ranks, without Message Content) and **Server Members** (privileged). Turn on _Server Members Intent_ under Bot in the Developer Portal, or login fails with "Used disallowed intents".
 
 ## Dashboard
 

@@ -413,3 +413,58 @@ export const settingsChanges = pgTable(
 
 export type SettingsChange = typeof settingsChanges.$inferSelect;
 export type SettingsModule = (typeof settingsModule.enumValues)[number];
+
+// ---------------------------------------------------------------------------
+// Ranks (leveling)
+// ---------------------------------------------------------------------------
+
+export const announceMode = pgEnum("announce_mode", ["off", "same_channel", "channel"]);
+
+export const ranksSettings = pgTable("ranks_settings", {
+  guildId: text("guild_id")
+    .primaryKey()
+    .references(() => guilds.id, { onDelete: "cascade" }),
+  /** Off by default: counting messages is the server's choice. */
+  enabled: boolean("enabled").notNull().default(false),
+  announce: announceMode("announce").notNull().default("same_channel"),
+  announceChannelId: text("announce_channel_id"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
+
+/** Role given at a level. A removed reward keeps its row with `roleId` null, so the bot needs no DELETE. */
+export const rankRewards = pgTable(
+  "rank_rewards",
+  {
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    level: integer("level").notNull(),
+    roleId: text("role_id"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.guildId, t.level] })],
+).enableRLS();
+
+export const memberXp = pgTable(
+  "member_xp",
+  {
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    /** Last seen username, so the dashboard can show names without asking Discord. */
+    username: text("username").notNull().default(""),
+    xp: integer("xp").notNull().default(0),
+    level: integer("level").notNull().default(0),
+    messages: integer("messages").notNull().default(0),
+    lastXpAt: timestamp("last_xp_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.guildId, t.userId] }),
+    index("member_xp_guild_xp").on(t.guildId, t.xp),
+  ],
+).enableRLS();
+
+export type RanksSettings = typeof ranksSettings.$inferSelect;
+export type RankReward = typeof rankRewards.$inferSelect;
+export type MemberXp = typeof memberXp.$inferSelect;
