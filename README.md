@@ -64,7 +64,11 @@ pnpm dev                    # run the bot with reload
 
 **Discord app setup:** create an application in the [Developer Portal](https://discord.com/developers/applications), add a bot, and invite it with the `bot` and `applications.commands` scopes plus these permissions: Moderate Members, Kick Members, Ban Members, Manage Messages, Manage Channels, Manage Roles, Manage Server (to pause invites), Read Message History, Send Messages, Embed Links. Drag Garrison's role above the roles it moderates.
 
-**Supabase:** project `Garrison` (`pijtbyfnhdxhtyidgcda`, us-west-2) has every migration applied. Every table has row-level security on with no policies, so the public API exposes nothing. The bot connects with the database connection string, not the anon key.
+**Supabase:** project `Garrison` (`pijtbyfnhdxhtyidgcda`, us-west-2) has every migration applied. The bot runs as the least-privilege `garrison_bot` role, and the public Data API can reach nothing. Enable the role's login once as described in [SECURITY.md](SECURITY.md#enabling-the-bot-role).
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for the principles and the checklists for new tables and commands.
 
 ## Scripts
 

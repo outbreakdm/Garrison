@@ -14,7 +14,12 @@ const ctx: BotContext = { db, logger };
 
 // Guild Members is privileged: turn on "Server Members Intent" in the Developer Portal.
 // Gatehouse needs it to see joins. Automod will need Message Content later.
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
+  // Never ping from bot messages. Reasons and other user-typed text are echoed
+  // back, and must not be able to trigger @everyone, role or user pings.
+  allowedMentions: { parse: [], repliedUser: false },
+});
 
 const SWEEP_INTERVAL_MS = 60_000;
 let sweepTimer: NodeJS.Timeout | undefined;

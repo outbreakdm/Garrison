@@ -15,6 +15,20 @@
       "when": 1793988082194,
       "tag": "0001_gatehouse",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793988840454,
+      "tag": "0002_security",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793988943974,
+      "tag": "0003_revoke_api_roles",
+      "breakpoints": true
     }
   ]
 }

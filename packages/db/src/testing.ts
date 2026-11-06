@@ -12,5 +12,10 @@ export async function createTestDb() {
   const client = new PGlite();
   const db = drizzle(client, { schema });
   await migrate(db, { migrationsFolder });
-  return { db: db as unknown as Db, close: () => client.close() };
+  return {
+    db: db as unknown as Db,
+    /** Run raw SQL on the same session, e.g. `SET ROLE garrison_bot`. */
+    exec: (sql: string) => client.exec(sql),
+    close: () => client.close(),
+  };
 }
