@@ -11,6 +11,7 @@
     "commands:deploy": "tsx --env-file-if-exists=../../.env src/deploy-commands.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.6.0",
     "@garrison/brand": "workspace:*",
     "@garrison/db": "workspace:*",
     "discord.js": "^14.28.1",

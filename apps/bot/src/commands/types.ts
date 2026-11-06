@@ -6,10 +6,13 @@ import type {
   RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from "discord.js";
 import type { Logger } from "../lib/logger.js";
+import type { Planner } from "../modules/quartermaster/planner.js";
 
 export interface BotContext {
   db: Db;
   logger: Logger;
+  /** Quartermaster's planner. Absent when no Claude API key is configured. */
+  planner?: Planner;
 }
 
 export interface Command {

@@ -518,3 +518,72 @@ export const ledgerEvents = pgTable(
 export type LedgerSettings = typeof ledgerSettings.$inferSelect;
 export type LedgerEvent = typeof ledgerEvents.$inferSelect;
 export type NewLedgerEvent = Omit<typeof ledgerEvents.$inferInsert, "id" | "createdAt">;
+
+// ---------------------------------------------------------------------------
+// Quartermaster (AI builder)
+// ---------------------------------------------------------------------------
+
+export const qmStatus = pgEnum("qm_status", [
+  "pending",
+  "applied",
+  "cancelled",
+  "expired",
+  "failed",
+  "rolled_back",
+]);
+
+/** One validated operation of a build plan. Additive only: Quartermaster never edits or deletes existing things. */
+export interface QmOperation {
+  kind: "create_category" | "create_text_channel" | "create_voice_channel" | "create_role";
+  ref: string;
+  name: string;
+  /** A category ref from this plan, or an existing category ID. */
+  parent: string | null;
+  topic: string | null;
+  slowmodeSeconds: number | null;
+  userLimit: number | null;
+  /** Role refs from this plan or existing role IDs. When set, the channel is hidden from everyone else. */
+  privateTo: string[];
+  color: number | null;
+  hoist: boolean;
+  mentionable: boolean;
+}
+
+/** Something a build created, recorded as it happens so Undo works even after a partial failure. */
+export interface QmCreated {
+  kind: "category" | "channel" | "role";
+  id: string;
+  name: string;
+}
+
+export const qmBuilds = pgTable(
+  "qm_builds",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    /** Per-server version number: "v15". */
+    version: integer("version").notNull(),
+    requestedById: text("requested_by_id").notNull(),
+    requestedByTag: text("requested_by_tag").notNull(),
+    prompt: text("prompt").notNull(),
+    summary: text("summary").notNull(),
+    plan: jsonb("plan").$type<QmOperation[]>().notNull(),
+    model: text("model").notNull(),
+    status: qmStatus("status").notNull().default("pending"),
+    created: jsonb("created").$type<QmCreated[]>().notNull().default([]),
+    error: text("error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    appliedAt: timestamp("applied_at", { withTimezone: true }),
+    rolledBackAt: timestamp("rolled_back_at", { withTimezone: true }),
+    rolledBackById: text("rolled_back_by_id"),
+  },
+  (t) => [
+    uniqueIndex("qm_builds_guild_version").on(t.guildId, t.version),
+    index("qm_builds_guild_created").on(t.guildId, t.createdAt),
+  ],
+).enableRLS();
+
+export type QmBuild = typeof qmBuilds.$inferSelect;
+export type QmStatus = (typeof qmStatus.enumValues)[number];

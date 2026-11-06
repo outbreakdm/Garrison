@@ -11,7 +11,13 @@ const ITEMS = [
   { group: null, href: "/ledger", name: modules.ledger.name, plain: modules.ledger.plain },
   { group: "Rally", href: "/rally", name: modules.rally.name, plain: "LFG and events" },
   { group: null, href: "/ranks", name: modules.ranks.name, plain: modules.ranks.plain },
-  { group: "Configure", href: "/settings", name: "Settings", plain: null },
+  {
+    group: "Configure",
+    href: "/quartermaster",
+    name: modules.quartermaster.name,
+    plain: modules.quartermaster.plain,
+  },
+  { group: null, href: "/settings", name: "Settings", plain: null },
 ];
 
 export function ServerNav({ guildId }: { guildId: string }) {

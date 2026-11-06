@@ -16,13 +16,21 @@ import {
   onVoiceUpdate,
 } from "./modules/ledger/service.js";
 import { sweepOps } from "./modules/ops/service.js";
+import { ClaudePlanner } from "./modules/quartermaster/planner.js";
 import { sweepRally } from "./modules/rally/service.js";
 import { handleMessage } from "./modules/ranks/service.js";
 
 const env = loadEnv();
 const logger = createLogger(env.LOG_LEVEL);
 const { db, close } = createDb(env.DATABASE_URL);
-const ctx: BotContext = { db, logger };
+const ctx: BotContext = {
+  db,
+  logger,
+  planner: env.ANTHROPIC_API_KEY
+    ? new ClaudePlanner(env.ANTHROPIC_API_KEY, env.QM_MODEL)
+    : undefined,
+};
+if (!ctx.planner) logger.info("Quartermaster is off: set ANTHROPIC_API_KEY to enable /qm build");
 
 // Guild Members is privileged: turn on "Server Members Intent" in the Developer Portal.
 // Gatehouse needs it to see joins, and Guild Moderation (not privileged) for the

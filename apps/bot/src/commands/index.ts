@@ -2,6 +2,7 @@ import { gatehouseButtons, gatehouseCommands } from "../modules/gatehouse/comman
 import { health } from "../modules/health/command.js";
 import { logs } from "../modules/ledger/commands.js";
 import { opsButtons, opsModals, raid } from "../modules/ops/commands.js";
+import { qm, qmButtons } from "../modules/quartermaster/commands.js";
 import { lfg, rallyButtons } from "../modules/rally/commands.js";
 import { leaderboard, rank, ranks } from "../modules/ranks/commands.js";
 import { watchButtons, watchCommands } from "../modules/watch/commands/index.js";
@@ -17,12 +18,14 @@ export const commands: Command[] = [
   leaderboard,
   ranks,
   logs,
+  qm,
 ];
 export const buttons: ButtonHandler[] = [
   ...watchButtons,
   ...gatehouseButtons,
   rallyButtons,
   opsButtons,
+  qmButtons,
 ];
 export const modals: ModalHandler[] = [opsModals];
 

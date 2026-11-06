@@ -11,6 +11,14 @@ const schema = z.object({
     .or(z.literal("").transform(() => undefined)),
   DATABASE_URL: z.string().url("DATABASE_URL must be a Postgres connection string"),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
+  /** Claude API key for Quartermaster. Without it, /qm explains that it isn't set up. */
+  ANTHROPIC_API_KEY: z
+    .string()
+    .min(1)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  /** Model Quartermaster plans with. */
+  QM_MODEL: z.string().min(1).default("claude-opus-5-5"),
 });
 
 export type Env = z.infer<typeof schema>;

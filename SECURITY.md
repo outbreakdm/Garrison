@@ -70,6 +70,16 @@ Then set `DATABASE_URL` to the pooled connection string with user `garrison_bot.
 - **Headers:** a per-request nonce CSP (`script-src 'nonce-…' 'strict-dynamic'`, no `unsafe-inline`, `frame-ancestors 'none'`), HSTS, `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: same-origin`, COOP, a locked-down Permissions-Policy, and no `X-Powered-By`. Fonts are self-hosted, so nothing loads from third parties.
 - Secret-holding modules import `server-only`, so they can't reach the browser bundle. User text is rendered by React, which escapes it.
 
+## Quartermaster (AI)
+
+- **The model proposes; Garrison decides.** Claude returns a structured plan (`output_config.format` with a Zod schema), and `validatePlan` then enforces every rule itself: known kinds only, refs that point backwards, existing IDs that really exist, cleaned names, numeric limits, Discord's channel and role caps. One problem rejects the whole plan.
+- **Capabilities are fixed in code, not the prompt:** create category, text channel, voice channel, role. No edits, deletes, moves or messages. Roles are created with `permissions: []`; channel access comes only from an allowlist (view, send, read history, connect, speak).
+- **Prompt injection:** server names reach the model inside `<server_snapshot>` and are described as data. Even if a name steers the model, its output still has to pass validation and a human review.
+- **Human in the loop:** only the requester can Apply, and Manage Server is re-checked on every click. Plans expire after 15 minutes and are claimed before running, so a double click applies once.
+- **Reversible:** each created object is recorded the moment it exists; Undo deletes only those IDs.
+- **Cost and abuse:** 5 builds per server per hour, 500-character requests, `max_tokens` 16000. The API key is server-side only; the model's answers and errors are never echoed raw.
+- **Refusals:** server-side fallback (`fallbacks: "default"`) retries a declined request on another model inside the same call; a final refusal is reported plainly.
+
 ## Discord
 
 - Intents: `Guilds`, `Guild Moderation`, `Guild Voice States`, `Guild Messages` and `Server Members` only. Message Content is not requested: Ranks counts messages by author and time only.

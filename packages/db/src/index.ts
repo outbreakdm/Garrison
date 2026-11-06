@@ -4,6 +4,7 @@ export * from "./repo/gatehouse";
 export * from "./repo/guilds";
 export * from "./repo/ledger";
 export * from "./repo/ops";
+export * from "./repo/quartermaster";
 export * from "./repo/rally";
 export * from "./repo/ranks";
 export * from "./repo/settings";
@@ -29,6 +30,10 @@ export type {
   OpsEvent,
   OpsSettings,
   OpsSignup,
+  QmBuild,
+  QmCreated,
+  QmOperation,
+  QmStatus,
   Quarantine,
   RaidResponse,
   RankReward,

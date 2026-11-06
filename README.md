@@ -26,7 +26,7 @@ packages/
 | Ops           | Events            | **Built** | `/raid`                                                                     |
 | Barracks      | Members           | Planned   | `/link` `/roster`                                                           |
 | Ranks         | Leveling          | **Built** | `/rank` `/leaderboard`                                                      |
-| Quartermaster | AI builder        | Planned   | `/qm`                                                                       |
+| Quartermaster | AI builder        | **Built** | `/qm`                                                                       |
 
 ### Watch
 
@@ -62,6 +62,13 @@ packages/
 - **Reminders** 24 h and 30 min before ping only the players signed up, never the bench or anyone else.
 - Weekly raids repost themselves after each run at the same local time, across daylight-saving changes.
 - `/raid list` shows what's coming up. The host or anyone with Manage Events can cancel. A server can hold 25 scheduled raids.
+
+### Quartermaster
+
+- **`/qm build request:"A WARDOGS section with ranked and casual LFG, a voice room and a Gold+ role for ranked"`** asks Claude for a plan and shows it as a diff. Nothing changes until the person who asked presses **Apply**.
+- **Additive only:** categories, text and voice channels, and roles. It never edits or deletes anything that exists. New roles get **no permissions**; private channels get only view, send, read history, connect and speak for the listed roles.
+- Every build is versioned (`v15`). **Undo** (or `/qm undo version:15`) removes exactly what that build created and nothing else, even after a partial failure. `/qm history` lists builds; the dashboard shows each plan.
+- Limits: 5 builds per server per hour, 20 changes per build, plans expire after 15 minutes. Needs `ANTHROPIC_API_KEY`; uses `claude-opus-5-5` by default (`QM_MODEL`).
 
 ### Ledger
 
