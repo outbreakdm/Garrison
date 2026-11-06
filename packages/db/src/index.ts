@@ -4,6 +4,7 @@ export * from "./repo/gatehouse";
 export * from "./repo/guilds";
 export * from "./repo/ops";
 export * from "./repo/rally";
+export * from "./repo/settings";
 export * from "./repo/web";
 export type {
   CaseAction,
@@ -24,6 +25,9 @@ export type {
   OpsSignup,
   Quarantine,
   RaidResponse,
+  SettingsChange,
+  SettingsDiff,
+  SettingsModule,
   WatchSettings,
   WebSession,
 } from "./schema";

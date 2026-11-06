@@ -10,6 +10,8 @@ const schema = z.object({
   DISCORD_TOKEN: z.string().min(1),
   /** Connection string for the read-only garrison_web role. */
   WEB_DATABASE_URL: z.string().url(),
+  /** Discord API base. Only for pointing tests at a local stand-in; defaults to Discord. */
+  DISCORD_API_BASE: z.string().url().default("https://discord.com/api/v10"),
 });
 
 let cached: z.infer<typeof schema> | undefined;

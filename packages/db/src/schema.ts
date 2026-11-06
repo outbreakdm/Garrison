@@ -373,3 +373,43 @@ export const webSessions = pgTable(
 ).enableRLS();
 
 export type WebSession = typeof webSessions.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Settings history (dashboard edits)
+// ---------------------------------------------------------------------------
+
+export const settingsModule = pgEnum("settings_module", ["watch", "gatehouse", "ops"]);
+
+/** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */
+export type SettingsDiff = Record<string, { from: unknown; to: unknown }>;
+
+/**
+ * Append-only history of dashboard settings changes. Nobody but the database
+ * owner can edit or delete a row, so it's a trustworthy record of who
+ * changed what. An undo is a new row pointing at the change it reverts.
+ */
+export const settingsChanges = pgTable(
+  "settings_changes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    module: settingsModule("module").notNull(),
+    changes: jsonb("changes").$type<SettingsDiff>().notNull(),
+    userId: text("user_id").notNull(),
+    username: text("username").notNull(),
+    revertsChangeId: uuid("reverts_change_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("settings_changes_guild_created").on(t.guildId, t.createdAt),
+    // A change can be undone once.
+    uniqueIndex("settings_changes_one_revert")
+      .on(t.revertsChangeId)
+      .where(sql`${t.revertsChangeId} is not null`),
+  ],
+).enableRLS();
+
+export type SettingsChange = typeof settingsChanges.$inferSelect;
+export type SettingsModule = (typeof settingsModule.enumValues)[number];

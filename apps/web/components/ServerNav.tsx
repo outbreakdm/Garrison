@@ -9,6 +9,7 @@ const ITEMS = [
   { group: "Guard", href: "/watch", name: modules.watch.name, plain: modules.watch.plain },
   { group: null, href: "/gatehouse", name: modules.gatehouse.name, plain: modules.gatehouse.plain },
   { group: "Rally", href: "/rally", name: modules.rally.name, plain: "LFG and events" },
+  { group: "Configure", href: "/settings", name: "Settings", plain: null },
 ];
 
 export function ServerNav({ guildId }: { guildId: string }) {

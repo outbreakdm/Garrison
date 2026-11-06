@@ -210,3 +210,34 @@ table.g-table {
 .login .g-btn {
   justify-content: center;
 }
+.notice--ok {
+  border-color: var(--go);
+  color: var(--go);
+}
+.check {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: 14px;
+}
+.check input {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+}
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+.g-field > span:first-child {
+  font-size: 14px;
+}
+select.g-input,
+textarea.g-input {
+  font: inherit;
+  font-size: 14px;
+}
+.g-table form {
+  margin: 0;
+}

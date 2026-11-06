@@ -40,15 +40,27 @@ export async function requireSession(next = "/servers") {
 }
 
 /**
- * The gate for every server page. Checks the session, the ID's shape, that
- * Garrison is in the server, and the user's live permissions there. Any
- * failure is a 404, so the dashboard never confirms which servers exist.
+ * Can the current session manage this server right now? Checks the session,
+ * the ID's shape, that Garrison is in the server, and the user's live
+ * permissions there. Returns null on any failure. Server Actions call this
+ * directly: they are public POST endpoints, so page checks don't cover them.
+ */
+export const checkGuildAccess = cache(async (guildId: string) => {
+  const session = await getSession();
+  if (!session || typeof guildId !== "string" || !isSnowflake(guildId)) return null;
+  const guild = await getActiveGuild(getDb(), guildId);
+  if (!guild) return null;
+  if (!(await canManageGuildNow(guildId, session.userId))) return null;
+  return { session, guild };
+});
+
+/**
+ * The gate for every server page. Signed-out users go to login; everything
+ * else that fails is a 404, so the dashboard never confirms which servers exist.
  */
 export const requireGuildAccess = cache(async (guildId: string) => {
-  const session = await requireSession(`/servers/${isSnowflake(guildId) ? guildId : ""}`);
-  if (!isSnowflake(guildId)) notFound();
-  const guild = await getActiveGuild(getDb(), guildId);
-  if (!guild) notFound();
-  if (!(await canManageGuildNow(guildId, session.userId))) notFound();
-  return { session, guild };
+  await requireSession(`/servers/${isSnowflake(guildId) ? guildId : ""}`);
+  const access = await checkGuildAccess(guildId);
+  if (!access) notFound();
+  return access;
 });

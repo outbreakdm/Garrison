@@ -2,7 +2,6 @@ import "server-only";
 import { env } from "./env";
 import { canManage, type GuildSnapshot, memberPermissions } from "./permissions";
 
-const API = "https://discord.com/api/v10";
 export const OAUTH_SCOPES = "identify guilds";
 
 export function authorizeUrl(state: string, codeChallenge: string) {
@@ -21,7 +20,7 @@ export function authorizeUrl(state: string, codeChallenge: string) {
 }
 
 async function discord<T>(path: string, init: RequestInit): Promise<T> {
-  const res = await fetch(`${API}${path}`, {
+  const res = await fetch(`${env().DISCORD_API_BASE}${path}`, {
     ...init,
     cache: "no-store",
     signal: AbortSignal.timeout(8000),
@@ -59,7 +58,7 @@ export async function exchangeCode(code: string, codeVerifier: string) {
 /** Revoke the user's token as soon as login is done: Garrison never keeps it. */
 export async function revokeToken(token: string) {
   const { DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET } = env();
-  await fetch(`${API}/oauth2/token/revoke`, {
+  await fetch(`${env().DISCORD_API_BASE}/oauth2/token/revoke`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -118,4 +117,26 @@ export async function canManageGuildNow(guildId: string, userId: string): Promis
   }
   accessCache.set(key, { ok, at: Date.now() });
   return ok;
+}
+
+// --- Server channels, for settings pickers -----------------------------------
+
+const channelCache = new Map<string, { channels: { id: string; name: string }[]; at: number }>();
+
+/** The server's text and announcement channels, in Discord's order. Cached 30 s. */
+export async function listTextChannels(guildId: string) {
+  const hit = channelCache.get(guildId);
+  if (hit && Date.now() - hit.at < ACCESS_TTL_MS) return hit.channels;
+  const raw = await discord<{ id: string; name: string; type: number; position: number }[]>(
+    `/guilds/${guildId}/channels`,
+    {
+      headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` },
+    },
+  );
+  const channels = raw
+    .filter((c) => c.type === 0 || c.type === 5)
+    .sort((a, b) => a.position - b.position)
+    .map(({ id, name }) => ({ id, name }));
+  channelCache.set(guildId, { channels, at: Date.now() });
+  return channels;
 }
