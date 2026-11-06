@@ -1,6 +1,5 @@
 const { chromium } = require("playwright");
 const { execSync } = require("node:child_process");
-const fs = require("node:fs");
 // Usage: see e2e/README.md. Screenshots go to E2E_OUT (default: this folder).
 const S = process.env.E2E_OUT ?? __dirname;
 const B = "http://localhost:3100";
