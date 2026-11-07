@@ -13,8 +13,16 @@ const schema = z.object({
   /** Discord API base. Only for pointing tests at a local stand-in; defaults to Discord. */
   DISCORD_API_BASE: z.string().url().default("https://discord.com/api/v10"),
   /** Battle.net client for linking World of Warcraft characters. Optional: without it, WoW linking is hidden. */
-  BNET_CLIENT_ID: z.string().min(1).optional(),
-  BNET_CLIENT_SECRET: z.string().min(1).optional(),
+  BNET_CLIENT_ID: z
+    .string()
+    .min(1)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  BNET_CLIENT_SECRET: z
+    .string()
+    .min(1)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
 });
 
 let cached: z.infer<typeof schema> | undefined;

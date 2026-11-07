@@ -17,6 +17,14 @@ const schema = z.object({
     .min(1)
     .optional()
     .or(z.literal("").transform(() => undefined)),
+  /** Serve GET /healthz on this port, for hosts that check health. Off when unset. */
+  HEALTH_PORT: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(65535)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
   /** Model Quartermaster plans with. */
   QM_MODEL: z.string().min(1).default("claude-opus-5-5"),
 });

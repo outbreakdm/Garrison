@@ -1,0 +1,62 @@
+# Garrison on one server: the bot, the dashboard, and Caddy for HTTPS.
+#   docker compose up -d --build
+# Values come from .env (see .env.example). Each service gets only the
+# variables it needs; the postgres migration string never reaches a container.
+name: garrison
+
+x-hardening: &hardening
+  restart: unless-stopped
+  init: true
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "5" }
+
+services:
+  bot:
+    <<: *hardening
+    build: { context: ., target: bot }
+    image: garrison-bot
+    mem_limit: 512m
+    environment:
+      DISCORD_TOKEN: ${DISCORD_TOKEN:?set DISCORD_TOKEN in .env}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:?set DISCORD_CLIENT_ID in .env}
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL in .env}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      QM_MODEL: ${QM_MODEL:-claude-opus-5-5}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      HEALTH_PORT: "8080"
+
+  web:
+    <<: *hardening
+    build: { context: ., target: web }
+    image: garrison-web
+    mem_limit: 512m
+    tmpfs: ["/app/apps/web/.next/cache:uid=1000,gid=1000"]
+    expose: ["3000"]
+    environment:
+      APP_URL: https://${DOMAIN:?set DOMAIN in .env}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:?set DISCORD_CLIENT_SECRET in .env}
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      WEB_DATABASE_URL: ${WEB_DATABASE_URL:?set WEB_DATABASE_URL in .env}
+      BNET_CLIENT_ID: ${BNET_CLIENT_ID:-}
+      BNET_CLIENT_SECRET: ${BNET_CLIENT_SECRET:-}
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [web]
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

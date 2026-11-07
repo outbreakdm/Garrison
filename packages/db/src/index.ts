@@ -14,6 +14,7 @@ export * from "./repo/ranks";
 export * from "./repo/search";
 export * from "./repo/settings";
 export * from "./repo/web";
+export * from "./role";
 export type {
   CallSignupsPayload,
   CaseAction,

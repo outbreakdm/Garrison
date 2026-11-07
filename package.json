@@ -15,7 +15,8 @@
     "format": "biome check --write .",
     "db:generate": "pnpm --filter @garrison/db generate",
     "db:migrate": "pnpm --filter @garrison/db migrate",
-    "commands:deploy": "pnpm --filter @garrison/bot commands:deploy"
+    "commands:deploy": "pnpm --filter @garrison/bot commands:deploy",
+    "preflight": "pnpm --filter @garrison/bot preflight"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.6",

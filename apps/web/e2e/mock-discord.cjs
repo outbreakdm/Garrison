@@ -32,6 +32,10 @@ http
       res.end(JSON.stringify(body));
     };
     if (req.headers.authorization !== "Bot test-bot-token") return json(401, {});
+    if (req.url === "/users/@me")
+      return json(200, { id: "123456789012345678", username: "Garrison", bot: true });
+    if (req.url === "/applications/@me")
+      return json(200, { id: "123456789012345678", flags: 1 << 15, bot_public: true });
     const m = req.url.match(/^\/guilds\/(\d+)(\/members\/(\w+)|\/channels)?$/);
     const g = m && guilds[m[1]];
     if (!g) return json(404, {});

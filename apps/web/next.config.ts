@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 
 /** Sent on every response, static files included. The CSP is added per request in proxy.ts. */
@@ -15,6 +16,9 @@ const securityHeaders = [
 
 const config: NextConfig = {
   poweredByHeader: false,
+  // A self-contained server for the Docker image; traced from the monorepo root.
+  output: "standalone",
+  outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
   // Workspace packages ship TypeScript source.
   transpilePackages: ["@garrison/db", "@garrison/brand"],
   async headers() {

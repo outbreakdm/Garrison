@@ -109,6 +109,14 @@ Then set `DATABASE_URL` to the pooled connection string with user `garrison_bot.
 - Invite permissions are listed in the README; never request Administrator.
 - Reset the bot token in the Developer Portal immediately if it is ever exposed. Discord also auto-revokes tokens found in public GitHub repositories.
 
+## Deployment
+
+- The bot and dashboard **refuse to start** if their database login is a superuser, bypasses row-level security, or isn't their own role (`garrison_bot` / `garrison_web`).
+- Images run as the unprivileged `node` user on a read-only filesystem, with all Linux capabilities dropped and `no-new-privileges` (see `docker-compose.yml`). Only Caddy publishes ports; the bot has none.
+- Each container gets only the variables it needs. The `postgres` migration string never goes to a server: migrations run from a trusted machine.
+- `.env` is excluded from images (`.dockerignore`). A proxy CA, if needed at build time, is a BuildKit secret and never stored in a layer.
+- Health endpoints (`/healthz`) return only "ok" or "starting".
+
 ## CI and dependencies
 
 - CI runs with `contents: read`, no secrets, and does not persist checkout credentials.

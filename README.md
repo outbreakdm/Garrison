@@ -127,6 +127,10 @@ pnpm --filter @garrison/web dev     # http://localhost:3000
 
 Set `APP_URL`, `DISCORD_CLIENT_SECRET` and `WEB_DATABASE_URL` in `.env`, and add `APP_URL/auth/callback` as an OAuth2 redirect in the Developer Portal. See SECURITY.md for how sign-in is protected.
 
+## Deploying
+
+See **[DEPLOY.md](DEPLOY.md)**: Discord Developer Portal settings, turning on the database roles, a one-server `docker compose` setup with automatic HTTPS, and `pnpm preflight` (or `node dist/preflight.js` in the image), which checks the token, intents, database roles and schema before you go live.
+
 ## Getting started
 
 Requirements: Node 22+, pnpm 10 (`corepack enable`).

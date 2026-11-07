@@ -8,7 +8,8 @@
     "start": "node --env-file-if-exists=../../.env dist/index.js",
     "build": "tsup",
     "typecheck": "tsc -p tsconfig.json",
-    "commands:deploy": "tsx --env-file-if-exists=../../.env src/deploy-commands.ts"
+    "commands:deploy": "tsx --env-file-if-exists=../../.env src/deploy-commands.ts",
+    "preflight": "tsx --env-file-if-exists=../../.env src/preflight.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0",

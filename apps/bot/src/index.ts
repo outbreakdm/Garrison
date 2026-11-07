@@ -1,9 +1,11 @@
-import { createDb, markGuildLeft, upsertGuild } from "@garrison/db";
+import { createDb, describeDbRole, markGuildLeft, roleProblem, upsertGuild } from "@garrison/db";
 import { Client, Events, GatewayIntentBits, Partials } from "discord.js";
 import type { BotContext } from "./commands/types.js";
 import { loadEnv } from "./env.js";
 import { handleInteraction } from "./interactions.js";
+
 import { ensureGuild, forgetGuild } from "./lib/guild-registry.js";
+import { startHealthServer } from "./lib/health.js";
 import { createLogger } from "./lib/logger.js";
 import { Metrics } from "./lib/metrics.js";
 import { refreshOsrs } from "./modules/barracks/refresh.js";
@@ -27,6 +29,13 @@ import { handleMessage } from "./modules/ranks/service.js";
 const env = loadEnv();
 const logger = createLogger(env.LOG_LEVEL);
 const { db, close } = createDb(env.DATABASE_URL);
+// Fail closed: never run with a login that skips the database's own protections.
+const problem = roleProblem(await describeDbRole(db), "garrison_bot");
+if (problem) {
+  logger.error(problem);
+  await close();
+  process.exit(1);
+}
 const ctx: BotContext = {
   db,
   logger,
@@ -145,10 +154,15 @@ client.on(Events.GuildDelete, async (guild) => {
 client.on(Events.InteractionCreate, (interaction) => handleInteraction(interaction, ctx));
 client.on(Events.Error, (error) => logger.error("Discord client error", { error }));
 
+const health = env.HEALTH_PORT
+  ? startHealthServer(env.HEALTH_PORT, () => client.isReady() && client.ws.ping >= 0)
+  : undefined;
+
 async function shutdown(signal: string) {
   logger.info(`Received ${signal}, shutting down`);
   clearInterval(sweepTimer);
   clearInterval(actionsTimer);
+  health?.close();
   await client.destroy();
   await close();
   process.exit(0);
