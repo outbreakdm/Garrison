@@ -76,9 +76,14 @@ export default async function RallyPage({
           <h1>Rally and Ops</h1>
           <p>Open groups, upcoming raids and who's signed up. Members post groups with /lfg.</p>
         </div>
-        <a className="g-btn g-btn--primary" href="?create=1#create-raid">
-          Create raid
-        </a>
+        <div className="row-between">
+          <a className="g-btn g-btn--secondary" href={`/servers/${guild.id}/rally/templates`}>
+            LFG templates
+          </a>
+          <a className="g-btn g-btn--primary" href="?create=1#create-raid">
+            Create raid
+          </a>
+        </div>
       </div>
       {working ? <AutoRefresh /> : null}
       {queued ? (
@@ -92,7 +97,7 @@ export default async function RallyPage({
         </div>
       ) : null}
 
-      <details className="g-card" id="create-raid" open={query.create === "1"}>
+      <details className="g-card raid-create" id="create-raid" open={query.create === "1"}>
         <summary className="g-label">Create raid</summary>
         <form action={requestCreateRaid} className="card-col create-raid">
           <input type="hidden" name="guildId" value={guild.id} />

@@ -612,8 +612,13 @@ a.topbar__user:hover {
   max-width: 220px;
 }
 
-.ladder-edit > summary {
+.ladder-edit > summary,
+.raid-create > summary,
+.template > summary {
   cursor: pointer;
+}
+.template > summary {
+  list-style: none;
 }
 .ladder-edit[open] > summary {
   margin-bottom: var(--space-3);
@@ -674,10 +679,7 @@ a.topbar__user:hover {
 .tone-go {
   color: var(--go);
 }
-#create-raid > summary {
-  cursor: pointer;
-}
-#create-raid[open] > summary {
+.raid-create[open] > summary {
   margin-bottom: var(--space-3);
 }
 
@@ -705,4 +707,57 @@ a.topbar__user:hover {
     flex: none;
     white-space: nowrap;
   }
+}
+
+/* Rally templates */
+.template > summary::-webkit-details-marker {
+  display: none;
+}
+.template__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--space-6);
+  margin-top: var(--space-4);
+}
+.wording {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-3) 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+.wording > legend {
+  padding: 0;
+}
+.wording > .g-help {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.preview__groups,
+.preview__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.preview__buttons .g-btn {
+  pointer-events: none;
+  padding: 4px 10px;
+  font-size: 13px;
+}
+select[multiple].g-input {
+  height: auto;
+}
+@media (max-width: 860px) {
+  .template__body {
+    grid-template-columns: 1fr;
+  }
+}
+
+figure.preview {
+  margin: 0;
+}
+.template > summary .g-badge {
+  margin-left: var(--space-2);
 }

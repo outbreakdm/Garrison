@@ -5,8 +5,16 @@ const guilds = {
   "111111111111111111": {
     owner_id: "999",
     roles: [
-      { id: "111111111111111111", permissions: "0" },
-      { id: "mods", permissions: MANAGE },
+      { id: "111111111111111111", name: "@everyone", position: 0, permissions: "0" },
+      { id: "mods", name: "Mods", position: 3, permissions: MANAGE },
+      {
+        id: "500000000000000001",
+        name: "Raiders",
+        position: 2,
+        permissions: "0",
+        mentionable: true,
+      },
+      { id: "500000000000000002", name: "Garrison", position: 4, permissions: "0", managed: true },
     ],
     members: { 1: ["mods"] },
   },

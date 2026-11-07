@@ -1,4 +1,5 @@
 export * from "./client";
+export * from "./rally";
 export * from "./repo/actions";
 export * from "./repo/barracks";
 export * from "./repo/cases";
@@ -46,6 +47,7 @@ export type {
   QmStatus,
   Quarantine,
   RaidResponse,
+  RallySettings,
   RankReward,
   RanksSettings,
   RosterShare,

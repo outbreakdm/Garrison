@@ -53,6 +53,17 @@ packages/
 - When the squad fills, Garrison opens a voice channel only the squad can join, and pings just those members: "Squad's full. Voice is open." Empty squad channels are removed after 5 min. Garrison only deletes channels it recorded creating.
 - One open group per person per server. Groups close 3 h after they start, or when the host leaves.
 - `/lfg list` shows open groups; `/lfg close` closes yours. The host or anyone with Manage Messages can close a card.
+- **Templates** adapt Rally to any game by changing words, not code. On the dashboard (Rally → LFG templates), each template sets default roles or size, the group word ("squad", "fireteam", "raid"), every button label, the full-squad message, a requirement label ("Item level", "Rank"), which channels it can be posted in, how long posts stay open, and whether a voice channel opens. Players pick one with `/lfg create template:` (autocompleted), and anything they type still overrides the defaults. Six presets (Mythic+, Raid, Ranked, Fireteam, Bossing, Casual) are starting points. Posts keep the wording they were made with, and template edits have history and undo.
+
+| Rally templates                                                  | Free | Pro |
+| ---------------------------------------------------------------- | ---- | --- |
+| Templates per server                                             | 3    | 25  |
+| All wording, roles, channels, voice, lifetime                    | ✓    | ✓   |
+| Notify a role when a post goes up (once per 15 min per template) |      | ✓   |
+
+Wording is free because it's what makes Rally fit a game; Pro adds scale and pings for bigger multi-game communities. Plans are applied when templates are used, so a downgrade keeps the first three working and stops role notifications without deleting anything. Until billing exists, set a server's plan as the database owner: `insert into guild_plans (guild_id, plan) values ('<server id>', 'pro') on conflict (guild_id) do update set plan = excluded.plan;`
+
+After pulling this change, run `pnpm commands:deploy` once: `/lfg create` has a new `template` option.
 
 ### Ops
 

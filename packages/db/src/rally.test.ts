@@ -1,153 +1,185 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "./client";
-import { upsertGuild } from "./repo/guilds";
 import {
-  closeLfg,
-  createLfgPost,
-  findOpenLfgByHost,
-  joinLfg,
-  leaveLfg,
-  listActiveMembers,
-  listExpiredLfg,
-  listLfgWithVoice,
-  listOpenLfg,
-  pickSlot,
-  setLfgMessage,
-  setLfgVoice,
-} from "./repo/rally";
-import { lfgMembers } from "./schema";
+  checkTemplates,
+  DEFAULT_WORDING,
+  newTemplateId,
+  renderWording,
+  TEMPLATE_PRESETS,
+} from "./rally";
+import { upsertGuild } from "./repo/guilds";
+import { claimRallyNotify, createLfgPost, getGuildPlan, getRallyTemplates } from "./repo/rally";
+import { applySettingsChange, undoSettingsChange } from "./repo/settings";
+import { guildPlans, rallySettings } from "./schema";
 import { createTestDb } from "./testing";
 
-// Runs as garrison_bot, so missing grants fail here first.
+const tpl = (over: Record<string, unknown> = {}) => ({
+  id: "abc123",
+  name: "Mythic+",
+  game: "World of Warcraft",
+  roles: "Tank 1, Healer 1, DPS 3",
+  size: null,
+  wording: { ...DEFAULT_WORDING, group: "group", requirement: "Item level" },
+  lifetimeHours: 3,
+  voice: true,
+  channelIds: [],
+  notifyRoleId: null,
+  isDefault: false,
+  ...over,
+});
+
+describe("checkTemplates", () => {
+  it("accepts every preset as a template", () => {
+    const list = Object.values(TEMPLATE_PRESETS).map((p, i) => ({
+      ...p,
+      id: `preset${i}`,
+      channelIds: [],
+      notifyRoleId: null,
+      isDefault: false,
+    }));
+    expect(checkTemplates(list.slice(0, 3), "free").ok).toBe(true);
+    expect(checkTemplates(list, "pro").ok).toBe(true);
+  });
+
+  it("holds free servers to 3 templates and keeps role pings for Pro", () => {
+    const four = [1, 2, 3, 4].map((n) => tpl({ id: `id000${n}`, name: `T${n}` }));
+    expect(checkTemplates(four, "free")).toMatchObject({ ok: false, error: /Garrison Pro/ });
+    expect(checkTemplates(four, "pro").ok).toBe(true);
+    const ping = [tpl({ notifyRoleId: "123456789012345678" })];
+    expect(checkTemplates(ping, "free")).toMatchObject({ ok: false, error: /Pro/ });
+    expect(checkTemplates(ping, "pro").ok).toBe(true);
+  });
+
+  it.each([
+    [{ wording: { ...DEFAULT_WORDING, full: "@everyone ready" } }],
+    [{ wording: { ...DEFAULT_WORDING, full: "<@&123> ready" } }],
+    [{ wording: { ...DEFAULT_WORDING, leave: "[Leave](https://evil.example)" } }],
+    [{ wording: { ...DEFAULT_WORDING, join: "Join" } }], // several roles need {role}
+    [{ name: "<script>" }],
+    [{ roles: "Tank 50" }],
+    [{ lifetimeHours: 48 }],
+    [{ channelIds: ["general"] }],
+  ])("refuses unsafe or invalid input %#", (over) => {
+    expect(checkTemplates([tpl(over)], "pro").ok).toBe(false);
+  });
+
+  it("collapses line breaks in wording to spaces", () => {
+    const r = checkTemplates(
+      [tpl({ wording: { ...DEFAULT_WORDING, close: "Close\n\nnow" } })],
+      "free",
+    );
+    expect(r.ok && r.value[0]?.wording.close).toBe("Close now");
+  });
+
+  it("refuses duplicate names and two defaults", () => {
+    expect(checkTemplates([tpl(), tpl({ id: "other1" })], "free").ok).toBe(false);
+    expect(
+      checkTemplates(
+        [tpl({ isDefault: true }), tpl({ id: "other1", name: "Raid", isDefault: true })],
+        "free",
+      ).ok,
+    ).toBe(false);
+  });
+
+  it("fills placeholders", () => {
+    const w = { ...DEFAULT_WORDING, group: "fireteam" };
+    expect(renderWording("{Group}'s full", w)).toBe("Fireteam's full");
+    expect(renderWording("Join as {role}", w, { role: "Titan" })).toBe("Join as Titan");
+    expect(newTemplateId()).toMatch(/^[a-z0-9]{10}$/);
+  });
+});
+
 let db: Db;
 let exec: (sql: string) => Promise<unknown>;
 let close: () => Promise<void>;
-const G = "700";
+const G = "990";
+const as = async (role: string) => {
+  await exec("RESET ROLE");
+  await exec(`SET ROLE ${role}`);
+};
+const refused = (q: PromiseLike<unknown>) =>
+  Promise.resolve(q).then(
+    () => "",
+    (e: Error & { cause?: Error }) => `${e.message} ${e.cause?.message ?? ""}`,
+  );
 
-beforeAll(async () => {
-  ({ db, exec, close } = await createTestDb());
-  await exec("SET ROLE garrison_bot");
-  await upsertGuild(db, { id: G, name: "Scapewatch" });
-});
-afterAll(() => close());
-
-const roles = [
-  { name: "Tank", count: 1 },
-  { name: "Healer", count: 1 },
-  { name: "DPS", count: 3 },
-];
-let n = 0;
-function post(slots = roles, hostSlot = "Tank", expiresAt = new Date(Date.now() + 3_600_000)) {
-  return createLfgPost(db, {
-    guildId: G,
-    channelId: "c",
-    hostId: `host${++n}`,
-    hostSlot,
-    title: "Mythic+ 12",
-    note: null,
-    slots,
-    startsAt: new Date(),
-    expiresAt,
+describe("Rally templates in the database", () => {
+  beforeAll(async () => {
+    ({ db, exec, close } = await createTestDb());
+    await as("garrison_bot");
+    await upsertGuild(db, { id: G, name: "Scapewatch" });
   });
-}
+  afterAll(() => close());
 
-describe("pickSlot", () => {
-  it("fills the requested group, or the first with room", () => {
-    expect(pickSlot(roles, [{ slotName: "Tank" }])).toEqual({ ok: true, slot: "Healer" });
-    expect(pickSlot(roles, [{ slotName: "Tank" }], "Tank")).toEqual({
-      ok: false,
-      reason: "slot_full",
-    });
-    expect(pickSlot(roles, [], "Bard")).toEqual({ ok: false, reason: "no_such_slot" });
-    expect(pickSlot([{ name: "", count: 1 }], [{ slotName: "" }])).toEqual({
-      ok: false,
-      reason: "full",
-    });
-  });
-});
-
-describe("LFG posts", () => {
-  it("allows one open group per host", async () => {
-    const p = await post();
-    expect(p).not.toBeNull();
-    const again = await createLfgPost(db, {
+  it("saves templates from the dashboard with history and undo; the bot only reads", async () => {
+    await as("garrison_web");
+    const ok = checkTemplates([tpl()], "free");
+    if (!ok.ok) throw new Error(ok.error);
+    const res = await applySettingsChange(db, {
       guildId: G,
-      channelId: "c",
-      hostId: p?.hostId ?? "",
-      hostSlot: "Tank",
-      title: "Second",
-      note: null,
-      slots: roles,
-      startsAt: new Date(),
-      expiresAt: new Date(Date.now() + 1000),
+      module: "rally",
+      patch: { templates: ok.value },
+      userId: "1",
+      username: "taner",
     });
-    expect(again).toBeNull();
-    expect((await findOpenLfgByHost(db, G, p?.hostId ?? ""))?.id).toBe(p?.id);
-    await setLfgMessage(db, p?.id ?? "", "m1");
-  });
-
-  it("fills up, refuses extra joins, and reopens when someone leaves", async () => {
-    const p = await post([{ name: "", count: 3 }], "");
-    const id = p?.id ?? "";
-    expect(await joinLfg(db, id, "a")).toMatchObject({ ok: true, becameFull: false });
-    expect(await joinLfg(db, id, "a")).toEqual({ ok: false, reason: "already" });
-    const full = await joinLfg(db, id, "b");
-    expect(full).toMatchObject({ ok: true, becameFull: true });
-    expect(full.ok && full.post.status).toBe("full");
-    expect(await joinLfg(db, id, "c")).toEqual({ ok: false, reason: "full" });
-
-    const left = await leaveLfg(db, id, "a");
-    expect(left.ok && left.post.status).toBe("open");
-    expect(await joinLfg(db, id, "c")).toMatchObject({ ok: true, becameFull: true });
-    expect(await joinLfg(db, id, "a")).toEqual({ ok: false, reason: "full" });
-  });
-
-  it("gives the last slot to exactly one of several people joining at once", async () => {
-    const p = await post([{ name: "", count: 2 }], "");
-    const results = await Promise.all(["x", "y", "z", "w"].map((u) => joinLfg(db, p?.id ?? "", u)));
-    expect(results.filter((r) => r.ok)).toHaveLength(1);
-    expect(await listActiveMembers(db, p?.id ?? "")).toHaveLength(2);
-  });
-
-  it("switches role when there's room", async () => {
-    const p = await post();
-    const id = p?.id ?? "";
-    await joinLfg(db, id, "d", "DPS");
-    expect(await joinLfg(db, id, "d", "Healer")).toMatchObject({ ok: true, switched: true });
-    expect(await joinLfg(db, id, "e", "Healer")).toEqual({ ok: false, reason: "slot_full" });
-  });
-
-  it("closes when the host leaves, and keeps who was there", async () => {
-    const p = await post();
-    const id = p?.id ?? "";
-    await joinLfg(db, id, "f");
-    const result = await leaveLfg(db, id, p?.hostId ?? "");
-    expect(result).toMatchObject({ ok: true, hostLeft: true });
-    expect(result.ok && result.post.status).toBe("closed");
-    expect(await joinLfg(db, id, "g")).toEqual({ ok: false, reason: "closed" });
-    expect(await leaveLfg(db, id, "f")).toEqual({ ok: false, reason: "closed" });
-    // History stays: rows are marked left, never deleted.
-    const all = await db.select().from(lfgMembers);
-    expect(all.some((m) => m.postId === id && m.leftAt !== null)).toBe(true);
-  });
-
-  it("expires, tracks voice channels, and lists open groups", async () => {
-    const p = await post(roles, "Tank", new Date(Date.now() - 1000));
-    const id = p?.id ?? "";
-    expect((await listExpiredLfg(db)).map((x) => x.id)).toContain(id);
-    await setLfgVoice(db, id, "vc1");
-    expect((await listLfgWithVoice(db)).map((x) => x.voiceChannelId)).toContain("vc1");
-    expect(await closeLfg(db, id, "expired")).toMatchObject({ status: "expired" });
-    expect(await closeLfg(db, id)).toBeNull();
-    await setLfgVoice(db, id, null);
-    expect((await listOpenLfg(db, G)).map((x) => x.id)).not.toContain(id);
-  });
-
-  it("can't delete memberships", async () => {
-    const error = await db.delete(lfgMembers).then(
-      () => null,
-      (e: Error & { cause?: Error }) => `${e.message} ${e.cause?.message}`,
+    expect(res).toMatchObject({ ok: true });
+    await as("garrison_bot");
+    expect(await getRallyTemplates(db, G)).toHaveLength(1);
+    expect(await refused(db.update(rallySettings).set({ templates: [] }))).toMatch(
+      /permission denied/,
     );
-    expect(error).toMatch(/permission denied/);
+    await as("garrison_web");
+    if (!res.ok) throw new Error("unreachable");
+    expect(
+      await undoSettingsChange(db, G, res.change.id, { userId: "2", username: "kel" }),
+    ).toMatchObject({ ok: true });
+    expect(await getRallyTemplates(db, G)).toHaveLength(0);
+  });
+
+  it("caps the stored list at 25 even if the app check is skipped", async () => {
+    const many = Array.from({ length: 26 }, (_, i) => tpl({ id: `id${i}xxxx`, name: `T${i}` }));
+    expect(await refused(db.update(rallySettings).set({ templates: many as never }))).toMatch(
+      /rally_templates_list/,
+    );
+  });
+
+  it("keeps plans read-only for both apps", async () => {
+    expect(await getGuildPlan(db, G)).toBe("free");
+    expect(await refused(db.insert(guildPlans).values({ guildId: G, plan: "pro" }))).toMatch(
+      /permission denied/,
+    );
+    await as("garrison_bot");
+    expect(await refused(db.insert(guildPlans).values({ guildId: G, plan: "pro" }))).toMatch(
+      /permission denied/,
+    );
+    await as("postgres");
+    await db.insert(guildPlans).values({ guildId: G, plan: "pro" });
+    await as("garrison_bot");
+    expect(await getGuildPlan(db, G)).toBe("pro");
+  });
+
+  it("notifies a template's role at most once per cooldown", async () => {
+    const post = (host: string) =>
+      createLfgPost(db, {
+        guildId: G,
+        channelId: "1",
+        hostId: host,
+        hostSlot: "",
+        title: "Key",
+        note: null,
+        slots: [{ name: "", count: 5 }],
+        startsAt: new Date(),
+        expiresAt: new Date(Date.now() + 3_600_000),
+        templateId: "abc123",
+        wording: { ...DEFAULT_WORDING, voice: true },
+      });
+    const a = await post("10");
+    const b = await post("11");
+    if (!a || !b) throw new Error("no post");
+    expect(await claimRallyNotify(db, G, "abc123", a.id)).toBe(true);
+    expect(await claimRallyNotify(db, G, "abc123", b.id)).toBe(false);
+    expect(await claimRallyNotify(db, G, "abc123", b.id, new Date(Date.now() + 16 * 60_000))).toBe(
+      true,
+    );
   });
 });

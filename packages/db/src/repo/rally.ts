@@ -1,6 +1,16 @@
-import { and, asc, eq, inArray, isNotNull, isNull, lte } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import type { Db } from "../client";
-import { type LfgMember, type LfgPost, type LfgSlotGroup, lfgMembers, lfgPosts } from "../schema";
+import type { GuildPlan, RallyWording } from "../rally";
+import { NOTIFY_COOLDOWN_MS } from "../rally";
+import {
+  guildPlans,
+  type LfgMember,
+  type LfgPost,
+  type LfgSlotGroup,
+  lfgMembers,
+  lfgPosts,
+  rallySettings,
+} from "../schema";
 
 export const capacity = (slots: LfgSlotGroup[]) => slots.reduce((n, g) => n + g.count, 0);
 
@@ -40,6 +50,8 @@ export interface CreateLfgInput {
   slots: LfgSlotGroup[];
   startsAt: Date;
   expiresAt: Date;
+  templateId?: string | null;
+  wording?: (RallyWording & { voice: boolean }) | null;
 }
 
 /** Create a post with the host in it. Returns null if the host already has an open group here. */
@@ -228,4 +240,55 @@ export async function listLfgWithVoice(db: Db) {
 
 export async function setLfgVoice(db: Db, id: string, voiceChannelId: string | null) {
   await db.update(lfgPosts).set({ voiceChannelId }).where(eq(lfgPosts.id, id));
+}
+
+// --- Templates and plans -------------------------------------------------------
+
+/** The stored template list, unchecked. Callers run it through checkTemplates before use. */
+export async function getRallyTemplates(db: Db, guildId: string): Promise<unknown[]> {
+  const [row] = await db
+    .select({ templates: rallySettings.templates })
+    .from(rallySettings)
+    .where(eq(rallySettings.guildId, guildId));
+  return Array.isArray(row?.templates) ? row.templates : [];
+}
+
+export async function getGuildPlan(db: Db, guildId: string): Promise<GuildPlan> {
+  const [row] = await db
+    .select({ plan: guildPlans.plan })
+    .from(guildPlans)
+    .where(eq(guildPlans.guildId, guildId));
+  return row?.plan ?? "free";
+}
+
+/**
+ * Claim the right to notify a template's role for this post: at most once per
+ * template every NOTIFY_COOLDOWN_MS. Returns false when it's too soon.
+ */
+export async function claimRallyNotify(
+  db: Db,
+  guildId: string,
+  templateId: string,
+  postId: string,
+  now = new Date(),
+) {
+  return db.transaction(async (tx) => {
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtext(${`garrison:notify:${guildId}:${templateId}`}))`,
+    );
+    const [recent] = await tx
+      .select({ id: lfgPosts.id })
+      .from(lfgPosts)
+      .where(
+        and(
+          eq(lfgPosts.guildId, guildId),
+          eq(lfgPosts.templateId, templateId),
+          gt(lfgPosts.notifiedAt, new Date(now.getTime() - NOTIFY_COOLDOWN_MS)),
+        ),
+      )
+      .limit(1);
+    if (recent) return false;
+    await tx.update(lfgPosts).set({ notifiedAt: now }).where(eq(lfgPosts.id, postId));
+    return true;
+  });
 }

@@ -177,4 +177,30 @@ export const FIELD_LABELS: Record<string, string> = {
   channelId: "Ledger channel",
   retentionDays: "Keep events (days)",
   rules: "Escalation ladder",
+  templates: "LFG templates",
 };
+
+type NamedTemplate = { id?: string; name?: string };
+
+/** "Added Ranked; edited Mythic+; removed Raid", for history entries. */
+export function templatesChangeText(from: unknown, to: unknown) {
+  const a = (Array.isArray(from) ? from : []) as NamedTemplate[];
+  const b = (Array.isArray(to) ? to : []) as NamedTemplate[];
+  const byId = (list: NamedTemplate[]) => new Map(list.map((t) => [t.id, t]));
+  const before = byId(a);
+  const after = byId(b);
+  const parts: string[] = [];
+  const added = b.filter((t) => !before.has(t.id)).map((t) => t.name);
+  const removed = a.filter((t) => !after.has(t.id)).map((t) => t.name);
+  const edited = b
+    .filter((t) => before.has(t.id) && JSON.stringify(before.get(t.id)) !== JSON.stringify(t))
+    .map((t) => {
+      const old = before.get(t.id)?.name;
+      return old && old !== t.name ? `${old} (now ${t.name})` : t.name;
+    });
+  if (added.length) parts.push(`added ${added.join(", ")}`);
+  if (edited.length) parts.push(`edited ${edited.join(", ")}`);
+  if (removed.length) parts.push(`removed ${removed.join(", ")}`);
+  const text = parts.join("; ") || "reordered";
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}

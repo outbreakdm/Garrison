@@ -32,6 +32,9 @@ const post: LfgPost = {
   voiceChannelId: null,
   createdAt: new Date(),
   closedAt: null,
+  templateId: null,
+  wording: null,
+  notifiedAt: null,
 };
 const member = (userId: string, slotName: string): LfgMember => ({
   postId: post.id,
@@ -67,5 +70,31 @@ describe("lfgCard", () => {
     const full = lfgCard({ ...post, status: "full" }, [...four, member("d", "DPS")]);
     expect(full.embeds[0]?.toJSON().title).toContain("Full");
     expect(lfgCard({ ...post, status: "closed" }, four).components).toEqual([]);
+  });
+
+  it("speaks the template's wording, and keeps it plain", () => {
+    const fireteam = {
+      ...post,
+      slots: [{ name: "", count: 6 }],
+      note: "1810",
+      wording: {
+        group: "fireteam",
+        join: "Join as {role}",
+        joinAny: "Join fireteam",
+        leave: "Bail",
+        close: "Disband",
+        full: "Fireteam ready.",
+        requirement: "Power",
+        voice: false,
+      },
+    };
+    const card = lfgCard(fireteam, [member("taz", "")]);
+    const json = card.embeds[0]?.toJSON();
+    expect(json?.fields?.[0]?.name).toBe("Fireteam · 1/6");
+    expect(json?.description).toContain("Power: 1810");
+    const labels = card.components.flatMap((row) =>
+      (row.toJSON().components as { label: string }[]).map((b) => b.label),
+    );
+    expect(labels).toEqual(["Join fireteam", "Bail", "Disband"]);
   });
 });

@@ -15,6 +15,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { GuildPlan, RallyTemplate, RallyWording } from "./rally";
 
 /**
  * Every table enables row-level security with no policies. The bot and the
@@ -261,6 +262,12 @@ export const lfgPosts = pgTable(
     status: lfgStatus("status").notNull().default("open"),
     /** Voice channel Garrison created for the full squad. Garrison deletes only channels recorded here. */
     voiceChannelId: text("voice_channel_id"),
+    /** The Rally template it was posted from, if any. */
+    templateId: text("template_id"),
+    /** The wording at posting time, so editing a template never rewrites live cards. Null: defaults. */
+    wording: jsonb("wording").$type<RallyWording & { voice: boolean }>(),
+    /** When Garrison notified the template's role about this post (Pro). */
+    notifiedAt: timestamp("notified_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     closedAt: timestamp("closed_at", { withTimezone: true }),
   },
@@ -399,6 +406,7 @@ export const settingsModule = pgEnum("settings_module", [
   "ranks",
   "ledger",
   "escalation",
+  "rally",
 ]);
 
 /** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */
@@ -809,3 +817,42 @@ export const dashboardActions = pgTable(
 ).enableRLS();
 
 export type DashboardAction = typeof dashboardActions.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Rally templates and plans
+// ---------------------------------------------------------------------------
+
+/** A server's LFG templates, edited on the dashboard as one value (with history and undo). */
+export const rallySettings = pgTable(
+  "rally_settings",
+  {
+    guildId: text("guild_id")
+      .primaryKey()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    templates: jsonb("templates").$type<RallyTemplate[]>().notNull().default(sql`'[]'::jsonb`),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      "rally_templates_list",
+      sql`jsonb_typeof(${t.templates}) = 'array' AND jsonb_array_length(${t.templates}) <= 25`,
+    ),
+  ],
+).enableRLS();
+
+export const guildPlan = pgEnum("guild_plan", ["free", "pro"]);
+
+/**
+ * Which plan a server is on. No row means free. Neither the bot nor the
+ * dashboard can write here: only billing (the database owner) changes plans.
+ */
+export const guildPlans = pgTable("guild_plans", {
+  guildId: text("guild_id")
+    .primaryKey()
+    .references(() => guilds.id, { onDelete: "cascade" }),
+  plan: guildPlan("plan").notNull().default("free"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
+
+export type RallySettings = typeof rallySettings.$inferSelect;
+export type { GuildPlan };

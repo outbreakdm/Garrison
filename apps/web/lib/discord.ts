@@ -144,3 +144,33 @@ export async function listTextChannels(guildId: string) {
   channelCache.set(guildId, { channels, at: Date.now() });
   return channels;
 }
+
+const roleCache = new Map<
+  string,
+  { roles: { id: string; name: string; mentionable: boolean }[]; at: number }
+>();
+
+/**
+ * Roles a Rally template could notify: not @everyone, not managed by an
+ * integration. Highest first, as Discord shows them. Cached 30 s.
+ */
+export async function listNotifiableRoles(guildId: string) {
+  const hit = roleCache.get(guildId);
+  if (hit && Date.now() - hit.at < ACCESS_TTL_MS) return hit.roles;
+  const guild = await discord<{
+    id: string;
+    roles: {
+      id: string;
+      name: string;
+      position: number;
+      managed?: boolean;
+      mentionable?: boolean;
+    }[];
+  }>(`/guilds/${guildId}`, { headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` } });
+  const roles = guild.roles
+    .filter((r) => r.id !== guild.id && !r.managed)
+    .sort((a, b) => b.position - a.position)
+    .map(({ id, name, mentionable }) => ({ id, name, mentionable: mentionable === true }));
+  roleCache.set(guildId, { roles, at: Date.now() });
+  return roles;
+}

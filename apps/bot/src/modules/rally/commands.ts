@@ -1,23 +1,27 @@
 import {
   capacity,
+  claimRallyNotify,
   closeLfg,
   createLfgPost,
   findOpenLfgByHost,
   getLfgPost,
   joinLfg,
+  type LfgPost,
   leaveLfg,
   listActiveMembers,
   listOpenLfg,
+  renderWording,
   setLfgMessage,
 } from "@garrison/db";
-import { PermissionFlagsBits } from "discord.js";
+import { type Guild, PermissionFlagsBits, type SendableChannels } from "discord.js";
 import { ephemeral, guildCommand } from "../../commands/builders.js";
-import type { ButtonHandler, Command } from "../../commands/types.js";
+import type { BotContext, ButtonHandler, Command } from "../../commands/types.js";
 import { brandEmbed } from "../../lib/embeds.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { lfgCard, RALLY_PREFIX, safeText } from "./card.js";
 import { LIFETIME_AFTER_START_MS, matchSlot, parseSlots, parseStart } from "./parse.js";
 import { announceFullSquad, refreshCard, syncVoiceAccess } from "./service.js";
+import { cachedTemplates, findTemplate, postWording } from "./templates.js";
 
 const TITLE_MAX = 80;
 const NOTE_MAX = 120;
@@ -34,6 +38,13 @@ export const lfg: Command = {
             .setDescription('What you\'re running, e.g. "Mythic+ 12 · Ara-Kara"')
             .setRequired(true)
             .setMaxLength(TITLE_MAX),
+        )
+        .addStringOption((o) =>
+          o
+            .setName("template")
+            .setDescription("One of this server's templates, like Mythic+ or Ranked")
+            .setAutocomplete(true)
+            .setMaxLength(32),
         )
         .addIntegerOption((o) =>
           o
@@ -123,9 +134,31 @@ export const lfg: Command = {
       await interaction.reply({ content: "I can't post in this channel.", ...ephemeral });
       return;
     }
+    const { templates } = await cachedTemplates(ctx, guild.id);
+    const picked = interaction.options.getString("template");
+    const template = findTemplate(templates, picked);
+    if (picked && !template) {
+      await interaction.reply({
+        content: templates.length
+          ? `No template called "${safeText(picked)}". Pick one from the list.`
+          : "This server has no templates yet. A moderator can add them on the dashboard.",
+        ...ephemeral,
+      });
+      return;
+    }
+    if (template?.channelIds.length && !template.channelIds.includes(channel.id)) {
+      await interaction.reply({
+        content: `${safeText(template.name)} groups go in ${template.channelIds.map((c) => `<#${c}>`).join(", ")}.`,
+        ...ephemeral,
+      });
+      return;
+    }
+    // What the player typed wins; otherwise the template's defaults.
+    const typedRoles = interaction.options.getString("roles");
+    const typedSize = interaction.options.getInteger("size");
     const slots = parseSlots(
-      interaction.options.getString("roles"),
-      interaction.options.getInteger("size"),
+      typedRoles ?? (typedSize ? null : (template?.roles ?? null)),
+      typedSize ?? template?.size ?? null,
     );
     if (!slots.ok) {
       await interaction.reply({ content: slots.error, ...ephemeral });
@@ -154,7 +187,12 @@ export const lfg: Command = {
       note: interaction.options.getString("note")?.trim() || null,
       slots: slots.value,
       startsAt: start.value,
-      expiresAt: new Date(start.value.getTime() + LIFETIME_AFTER_START_MS),
+      expiresAt: new Date(
+        start.value.getTime() +
+          (template ? template.lifetimeHours * 3_600_000 : LIFETIME_AFTER_START_MS),
+      ),
+      templateId: template?.id ?? null,
+      wording: template ? { ...template.wording, voice: template.voice } : null,
     });
     if (!post) {
       await interaction.reply({
@@ -167,8 +205,55 @@ export const lfg: Command = {
     const message = await interaction.reply({ ...lfgCard(post, members), withResponse: true });
     const sent = message.resource?.message;
     if (sent) await setLfgMessage(ctx.db, post.id, sent.id);
+    if (template?.notifyRoleId && sent)
+      await notifyTemplateRole(ctx, guild, channel, post, template.notifyRoleId, sent.url);
+  },
+  async autocomplete(interaction, ctx) {
+    const focused = interaction.options.getFocused(true);
+    if (focused.name !== "template") {
+      await interaction.respond([]);
+      return;
+    }
+    const { templates } = await cachedTemplates(ctx, interaction.guildId);
+    const q = focused.value.trim().toLowerCase();
+    await interaction.respond(
+      templates
+        .filter((t) => !t.channelIds.length || t.channelIds.includes(interaction.channelId))
+        .filter((t) => `${t.name} ${t.game ?? ""}`.toLowerCase().includes(q))
+        .slice(0, 25)
+        .map((t) => ({
+          name: (t.game ? `${t.name} · ${t.game}` : t.name).slice(0, 100),
+          value: t.id,
+        })),
+    );
   },
 };
+
+/**
+ * Pro: tell a template's role a group is up. One ping per template every 15
+ * minutes, only that role, and only if Discord lets Garrison mention it.
+ */
+async function notifyTemplateRole(
+  ctx: BotContext,
+  guild: Guild,
+  channel: SendableChannels,
+  post: LfgPost,
+  roleId: string,
+  url: string,
+) {
+  const role = guild.roles.cache.get(roleId);
+  const me = guild.members.me;
+  if (!role || !me) return;
+  if (!role.mentionable && !me.permissions.has(PermissionFlagsBits.MentionEveryone)) return;
+  if (!(await claimRallyNotify(ctx.db, guild.id, post.templateId ?? "", post.id))) return;
+  const w = postWording(post.wording);
+  await channel
+    .send({
+      content: `<@&${role.id}> ${safeText(renderWording("New {group}", w))}: ${safeText(post.title)} ${url}`,
+      allowedMentions: { roles: [role.id], users: [], parse: [] },
+    })
+    .catch((error: unknown) => ctx.logger.warn("Could not notify a Rally role", { error }));
+}
 
 const UUID = /^[0-9a-f-]{36}$/;
 
@@ -220,7 +305,7 @@ export const rallyButtons: ButtonHandler = {
           not_found: "That group is gone.",
           closed: "This group is closed.",
           already: "You're already in this group.",
-          full: "Squad's full.",
+          full: renderWording("{Group}'s full.", postWording(post.wording)),
           slot_full: `${group.name || "That role"} is full. Pick another role.`,
           no_such_slot: "That role doesn't exist any more.",
         }[result.reason];

@@ -5,6 +5,7 @@ import {
   listActiveMembers,
   listExpiredLfg,
   listLfgWithVoice,
+  renderWording,
   setLfgVoice,
 } from "@garrison/db";
 import {
@@ -15,8 +16,9 @@ import {
   PermissionFlagsBits,
 } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
-import { lfgCard } from "./card.js";
+import { lfgCard, safeText } from "./card.js";
 import { voiceChannelName } from "./parse.js";
+import { postWording } from "./templates.js";
 
 /** Empty squad voice channels are removed after this long. */
 const VOICE_IDLE_MS = 5 * 60_000;
@@ -54,13 +56,14 @@ export async function announceFullSquad(
   const me = guild.members.me ?? (await guild.members.fetchMe());
   const memberIds = members.map((m) => m.userId);
 
+  const w = postWording(post.wording);
   let voiceId = post.voiceChannelId;
   const canCreate = me.permissions.has([
     PermissionFlagsBits.ManageChannels,
     PermissionFlagsBits.ManageRoles,
     PermissionFlagsBits.Connect,
   ]);
-  if (!voiceId && canCreate) {
+  if (!voiceId && canCreate && w.voice) {
     try {
       const parent = "parentId" in channel ? channel.parentId : null;
       const voice = await guild.channels.create({
@@ -102,8 +105,8 @@ export async function announceFullSquad(
   await channel
     .send({
       content: voiceId
-        ? `Squad's full. Voice is open: <#${voiceId}>\n${pings}`
-        : `Squad's full.\n${pings}`,
+        ? `${safeText(renderWording(w.full, w, { title: post.title }))} Voice is open: <#${voiceId}>\n${pings}`
+        : `${safeText(renderWording(w.full, w, { title: post.title }))}\n${pings}`,
       // Ping the squad and nobody else.
       allowedMentions: { users: memberIds, roles: [], parse: [] },
     })

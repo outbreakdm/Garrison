@@ -1,5 +1,6 @@
 import type { Db } from "@garrison/db";
 import type {
+  AutocompleteInteraction,
   ButtonInteraction,
   ChatInputCommandInteraction,
   ModalSubmitInteraction,
@@ -21,6 +22,8 @@ export interface BotContext {
 export interface Command {
   data: RESTPostAPIChatInputApplicationCommandsJSONBody;
   execute(interaction: ChatInputCommandInteraction<"cached">, ctx: BotContext): Promise<void>;
+  /** Suggestions while someone types an option marked autocomplete. */
+  autocomplete?(interaction: AutocompleteInteraction<"cached">, ctx: BotContext): Promise<void>;
 }
 
 /** Handles buttons whose custom ID starts with `prefix:`. */

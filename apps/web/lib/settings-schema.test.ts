@@ -7,6 +7,7 @@ import {
   parseLadder,
   pick,
   ranksForm,
+  templatesChangeText,
   watchForm,
 } from "./settings-schema";
 
@@ -161,5 +162,21 @@ describe("parseLadder", () => {
       ]),
     ).toBe("3 in 24 h: timeout 1 h; 5 in 7 d: ban");
     expect(ladderText([])).toBe("no steps");
+  });
+});
+
+describe("templatesChangeText", () => {
+  it("says which templates were added, edited, renamed and removed", () => {
+    const a = [
+      { id: "1", name: "Raid" },
+      { id: "2", name: "Ranked", size: 5 },
+      { id: "3", name: "Old" },
+    ];
+    const b = [
+      { id: "1", name: "Raid" },
+      { id: "2", name: "Comp", size: 5 },
+      { id: "4", name: "Fireteam" },
+    ];
+    expect(templatesChangeText(a, b)).toBe("Added Fireteam; edited Ranked (now Comp); removed Old");
   });
 });

@@ -67,6 +67,12 @@ export const SEARCH_INDEX: SearchEntry[] = [
     "ai build channels roles undo",
   ),
   page("/settings", "Settings", null, "configure history undo"),
+  page(
+    "/rally/templates",
+    "LFG templates",
+    "Rally",
+    "lfg wording game presets roles buttons customize",
+  ),
   setting("watch", "Watch", "Log channel", "mod log cases channel"),
   setting("watch", "Watch", "DM members when moderated", "direct message notify"),
   setting("watch", "Watch", "How to appeal", "appeal text ban"),

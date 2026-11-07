@@ -10,7 +10,7 @@ import type { Metadata } from "next";
 import { getDb } from "@/lib/db";
 import { listTextChannels } from "@/lib/discord";
 import { requireGuildAccess } from "@/lib/session";
-import { FIELD_LABELS, ladderText } from "@/lib/settings-schema";
+import { FIELD_LABELS, ladderText, templatesChangeText } from "@/lib/settings-schema";
 import { saveGatehouse, saveLedger, saveOps, saveRanks, saveWatch, undoChange } from "./actions";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -22,6 +22,7 @@ const SAVED: Record<string, string> = {
   ranks: "Saved Ranks settings.",
   ledger: "Saved Ledger settings.",
   escalation: "Saved the escalation ladder.",
+  rally: "Saved Rally templates.",
   undo: "Undone.",
 };
 const ERRORS: Record<string, string> = {
@@ -38,6 +39,10 @@ const ERRORS: Record<string, string> = {
 
 function describe(field: string, value: unknown, channels: Map<string, string>) {
   if (field === "rules") return ladderText(value);
+  if (field === "templates")
+    return Array.isArray(value) && value.length
+      ? value.map((t: { name?: string }) => t.name ?? "?").join(", ")
+      : "no templates";
   if (value === null || value === undefined || value === "") return "none";
   if (typeof value === "boolean") return value ? "on" : "off";
   if (field === "announce") return ANNOUNCE[String(value)] ?? String(value);
@@ -384,8 +389,10 @@ export default async function SettingsPage({
                     {h.revertsChangeId ? <span className="muted">Undo: </span> : null}
                     {Object.entries(h.changes).map(([field, { from, to }]) => (
                       <div key={field}>
-                        {FIELD_LABELS[field] ?? field}: {describe(field, from, names)} →{" "}
-                        {describe(field, to, names)}
+                        {FIELD_LABELS[field] ?? field}:{" "}
+                        {field === "templates"
+                          ? templatesChangeText(from, to)
+                          : `${describe(field, from, names)} → ${describe(field, to, names)}`}
                       </div>
                     ))}
                   </td>

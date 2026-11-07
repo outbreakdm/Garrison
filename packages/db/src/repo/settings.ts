@@ -6,6 +6,7 @@ import {
   gatehouseSettings,
   ledgerSettings,
   opsSettings,
+  rallySettings,
   ranksSettings,
   type SettingsChange,
   type SettingsDiff,
@@ -35,6 +36,8 @@ export const EDITABLE_FIELDS = {
   ledger: ["channelId", "retentionDays"],
   // The whole ladder is one value, so history and undo treat it as a unit.
   escalation: ["rules"],
+  // Templates are checked with checkTemplates before they get here.
+  rally: ["templates"],
 } as const satisfies Record<SettingsModule, readonly string[]>;
 
 /** One step of the escalation ladder, as the dashboard edits it and history stores it. */
@@ -101,10 +104,11 @@ const TABLES = {
   ops: opsSettings,
   ranks: ranksSettings,
   ledger: ledgerSettings,
+  rally: rallySettings,
 } as const;
 
 /** Modules whose settings row is created on first use, by the bot or the dashboard. */
-const LAZY = new Set<SettingsModule>(["ops", "ranks", "ledger"]);
+const LAZY = new Set<SettingsModule>(["ops", "ranks", "ledger", "rally"]);
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 type Row = Record<string, unknown>;
@@ -176,6 +180,12 @@ async function writeRow(tx: Tx, module: SettingsModule, guildId: string, values:
         .update(ledgerSettings)
         .set(set as Partial<typeof ledgerSettings.$inferInsert>)
         .where(eq(ledgerSettings.guildId, guildId));
+      return;
+    case "rally":
+      await tx
+        .update(rallySettings)
+        .set(set as Partial<typeof rallySettings.$inferInsert>)
+        .where(eq(rallySettings.guildId, guildId));
       return;
   }
 }

@@ -5,6 +5,17 @@ import type { BotContext } from "./commands/types.js";
 const FAILURE = "Something went wrong on my side. Try again in a moment.";
 
 export async function handleInteraction(interaction: Interaction, ctx: BotContext) {
+  if (interaction.isAutocomplete()) {
+    if (!interaction.inCachedGuild()) return;
+    const command = commandsByName.get(interaction.commandName);
+    // Suggestions are best effort: an error just means no suggestions.
+    await command
+      ?.autocomplete?.(interaction, ctx)
+      .catch((error: unknown) =>
+        ctx.logger.debug("Autocomplete failed", { command: interaction.commandName, error }),
+      );
+    return;
+  }
   if (!interaction.isChatInputCommand() && !interaction.isButton() && !interaction.isModalSubmit())
     return;
 
