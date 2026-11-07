@@ -92,6 +92,13 @@
       "when": 1793998473198,
       "tag": "0012_barracks",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794000591153,
+      "tag": "0013_metrics",
+      "breakpoints": true
     }
   ]
 }

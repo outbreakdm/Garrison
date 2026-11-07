@@ -3,7 +3,10 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { publicMetrics } from "@/lib/public-metrics";
 import { SESSION_COOKIE } from "@/lib/session";
+import { currentTheme } from "@/lib/theme";
 
 export const metadata: Metadata = {
   title: { absolute: "Garrison · Guard the gate. Rally the squad." },
@@ -72,6 +75,7 @@ export default async function Home() {
   const signedIn = Boolean((await cookies()).get(SESSION_COOKIE));
   const clientId = process.env.DISCORD_CLIENT_ID;
   const invite = clientId && /^\d+$/.test(clientId) ? inviteUrl(clientId) : null;
+  const [metrics, theme] = await Promise.all([publicMetrics(), currentTheme()]);
 
   return (
     <div className="landing">
@@ -81,8 +85,10 @@ export default async function Home() {
           <a href="#modules">Modules</a>
           <a href="#security">Security</a>
           <a href="#pricing">Pricing</a>
+          <a href="/status">Status</a>
         </nav>
         <span className="topbar__spacer" />
+        <ThemeToggle back="/" theme={theme} />
         <Link className="g-btn g-btn--ghost" href={signedIn ? "/servers" : "/login"}>
           {signedIn ? "Open dashboard" : "Sign in"}
         </Link>
@@ -93,6 +99,13 @@ export default async function Home() {
           <span className="g-label">Discord bot for gaming communities</span>
           <h1 className="hero__title">{brand.tagline}</h1>
           <p className="hero__lede">{brand.oneLiner}</p>
+          {metrics?.latency ? (
+            // The Fast pillar's proof: a live number, linked to where it comes from.
+            <a className="live-number" href="/status">
+              Commands answered in <strong>{metrics.latency.p95Ms} ms</strong> (p95, last 24 h)
+              {metrics.uptimePct !== null ? ` · ${metrics.uptimePct.toFixed(2)}% uptime` : ""}
+            </a>
+          ) : null}
           <div className="g-row">
             {invite ? (
               <a className="g-btn g-btn--primary" href={invite}>

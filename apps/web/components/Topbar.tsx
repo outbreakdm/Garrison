@@ -1,13 +1,44 @@
 import { Logo } from "./Logo";
+import { ThemeToggle } from "./ThemeToggle";
 
-export function Topbar({ username, guildName }: { username: string; guildName?: string }) {
+export interface TopbarProps {
+  username: string;
+  theme: "dark" | "light";
+  back: string;
+  /** The current server, and others to switch to. */
+  guild?: { id: string; name: string };
+  guilds?: { id: string; name: string }[];
+}
+
+export function Topbar({ username, theme, back, guild, guilds = [] }: TopbarProps) {
   return (
     <header className="topbar">
       <a href="/servers" aria-label="All servers">
         <Logo />
       </a>
-      {guildName ? <span className="g-badge">{guildName}</span> : null}
+      {guild ? (
+        // A details menu: switching servers needs no JavaScript.
+        <details className="switcher">
+          <summary className="g-btn g-btn--secondary">{guild.name}</summary>
+          <div className="switcher__menu" role="menu">
+            {guilds.map((g) => (
+              <a
+                key={g.id}
+                role="menuitem"
+                href={`/servers/${g.id}`}
+                aria-current={g.id === guild.id ? "true" : undefined}
+              >
+                {g.name}
+              </a>
+            ))}
+            <a role="menuitem" href="/servers">
+              All servers
+            </a>
+          </div>
+        </details>
+      ) : null}
       <span className="topbar__spacer" />
+      <ThemeToggle back={back} theme={theme} />
       <a className="topbar__user" href="/account">
         {username}
       </a>

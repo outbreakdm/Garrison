@@ -96,6 +96,10 @@ packages/
 
 `/health` checks Garrison's permissions per module, its role position (roles with moderation powers above Garrison are anti-nuke's blind spot), the log and alert channels, the verify and staff roles, and whether protections are on. If permissions are wrong, a **Fix permissions** button re-invites Garrison with exactly the set it uses (never Administrator, and it warns if Garrison has it).
 
+### Metrics and status
+
+The bot keeps a few counts, never content: messages per server per UTC day, when each member last posted (throttled to once every 15 minutes), hourly p50/p95 of how fast each command got its first reply, and a heartbeat each minute. `/health` results are saved, and refreshed for every server every 30 minutes. The Overview shows these numbers, and `/status` is a public page with the current state, 30-day uptime and command reply times. Uptime counts from the first heartbeat, so a new install isn't shown as down.
+
 ### Intents
 
 `Guilds`, `Guild Moderation` (audit log, for anti-nuke), `Guild Voice States` (Rally), `Guild Messages` (Ranks, without Message Content) and **Server Members** (privileged). Turn on _Server Members Intent_ under Bot in the Developer Portal, or login fails with "Used disallowed intents".
@@ -104,7 +108,7 @@ packages/
 
 `apps/web` serves the public landing page at `/` and the dashboard. The landing page covers the modules, security and early-access pricing, with an **Add to Discord** button that requests exactly the permissions `/health` checks (set `DISCORD_CLIENT_ID`).
 
-The dashboard: Sign in with Discord to see the servers you manage: an **Overview** (mod actions, open groups, next raid, Gatehouse status, recent cases), **Watch** (the latest 50 cases), **Gatehouse** (lockdown, anti-raid and anti-nuke settings) and **Rally** (open groups and raid rosters) and **Settings**: Watch, Gatehouse anti-raid and the raid time zone, with a history of every change and one-click **Undo**. Anti-nuke and the trusted list stay owner-only commands in Discord.
+The dashboard: Sign in with Discord to see the servers you manage, switch between them from the top bar, and pick a light or dark theme. An **Overview** (active members, messages today, mod actions, command reply p95, the latest Quartermaster build, saved health checks with a Fix permissions button, open groups, next raid, Gatehouse status, recent cases), **Watch** (the latest 50 cases), **Gatehouse** (lockdown, anti-raid and anti-nuke settings) and **Rally** (open groups and raid rosters) and **Settings**: Watch, Gatehouse anti-raid and the raid time zone, with a history of every change and one-click **Undo**. Anti-nuke and the trusted list stay owner-only commands in Discord.
 
 ```sh
 pnpm --filter @garrison/web dev     # http://localhost:3000

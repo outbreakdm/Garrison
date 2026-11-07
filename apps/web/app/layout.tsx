@@ -4,6 +4,7 @@ import "./app.css";
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Saira_Semi_Condensed } from "next/font/google";
 import type { ReactNode } from "react";
+import { currentTheme } from "@/lib/theme";
 
 // Self-hosted at build time, so the CSP can stay at font-src 'self'.
 const inter = Inter({
@@ -28,11 +29,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const theme = await currentTheme();
   return (
     <html
       lang="en"
-      data-theme="dark"
+      data-theme={theme}
       className={`${inter.variable} ${mono.variable} ${saira.variable}`}
     >
       <body>{children}</body>

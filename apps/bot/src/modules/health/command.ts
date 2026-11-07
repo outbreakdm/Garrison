@@ -1,4 +1,4 @@
-import { getGatehouseSettings, getWatchSettings } from "@garrison/db";
+import { getGatehouseSettings, getWatchSettings, saveHealthSnapshot } from "@garrison/db";
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -74,6 +74,7 @@ export const health: Command = {
   async execute(interaction, ctx) {
     await interaction.deferReply(ephemeral);
     const checks = await healthFor(ctx, interaction.guild);
+    await saveHealthSnapshot(ctx.db, interaction.guild.id, checks).catch(() => {});
     const problems = checks.filter((c) => c.status !== "ok").length;
     const me = interaction.guild.members.me;
     const needsReinvite =
@@ -103,3 +104,14 @@ export const health: Command = {
     await interaction.editReply({ embeds: [embed], components });
   },
 };
+
+/** Refresh every server's health snapshot for the dashboard. Uses cached data only: no extra Discord calls. */
+export async function snapshotAllHealth(ctx: BotContext, guilds: Iterable<Guild>) {
+  for (const guild of guilds) {
+    try {
+      await saveHealthSnapshot(ctx.db, guild.id, await healthFor(ctx, guild));
+    } catch (error) {
+      ctx.logger.warn("Health snapshot failed", { guildId: guild.id, error });
+    }
+  }
+}

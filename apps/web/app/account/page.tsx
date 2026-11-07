@@ -6,6 +6,7 @@ import { WOW_REGIONS } from "@/lib/barracks";
 import { battlenetConfigured } from "@/lib/battlenet";
 import { getDb } from "@/lib/db";
 import { requireSession } from "@/lib/session";
+import { currentTheme } from "@/lib/theme";
 import { removeAccountLink, stopSharing } from "./actions";
 
 export const metadata: Metadata = { title: "Your accounts" };
@@ -40,7 +41,7 @@ export default async function AccountPage({
 
   return (
     <>
-      <Topbar username={session.username} />
+      <Topbar username={session.username} theme={await currentTheme()} back="/account" />
       <main className="shell">
         <div className="main">
           <div className="page-head">

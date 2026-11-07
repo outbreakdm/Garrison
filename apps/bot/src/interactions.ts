@@ -18,6 +18,9 @@ export async function handleInteraction(interaction: Interaction, ctx: BotContex
     return;
   }
 
+  // Response time: from Discord's creation timestamp to Garrison's first reply.
+  if (ctx.metrics) instrumentFirstResponse(interaction, ctx);
+
   try {
     if (interaction.isChatInputCommand()) {
       const command = commandsByName.get(interaction.commandName);
@@ -47,5 +50,27 @@ export async function handleInteraction(interaction: Interaction, ctx: BotContex
     } catch {
       // The interaction token may have expired; nothing more we can do.
     }
+  }
+}
+
+const FIRST_RESPONSE = ["reply", "deferReply", "update", "deferUpdate", "showModal"] as const;
+
+function instrumentFirstResponse(interaction: Interaction, ctx: BotContext) {
+  let recorded = false;
+  const target = interaction as unknown as Record<string, unknown>;
+  for (const name of FIRST_RESPONSE) {
+    const original = target[name];
+    if (typeof original !== "function") continue;
+    target[name] = async (...args: unknown[]) => {
+      const result = await (original as (...a: unknown[]) => Promise<unknown>).apply(
+        interaction,
+        args,
+      );
+      if (!recorded) {
+        recorded = true;
+        ctx.metrics?.response(interaction.guildId, Date.now() - interaction.createdTimestamp);
+      }
+      return result;
+    };
   }
 }

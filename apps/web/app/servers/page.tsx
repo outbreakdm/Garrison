@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
 import { getDb } from "@/lib/db";
 import { requireSession } from "@/lib/session";
+import { currentTheme } from "@/lib/theme";
 
 export const metadata: Metadata = { title: "Servers" };
 
@@ -12,7 +13,7 @@ export default async function ServersPage() {
   const guilds = await listActiveGuilds(getDb(), session.manageableGuildIds);
   return (
     <>
-      <Topbar username={session.username} />
+      <Topbar username={session.username} theme={await currentTheme()} back="/servers" />
       <main className="shell">
         <div className="main">
           <div className="page-head">

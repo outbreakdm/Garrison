@@ -5,9 +5,11 @@ import { loadEnv } from "./env.js";
 import { handleInteraction } from "./interactions.js";
 import { ensureGuild, forgetGuild } from "./lib/guild-registry.js";
 import { createLogger } from "./lib/logger.js";
+import { Metrics } from "./lib/metrics.js";
 import { refreshOsrs } from "./modules/barracks/refresh.js";
 import { handleAuditLogEntry } from "./modules/gatehouse/anti-nuke.js";
 import { handleMemberJoin, sweepExpiredLockdowns } from "./modules/gatehouse/service.js";
+import { snapshotAllHealth } from "./modules/health/command.js";
 import {
   maybePruneLedger,
   onAuditEntry,
@@ -30,6 +32,7 @@ const ctx: BotContext = {
   planner: env.ANTHROPIC_API_KEY
     ? new ClaudePlanner(env.ANTHROPIC_API_KEY, env.QM_MODEL)
     : undefined,
+  metrics: new Metrics(),
 };
 if (!ctx.planner) logger.info("Quartermaster is off: set ANTHROPIC_API_KEY to enable /qm build");
 
@@ -55,6 +58,8 @@ const client = new Client({
 
 const SWEEP_INTERVAL_MS = 60_000;
 let sweepTimer: NodeJS.Timeout | undefined;
+const HEALTH_EVERY_MS = 30 * 60_000;
+let lastHealthSnapshot = 0;
 
 client.once(Events.ClientReady, async (ready) => {
   logger.info(`Online as ${ready.user.tag} in ${ready.guilds.cache.size} servers`);
@@ -72,6 +77,11 @@ client.once(Events.ClientReady, async (ready) => {
     await sweepOps(ctx, ready).catch((error) => logger.error("Ops sweep failed", { error }));
     await maybePruneLedger(ctx).catch((error) => logger.error("Ledger prune failed", { error }));
     await refreshOsrs(ctx).catch((error) => logger.error("OSRS refresh failed", { error }));
+    await ctx.metrics?.flush(ctx).catch((error) => logger.error("Metrics flush failed", { error }));
+    if (Date.now() - lastHealthSnapshot > HEALTH_EVERY_MS) {
+      lastHealthSnapshot = Date.now();
+      await snapshotAllHealth(ctx, ready.guilds.cache.values());
+    }
   };
   await sweep();
   sweepTimer = setInterval(sweep, SWEEP_INTERVAL_MS);
@@ -84,11 +94,13 @@ client.on(Events.GuildAuditLogEntryCreate, (entry, guild) => {
   void onAuditEntry(ctx, entry, guild);
 });
 
-client.on(Events.MessageCreate, (message) =>
+client.on(Events.MessageCreate, (message) => {
+  if (message.inGuild() && !message.author.bot && !message.webhookId)
+    ctx.metrics?.message(message.guildId, message.author.id);
   handleMessage(ctx, message).catch((error) =>
     logger.error("Ranks failed", { guildId: message.guildId, error }),
-  ),
-);
+  );
+});
 
 client.on(Events.GuildMemberAdd, (member) => {
   handleMemberJoin(ctx, member).catch((error) =>

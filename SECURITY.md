@@ -88,6 +88,13 @@ Then set `DATABASE_URL` to the pooled connection string with user `garrison_bot.
 - **Cost and abuse:** 5 builds per server per hour, 500-character requests, `max_tokens` 16000. The API key is server-side only; the model's answers and errors are never echoed raw.
 - **Refusals:** server-side fallback (`fallbacks: "default"`) retries a declined request on another model inside the same call; a final refusal is reported plainly.
 
+## Metrics and the status page
+
+- **Counts, never content:** message counts per server per day, last-posted times per member, hourly command timings and a heartbeat. No message text, and Message Content stays off.
+- The bot can insert and update only the count and timing columns; the dashboard can only read them; `anon` and `authenticated` have no grants. `bot_status` is held to one row by a check constraint.
+- `/status` is public and shows only Garrison-wide numbers (heartbeat, uptime, p95 across all servers), never per-server data. If the database can't be reached, it says so instead of showing an error.
+- The theme cookie holds only `dark` or `light`. It's set by a Server Action that redirects only to local paths.
+
 ## Discord
 
 - Intents: `Guilds`, `Guild Moderation`, `Guild Voice States`, `Guild Messages` and `Server Members` only. Message Content is not requested: Ranks counts messages by author and time only.

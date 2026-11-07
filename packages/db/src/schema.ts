@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   bigserial,
   boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -642,3 +643,80 @@ export const rosterShares = pgTable(
 
 export type LinkedAccount = typeof linkedAccounts.$inferSelect;
 export type RosterShare = typeof rosterShares.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Health, activity and service metrics
+// ---------------------------------------------------------------------------
+
+/** The latest /health result per server, written by the bot so the dashboard can show it. */
+export const healthSnapshots = pgTable("health_snapshots", {
+  guildId: text("guild_id")
+    .primaryKey()
+    .references(() => guilds.id, { onDelete: "cascade" }),
+  checks: jsonb("checks").$type<{ status: "ok" | "warn" | "fix"; text: string }[]>().notNull(),
+  problems: integer("problems").notNull(),
+  computedAt: timestamp("computed_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
+
+/** Messages per server per day. Counts only, never content. */
+export const guildActivityDaily = pgTable(
+  "guild_activity_daily",
+  {
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    day: date("day").notNull(),
+    messages: integer("messages").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.guildId, t.day] })],
+).enableRLS();
+
+/** When each member last posted, for "active members". Updated at most every 15 minutes per member. */
+export const memberLastSeen = pgTable(
+  "member_last_seen",
+  {
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.guildId, t.userId] }),
+    index("member_last_seen_guild_time").on(t.guildId, t.lastSeenAt),
+  ],
+).enableRLS();
+
+/**
+ * How fast commands are answered, per hour: time from the interaction's
+ * creation (Discord's timestamp) to Garrison's first response. guild_id ''
+ * is all servers together.
+ */
+export const commandLatencyHourly = pgTable(
+  "command_latency_hourly",
+  {
+    hour: timestamp("hour", { withTimezone: true }).notNull(),
+    guildId: text("guild_id").notNull().default(""),
+    count: integer("count").notNull(),
+    p50Ms: integer("p50_ms").notNull(),
+    p95Ms: integer("p95_ms").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.hour, t.guildId] })],
+).enableRLS();
+
+/** Minutes the bot was up, per day, for the status page. */
+export const botUptimeDaily = pgTable("bot_uptime_daily", {
+  day: date("day").primaryKey(),
+  minutesUp: integer("minutes_up").notNull().default(0),
+  /** When the first heartbeat of the day landed, so a partial first day is not counted as downtime. */
+  firstBeatAt: timestamp("first_beat_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
+
+/** One row: the bot's latest heartbeat. */
+export const botStatus = pgTable("bot_status", {
+  id: integer("id").primaryKey().default(1),
+  lastBeatAt: timestamp("last_beat_at", { withTimezone: true }).notNull(),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+}).enableRLS();
+
+export type HealthSnapshot = typeof healthSnapshots.$inferSelect;
