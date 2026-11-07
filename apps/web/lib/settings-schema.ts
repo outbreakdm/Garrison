@@ -50,6 +50,28 @@ export const opsForm = z.object({
     .refine(isValidTimeZone, "That isn't a time zone. Use a name like America/Chicago."),
 });
 
+export const ranksForm = z
+  .object({
+    enabled: checkbox,
+    announce: z.enum(["off", "same_channel", "channel"], { message: "Pick where level-ups go." }),
+    announceChannelId: snowflakeOrNone,
+  })
+  .refine((v) => v.announce !== "channel" || v.announceChannelId !== null, {
+    message: "Pick the channel for level-up messages.",
+    path: ["announceChannelId"],
+  })
+  // Only keep a channel when it's used, so history doesn't show a stale one.
+  .transform((v) => ({
+    ...v,
+    announceChannelId: v.announce === "channel" ? v.announceChannelId : null,
+  }));
+
+export const ledgerForm = z.object({
+  channelId: snowflakeOrNone,
+  // Matches /logs settings and the database check; ledger_prune() clamps to the same range.
+  retentionDays: int(7, 365, "Keep events for"),
+});
+
 /** Read only the expected keys from FormData, so extra fields are ignored rather than trusted. */
 export function pick(form: FormData, keys: readonly string[]) {
   return Object.fromEntries(keys.map((k) => [k, form.get(k) ?? undefined]));
@@ -68,4 +90,9 @@ export const FIELD_LABELS: Record<string, string> = {
   autoUnlockMinutes: "Auto-unlock (min)",
   flagAccountAgeDays: "Flag accounts under (days)",
   timezone: "Time zone",
+  enabled: "Ranks",
+  announce: "Level-ups",
+  announceChannelId: "Level-up channel",
+  channelId: "Ledger channel",
+  retentionDays: "Keep events (days)",
 };

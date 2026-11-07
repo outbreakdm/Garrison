@@ -2,7 +2,9 @@ import { and, desc, eq } from "drizzle-orm";
 import type { Db } from "../client";
 import {
   gatehouseSettings,
+  ledgerSettings,
   opsSettings,
+  ranksSettings,
   type SettingsChange,
   type SettingsDiff,
   type SettingsModule,
@@ -27,9 +29,20 @@ export const EDITABLE_FIELDS = {
     "flagAccountAgeDays",
   ],
   ops: ["timezone"],
+  ranks: ["enabled", "announce", "announceChannelId"],
+  ledger: ["channelId", "retentionDays"],
 } as const satisfies Record<SettingsModule, readonly string[]>;
 
-const TABLES = { watch: watchSettings, gatehouse: gatehouseSettings, ops: opsSettings } as const;
+const TABLES = {
+  watch: watchSettings,
+  gatehouse: gatehouseSettings,
+  ops: opsSettings,
+  ranks: ranksSettings,
+  ledger: ledgerSettings,
+} as const;
+
+/** Modules whose settings row is created on first use, by the bot or the dashboard. */
+const LAZY = new Set<SettingsModule>(["ops", "ranks", "ledger"]);
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 type Row = Record<string, unknown>;
@@ -38,9 +51,12 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stri
 
 async function lockRow(tx: Tx, module: SettingsModule, guildId: string): Promise<Row | null> {
   const table = TABLES[module];
-  if (module === "ops") {
-    // Ops settings rows are created lazily.
-    await tx.insert(opsSettings).values({ guildId }).onConflictDoNothing();
+  if (LAZY.has(module)) {
+    // These rows are created lazily, with the column defaults.
+    await tx
+      .insert(table as typeof opsSettings)
+      .values({ guildId })
+      .onConflictDoNothing();
   }
   const [row] = await tx.select().from(table).where(eq(table.guildId, guildId)).for("update");
   return (row as Row | undefined) ?? null;
@@ -67,6 +83,18 @@ async function writeRow(tx: Tx, module: SettingsModule, guildId: string, values:
         .update(opsSettings)
         .set(set as Partial<typeof opsSettings.$inferInsert>)
         .where(eq(opsSettings.guildId, guildId));
+      return;
+    case "ranks":
+      await tx
+        .update(ranksSettings)
+        .set(set as Partial<typeof ranksSettings.$inferInsert>)
+        .where(eq(ranksSettings.guildId, guildId));
+      return;
+    case "ledger":
+      await tx
+        .update(ledgerSettings)
+        .set(set as Partial<typeof ledgerSettings.$inferInsert>)
+        .where(eq(ledgerSettings.guildId, guildId));
       return;
   }
 }

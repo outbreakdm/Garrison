@@ -1,6 +1,8 @@
 import {
+  getLedgerSettings,
   getOpsTimezone,
   getOverview,
+  getRanksSettings,
   listSettingsChanges,
   type SettingsChange,
 } from "@garrison/db";
@@ -9,7 +11,7 @@ import { getDb } from "@/lib/db";
 import { listTextChannels } from "@/lib/discord";
 import { requireGuildAccess } from "@/lib/session";
 import { FIELD_LABELS } from "@/lib/settings-schema";
-import { saveGatehouse, saveOps, saveWatch, undoChange } from "./actions";
+import { saveGatehouse, saveLedger, saveOps, saveRanks, saveWatch, undoChange } from "./actions";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -17,6 +19,8 @@ const SAVED: Record<string, string> = {
   watch: "Saved Watch settings.",
   gatehouse: "Saved Gatehouse settings.",
   ops: "Saved the raid time zone.",
+  ranks: "Saved Ranks settings.",
+  ledger: "Saved Ledger settings.",
   undo: "Undone.",
 };
 const ERRORS: Record<string, string> = {
@@ -34,9 +38,16 @@ const ERRORS: Record<string, string> = {
 function describe(field: string, value: unknown, channels: Map<string, string>) {
   if (value === null || value === undefined || value === "") return "none";
   if (typeof value === "boolean") return value ? "on" : "off";
-  if (field.endsWith("ChannelId")) return `#${channels.get(String(value)) ?? "deleted-channel"}`;
+  if (field === "announce") return ANNOUNCE[String(value)] ?? String(value);
+  if (/channelId$/i.test(field)) return `#${channels.get(String(value)) ?? "deleted-channel"}`;
   return String(value);
 }
+
+const ANNOUNCE: Record<string, string> = {
+  off: "off",
+  same_channel: "where they posted",
+  channel: "a set channel",
+};
 
 function ChannelSelect({
   name,
@@ -72,9 +83,11 @@ export default async function SettingsPage({
   const { guild } = await requireGuildAccess(guildId);
   const query = await searchParams;
   const db = getDb();
-  const [overview, timezone, history, channels] = await Promise.all([
+  const [overview, timezone, ranks, ledger, history, channels] = await Promise.all([
     getOverview(db, guild.id),
     getOpsTimezone(db, guild.id),
+    getRanksSettings(db, guild.id),
+    getLedgerSettings(db, guild.id),
     listSettingsChanges(db, guild.id),
     listTextChannels(guild.id).catch(() => []),
   ]);
@@ -262,6 +275,79 @@ export default async function SettingsPage({
           </label>
           <button type="submit" className="g-btn g-btn--secondary">
             Save time zone
+          </button>
+        </form>
+
+        <form
+          action={saveRanks}
+          className="g-card card-col"
+          key={`ranks-${ranks.updatedAt.getTime()}`}
+        >
+          <input type="hidden" name="guildId" value={guild.id} />
+          <span className="g-label">Ranks · Leveling</span>
+          <label className="check">
+            <input type="checkbox" name="enabled" defaultChecked={ranks.enabled} />
+            <span>Give XP for messages</span>
+          </label>
+          <label className="g-field" htmlFor="announce">
+            <span>Level-up messages</span>
+            <select className="g-input" id="announce" name="announce" defaultValue={ranks.announce}>
+              <option value="same_channel">Where the member posted</option>
+              <option value="channel">In one channel</option>
+              <option value="off">Don't announce</option>
+            </select>
+          </label>
+          <label className="g-field" htmlFor="announceChannelId">
+            <span>Level-up channel</span>
+            <ChannelSelect
+              name="announceChannelId"
+              value={ranks.announceChannelId}
+              channels={channels}
+              none="Pick a channel"
+            />
+            <span className="g-help">Only used when level-ups go to one channel.</span>
+          </label>
+          <p className="g-help">
+            Garrison counts who posted and when, never what they wrote. Set level rewards with
+            /ranks reward in Discord.
+          </p>
+          <button type="submit" className="g-btn g-btn--secondary">
+            Save Ranks
+          </button>
+        </form>
+
+        <form
+          action={saveLedger}
+          className="g-card card-col"
+          key={`ledger-${ledger.updatedAt.getTime()}`}
+        >
+          <input type="hidden" name="guildId" value={guild.id} />
+          <span className="g-label">Ledger · Logs</span>
+          <label className="g-field" htmlFor="channelId">
+            <span>Ledger channel</span>
+            <ChannelSelect
+              name="channelId"
+              value={ledger.channelId}
+              channels={channels}
+              none="Dashboard only"
+            />
+            <span className="g-help">Each event also gets a line here.</span>
+          </label>
+          <label className="g-field" htmlFor="retentionDays">
+            <span>Keep events for (days)</span>
+            <input
+              className="g-input"
+              id="retentionDays"
+              name="retentionDays"
+              type="number"
+              min={7}
+              max={365}
+              defaultValue={ledger.retentionDays}
+            />
+            <span className="g-help">7 to 365. Older events are removed automatically.</span>
+          </label>
+          <button type="submit" className="g-btn g-btn--secondary">
+            Save Ledger
           </button>
         </form>
       </div>

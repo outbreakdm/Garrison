@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   bigserial,
   boolean,
+  check,
   date,
   index,
   integer,
@@ -380,7 +381,13 @@ export type WebSession = typeof webSessions.$inferSelect;
 // Settings history (dashboard edits)
 // ---------------------------------------------------------------------------
 
-export const settingsModule = pgEnum("settings_module", ["watch", "gatehouse", "ops"]);
+export const settingsModule = pgEnum("settings_module", [
+  "watch",
+  "gatehouse",
+  "ops",
+  "ranks",
+  "ledger",
+]);
 
 /** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */
 export type SettingsDiff = Record<string, { from: unknown; to: unknown }>;
@@ -475,16 +482,20 @@ export type MemberXp = typeof memberXp.$inferSelect;
 // Ledger (logs)
 // ---------------------------------------------------------------------------
 
-export const ledgerSettings = pgTable("ledger_settings", {
-  guildId: text("guild_id")
-    .primaryKey()
-    .references(() => guilds.id, { onDelete: "cascade" }),
-  /** Channel that gets a line for each event. Null keeps events in the dashboard only. */
-  channelId: text("channel_id"),
-  /** Events older than this are removed by ledger_prune(). */
-  retentionDays: integer("retention_days").notNull().default(30),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}).enableRLS();
+export const ledgerSettings = pgTable(
+  "ledger_settings",
+  {
+    guildId: text("guild_id")
+      .primaryKey()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    /** Channel that gets a line for each event. Null keeps events in the dashboard only. */
+    channelId: text("channel_id"),
+    /** Events older than this are removed by ledger_prune(). */
+    retentionDays: integer("retention_days").notNull().default(30),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [check("ledger_retention_range", sql`${t.retentionDays} BETWEEN 7 AND 365`)],
+).enableRLS();
 
 /**
  * Server events: who did what, when. Never message content. Rows are

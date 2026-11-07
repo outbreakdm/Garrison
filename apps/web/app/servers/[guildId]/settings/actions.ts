@@ -6,7 +6,14 @@ import { getDb } from "@/lib/db";
 import { listTextChannels } from "@/lib/discord";
 import { isSnowflake } from "@/lib/security";
 import { checkGuildAccess } from "@/lib/session";
-import { gatehouseForm, opsForm, pick, watchForm } from "@/lib/settings-schema";
+import {
+  gatehouseForm,
+  ledgerForm,
+  opsForm,
+  pick,
+  ranksForm,
+  watchForm,
+} from "@/lib/settings-schema";
 
 /**
  * Every action here re-checks access for the guild named in the form. That
@@ -79,6 +86,24 @@ export async function saveOps(form: FormData) {
   const parsed = opsForm.safeParse(pick(form, ["timezone"]));
   if (!parsed.success) back(guild.id, { error: "timezone" });
   else await save("ops", form, parsed.data);
+}
+
+export async function saveRanks(form: FormData) {
+  const { guild } = await authorize(form);
+  const parsed = ranksForm.safeParse(pick(form, ["enabled", "announce", "announceChannelId"]));
+  if (!parsed.success) back(guild.id, { error: "invalid", module: "ranks" });
+  else if (!(await channelBelongs(guild.id, parsed.data.announceChannelId)))
+    back(guild.id, { error: "channel" });
+  else await save("ranks", form, parsed.data);
+}
+
+export async function saveLedger(form: FormData) {
+  const { guild } = await authorize(form);
+  const parsed = ledgerForm.safeParse(pick(form, ["channelId", "retentionDays"]));
+  if (!parsed.success) back(guild.id, { error: "invalid", module: "ledger" });
+  else if (!(await channelBelongs(guild.id, parsed.data.channelId)))
+    back(guild.id, { error: "channel" });
+  else await save("ledger", form, parsed.data);
 }
 
 export async function undoChange(form: FormData) {

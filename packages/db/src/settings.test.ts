@@ -3,7 +3,13 @@ import type { Db } from "./client";
 import { getGatehouseSettings } from "./repo/gatehouse";
 import { getWatchSettings, upsertGuild } from "./repo/guilds";
 import { applySettingsChange, listSettingsChanges, undoSettingsChange } from "./repo/settings";
-import { gatehouseSettings, settingsChanges } from "./schema";
+import {
+  gatehouseSettings,
+  ledgerSettings,
+  memberXp,
+  rankRewards,
+  settingsChanges,
+} from "./schema";
 import { createTestDb } from "./testing";
 
 let db: Db;
@@ -134,6 +140,45 @@ describe("dashboard settings, as garrison_web", () => {
         ...taner,
       }),
     ).toMatchObject({ ok: true });
+  });
+
+  it("edits Ranks and Ledger, creating their rows on first edit", async () => {
+    expect(
+      await applySettingsChange(db, {
+        guildId: G,
+        module: "ranks",
+        patch: { enabled: true, announce: "channel", announceChannelId: "123456789012345678" },
+        ...taner,
+      }),
+    ).toMatchObject({ ok: true, change: { changes: { enabled: { from: false, to: true } } } });
+    const ledger = await applySettingsChange(db, {
+      guildId: G,
+      module: "ledger",
+      patch: { retentionDays: 90 },
+      ...taner,
+    });
+    expect(ledger).toMatchObject({
+      ok: true,
+      change: { changes: { retentionDays: { from: 30, to: 90 } } },
+    });
+    if (!ledger.ok) throw new Error("unreachable");
+    expect(await undoSettingsChange(db, G, ledger.change.id, kel)).toMatchObject({ ok: true });
+  });
+
+  it("holds Ledger retention to 7..365 days and keeps XP and rewards bot-only", async () => {
+    const tooShort = await applySettingsChange(db, {
+      guildId: G,
+      module: "ledger",
+      patch: { retentionDays: 1 },
+      ...taner,
+    }).then(
+      () => "",
+      (e: Error & { cause?: Error }) => `${e.message} ${e.cause?.message ?? ""}`,
+    );
+    expect(tooShort).toMatch(/ledger_retention_range/);
+    await denied(db.update(memberXp).set({ xp: 999999 }));
+    await denied(db.insert(rankRewards).values({ guildId: G, level: 5, roleId: "1" }));
+    await denied(db.delete(ledgerSettings));
   });
 
   it("keeps history append-only", async () => {

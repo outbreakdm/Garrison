@@ -78,9 +78,15 @@ describe("ledger, as garrison_bot", () => {
       ('${H}', 'mid', 'mid', now() - interval '20 days')`);
     await exec("SET ROLE garrison_bot");
 
-    // A bot trying to wipe history by setting retention to 1 day still can't touch the last 7 days.
-    await updateLedgerSettings(db, H, { retentionDays: 1 });
-    expect((await getLedgerSettings(db, H)).retentionDays).toBe(1);
+    // A bot trying to wipe history by setting retention to 1 day is refused by the database,
+    // and ledger_prune() clamps to 7 days as well.
+    const refused = await updateLedgerSettings(db, H, { retentionDays: 1 }).then(
+      () => "",
+      (e: Error & { cause?: Error }) => `${e.message} ${e.cause?.message ?? ""}`,
+    );
+    expect(refused).toMatch(/ledger_retention_range/);
+    await updateLedgerSettings(db, H, { retentionDays: 7 });
+    expect((await getLedgerSettings(db, H)).retentionDays).toBe(7);
     const removed = await pruneLedger(db);
     expect(removed).toBe(2); // G's 40-day event (30-day default) and H's 20-day event
     const types = (await searchLedger(db, { guildId: G, limit: 100 })).map((e) => e.type);
