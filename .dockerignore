@@ -11,3 +11,6 @@
 .github
 **/e2e
 **/*.test.ts
+**/.open-next
+**/.wrangler
+**/.dev.vars

@@ -46,7 +46,7 @@ export async function GET(request: Request) {
         source: "battlenet" as const,
       }),
     );
-    await syncLinksFromSource(getDb(), session.userId, "battlenet", ["wow"], links);
+    await syncLinksFromSource(await getDb(), session.userId, "battlenet", ["wow"], links);
     return back(`linked=wow&count=${links.length}`);
   } catch {
     return back("error=battlenet");

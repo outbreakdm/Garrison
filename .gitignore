@@ -10,3 +10,9 @@ coverage/
 .next/
 next-env.d.ts
 *.tsbuildinfo
+# Cloudflare build output and local secrets
+.open-next/
+.wrangler/
+.dev.vars
+.dev.vars.*
+cloudflare-env.d.ts

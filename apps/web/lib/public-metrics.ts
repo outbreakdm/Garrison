@@ -7,7 +7,7 @@ const ONLINE_WITHIN_MS = 3 * 60_000;
 /** Public service numbers for the landing and status pages. Null when the database isn't reachable. */
 export async function publicMetrics() {
   try {
-    const db = getDb();
+    const db = await getDb();
     const [latency, { status, uptime }] = await Promise.all([
       getLatency(db, "", 24),
       getBotStatus(db, 30),

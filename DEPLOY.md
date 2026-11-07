@@ -6,9 +6,10 @@ Garrison is two processes and a database:
 - **Dashboard** (`apps/web`): a Next.js server behind HTTPS.
 - **Database**: your Supabase project (already migrated).
 
-Both come from one `Dockerfile` (`--target bot`, `--target web`). The quickest
-route is one small Linux server running `docker compose`, which also gets the
-HTTPS certificate for you. Other hosts are covered at the end.
+**On Cloudflare** (section 3), the dashboard runs as a Worker and the bot runs in
+a Cloudflare Container, kept to exactly one always-on instance. Everything is in
+your Cloudflare account, with no server to maintain. **Or** run both on one small
+Linux server with `docker compose` (section 4).
 
 ## 1. Discord Developer Portal
 
@@ -48,7 +49,79 @@ Use the pooler host shown in the Connect panel (the project is in `us-west-2`).
 The bot and dashboard refuse to start if these log in as `postgres` or any
 role that bypasses row-level security.
 
-## 3. A server
+## 3. Cloudflare
+
+You need the **Workers Paid** plan (Containers aren't on the free plan), Docker
+on the machine you deploy from (Wrangler builds the bot image locally), and a
+domain on Cloudflare for the dashboard. Containers are newer than Workers:
+check Cloudflare's current pricing and limits for an always-on instance.
+
+Log in once: `pnpm --filter @garrison/web exec wrangler login`.
+
+### Dashboard (Worker + Hyperdrive)
+
+1. Create a Hyperdrive config for the **dashboard's** role. Use Supabase →
+   Connect → **Session pooler** (port 5432), with the user
+   `garrison_web.pijtbyfnhdxhtyidgcda`:
+
+   ```sh
+   cd apps/web
+   npx wrangler hyperdrive create garrison-web \
+     --connection-string="postgresql://garrison_web.pijtbyfnhdxhtyidgcda:<dashboard password>@<pooler host>:5432/postgres"
+   ```
+
+   Paste the `id` it prints into `apps/web/wrangler.jsonc` → `hyperdrive`.
+2. In `apps/web/wrangler.jsonc`, set `vars.APP_URL` to `https://<your domain>`,
+   `vars.DISCORD_CLIENT_ID`, and uncomment `routes` with your domain.
+3. Add the secrets (each prompts for the value, so it never lands in your shell history):
+
+   ```sh
+   npx wrangler secret put DISCORD_CLIENT_SECRET
+   npx wrangler secret put DISCORD_TOKEN
+   # Optional, for WoW linking:
+   npx wrangler secret put BNET_CLIENT_ID
+   npx wrangler secret put BNET_CLIENT_SECRET
+   ```
+
+4. Deploy: `pnpm cf:deploy` (from `apps/web`). Open `https://<your domain>/healthz`.
+
+The dashboard checks on its first request that Hyperdrive logs in as
+`garrison_web`, and refuses to serve if it doesn't.
+
+### Bot (Container)
+
+1. In `apps/bot-cloudflare/wrangler.jsonc`, set `vars.DISCORD_CLIENT_ID`.
+2. Add the secrets. `DATABASE_URL` is the **bot's** Transaction pooler string
+   from step 2:
+
+   ```sh
+   cd apps/bot-cloudflare
+   npx wrangler secret put DISCORD_TOKEN
+   npx wrangler secret put DATABASE_URL
+   npx wrangler secret put ANTHROPIC_API_KEY   # optional, for Quartermaster
+   ```
+
+3. Register slash commands from your machine, with `.env` filled in:
+   `pnpm commands:deploy`. You can also run `pnpm preflight` there first.
+4. Deploy: `pnpm --filter @garrison/bot-cloudflare deploy`. Wrangler builds the
+   bot image from the repo's `Dockerfile` and pushes it to Cloudflare.
+
+The Worker has no public routes. A cron trigger starts the container within a
+minute and restarts it if Cloudflare moves it; watch it with
+`npx wrangler tail garrison-bot` and look for `Online as Garrison#…`. Exactly one
+instance runs, because a single Durable Object owns it.
+
+### Updating on Cloudflare
+
+```sh
+git pull
+pnpm install
+pnpm commands:deploy                                   # if commands changed
+(cd apps/web && pnpm cf:deploy)
+pnpm --filter @garrison/bot-cloudflare deploy
+```
+
+## 4. Or: one server with Docker Compose
 
 Any small Linux VPS works (1 vCPU and 1–2 GB of RAM is plenty to start), for
 example Hetzner, DigitalOcean, Vultr or Linode, in a US-West region near the database.
@@ -68,7 +141,7 @@ example Hetzner, DigitalOcean, Vultr or Linode, in a US-West region near the dat
    `DATABASE_URL`, `WEB_DATABASE_URL`, `DOMAIN`, and optionally
    `ANTHROPIC_API_KEY`. `DATABASE_MIGRATION_URL` isn't needed on the server.
 
-## 4. Check, then start
+### Check, then start
 
 ```sh
 docker compose build
@@ -84,7 +157,7 @@ Preflight prints an invite link. Open it to add Garrison to your server, then
 run `/health` there. The dashboard is at `https://<your domain>`, and the public
 status page at `/status`.
 
-## Updating
+### Updating
 
 ```sh
 git pull
@@ -113,10 +186,13 @@ connected copy.
 
 ## If something's wrong
 
-| Symptom                                                       | Fix                                                                              |
-| ------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `Used disallowed intents`                                     | Turn on Server Members Intent (step 1).                                          |
-| `logs in as "postgres"`                                       | Use the `garrison_bot` / `garrison_web` strings (step 2).                        |
-| `password authentication failed` / `Tenant or user not found` | The user must be `garrison_bot.<project ref>`, with the password from step 2.    |
-| Sign-in loops back to the login page                          | `DOMAIN` must match the redirect in step 1.6, and the site must load over HTTPS. |
-| Commands don't appear                                         | Run `deploy-commands.js`; global commands can take a few minutes.                |
+| Symptom                                                       | Fix                                                                                                                           |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `Used disallowed intents`                                     | Turn on Server Members Intent (step 1).                                                                                       |
+| `logs in as "postgres"`                                       | Use the `garrison_bot` / `garrison_web` strings (step 2).                                                                     |
+| `password authentication failed` / `Tenant or user not found` | The user must be `garrison_bot.<project ref>`, with the password from step 2.                                                 |
+| Sign-in loops back to the login page                          | `DOMAIN` must match the redirect in step 1.6, and the site must load over HTTPS.                                              |
+| Commands don't appear                                         | Run `deploy-commands.js`; global commands can take a few minutes.                                                             |
+| Dashboard on Cloudflare answers 500 and logs "database login" | The Hyperdrive config must use `garrison_web.<project ref>` (Cloudflare step 1).                                              |
+| `wrangler deploy` says Docker isn't running                   | Start Docker Desktop (or the daemon); Wrangler builds the bot image locally.                                                  |
+| Bot container keeps restarting                                | `npx wrangler tail garrison-bot`; usually a wrong `DATABASE_URL` or token. Run `pnpm preflight` locally with the same values. |

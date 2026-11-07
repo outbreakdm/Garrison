@@ -1,0 +1,31 @@
+// Garrison dashboard on Cloudflare Workers (built with OpenNext).
+//   pnpm --filter @garrison/web cf:deploy
+// Secrets are never written here: set them with `wrangler secret put` (see DEPLOY.md).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "garrison-dashboard",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-11-01",
+  // nodejs_compat: node:crypto and friends. global_fetch_strictly_public: the
+  // Worker's fetch() can't reach private or internal addresses (SSRF guard).
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "observability": { "enabled": true },
+  // Your dashboard's domain. Cloudflare issues the certificate.
+  // "routes": [{ "pattern": "dash.example.com", "custom_domain": true }],
+  "vars": {
+    // Public settings only. APP_URL must match the OAuth2 redirect in the Developer Portal.
+    "APP_URL": "https://dash.example.com",
+    "DISCORD_CLIENT_ID": "000000000000000000"
+  },
+  // Pooled connection to Supabase as the garrison_web role. Create it with:
+  //   wrangler hyperdrive create garrison-web --connection-string="<garrison_web direct string>"
+  // and paste its id here.
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "00000000000000000000000000000000",
+      "localConnectionString": "postgres://garrison_web:test-web@127.0.0.1:55432/postgres"
+    }
+  ]
+}

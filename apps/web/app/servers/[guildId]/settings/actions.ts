@@ -49,7 +49,7 @@ async function save(
   page = "settings",
 ) {
   const { session, guild } = await authorize(form);
-  const result = await applySettingsChange(getDb(), {
+  const result = await applySettingsChange(await getDb(), {
     guildId: guild.id,
     module,
     patch,
@@ -125,7 +125,7 @@ export async function undoChange(form: FormData) {
   const changeId = String(form.get("changeId") ?? "");
   if (!/^[0-9a-f-]{36}$/.test(changeId) || !isSnowflake(guild.id))
     back(guild.id, { error: "not_found" });
-  const result = await undoSettingsChange(getDb(), guild.id, changeId, {
+  const result = await undoSettingsChange(await getDb(), guild.id, changeId, {
     userId: session.userId,
     username: session.username,
   });

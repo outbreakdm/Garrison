@@ -26,7 +26,7 @@ async function authorize(form: FormData) {
 async function queue(form: FormData, input: QueueInput) {
   const { session, guild } = await authorize(form);
   const result = await queueDashboardAction(
-    getDb(),
+    await getDb(),
     guild.id,
     { id: session.userId, name: session.username },
     input,
@@ -37,7 +37,7 @@ async function queue(form: FormData, input: QueueInput) {
 
 /** The event must be a scheduled raid in this server. */
 async function eventBelongs(guildId: string, eventId: string) {
-  const event = await getOpsEvent(getDb(), guildId, eventId);
+  const event = await getOpsEvent(await getDb(), guildId, eventId);
   return event?.status === "scheduled" ? event : null;
 }
 
@@ -60,7 +60,7 @@ export async function requestMoveSignup(form: FormData) {
   else {
     const event = await eventBelongs(guild.id, parsed.data.eventId);
     const benched = event
-      ? (await listSignups(getDb(), event.id)).some(
+      ? (await listSignups(await getDb(), event.id)).some(
           (s) => s.userId === parsed.data.userId && s.bench,
         )
       : false;

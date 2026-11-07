@@ -17,7 +17,7 @@ export default async function ServerLayout({
   // Pages check access too: layouts don't re-run on every navigation.
   const { session, guild } = await requireGuildAccess(guildId);
   const [guilds, theme] = await Promise.all([
-    listActiveGuilds(getDb(), session.manageableGuildIds),
+    listActiveGuilds(await getDb(), session.manageableGuildIds),
     currentTheme(),
   ]);
   return (

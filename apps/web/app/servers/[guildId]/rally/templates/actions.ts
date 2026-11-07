@@ -41,7 +41,7 @@ async function back(guildId: string, outcome: { ok: string } | { error: string }
 async function load(form: FormData) {
   const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
   if (!access) redirect("/servers");
-  const db = getDb();
+  const db = await getDb();
   const [raw, plan] = await Promise.all([
     getRallyTemplates(db, access.guild.id),
     getGuildPlan(db, access.guild.id),
@@ -59,7 +59,7 @@ async function save(
 ) {
   const checked = checkTemplates(next, ctx.plan);
   if (!checked.ok) return back(ctx.guild.id, { error: checked.error }, anchor);
-  const result = await applySettingsChange(getDb(), {
+  const result = await applySettingsChange(await getDb(), {
     guildId: ctx.guild.id,
     module: "rally",
     patch: { templates: checked.value },

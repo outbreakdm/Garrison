@@ -32,7 +32,7 @@ export default async function AccountPage({
     const [name, value] = k.split("=");
     return name && q[name] === value;
   });
-  const db = getDb();
+  const db = await getDb();
   const [links, shares] = await Promise.all([
     listLinks(db, session.userId),
     listSharesForUser(db, session.userId),

@@ -75,7 +75,7 @@ export default async function RallyTemplatesPage({
 }) {
   const { guildId } = await params;
   const { guild } = await requireGuildAccess(guildId);
-  const db = getDb();
+  const db = await getDb();
   const [raw, plan, channels, roles] = await Promise.all([
     getRallyTemplates(db, guild.id),
     getGuildPlan(db, guild.id),

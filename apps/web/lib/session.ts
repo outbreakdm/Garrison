@@ -26,9 +26,9 @@ export const getSession = cache(async () => {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token || token.length > 100) return null;
   const hash = hashToken(token);
-  const session = await getWebSession(getDb(), hash);
+  const session = await getWebSession(await getDb(), hash);
   if (session && Date.now() - session.lastSeenAt.getTime() > 5 * 60_000) {
-    await touchWebSession(getDb(), hash).catch(() => {});
+    await touchWebSession(await getDb(), hash).catch(() => {});
   }
   return session;
 });
@@ -48,7 +48,7 @@ export async function requireSession(next = "/servers") {
 export const checkGuildAccess = cache(async (guildId: string) => {
   const session = await getSession();
   if (!session || typeof guildId !== "string" || !isSnowflake(guildId)) return null;
-  const guild = await getActiveGuild(getDb(), guildId);
+  const guild = await getActiveGuild(await getDb(), guildId);
   if (!guild) return null;
   if (!(await canManageGuildNow(guildId, session.userId))) return null;
   return { session, guild };

@@ -20,7 +20,7 @@ export const metadata: Metadata = { title: "Overview" };
 export default async function OverviewPage({ params }: { params: Promise<{ guildId: string }> }) {
   const { guildId } = await params;
   const { guild } = await requireGuildAccess(guildId);
-  const db = getDb();
+  const db = await getDb();
   const [o, cases, activity, latency, health, [build]] = await Promise.all([
     getOverview(db, guild.id),
     listRecentCases(db, guild.id, 5),

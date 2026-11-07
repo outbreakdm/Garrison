@@ -13,7 +13,7 @@ export async function removeAccountLink(form: FormData) {
   if (!session) redirect("/login?next=/account");
   const id = String(form.get("linkId") ?? "");
   if (!/^[0-9a-f-]{36}$/.test(id)) redirect("/account?error=invalid");
-  const removed = await removeLink(getDb(), session.userId, id);
+  const removed = await removeLink(await getDb(), session.userId, id);
   redirect(removed ? "/account?removed=1" : "/account?error=invalid");
 }
 
@@ -22,6 +22,6 @@ export async function stopSharing(form: FormData) {
   if (!session) redirect("/login?next=/account");
   const guildId = String(form.get("guildId") ?? "");
   if (!isSnowflake(guildId)) redirect("/account?error=invalid");
-  await setRosterShare(getDb(), guildId, session.userId, session.username, false);
+  await setRosterShare(await getDb(), guildId, session.userId, session.username, false);
   redirect("/account?unshared=1");
 }

@@ -1,0 +1,32 @@
+// Garrison's bot on Cloudflare Containers (Workers Paid plan).
+//   pnpm --filter @garrison/bot-cloudflare deploy
+// Secrets: wrangler secret put DISCORD_TOKEN / DATABASE_URL / ANTHROPIC_API_KEY
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "garrison-bot",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-11-01",
+  "observability": { "enabled": true },
+  "vars": {
+    "DISCORD_CLIENT_ID": "000000000000000000",
+    "LOG_LEVEL": "info"
+  },
+  "containers": [
+    {
+      "class_name": "GarrisonBot",
+      // The repo's Dockerfile; its last stage is the bot image.
+      "image": "../../Dockerfile",
+      "image_build_context": "../..",
+      // One bot, always. Two would each answer every command.
+      "max_instances": 1,
+      // The bot uses about 150–300 MB. "basic" leaves room; check current sizes and pricing.
+      "instance_type": "basic"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "BOT", "class_name": "GarrisonBot" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["GarrisonBot"] }],
+  // Restart the bot within a minute if Cloudflare moves or stops it.
+  "triggers": { "crons": ["* * * * *"] }
+}

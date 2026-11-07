@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Servers" };
 
 export default async function ServersPage() {
   const session = await requireSession("/servers");
-  const guilds = await listActiveGuilds(getDb(), session.manageableGuildIds);
+  const guilds = await listActiveGuilds(await getDb(), session.manageableGuildIds);
   return (
     <>
       <Topbar username={session.username} theme={await currentTheme()} back="/servers" />

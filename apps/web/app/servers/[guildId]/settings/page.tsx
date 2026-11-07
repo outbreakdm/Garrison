@@ -89,7 +89,7 @@ export default async function SettingsPage({
   const { guildId } = await params;
   const { guild } = await requireGuildAccess(guildId);
   const query = await searchParams;
-  const db = getDb();
+  const db = await getDb();
   const [overview, timezone, ranks, ledger, history, channels] = await Promise.all([
     getOverview(db, guild.id),
     getOpsTimezone(db, guild.id),

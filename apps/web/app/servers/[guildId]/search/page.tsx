@@ -19,7 +19,7 @@ export default async function SearchPage({
   const { guild } = await requireGuildAccess(guildId);
   const q = cleanQuery((await searchParams).q);
   const base = `/servers/${guild.id}`;
-  const db = getDb();
+  const db = await getDb();
   const [places, members, cases] = q
     ? await Promise.all([
         Promise.resolve(searchIndex(q)),

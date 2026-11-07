@@ -116,6 +116,8 @@ Then set `DATABASE_URL` to the pooled connection string with user `garrison_bot.
 - Each container gets only the variables it needs. The `postgres` migration string never goes to a server: migrations run from a trusted machine.
 - `.env` is excluded from images (`.dockerignore`). A proxy CA, if needed at build time, is a BuildKit secret and never stored in a layer.
 - Health endpoints (`/healthz`) return only "ok" or "starting".
+- **On Cloudflare**, the dashboard Worker runs with `global_fetch_strictly_public`, so its `fetch()` can't reach private or internal addresses. It reaches Postgres only through Hyperdrive, checks once per isolate that the login is `garrison_web`, and opens a fresh client per request. Secrets are Worker secrets, never in `wrangler.jsonc`.
+- The bot's Container has no public route: its Worker answers 404 to everything, and the health check is called only by the Worker's own cron. One Durable Object owns the container, with `max_instances: 1`.
 
 ## CI and dependencies
 

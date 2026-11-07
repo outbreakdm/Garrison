@@ -18,7 +18,7 @@ function Row({ label, value }: { label: string; value: string }) {
 export default async function GatehousePage({ params }: { params: Promise<{ guildId: string }> }) {
   const { guildId } = await params;
   const { guild } = await requireGuildAccess(guildId);
-  const { gatehouse: g, activeLockdown: l } = await getOverview(getDb(), guild.id);
+  const { gatehouse: g, activeLockdown: l } = await getOverview(await getDb(), guild.id);
   return (
     <>
       <div className="page-head">

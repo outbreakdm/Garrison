@@ -16,7 +16,7 @@ function detail(d: Record<string, unknown>) {
 export default async function BarracksPage({ params }: { params: Promise<{ guildId: string }> }) {
   const { guildId } = await params;
   const { guild } = await requireGuildAccess(guildId);
-  const roster = await getRoster(getDb(), guild.id);
+  const roster = await getRoster(await getDb(), guild.id);
   return (
     <>
       <div className="page-head">

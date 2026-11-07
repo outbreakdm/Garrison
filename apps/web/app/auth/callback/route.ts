@@ -67,7 +67,7 @@ export async function GET(request: Request) {
         userId: me.id,
         source: "discord" as const,
       }));
-      await syncLinksFromSource(getDb(), me.id, "discord", discordConnectionProviders, links);
+      await syncLinksFromSource(await getDb(), me.id, "discord", discordConnectionProviders, links);
       const response = NextResponse.redirect(
         new URL("/account?linked=discord", env().APP_URL),
         303,
@@ -80,10 +80,10 @@ export async function GET(request: Request) {
     const manageable = guilds
       .filter((g) => g.owner || canManage(BigInt(g.permissions)))
       .map((g) => g.id);
-    const withGarrison = (await listActiveGuilds(getDb(), manageable)).map((g) => g.id);
+    const withGarrison = (await listActiveGuilds(await getDb(), manageable)).map((g) => g.id);
 
     const sessionToken = randomToken();
-    await createWebSession(getDb(), {
+    await createWebSession(await getDb(), {
       tokenHash: hashToken(sessionToken),
       userId: me.id,
       username: me.global_name || me.username,

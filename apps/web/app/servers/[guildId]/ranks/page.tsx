@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Ranks" };
 export default async function RanksPage({ params }: { params: Promise<{ guildId: string }> }) {
   const { guildId } = await params;
   const { guild } = await requireGuildAccess(guildId);
-  const db = getDb();
+  const db = await getDb();
   const [settings, top, rewards] = await Promise.all([
     getRanksSettings(db, guild.id),
     getLeaderboard(db, guild.id, 25),

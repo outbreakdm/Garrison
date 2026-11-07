@@ -7,11 +7,15 @@
     "dev": "next dev --port 3000",
     "build": "next build",
     "start": "next start --port 3000",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "cf:build": "opennextjs-cloudflare build",
+    "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
   },
   "dependencies": {
     "@garrison/brand": "workspace:*",
     "@garrison/db": "workspace:*",
+    "@opennextjs/cloudflare": "^1.20.16",
     "next": "16.4.5",
     "react": "19.3.1",
     "react-dom": "19.3.1",
@@ -20,6 +24,7 @@
   },
   "devDependencies": {
     "@types/react": "19.3.0",
-    "@types/react-dom": "^19.3.0"
+    "@types/react-dom": "^19.3.0",
+    "wrangler": "^4.158.0"
   }
 }

@@ -24,7 +24,7 @@ export default async function LedgerPage({
   const user = q.user && isSnowflake(q.user.trim()) ? q.user.trim() : undefined;
   const type = q.type && Object.hasOwn(ledgerTypeLabels, q.type) ? q.type : undefined;
   const before = q.before && /^\d{1,15}$/.test(q.before) ? Number(q.before) : undefined;
-  const db = getDb();
+  const db = await getDb();
   const [settings, events] = await Promise.all([
     getLedgerSettings(db, guild.id),
     searchLedger(db, { guildId: guild.id, userId: user, type, before, limit: PAGE }),

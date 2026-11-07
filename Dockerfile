@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1
-# One Dockerfile, two images:
+# One Dockerfile, two images (the bot is the last stage, so it's the default,
+# which is what Cloudflare Containers builds):
 #   docker build --target bot -t garrison-bot .
 #   docker build --target web -t garrison-web .
 # Both run as the unprivileged "node" user and need no writable filesystem.
@@ -42,17 +43,6 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store --mount=type=secret,id=ca,requ
     cp -r apps/bot/dist /out/bot/dist && \
     rm -rf /out/bot/src /out/bot/tsconfig.json /out/bot/tsup.config.ts
 
-# --- Bot: a long-running worker. No inbound ports except an optional health check.
-FROM node:${NODE_VERSION} AS bot
-ENV NODE_ENV=production
-WORKDIR /app
-COPY --from=build --chown=root:root /out/bot ./
-USER node
-# Set HEALTH_PORT=8080 to enable GET /healthz.
-HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD [ -z "$HEALTH_PORT" ] || wget -q -O /dev/null "http://127.0.0.1:${HEALTH_PORT}/healthz" || exit 1
-CMD ["node", "--enable-source-maps", "dist/index.js"]
-
 # --- Dashboard: Next.js standalone server on port 3000.
 FROM node:${NODE_VERSION} AS web
 ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0 NEXT_TELEMETRY_DISABLED=1
@@ -64,3 +54,14 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD wget -q -O /dev/null http://127.0.0.1:3000/healthz || exit 1
 CMD ["node", "apps/web/server.js"]
+
+# --- Bot: a long-running worker. No inbound ports except an optional health check.
+FROM node:${NODE_VERSION} AS bot
+ENV NODE_ENV=production
+WORKDIR /app
+COPY --from=build --chown=root:root /out/bot ./
+USER node
+# Set HEALTH_PORT=8080 to enable GET /healthz.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD [ -z "$HEALTH_PORT" ] || wget -q -O /dev/null "http://127.0.0.1:${HEALTH_PORT}/healthz" || exit 1
+CMD ["node", "--enable-source-maps", "dist/index.js"]

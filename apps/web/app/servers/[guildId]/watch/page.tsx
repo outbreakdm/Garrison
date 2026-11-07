@@ -28,7 +28,7 @@ export default async function WatchPage({
   const { guild } = await requireGuildAccess(guildId);
   const query = await searchParams;
   const q = cleanQuery(query.q);
-  const db = getDb();
+  const db = await getDb();
   const [cases, rules] = await Promise.all([
     q ? searchCases(db, guild.id, q, 50) : listRecentCases(db, guild.id, 50),
     listEscalationRules(db, guild.id),

@@ -34,7 +34,7 @@ export default async function QuartermasterPage({
 }) {
   const { guildId } = await params;
   const { guild } = await requireGuildAccess(guildId);
-  const builds = await listQmBuilds(getDb(), guild.id, 25);
+  const builds = await listQmBuilds(await getDb(), guild.id, 25);
   return (
     <>
       <div className="page-head">

@@ -8,8 +8,8 @@ const schema = z.object({
   DISCORD_CLIENT_SECRET: z.string().min(1),
   /** Bot token, used server-side only to check a user's live permissions in a server. */
   DISCORD_TOKEN: z.string().min(1),
-  /** Connection string for the read-only garrison_web role. */
-  WEB_DATABASE_URL: z.string().url(),
+  /** Connection string for the garrison_web role. On Cloudflare, the Hyperdrive binding is used instead. */
+  WEB_DATABASE_URL: z.string().url().optional(),
   /** Discord API base. Only for pointing tests at a local stand-in; defaults to Discord. */
   DISCORD_API_BASE: z.string().url().default("https://discord.com/api/v10"),
   /** Battle.net client for linking World of Warcraft characters. Optional: without it, WoW linking is hidden. */

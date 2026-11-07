@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     return new NextResponse("Cross-site request refused.", { status: 403 });
   }
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
-  if (token && token.length <= 100) await revokeWebSession(getDb(), hashToken(token));
+  if (token && token.length <= 100) await revokeWebSession(await getDb(), hashToken(token));
   const response = NextResponse.redirect(new URL("/login", env().APP_URL), 303);
   response.cookies.delete(SESSION_COOKIE);
   return response;

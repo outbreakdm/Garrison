@@ -46,7 +46,7 @@ export default async function RallyPage({
   const { guildId } = await params;
   const { guild } = await requireGuildAccess(guildId);
   const query = await searchParams;
-  const db = getDb();
+  const db = await getDb();
   const [posts, raids, actions, timezone, channels] = await Promise.all([
     listOpenLfg(db, guild.id),
     listUpcomingOps(db, guild.id),
