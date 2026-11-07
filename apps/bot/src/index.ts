@@ -7,6 +7,7 @@ import { ensureGuild, forgetGuild } from "./lib/guild-registry.js";
 import { createLogger } from "./lib/logger.js";
 import { Metrics } from "./lib/metrics.js";
 import { refreshOsrs } from "./modules/barracks/refresh.js";
+import { processDashboardActions } from "./modules/dashboard/actions.js";
 import { handleAuditLogEntry } from "./modules/gatehouse/anti-nuke.js";
 import { handleMemberJoin, sweepExpiredLockdowns } from "./modules/gatehouse/service.js";
 import { snapshotAllHealth } from "./modules/health/command.js";
@@ -58,6 +59,8 @@ const client = new Client({
 
 const SWEEP_INTERVAL_MS = 60_000;
 let sweepTimer: NodeJS.Timeout | undefined;
+const ACTIONS_INTERVAL_MS = 5_000;
+let actionsTimer: NodeJS.Timeout | undefined;
 const HEALTH_EVERY_MS = 30 * 60_000;
 let lastHealthSnapshot = 0;
 
@@ -85,6 +88,17 @@ client.once(Events.ClientReady, async (ready) => {
   };
   await sweep();
   sweepTimer = setInterval(sweep, SWEEP_INTERVAL_MS);
+  // Dashboard requests are checked more often than the sweep, so they feel quick.
+  let running = false;
+  actionsTimer = setInterval(async () => {
+    if (running) return;
+    running = true;
+    await processDashboardActions(ctx, ready)
+      .catch((error) => logger.error("Dashboard actions failed", { error }))
+      .finally(() => {
+        running = false;
+      });
+  }, ACTIONS_INTERVAL_MS);
 });
 
 client.on(Events.GuildAuditLogEntryCreate, (entry, guild) => {
@@ -134,6 +148,7 @@ client.on(Events.Error, (error) => logger.error("Discord client error", { error 
 async function shutdown(signal: string) {
   logger.info(`Received ${signal}, shutting down`);
   clearInterval(sweepTimer);
+  clearInterval(actionsTimer);
   await client.destroy();
   await close();
   process.exit(0);

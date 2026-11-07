@@ -1,4 +1,5 @@
 export * from "./client";
+export * from "./repo/actions";
 export * from "./repo/barracks";
 export * from "./repo/cases";
 export * from "./repo/gatehouse";
@@ -13,7 +14,10 @@ export * from "./repo/search";
 export * from "./repo/settings";
 export * from "./repo/web";
 export type {
+  CallSignupsPayload,
   CaseAction,
+  CreateRaidPayload,
+  DashboardAction,
   EscalationAction,
   EscalationRule,
   GatehouseSettings,
@@ -30,6 +34,7 @@ export type {
   LockdownSnapshotEntry,
   MemberXp,
   ModCase,
+  MoveSignupPayload,
   NewLedgerEvent,
   NewModCase,
   OpsEvent,

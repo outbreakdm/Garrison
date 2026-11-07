@@ -627,3 +627,82 @@ a.topbar__user:hover {
   border: 0;
   border-bottom: 1px solid var(--line);
 }
+
+/* Rally: roster and dashboard requests */
+.roster {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-4);
+}
+.roster__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.roster__slot {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  font-size: 14px;
+}
+.roster__slot .mono {
+  font-size: 12px;
+}
+.roster__slot--open {
+  background: none;
+  border: 1px dashed var(--line);
+  color: var(--text-muted);
+}
+.bench-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 14px;
+}
+.bench-row > span {
+  flex: 1 1 160px;
+}
+.raid-foot {
+  flex-wrap: wrap;
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-3);
+}
+.tone-go {
+  color: var(--go);
+}
+#create-raid > summary {
+  cursor: pointer;
+}
+#create-raid[open] > summary {
+  margin-bottom: var(--space-3);
+}
+
+/* Phones: the server menu becomes one scrollable row, so content starts on the first screen. */
+@media (max-width: 720px) {
+  .shell {
+    padding: var(--space-4);
+    gap: var(--space-4);
+  }
+  .shell .g-nav {
+    flex: 1 1 100%;
+    width: auto;
+    min-width: 0;
+    flex-direction: row;
+    gap: var(--space-1);
+    overflow-x: auto;
+    padding: var(--space-1);
+    scrollbar-width: none;
+  }
+  .shell .g-nav .g-nav__group,
+  .shell .g-nav .g-nav__plain {
+    display: none;
+  }
+  .shell .g-nav .g-nav__item {
+    flex: none;
+    white-space: nowrap;
+  }
+}

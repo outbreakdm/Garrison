@@ -29,7 +29,7 @@ import { announcePromotion, refreshOpsCard } from "./service.js";
 import { parseTimeZone, parseWhen } from "./when.js";
 
 /** Scheduled events per server. Raids are planned weeks ahead; this caps abuse, not use. */
-const MAX_SCHEDULED = 25;
+export const MAX_SCHEDULED = 25;
 const SPEC = /^[\p{L}\p{N} +'/-]{0,20}$/u;
 const UUID = /^[0-9a-f-]{36}$/;
 

@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, isNotNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, isNotNull, or, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { memberXp, modCases } from "../schema";
 
@@ -78,4 +78,14 @@ export async function searchMembers(db: Db, guildId: string, q: string, limit = 
     out.set(m.userId, { userId: m.userId, name: m.name ?? m.userId, level: null });
   }
   return [...out.values()].slice(0, limit);
+}
+
+/** Names Garrison has seen for these members (from Ranks), keyed by user ID. Unknown IDs are left out. */
+export async function memberNames(db: Db, guildId: string, userIds: string[]) {
+  if (!userIds.length) return new Map<string, string>();
+  const rows = await db
+    .select({ userId: memberXp.userId, name: memberXp.username })
+    .from(memberXp)
+    .where(and(eq(memberXp.guildId, guildId), inArray(memberXp.userId, userIds.slice(0, 500))));
+  return new Map(rows.filter((r) => r.name).map((r) => [r.userId, r.name]));
 }

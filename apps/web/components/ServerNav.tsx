@@ -3,6 +3,7 @@
 import { modules } from "@garrison/brand";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 
 const ITEMS = [
   { group: null, href: "", name: "Overview", plain: null },
@@ -24,8 +25,19 @@ const ITEMS = [
 export function ServerNav({ guildId }: { guildId: string }) {
   const pathname = usePathname();
   const base = `/servers/${guildId}`;
+  const nav = useRef<HTMLElement>(null);
+  // On phones the menu is one scrolling row: keep the current page in view.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-run when the page changes
+  useEffect(() => {
+    const el = nav.current;
+    const current = el?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!el || !current || el.scrollWidth <= el.clientWidth) return;
+    const box = el.getBoundingClientRect();
+    const item = current.getBoundingClientRect();
+    el.scrollLeft += item.left - box.left - (box.width - item.width) / 2;
+  }, [pathname]);
   return (
-    <nav className="g-nav" aria-label="Server">
+    <nav className="g-nav" aria-label="Server" ref={nav}>
       {ITEMS.map((item) => {
         const href = `${base}${item.href}`;
         return (

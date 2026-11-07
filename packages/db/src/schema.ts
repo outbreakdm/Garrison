@@ -743,3 +743,69 @@ export const botStatus = pgTable("bot_status", {
 }).enableRLS();
 
 export type HealthSnapshot = typeof healthSnapshots.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Dashboard actions (an outbox the bot works through)
+// ---------------------------------------------------------------------------
+
+export const dashboardActionKind = pgEnum("dashboard_action_kind", [
+  "create_raid",
+  "move_signup",
+  "call_signups",
+]);
+export const dashboardActionStatus = pgEnum("dashboard_action_status", [
+  "pending",
+  "running",
+  "done",
+  "failed",
+]);
+
+export interface CreateRaidPayload {
+  channelId: string;
+  title: string;
+  /** Local date and time in the server's raid time zone: "2026-11-12 20:00". */
+  when: string;
+  /** "Tank 4, Healer 8, DPS 28" */
+  roles: string;
+  note: string | null;
+  repeatWeekly: boolean;
+}
+export interface MoveSignupPayload {
+  eventId: string;
+  userId: string;
+  role: string;
+}
+export interface CallSignupsPayload {
+  eventId: string;
+}
+
+/**
+ * Things the dashboard asks Garrison to do in Discord. The dashboard can only
+ * add requests; the bot claims each one, checks it again (including that the
+ * requester still has Manage Server), does it, and records the outcome. The
+ * dashboard never talks to Discord on a user's behalf.
+ */
+export const dashboardActions = pgTable(
+  "dashboard_actions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    kind: dashboardActionKind("kind").notNull(),
+    payload: jsonb("payload").notNull(),
+    requestedById: text("requested_by_id").notNull(),
+    requestedByName: text("requested_by_name").notNull(),
+    status: dashboardActionStatus("status").notNull().default("pending"),
+    /** A short, Garrison-written outcome shown on the dashboard. Never raw errors. */
+    message: text("message"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    processedAt: timestamp("processed_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("dashboard_actions_guild_created").on(t.guildId, t.createdAt),
+    index("dashboard_actions_pending").on(t.createdAt).where(sql`${t.status} = 'pending'`),
+  ],
+).enableRLS();
+
+export type DashboardAction = typeof dashboardActions.$inferSelect;
