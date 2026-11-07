@@ -16,7 +16,10 @@
     "db:generate": "pnpm --filter @garrison/db generate",
     "db:migrate": "pnpm --filter @garrison/db migrate",
     "commands:deploy": "pnpm --filter @garrison/bot commands:deploy",
-    "preflight": "pnpm --filter @garrison/bot preflight"
+    "preflight": "pnpm --filter @garrison/bot preflight",
+    "cf:dashboard": "pnpm --filter @garrison/web run cf:deploy",
+    "cf:bot": "pnpm --filter @garrison/bot-cloudflare run cf:deploy",
+    "cf:bot:logs": "pnpm --filter @garrison/bot-cloudflare run cf:tail"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.6",

@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "deploy": "wrangler deploy",
+    "cf:deploy": "wrangler deploy",
+    "cf:tail": "wrangler tail garrison-bot",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
