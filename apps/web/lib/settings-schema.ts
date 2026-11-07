@@ -72,6 +72,87 @@ export const ledgerForm = z.object({
   retentionDays: int(7, 365, "Keep events for"),
 });
 
+/** Choices offered on the ladder form. Anything else is refused, whatever the browser sends. */
+export const LADDER_WINDOWS = [60, 360, 1440, 10080, 43200] as const;
+export const LADDER_DURATIONS = [600, 3600, 21600, 86400, 604800, 2419200] as const;
+export const LADDER_MAX_STEPS = 5;
+
+const ladderStep = z
+  .object({
+    warnCount: int(1, 50, "Warnings"),
+    windowMinutes: z.coerce
+      .number()
+      .refine((v) => (LADDER_WINDOWS as readonly number[]).includes(v), "Pick a time window."),
+    action: z.enum(["timeout", "kick", "ban"], { message: "Pick an action." }),
+    durationSeconds: z.coerce.number().nullable(),
+  })
+  .transform((s) => ({
+    ...s,
+    durationSeconds: s.action === "timeout" ? s.durationSeconds : null,
+  }))
+  .refine(
+    (s) =>
+      s.action !== "timeout" ||
+      (LADDER_DURATIONS as readonly number[]).includes(s.durationSeconds ?? -1),
+    "Pick how long the timeout lasts.",
+  );
+
+/**
+ * The ladder form posts LADDER_MAX_STEPS rows as step0_warns, step0_window,
+ * step0_action, step0_duration… A row with no warnings or no action is empty
+ * and dropped; the rest must be valid, with different warning counts.
+ */
+export function parseLadder(form: FormData) {
+  const rows: unknown[] = [];
+  for (let i = 0; i < LADDER_MAX_STEPS; i++) {
+    const warns = String(form.get(`step${i}_warns`) ?? "").trim();
+    const action = String(form.get(`step${i}_action`) ?? "");
+    if (!warns || !action) continue;
+    const duration = String(form.get(`step${i}_duration`) ?? "");
+    rows.push({
+      warnCount: warns,
+      windowMinutes: String(form.get(`step${i}_window`) ?? ""),
+      action,
+      durationSeconds: duration === "" ? null : duration,
+    });
+  }
+  return z
+    .array(ladderStep)
+    .max(LADDER_MAX_STEPS)
+    .refine(
+      (steps) => new Set(steps.map((s) => s.warnCount)).size === steps.length,
+      "Each step needs a different number of warnings.",
+    )
+    .safeParse(rows);
+}
+
+const span = (seconds: number) =>
+  seconds % 86400 === 0
+    ? `${seconds / 86400} d`
+    : seconds % 3600 === 0
+      ? `${seconds / 3600} h`
+      : `${seconds / 60} min`;
+
+export const windowText = (minutes: number) =>
+  minutes <= 2880 && minutes % 60 === 0 ? `${minutes / 60} h` : span(minutes * 60);
+export const durationText = span;
+
+/** "3 in 24 h: timeout 1 h; 5 in 7 d: ban", for history entries. */
+export function ladderText(value: unknown) {
+  if (!Array.isArray(value) || value.length === 0) return "no steps";
+  return value
+    .map(
+      (r: {
+        warnCount: number;
+        windowMinutes: number;
+        action: string;
+        durationSeconds: number | null;
+      }) =>
+        `${r.warnCount} in ${windowText(r.windowMinutes)}: ${r.action}${r.action === "timeout" && r.durationSeconds ? ` ${durationText(r.durationSeconds)}` : ""}`,
+    )
+    .join("; ");
+}
+
 /** Read only the expected keys from FormData, so extra fields are ignored rather than trusted. */
 export function pick(form: FormData, keys: readonly string[]) {
   return Object.fromEntries(keys.map((k) => [k, form.get(k) ?? undefined]));
@@ -95,4 +176,5 @@ export const FIELD_LABELS: Record<string, string> = {
   announceChannelId: "Level-up channel",
   channelId: "Ledger channel",
   retentionDays: "Keep events (days)",
+  rules: "Escalation ladder",
 };

@@ -10,6 +10,7 @@ import {
   gatehouseForm,
   ledgerForm,
   opsForm,
+  parseLadder,
   pick,
   ranksForm,
   watchForm,
@@ -20,8 +21,8 @@ import {
  * value comes from the browser and is never trusted on its own.
  */
 
-const back = (guildId: string, query: Record<string, string>) =>
-  redirect(`/servers/${guildId}/settings?${new URLSearchParams(query)}`);
+const back = (guildId: string, query: Record<string, string>, page = "settings") =>
+  redirect(`/servers/${guildId}/${page}?${new URLSearchParams(query)}`);
 
 async function authorize(form: FormData) {
   const guildId = String(form.get("guildId") ?? "");
@@ -41,7 +42,12 @@ async function channelBelongs(guildId: string, channelId: string | null) {
   }
 }
 
-async function save(module: SettingsModule, form: FormData, patch: Record<string, unknown>) {
+async function save(
+  module: SettingsModule,
+  form: FormData,
+  patch: Record<string, unknown>,
+  page = "settings",
+) {
   const { session, guild } = await authorize(form);
   const result = await applySettingsChange(getDb(), {
     guildId: guild.id,
@@ -50,8 +56,8 @@ async function save(module: SettingsModule, form: FormData, patch: Record<string
     userId: session.userId,
     username: session.username,
   });
-  if (!result.ok) back(guild.id, { error: result.reason });
-  back(guild.id, { saved: module });
+  if (!result.ok) back(guild.id, { error: result.reason }, page);
+  back(guild.id, { saved: module }, page);
 }
 
 export async function saveWatch(form: FormData) {
@@ -104,6 +110,14 @@ export async function saveLedger(form: FormData) {
   else if (!(await channelBelongs(guild.id, parsed.data.channelId)))
     back(guild.id, { error: "channel" });
   else await save("ledger", form, parsed.data);
+}
+
+/** The escalation ladder is edited on the Watch page, and saved like any other setting. */
+export async function saveLadder(form: FormData) {
+  const { guild } = await authorize(form);
+  const parsed = parseLadder(form);
+  if (!parsed.success) back(guild.id, { error: "ladder" }, "watch");
+  else await save("escalation", form, { rules: parsed.data }, "watch");
 }
 
 export async function undoChange(form: FormData) {

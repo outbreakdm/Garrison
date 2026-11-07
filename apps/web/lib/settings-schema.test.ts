@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { gatehouseForm, ledgerForm, opsForm, pick, ranksForm, watchForm } from "./settings-schema";
+import {
+  gatehouseForm,
+  ladderText,
+  ledgerForm,
+  opsForm,
+  parseLadder,
+  pick,
+  ranksForm,
+  watchForm,
+} from "./settings-schema";
 
 const form = (entries: Record<string, string>) => {
   const f = new FormData();
@@ -110,5 +119,47 @@ describe("ledgerForm", () => {
       channelId: null,
       retentionDays: 90,
     });
+  });
+});
+
+describe("parseLadder", () => {
+  const ladder = (rows: Record<string, string>[]) => {
+    const f = new FormData();
+    rows.forEach((r, i) => {
+      for (const [k, v] of Object.entries(r)) f.set(`step${i}_${k}`, v);
+    });
+    return parseLadder(f);
+  };
+  it("keeps filled rows, drops empty ones, and clears duration off timeouts", () => {
+    const r = ladder([
+      { warns: "3", window: "1440", action: "timeout", duration: "3600" },
+      { warns: "", window: "1440", action: "ban", duration: "" },
+      { warns: "5", window: "10080", action: "ban", duration: "3600" },
+    ]);
+    expect(r.success && r.data).toEqual([
+      { warnCount: 3, windowMinutes: 1440, action: "timeout", durationSeconds: 3600 },
+      { warnCount: 5, windowMinutes: 10080, action: "ban", durationSeconds: null },
+    ]);
+  });
+  it.each([
+    [{ warns: "3", window: "999", action: "kick", duration: "" }],
+    [{ warns: "3", window: "1440", action: "timeout", duration: "5" }],
+    [{ warns: "0", window: "1440", action: "kick", duration: "" }],
+    [{ warns: "3", window: "1440", action: "nuke", duration: "" }],
+  ])("refuses %j", (row) => {
+    expect(ladder([row]).success).toBe(false);
+  });
+  it("refuses two steps at the same count", () => {
+    const row = { warns: "3", window: "1440", action: "kick", duration: "" };
+    expect(ladder([row, row]).success).toBe(false);
+  });
+  it("describes a ladder for history", () => {
+    expect(
+      ladderText([
+        { warnCount: 3, windowMinutes: 1440, action: "timeout", durationSeconds: 3600 },
+        { warnCount: 5, windowMinutes: 10080, action: "ban", durationSeconds: null },
+      ]),
+    ).toBe("3 in 24 h: timeout 1 h; 5 in 7 d: ban");
+    expect(ladderText([])).toBe("no steps");
   });
 });

@@ -32,7 +32,7 @@ packages/
 
 - Every action creates a numbered **case** (per server, never reused). Embeds carry `Watch · case #N`.
 - **Undo** on every confirmation: revokes a warning, lifts a timeout, or unbans. Kicks and purges can't be reversed.
-- **Escalation rules**: new servers start with _3 warnings in 24 h → 1 h timeout_. Rules fire once, as the count reaches the threshold. Undone warnings stop counting.
+- **Escalation rules**: new servers start with _3 warnings in 24 h → 1 h timeout_. Change the ladder on the dashboard's Watch page. Rules fire once, as the count reaches the threshold. Undone warnings stop counting.
 - **Role checks before acting**, with errors that name the fix ("Drag Garrison above it in Server Settings → Roles").
 - Members get a neutral DM with the reason and how to appeal (`/moderation dm_members` and `appeal_text`).
 - `/moderation log_channel:#mod-log` posts every case to a channel.
@@ -108,7 +108,7 @@ The bot keeps a few counts, never content: messages per server per UTC day, when
 
 `apps/web` serves the public landing page at `/` and the dashboard. The landing page covers the modules, security and early-access pricing, with an **Add to Discord** button that requests exactly the permissions `/health` checks (set `DISCORD_CLIENT_ID`).
 
-The dashboard: Sign in with Discord to see the servers you manage, switch between them from the top bar, search settings, members and cases (⌘K / Ctrl+K), and pick a light or dark theme. An **Overview** (active members, messages today, mod actions, command reply p95, the latest Quartermaster build, saved health checks with a Fix permissions button, open groups, next raid, Gatehouse status, recent cases), **Watch** (the escalation ladder and the latest 50 cases, searchable by member or case number), **Gatehouse** (lockdown, anti-raid and anti-nuke settings) and **Rally** (open groups and raid rosters) and **Settings**: Watch, Gatehouse anti-raid, the raid time zone, Ranks (on or off, where level-ups go) and Ledger (channel, 7 to 365 days of retention), with a history of every change and one-click **Undo**. Anti-nuke and the trusted list stay owner-only commands in Discord, and Ranks rewards stay in `/ranks reward`.
+The dashboard: Sign in with Discord to see the servers you manage, switch between them from the top bar, search settings, members and cases (⌘K / Ctrl+K), and pick a light or dark theme. An **Overview** (active members, messages today, mod actions, command reply p95, the latest Quartermaster build, saved health checks with a Fix permissions button, open groups, next raid, Gatehouse status, recent cases), **Watch** (the escalation ladder, editable up to five steps, and the latest 50 cases, searchable by member or case number), **Gatehouse** (lockdown, anti-raid and anti-nuke settings) and **Rally** (open groups and raid rosters) and **Settings**: Watch, Gatehouse anti-raid, the raid time zone, Ranks (on or off, where level-ups go) and Ledger (channel, 7 to 365 days of retention), with a history of every change and one-click **Undo**. Anti-nuke and the trusted list stay owner-only commands in Discord, and Ranks rewards stay in `/ranks reward`.
 
 ```sh
 pnpm --filter @garrison/web dev     # http://localhost:3000

@@ -1,9 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "./client";
 import { getGatehouseSettings } from "./repo/gatehouse";
-import { getWatchSettings, upsertGuild } from "./repo/guilds";
+import { getWatchSettings, listEscalationRules, upsertGuild } from "./repo/guilds";
 import { applySettingsChange, listSettingsChanges, undoSettingsChange } from "./repo/settings";
 import {
+  escalationRules,
   gatehouseSettings,
   ledgerSettings,
   memberXp,
@@ -179,6 +180,54 @@ describe("dashboard settings, as garrison_web", () => {
     await denied(db.update(memberXp).set({ xp: 999999 }));
     await denied(db.insert(rankRewards).values({ guildId: G, level: 5, roleId: "1" }));
     await denied(db.delete(ledgerSettings));
+  });
+
+  it("replaces the escalation ladder as one change, switching removed steps off", async () => {
+    const ladder = [
+      { warnCount: 5, windowMinutes: 10080, action: "ban" as const, durationSeconds: null },
+      { warnCount: 2, windowMinutes: 1440, action: "timeout" as const, durationSeconds: 600 },
+    ];
+    const res = await applySettingsChange(db, {
+      guildId: G,
+      module: "escalation",
+      patch: { rules: ladder },
+      ...taner,
+    });
+    expect(res).toMatchObject({ ok: true });
+    const now = await listEscalationRules(db, G);
+    expect(now.map((r) => [r.warnCount, r.action])).toEqual([
+      [2, "timeout"],
+      [5, "ban"],
+    ]);
+    // Same ladder in another order is no change.
+    expect(
+      await applySettingsChange(db, {
+        guildId: G,
+        module: "escalation",
+        patch: { rules: [...ladder].reverse() },
+        ...taner,
+      }),
+    ).toEqual({ ok: false, reason: "unchanged" });
+    if (!res.ok) throw new Error("unreachable");
+    expect(await undoSettingsChange(db, G, res.change.id, kel)).toMatchObject({ ok: true });
+    expect((await listEscalationRules(db, G)).map((r) => r.warnCount)).toEqual([3]);
+  });
+
+  it("bounds ladder values in the database and never deletes a rule", async () => {
+    const bad = await applySettingsChange(db, {
+      guildId: G,
+      module: "escalation",
+      patch: {
+        rules: [{ warnCount: 4, windowMinutes: 60, action: "timeout", durationSeconds: 99999999 }],
+      },
+      ...taner,
+    }).then(
+      () => "",
+      (e: Error & { cause?: Error }) => `${e.message} ${e.cause?.message ?? ""}`,
+    );
+    expect(bad).toMatch(/escalation_duration/);
+    await denied(db.delete(escalationRules));
+    await denied(db.update(escalationRules).set({ guildId: "961" }));
   });
 
   it("keeps history append-only", async () => {

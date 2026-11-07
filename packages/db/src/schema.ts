@@ -104,6 +104,17 @@ export const escalationRules = pgTable(
   (t) => [
     uniqueIndex("escalation_rules_guild_count").on(t.guildId, t.warnCount),
     index("escalation_rules_guild").on(t.guildId).where(sql`${t.enabled}`),
+    check("escalation_warn_count", sql`${t.warnCount} BETWEEN 1 AND 50`),
+    check("escalation_window", sql`${t.windowMinutes} BETWEEN 1 AND 525600`),
+    // Discord caps a timeout at 28 days.
+    check(
+      "escalation_duration",
+      sql`${t.durationSeconds} IS NULL OR ${t.durationSeconds} BETWEEN 1 AND 2419200`,
+    ),
+    check(
+      "escalation_timeout_needs_duration",
+      sql`${t.action} <> 'timeout' OR ${t.durationSeconds} IS NOT NULL`,
+    ),
   ],
 ).enableRLS();
 
@@ -387,6 +398,7 @@ export const settingsModule = pgEnum("settings_module", [
   "ops",
   "ranks",
   "ledger",
+  "escalation",
 ]);
 
 /** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */

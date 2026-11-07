@@ -1,6 +1,8 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, notInArray, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import {
+  type EscalationRule,
+  escalationRules,
   gatehouseSettings,
   ledgerSettings,
   opsSettings,
@@ -31,7 +33,67 @@ export const EDITABLE_FIELDS = {
   ops: ["timezone"],
   ranks: ["enabled", "announce", "announceChannelId"],
   ledger: ["channelId", "retentionDays"],
+  // The whole ladder is one value, so history and undo treat it as a unit.
+  escalation: ["rules"],
 } as const satisfies Record<SettingsModule, readonly string[]>;
+
+/** One step of the escalation ladder, as the dashboard edits it and history stores it. */
+export interface LadderStep {
+  warnCount: number;
+  windowMinutes: number;
+  action: EscalationRule["action"];
+  durationSeconds: number | null;
+}
+
+/** Same keys, same order, sorted by threshold: so equal ladders compare equal as JSON. */
+export function normalizeLadder(steps: LadderStep[]): LadderStep[] {
+  return [...steps]
+    .sort((a, b) => a.warnCount - b.warnCount)
+    .map((r) => ({
+      warnCount: r.warnCount,
+      windowMinutes: r.windowMinutes,
+      action: r.action,
+      durationSeconds: r.action === "timeout" ? r.durationSeconds : null,
+    }));
+}
+
+async function readLadder(tx: Tx, guildId: string) {
+  const rows = await tx
+    .select()
+    .from(escalationRules)
+    .where(and(eq(escalationRules.guildId, guildId), eq(escalationRules.enabled, true)))
+    .orderBy(asc(escalationRules.warnCount));
+  return normalizeLadder(rows);
+}
+
+/** Make the enabled rules exactly `ladder`. Steps that go away are switched off, never deleted. */
+async function writeLadder(tx: Tx, guildId: string, ladder: LadderStep[]) {
+  for (const step of ladder) {
+    await tx
+      .insert(escalationRules)
+      .values({ guildId, ...step, enabled: true })
+      .onConflictDoUpdate({
+        target: [escalationRules.guildId, escalationRules.warnCount],
+        set: {
+          windowMinutes: step.windowMinutes,
+          action: step.action,
+          durationSeconds: step.durationSeconds,
+          enabled: true,
+        },
+      });
+  }
+  const keep = ladder.map((s) => s.warnCount);
+  await tx
+    .update(escalationRules)
+    .set({ enabled: false })
+    .where(
+      and(
+        eq(escalationRules.guildId, guildId),
+        eq(escalationRules.enabled, true),
+        keep.length ? notInArray(escalationRules.warnCount, keep) : sql`true`,
+      ),
+    );
+}
 
 const TABLES = {
   watch: watchSettings,
@@ -47,9 +109,24 @@ const LAZY = new Set<SettingsModule>(["ops", "ranks", "ledger"]);
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 type Row = Record<string, unknown>;
 
-const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+/** JSON with object keys sorted, because JSONB doesn't keep key order. */
+function stable(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
+  if (value && typeof value === "object")
+    return `{${Object.keys(value)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}:${stable((value as Row)[k])}`)
+      .join(",")}}`;
+  return JSON.stringify(value ?? null);
+}
+const same = (a: unknown, b: unknown) => stable(a) === stable(b);
 
 async function lockRow(tx: Tx, module: SettingsModule, guildId: string): Promise<Row | null> {
+  if (module === "escalation") {
+    // The ladder spans several rows; one lock per server serialises edits to it.
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`garrison:ladder:${guildId}`}))`);
+    return { rules: await readLadder(tx, guildId) };
+  }
   const table = TABLES[module];
   if (LAZY.has(module)) {
     // These rows are created lazily, with the column defaults.
@@ -64,6 +141,10 @@ async function lockRow(tx: Tx, module: SettingsModule, guildId: string): Promise
 
 /** Write whitelisted values. Callers only pass fields from EDITABLE_FIELDS. */
 async function writeRow(tx: Tx, module: SettingsModule, guildId: string, values: Row) {
+  if (module === "escalation") {
+    await writeLadder(tx, guildId, normalizeLadder(values.rules as LadderStep[]));
+    return;
+  }
   const set = { ...values, updatedAt: new Date() };
   switch (module) {
     case "watch":
@@ -119,9 +200,13 @@ export async function applySettingsChange(db: Db, input: ApplyInput): Promise<Ap
 
     const diff: SettingsDiff = {};
     const values: Row = {};
+    const patch =
+      input.module === "escalation" && Array.isArray(input.patch.rules)
+        ? { rules: normalizeLadder(input.patch.rules as LadderStep[]) }
+        : input.patch;
     for (const field of EDITABLE_FIELDS[input.module] as readonly string[]) {
-      if (!(field in input.patch)) continue;
-      const to = input.patch[field];
+      if (!(field in patch)) continue;
+      const to = patch[field];
       if (same(row[field], to)) continue;
       diff[field] = { from: row[field] ?? null, to: to ?? null };
       values[field] = to;
