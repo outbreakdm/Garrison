@@ -11,7 +11,7 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ActionBadge, formatTime } from "@/components/format";
+import { ActionBadge, formatTime, plainMentions } from "@/components/format";
 import { getDb } from "@/lib/db";
 import { requireGuildAccess } from "@/lib/session";
 
@@ -214,12 +214,4 @@ export default async function OverviewPage({ params }: { params: Promise<{ guild
       </div>
     </>
   );
-}
-
-/** Snapshot text can hold Discord mentions; the dashboard has no names for them, so say what kind each is. */
-function plainMentions(text: string) {
-  return text
-    .replace(/<@&\d+>/g, "a role")
-    .replace(/<#\d+>/g, "a channel")
-    .replace(/<@!?\d+>/g, "a member");
 }

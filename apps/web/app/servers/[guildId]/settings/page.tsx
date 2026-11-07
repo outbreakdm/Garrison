@@ -126,6 +126,7 @@ export default async function SettingsPage({
             values, instead of keeping stale browser state that a later save would re-apply. */}
         <form
           action={saveWatch}
+          id="watch"
           className="g-card card-col"
           key={`watch-${w?.updatedAt.getTime() ?? 0}`}
         >
@@ -164,6 +165,7 @@ export default async function SettingsPage({
 
         <form
           action={saveGatehouse}
+          id="gatehouse"
           className="g-card card-col"
           key={`gate-${g?.updatedAt.getTime() ?? 0}`}
         >
@@ -258,7 +260,7 @@ export default async function SettingsPage({
           </button>
         </form>
 
-        <form action={saveOps} className="g-card card-col" key={`ops-${timezone}`}>
+        <form action={saveOps} id="ops" className="g-card card-col" key={`ops-${timezone}`}>
           <input type="hidden" name="guildId" value={guild.id} />
           <span className="g-label">Ops · Events</span>
           <label className="g-field" htmlFor="timezone">
@@ -280,6 +282,7 @@ export default async function SettingsPage({
 
         <form
           action={saveRanks}
+          id="ranks"
           className="g-card card-col"
           key={`ranks-${ranks.updatedAt.getTime()}`}
         >
@@ -318,6 +321,7 @@ export default async function SettingsPage({
 
         <form
           action={saveLedger}
+          id="ledger"
           className="g-card card-col"
           key={`ledger-${ledger.updatedAt.getTime()}`}
         >

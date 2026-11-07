@@ -1,4 +1,5 @@
 import { Logo } from "./Logo";
+import { SearchBox } from "./SearchBox";
 import { ThemeToggle } from "./ThemeToggle";
 
 export interface TopbarProps {
@@ -38,6 +39,7 @@ export function Topbar({ username, theme, back, guild, guilds = [] }: TopbarProp
         </details>
       ) : null}
       <span className="topbar__spacer" />
+      {guild ? <SearchBox guildId={guild.id} /> : null}
       <ThemeToggle back={back} theme={theme} />
       <a className="topbar__user" href="/account">
         {username}

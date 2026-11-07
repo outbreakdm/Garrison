@@ -9,6 +9,7 @@ export * from "./repo/ops";
 export * from "./repo/quartermaster";
 export * from "./repo/rally";
 export * from "./repo/ranks";
+export * from "./repo/search";
 export * from "./repo/settings";
 export * from "./repo/web";
 export type {

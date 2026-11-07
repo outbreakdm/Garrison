@@ -31,3 +31,11 @@ export function formatDuration(seconds: number | null) {
   if (seconds % 3600 === 0) return `${seconds / 3600} h`;
   return `${Math.round(seconds / 60)} min`;
 }
+
+/** Stored text can hold Discord mentions; the dashboard has no names for them, so say what kind each is. */
+export function plainMentions(text: string) {
+  return text
+    .replace(/<@&\d+>/g, "a role")
+    .replace(/<#\d+>/g, "a channel")
+    .replace(/<@!?\d+>/g, "a member");
+}
