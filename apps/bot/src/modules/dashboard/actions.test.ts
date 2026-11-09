@@ -1,7 +1,10 @@
 import {
   createLfgPost,
+  createQmPlan,
   getGatehouseSettings,
   getLfgPost,
+  getQmBuild,
+  listActiveMembers,
   listDashboardActions,
   listSignups,
   listUpcomingOps,
@@ -10,8 +13,8 @@ import {
   upsertGuild,
 } from "@garrison/db";
 import { createTestDb } from "@garrison/db/testing";
-import { type Client, Collection } from "discord.js";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { type Client, Collection, PermissionFlagsBits } from "discord.js";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { BotContext } from "../../commands/types.js";
 import { createLogger } from "../../lib/logger.js";
 import { plainOutcome, processDashboardActions } from "./actions.js";
@@ -23,6 +26,8 @@ const ADMIN = "980000000000000010";
 const NOBODY = "980000000000000011";
 const ADMIN2 = "980000000000000012";
 const OWNER = "980000000000000013";
+/** Has Manage Server and nothing else. */
+const MANAGER_ONLY = "980000000000000014";
 
 type Sent = { channel: string; body: Record<string, unknown> };
 const sent: Sent[] = [];
@@ -47,11 +52,15 @@ const channels = new Collection<string, ReturnType<typeof channel>>([
   [CH, channel(CH, "raids", true)],
   [SECRET, channel(SECRET, "officers", false)],
 ]);
-const members: Record<string, { id: string; permissions: { has: () => boolean } }> = {
+const members: Record<string, { id: string; permissions: { has: (p?: unknown) => boolean } }> = {
   [ADMIN]: { id: ADMIN, permissions: { has: () => true } },
   [NOBODY]: { id: NOBODY, permissions: { has: () => false } },
   [ADMIN2]: { id: ADMIN2, permissions: { has: () => true } },
   [OWNER]: { id: OWNER, permissions: { has: () => true } },
+  [MANAGER_ONLY]: {
+    id: MANAGER_ONLY,
+    permissions: { has: (p) => p === PermissionFlagsBits.ManageGuild },
+  },
 };
 const guild = {
   id: G,
@@ -96,6 +105,12 @@ beforeAll(async () => {
   await upsertGuild(ctx.db, { id: G, name: "Scapewatch" });
 });
 afterAll(() => close());
+// Each test starts with a clean slate for the per-member rate limit (5 requests a minute).
+beforeEach(async () => {
+  await exec("RESET ROLE");
+  await exec("UPDATE dashboard_actions SET created_at = created_at - interval '2 minutes'");
+  await as("garrison_bot");
+});
 
 async function run(user: string, input: Parameters<typeof queueDashboardAction>[3]) {
   await as("garrison_web");
@@ -214,6 +229,128 @@ describe("dashboard actions, run by the bot", () => {
       status: "failed",
       message: "That group is already closed.",
     });
+  });
+
+  it("signs the requester up for a raid and withdraws them", async () => {
+    const [event] = await listUpcomingOps(ctx.db, G);
+    if (!event) throw new Error("no event");
+    const up = await run(OWNER, {
+      kind: "raid_signup",
+      payload: { eventId: event.id, role: "Healer", spec: "Resto" },
+    });
+    expect(up).toMatchObject({
+      status: "done",
+      message: "You're signed up for Molten Core as Healer.",
+    });
+    expect((await listSignups(ctx.db, event.id)).find((s) => s.userId === OWNER)).toMatchObject({
+      role: "Healer",
+      spec: "Resto",
+      bench: false,
+    });
+    const bad = await run(OWNER, {
+      kind: "raid_signup",
+      payload: { eventId: event.id, role: "Bard", spec: null },
+    });
+    expect(bad).toMatchObject({ status: "failed", message: "That role isn't in this raid." });
+    const out = await run(OWNER, { kind: "raid_withdraw", payload: { eventId: event.id } });
+    expect(out).toMatchObject({ status: "done" });
+    expect((await listSignups(ctx.db, event.id)).some((s) => s.userId === OWNER)).toBe(false);
+    const again = await run(OWNER, { kind: "raid_withdraw", payload: { eventId: event.id } });
+    expect(again).toMatchObject({ status: "failed", message: "You're not signed up." });
+  });
+
+  it("holds a moderator to the permission the action needs", async () => {
+    const row = await run(MANAGER_ONLY, {
+      kind: "mod_action",
+      payload: {
+        action: "kick",
+        userId: NOBODY,
+        reason: null,
+        durationSeconds: null,
+        deleteMessageSeconds: 0,
+      },
+    });
+    expect(row).toMatchObject({
+      status: "failed",
+      message: "You need Kick Members in Discord to do that.",
+    });
+    const noLength = await run(ADMIN, {
+      kind: "mod_action",
+      payload: {
+        action: "timeout",
+        userId: NOBODY,
+        reason: null,
+        durationSeconds: null,
+        deleteMessageSeconds: 0,
+      },
+    });
+    expect(noLength).toMatchObject({ status: "failed", message: "Pick how long to time out." });
+  });
+
+  it("only clears messages for someone who could in that channel", async () => {
+    const row = await run(ADMIN, {
+      kind: "purge",
+      payload: { channelId: SECRET, amount: 10, userId: null, reason: null },
+    });
+    expect(row).toMatchObject({ status: "failed" });
+    const elsewhere = await run(ADMIN, {
+      kind: "purge",
+      payload: { channelId: "980000000000000099", amount: 10, userId: null, reason: null },
+    });
+    expect(elsewhere).toMatchObject({ status: "failed" });
+  });
+
+  it("plans nothing without a planner, and lets only the asker build a plan", async () => {
+    const none = await run(ADMIN, { kind: "qm_plan", payload: { request: "A raid section" } });
+    expect(none).toMatchObject({ status: "failed" });
+    expect(none?.message).toMatch(/isn't set up/);
+
+    const build = await createQmPlan(ctx.db, {
+      guildId: G,
+      requestedById: ADMIN,
+      requestedByTag: "admin",
+      prompt: "A raid section",
+      summary: "Raid section",
+      plan: [],
+      model: "test",
+    });
+    const other = await run(ADMIN2, { kind: "qm_apply", payload: { id: build.id } });
+    expect(other).toMatchObject({
+      status: "failed",
+      message: "Only the person who asked for this plan can apply it.",
+    });
+    expect((await getQmBuild(ctx.db, G, build.id))?.status).toBe("pending");
+
+    const discard = await run(ADMIN2, { kind: "qm_cancel", payload: { id: build.id } });
+    expect(discard).toMatchObject({ status: "done" });
+    expect((await getQmBuild(ctx.db, G, build.id))?.status).toBe("cancelled");
+    const late = await run(ADMIN, { kind: "qm_apply", payload: { id: build.id } });
+    expect(late).toMatchObject({ status: "failed" });
+  });
+
+  it("joins and leaves a group as the requester", async () => {
+    const post = await createLfgPost(ctx.db, {
+      guildId: G,
+      channelId: CH,
+      hostId: "980000000000000021",
+      hostSlot: "DPS",
+      title: "Duos",
+      note: null,
+      slots: [
+        { name: "DPS", count: 1 },
+        { name: "Support", count: 2 },
+      ],
+      startsAt: new Date(),
+      expiresAt: new Date(Date.now() + 3_600_000),
+    });
+    if (!post) throw new Error("no post");
+    const full = await run(OWNER, { kind: "lfg_join", payload: { id: post.id, role: "DPS" } });
+    expect(full).toMatchObject({ status: "failed" });
+    const join = await run(OWNER, { kind: "lfg_join", payload: { id: post.id, role: "Support" } });
+    expect(join).toMatchObject({ status: "done", message: "You're in Duos as Support." });
+    expect((await listActiveMembers(ctx.db, post.id)).map((m) => m.userId)).toContain(OWNER);
+    const leave = await run(OWNER, { kind: "lfg_leave", payload: { id: post.id } });
+    expect(leave).toMatchObject({ status: "done", message: "You left Duos." });
   });
 
   it("writes outcomes as plain text", () => {

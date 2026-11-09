@@ -7,7 +7,9 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Art } from "@/components/Art";
 import { ActionBadge, formatDuration, plainMentions } from "@/components/format";
+import { MemberAvatar } from "@/components/MemberAvatar";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import {
   ChannelSelect,
@@ -19,7 +21,7 @@ import {
   Switch,
 } from "@/components/settings";
 import { getDb } from "@/lib/db";
-import { listTextChannels } from "@/lib/discord";
+import { listTextChannels, searchMembers } from "@/lib/discord";
 import { requireGuildAccess } from "@/lib/session";
 import {
   durationText,
@@ -54,12 +56,15 @@ export default async function WatchPage({
   const { guild } = await requireGuildAccess(guildId);
   const query = await searchParams;
   const q = cleanQuery(query.q);
+  const memberQuery = typeof query.member === "string" ? query.member.trim().slice(0, 32) : "";
   const db = await getDb();
-  const [cases, rules, { watch: w }, channels] = await Promise.all([
+  const [cases, rules, { watch: w }, channels, found] = await Promise.all([
     q ? searchCases(db, guild.id, q, 50) : listRecentCases(db, guild.id, 50),
     listEscalationRules(db, guild.id),
     getOverview(db, guild.id),
     listTextChannels(guild.id).catch(() => []),
+    // null means Discord didn't answer, which the page says rather than showing nobody.
+    memberQuery ? searchMembers(guild.id, memberQuery).catch(() => null) : null,
   ]);
   const first = rules[0]?.warnCount ?? 0;
   const logChannel = channels.find((c) => c.id === w?.logChannelId);
@@ -68,7 +73,7 @@ export default async function WatchPage({
       <div className="page-head">
         <div>
           <h1>Watch</h1>
-          <p>Escalation rules and every moderation case. Undo a case from Discord with /case.</p>
+          <p>Moderate members, set the escalation ladder, and review or undo every case.</p>
         </div>
         <a className="g-btn g-btn--secondary" href="?edit=settings#settings">
           <GearIcon />
@@ -76,8 +81,142 @@ export default async function WatchPage({
         </a>
       </div>
 
-      <RequestsPanel guildId={guild.id} kinds={["undo_case"]} query={query} />
+      <RequestsPanel
+        guildId={guild.id}
+        kinds={["undo_case", "mod_action", "purge"]}
+        query={query}
+      />
       <SettingsNotice query={query} />
+
+      <section className="g-card card-col" id="moderate" aria-label="Moderate">
+        <div className="row-between">
+          <div>
+            <div className="g-label">Moderate a member</div>
+            <div className="g-help">
+              Find someone to warn, time out, kick or ban, and see their cases and rank.
+            </div>
+          </div>
+          <search>
+            <form className="row-between" method="get" action="#moderate">
+              <label className="sr-only" htmlFor="member-search">
+                Member name or user ID
+              </label>
+              <input
+                id="member-search"
+                className="g-input"
+                name="member"
+                type="search"
+                maxLength={32}
+                required
+                placeholder="Name or user ID"
+                defaultValue={memberQuery}
+              />
+              <button type="submit" className="g-btn g-btn--primary">
+                Find
+              </button>
+            </form>
+          </search>
+        </div>
+        {memberQuery ? (
+          found === null ? (
+            <span className="notice" role="alert">
+              Discord didn't answer. Try again in a moment.
+            </span>
+          ) : found.length ? (
+            <ul className="member-list">
+              {found.map((m) => (
+                <li key={m.id}>
+                  <Link className="member-row" href={`/servers/${guild.id}/watch/member/${m.id}`}>
+                    <MemberAvatar name={m.name} src={m.avatar} />
+                    <span className="member-row__name">
+                      {m.name}
+                      <span className="mono">
+                        {m.username}
+                        {m.bot ? " · bot" : ""}
+                        {m.joinedAt ? "" : " · not in the server"}
+                      </span>
+                    </span>
+                    <span className="g-btn g-btn--ghost">Open</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted">
+              Nobody's name starts with “{memberQuery}”. To ban someone who isn't in the server,
+              search their user ID.
+            </p>
+          )
+        ) : null}
+        <details className="card-edit" open={query.clear === "1"}>
+          <summary className="g-btn g-btn--ghost">Clear messages…</summary>
+          <form action={requestAction} className="settings-form">
+            <input type="hidden" name="guildId" value={guild.id} />
+            <input type="hidden" name="page" value="watch" />
+            <input type="hidden" name="kind" value="purge" />
+            <div className="field-row">
+              <label className="g-field" htmlFor="purge-channel">
+                <span>Channel</span>
+                <select
+                  className="g-input"
+                  id="purge-channel"
+                  name="channelId"
+                  required
+                  defaultValue=""
+                >
+                  <option value="" disabled>
+                    Pick a channel
+                  </option>
+                  {channels.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      #{c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="g-field" htmlFor="purge-amount">
+                <span>How many</span>
+                <input
+                  className="g-input"
+                  id="purge-amount"
+                  name="amount"
+                  type="number"
+                  min={1}
+                  max={100}
+                  required
+                  defaultValue={20}
+                />
+              </label>
+            </div>
+            <div className="field-row">
+              <label className="g-field" htmlFor="purge-user">
+                <span>Only from this user ID</span>
+                <input
+                  className="g-input"
+                  id="purge-user"
+                  name="userId"
+                  inputMode="numeric"
+                  pattern="\d{17,20}"
+                  placeholder="Everyone"
+                />
+              </label>
+              <label className="g-field" htmlFor="purge-reason">
+                <span>Reason</span>
+                <input className="g-input" id="purge-reason" name="reason" maxLength={512} />
+              </label>
+            </div>
+            <p className="g-help">
+              Deletes the channel's most recent messages, 100 at most. Pinned messages and ones
+              older than 14 days are kept. This can't be undone.
+            </p>
+            <div className="form-foot">
+              <button type="submit" className="g-btn g-btn--danger">
+                Delete messages
+              </button>
+            </div>
+          </form>
+        </details>
+      </section>
 
       {/* Keyed by last update: after a save or undo the form re-mounts with the stored
           values, instead of keeping stale browser state that a later save would re-apply. */}
@@ -309,7 +448,15 @@ export default async function WatchPage({
                     <span className="mono">{formatDuration(c.durationSeconds)}</span>
                   </td>
                   {/* React escapes all of this: user-typed reasons can't inject markup. */}
-                  <td>{c.targetTag ?? "—"}</td>
+                  <td>
+                    {c.targetId ? (
+                      <Link href={`/servers/${guild.id}/watch/member/${c.targetId}`}>
+                        {c.targetTag ?? c.targetId}
+                      </Link>
+                    ) : (
+                      (c.targetTag ?? "—")
+                    )}
+                  </td>
                   <td>
                     {c.reason ? (
                       plainMentions(c.reason)
@@ -349,7 +496,12 @@ export default async function WatchPage({
               ))}
             </tbody>
           </table>
-          {cases.length === 0 ? <div className="table-card__head muted">No cases yet.</div> : null}
+          {cases.length === 0 ? (
+            <div className="table-card__head muted">
+              <Art slot="empty" className="empty-art" decorative />
+              No cases yet.
+            </div>
+          ) : null}
         </div>
       </div>
     </>

@@ -1,12 +1,8 @@
-import { createCase, getWatchSettings } from "@garrison/db";
-import { type Collection, type Message, PermissionFlagsBits } from "discord.js";
+import { PermissionFlagsBits } from "discord.js";
 import type { Command } from "../../../commands/types.js";
-import { ensureGuild } from "../../../lib/guild-registry.js";
 import { confirmationEmbedForPurge } from "../embeds.js";
-import { postCaseLog } from "../service.js";
+import { purgeMessages } from "../purge.js";
 import { ephemeral, REASON_MAX, watchCommand } from "./shared.js";
-
-const BULK_DELETE_MAX_AGE_MS = 14 * 86_400_000;
 
 export const purge: Command = {
   data: watchCommand(
@@ -40,38 +36,20 @@ export const purge: Command = {
       });
       return;
     }
-    const me = interaction.guild.members.me ?? (await interaction.guild.members.fetchMe());
-    const perms = channel.permissionsFor(me);
-    if (!perms?.has([PermissionFlagsBits.ManageMessages, PermissionFlagsBits.ReadMessageHistory])) {
-      await interaction.reply({
-        content: `I can't delete messages in <#${channel.id}>: I'm missing Manage Messages or Read Message History there. Give Garrison both in the channel's permissions.`,
-        ...ephemeral,
-      });
+    await interaction.deferReply(ephemeral);
+    const result = await purgeMessages(
+      ctx,
+      interaction.guild,
+      channel,
+      { id: interaction.user.id, tag: interaction.user.username },
+      { amount, user, reason },
+    );
+    if (!result.ok) {
+      await interaction.editReply(result.error);
       return;
     }
-
-    await interaction.deferReply(ephemeral);
-    const fetched: Collection<string, Message> = await channel.messages.fetch({ limit: 100 });
-    const cutoff = Date.now() - BULK_DELETE_MAX_AGE_MS;
-    const eligible = fetched
-      .filter((m) => !m.pinned && m.createdTimestamp > cutoff && (!user || m.author.id === user.id))
-      .first(amount);
-    const deleted = eligible.length ? await channel.bulkDelete(eligible, true) : null;
-    const count = deleted?.size ?? 0;
-
-    await ensureGuild(ctx, interaction.guild);
-    const created = await createCase(ctx.db, {
-      guildId: interaction.guild.id,
-      action: "purge",
-      targetId: user?.id ?? null,
-      targetTag: user?.username ?? null,
-      moderatorId: interaction.user.id,
-      moderatorTag: interaction.user.username,
-      reason,
-      details: { channelId: channel.id, deleted: count, requested: amount },
-    });
-    const settings = await getWatchSettings(ctx.db, interaction.guild.id);
-    await postCaseLog(ctx, interaction.guild, settings, created);
+    const created = result.case;
+    const count = result.deleted;
 
     await interaction.editReply({
       embeds: [

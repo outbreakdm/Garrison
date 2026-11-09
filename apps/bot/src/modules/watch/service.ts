@@ -24,8 +24,17 @@ import { caseEmbed, dmEmbed } from "./embeds.js";
 import { pickEscalation } from "./escalation.js";
 import { checkHierarchy } from "./hierarchy.js";
 
+/** What Garrison itself needs for each action. A warning needs nothing from Discord. */
 const permissionFor: Record<MemberAction, bigint | null> = {
   warn: null,
+  timeout: PermissionFlagsBits.ModerateMembers,
+  kick: PermissionFlagsBits.KickMembers,
+  ban: PermissionFlagsBits.BanMembers,
+};
+
+/** What a moderator needs to take each action: the same as the slash commands ask for. */
+export const moderatorPermission: Record<MemberAction, bigint> = {
+  warn: PermissionFlagsBits.ModerateMembers,
   timeout: PermissionFlagsBits.ModerateMembers,
   kick: PermissionFlagsBits.KickMembers,
   ban: PermissionFlagsBits.BanMembers,

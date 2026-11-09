@@ -786,6 +786,16 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "run_health",
   "post_verify_panel",
   "anti_nuke",
+  "mod_action",
+  "purge",
+  "create_lfg",
+  "lfg_join",
+  "lfg_leave",
+  "raid_signup",
+  "raid_withdraw",
+  "qm_plan",
+  "qm_apply",
+  "qm_cancel",
 ]);
 export const dashboardActionStatus = pgEnum("dashboard_action_status", [
   "pending",
@@ -829,6 +839,56 @@ export interface BuildVersionPayload {
 }
 export interface VerifyPanelPayload {
   channelId: string;
+}
+/** Warn, time out, kick or ban from the dashboard. The bot checks the moderator's own permissions. */
+export interface ModActionPayload {
+  action: "warn" | "timeout" | "kick" | "ban";
+  userId: string;
+  reason: string | null;
+  /** Timeouts only. */
+  durationSeconds: number | null;
+  /** Bans only: how far back to delete their messages. */
+  deleteMessageSeconds: number;
+}
+export interface PurgePayload {
+  channelId: string;
+  /** 1 to 100 of the channel's most recent messages. */
+  amount: number;
+  /** Only this member's messages, when set. */
+  userId: string | null;
+  reason: string | null;
+}
+export interface CreateLfgPayload {
+  channelId: string;
+  title: string;
+  /** A template ID from this server, or null for a plain group. */
+  templateId: string | null;
+  /** "Tank 1, Healer 1, DPS 3", or null to use size or the template. */
+  roles: string | null;
+  size: number | null;
+  /** The host's own role, when the group has roles. */
+  myRole: string | null;
+  /** "now", or a time from now like "10m" or "2h". */
+  starts: string | null;
+  note: string | null;
+}
+/** Join a group, in `role` when it has roles. */
+export interface LfgJoinPayload {
+  id: string;
+  role: string;
+}
+/** Sign the requester up for a raid. */
+export interface RaidSignupPayload {
+  eventId: string;
+  role: string;
+  spec: string | null;
+}
+export interface RaidWithdrawPayload {
+  eventId: string;
+}
+/** Ask Quartermaster for a plan. Nothing is built until the plan is applied. */
+export interface QmPlanPayload {
+  request: string;
 }
 /** Owner only: the bot applies it after confirming the requester owns the server. */
 export interface AntiNukePayload {

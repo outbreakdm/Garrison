@@ -5,12 +5,19 @@ import {
   type BuildVersionPayload,
   type CallSignupsPayload,
   type CaseNumberPayload,
+  type CreateLfgPayload,
   type CreateRaidPayload,
   type DashboardAction,
   dashboardActions,
   type IdPayload,
+  type LfgJoinPayload,
   type LockdownStartPayload,
+  type ModActionPayload,
   type MoveSignupPayload,
+  type PurgePayload,
+  type QmPlanPayload,
+  type RaidSignupPayload,
+  type RaidWithdrawPayload,
   type VerifyPanelPayload,
 } from "../schema";
 
@@ -27,7 +34,17 @@ export type QueueInput =
   | { kind: "undo_build"; payload: BuildVersionPayload }
   | { kind: "run_health"; payload: Record<string, never> }
   | { kind: "post_verify_panel"; payload: VerifyPanelPayload }
-  | { kind: "anti_nuke"; payload: AntiNukePayload };
+  | { kind: "anti_nuke"; payload: AntiNukePayload }
+  | { kind: "mod_action"; payload: ModActionPayload }
+  | { kind: "purge"; payload: PurgePayload }
+  | { kind: "create_lfg"; payload: CreateLfgPayload }
+  | { kind: "lfg_join"; payload: LfgJoinPayload }
+  | { kind: "lfg_leave"; payload: IdPayload }
+  | { kind: "raid_signup"; payload: RaidSignupPayload }
+  | { kind: "raid_withdraw"; payload: RaidWithdrawPayload }
+  | { kind: "qm_plan"; payload: QmPlanPayload }
+  | { kind: "qm_apply"; payload: IdPayload }
+  | { kind: "qm_cancel"; payload: IdPayload };
 
 /** Per server: at most this many requests waiting at once. */
 export const MAX_PENDING_PER_GUILD = 10;

@@ -16,6 +16,8 @@
     "db:generate": "pnpm --filter @garrison/db generate",
     "db:migrate": "pnpm --filter @garrison/db migrate",
     "commands:deploy": "pnpm --filter @garrison/bot commands:deploy",
+    "art": "node scripts/art-sync.mjs",
+    "art:optimize": "node scripts/art-optimize.mjs",
     "preflight": "pnpm --filter @garrison/bot preflight",
     "cf:dashboard": "pnpm --filter @garrison/web run cf:deploy",
     "cf:bot": "pnpm --filter @garrison/bot-cloudflare run cf:deploy",
