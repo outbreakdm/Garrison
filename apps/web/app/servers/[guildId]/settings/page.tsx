@@ -7,40 +7,17 @@ import {
   type SettingsChange,
 } from "@garrison/db";
 import type { Metadata } from "next";
+import Link from "next/link";
+import { SettingsNotice } from "@/components/settings";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { getDb } from "@/lib/db";
 import { listGuildRoles, listTextChannels } from "@/lib/discord";
-import { isDangerousRole } from "@/lib/permissions";
 import { requireGuildAccess } from "@/lib/session";
 import { FIELD_LABELS, ladderText, templatesChangeText } from "@/lib/settings-schema";
-import { saveGatehouse, saveLedger, saveOps, saveRanks, saveWatch, undoChange } from "./actions";
+import { currentTheme } from "@/lib/theme";
+import { saveOps, undoChange } from "./actions";
 
 export const metadata: Metadata = { title: "Settings" };
-
-const SAVED: Record<string, string> = {
-  watch: "Saved Watch settings.",
-  gatehouse: "Saved Gatehouse settings.",
-  ops: "Saved the raid time zone.",
-  ranks: "Saved Ranks settings.",
-  ledger: "Saved Ledger settings.",
-  escalation: "Saved the escalation ladder.",
-  rally: "Saved Rally templates.",
-  rewards: "Saved level rewards.",
-  undo: "Undone.",
-};
-const ERRORS: Record<string, string> = {
-  invalid: "Some values were out of range. Nothing was saved.",
-  channel: "That channel isn't a text channel in this server. Nothing was saved.",
-  timezone: "That isn't a time zone. Use a name like America/Chicago.",
-  role: "Pick roles from this server's list. Nothing was saved.",
-  dangerous_role:
-    "That role has admin or moderation powers, so it can't be handed out by the Verify button.",
-  unchanged: "Nothing changed.",
-  not_ready: "Garrison hasn't finished setting up this server. Try again in a minute.",
-  not_found: "That change doesn't exist.",
-  already_undone: "That change was already undone.",
-  is_undo: "That's an undo. Change the setting again instead.",
-  conflict: "Someone changed these settings since. Undo the newer change first.",
-};
 
 function describe(
   field: string,
@@ -81,26 +58,14 @@ const ANNOUNCE: Record<string, string> = {
   channel: "a set channel",
 };
 
-function ChannelSelect({
-  name,
-  value,
-  channels,
-  none,
-}: {
-  name: string;
-  value: string | null;
-  channels: { id: string; name: string }[];
-  none: string;
-}) {
+/** One line in "Where the rest lives": a setting group, its current values, and its page. */
+function Place({ href, name, value }: { href: string; name: string; value: string }) {
   return (
-    <select className="g-input" name={name} defaultValue={value ?? ""} id={name}>
-      <option value="">{none}</option>
-      {channels.map((c) => (
-        <option key={c.id} value={c.id}>
-          #{c.name}
-        </option>
-      ))}
-    </select>
+    <Link className="place" href={href}>
+      <span className="place__name">{name}</span>
+      <span className="place__value">{value}</span>
+      <span className="place__cue" aria-hidden="true" />
+    </Link>
   );
 }
 
@@ -112,10 +77,10 @@ export default async function SettingsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const { guildId } = await params;
-  const { guild } = await requireGuildAccess(guildId);
+  const { guild, session } = await requireGuildAccess(guildId);
   const query = await searchParams;
   const db = await getDb();
-  const [overview, timezone, ranks, ledger, history, channels, roles] = await Promise.all([
+  const [overview, timezone, ranks, ledger, history, channels, roles, theme] = await Promise.all([
     getOverview(db, guild.id),
     getOpsTimezone(db, guild.id),
     getRanksSettings(db, guild.id),
@@ -123,343 +88,154 @@ export default async function SettingsPage({
     listSettingsChanges(db, guild.id),
     listTextChannels(guild.id).catch(() => []),
     listGuildRoles(guild.id).catch(() => []),
+    currentTheme(),
   ]);
   const w = overview.watch;
   const g = overview.gatehouse;
   const names = new Map(channels.map((c) => [c.id, c.name]));
   const roleNames = new Map(roles.map((r) => [r.id, r.name]));
   const undone = new Set(history.map((h) => h.revertsChangeId).filter(Boolean));
-  const message = query.saved ? SAVED[query.saved] : undefined;
-  const error = query.error ? ERRORS[query.error] : undefined;
+  const base = `/servers/${guild.id}`;
+  const channel = (id: string | null | undefined, none: string) =>
+    id ? `#${names.get(id) ?? "deleted-channel"}` : none;
 
   return (
     <>
       <div className="page-head">
         <div>
-          <span className="g-label">Configure</span>
           <h1>Settings</h1>
           <p>
-            Every change is recorded with who made it, and can be undone. Garrison picks changes up
-            within a minute.
+            What applies to the whole server, your own account, and the record of every change. Each
+            module's settings are on its own page.
           </p>
         </div>
       </div>
-      {message ? (
-        <div className="notice notice--ok" role="status">
-          {message}
+      <SettingsNotice query={query} />
+
+      <div className="settings-layout">
+        <div className="card-col">
+          {/* Keyed by the stored value: after a save or undo the form re-mounts with it,
+              instead of keeping stale browser state that a later save would re-apply. */}
+          <form action={saveOps} id="server" className="g-card card-col" key={`ops-${timezone}`}>
+            <input type="hidden" name="guildId" value={guild.id} />
+            <span className="g-label">Server</span>
+            <label className="g-field" htmlFor="timezone">
+              <span>Time zone</span>
+              <input
+                className="g-input"
+                id="timezone"
+                name="timezone"
+                maxLength={64}
+                defaultValue={timezone}
+                placeholder="America/Chicago"
+              />
+              <span className="g-help">
+                Used when /raid create gets a date without a time zone.
+              </span>
+            </label>
+            <div className="form-foot">
+              <button type="submit" className="g-btn g-btn--primary">
+                Save time zone
+              </button>
+            </div>
+          </form>
+
+          <div className="g-card card-col" id="account">
+            <span className="g-label">Your account</span>
+            <div className="list-row">
+              <span>Signed in as</span>
+              <span className="mono">{session.username}</span>
+            </div>
+            <div className="list-row">
+              <span>
+                Game accounts
+                <br />
+                <span className="g-help">Steam, Battle.net, OSRS and which servers see them.</span>
+              </span>
+              <a className="g-btn g-btn--secondary" href="/account">
+                Manage
+              </a>
+            </div>
+            <div className="list-row">
+              <span>Theme: {theme === "dark" ? "Dark" : "Light"}</span>
+              <ThemeToggle back={`${base}/settings`} theme={theme} />
+            </div>
+            <div className="list-row">
+              <span>This browser</span>
+              {/* POST + Origin check + SameSite cookie: logout can't be triggered cross-site. */}
+              <form method="post" action="/auth/logout">
+                <button type="submit" className="g-btn g-btn--secondary">
+                  Sign out
+                </button>
+              </form>
+            </div>
+          </div>
         </div>
-      ) : null}
-      {error ? (
-        <div className="notice" role="alert">
-          {error}
-        </div>
-      ) : null}
 
-      <nav className="jump" aria-label="Settings sections">
-        <span className="g-label">Jump to</span>
-        <a href="#watch">Watch</a>
-        <a href="#gatehouse">Gatehouse</a>
-        <a href="#ops">Ops</a>
-        <a href="#ranks">Ranks</a>
-        <a href="#ledger">Ledger</a>
-        <span className="jump__sep" aria-hidden="true">
-          ·
-        </span>
-        <a href={`/servers/${guild.id}/watch?edit=1#edit-ladder`}>Escalation ladder</a>
-        <a href={`/servers/${guild.id}/ranks`}>Level rewards</a>
-        <a href={`/servers/${guild.id}/rally/templates`}>LFG templates</a>
-        <a href={`/servers/${guild.id}/gatehouse`}>Lockdown, verification, anti-nuke</a>
-      </nav>
-
-      <div className="grid-cards">
-        {/* Keyed by last update: after a save or undo the form re-mounts with the stored
-            values, instead of keeping stale browser state that a later save would re-apply. */}
-        <form
-          action={saveWatch}
-          id="watch"
-          className="g-card card-col"
-          key={`watch-${w?.updatedAt.getTime() ?? 0}`}
-        >
-          <input type="hidden" name="guildId" value={guild.id} />
-          <span className="g-label">Watch · Moderation</span>
-          <label className="g-field" htmlFor="logChannelId">
-            <span>Log channel</span>
-            <ChannelSelect
-              name="logChannelId"
-              value={w?.logChannelId ?? null}
-              channels={channels}
-              none="Don't log cases"
+        <nav className="g-card card-col" aria-label="Module settings">
+          <span className="g-label">Where the rest lives</span>
+          <div className="places">
+            <Place
+              href={`${base}/watch?edit=settings#settings`}
+              name="Watch"
+              value={`Log ${channel(w?.logChannelId, "off")} · DMs ${(w?.dmMembers ?? true) ? "on" : "off"}`}
             />
-            <span className="g-help">Every case is posted here.</span>
-          </label>
-          <label className="check">
-            <input type="checkbox" name="dmMembers" defaultChecked={w?.dmMembers ?? true} />
-            <span>DM members when they're moderated</span>
-          </label>
-          <label className="g-field" htmlFor="appealText">
-            <span>How to appeal</span>
-            <textarea
-              className="g-input"
-              id="appealText"
-              name="appealText"
-              maxLength={300}
-              rows={3}
-              defaultValue={w?.appealText ?? ""}
+            <Place
+              href={`${base}/watch?edit=edit-ladder#edit-ladder`}
+              name="Escalation ladder"
+              value="What happens as warnings add up"
             />
-            <span className="g-help">Shown in moderation DMs. Leave blank for the default.</span>
-          </label>
-          <button type="submit" className="g-btn g-btn--secondary">
-            Save Watch
-          </button>
-        </form>
-
-        <form
-          action={saveGatehouse}
-          id="gatehouse"
-          className="g-card card-col"
-          key={`gate-${g?.updatedAt.getTime() ?? 0}`}
-        >
-          <input type="hidden" name="guildId" value={guild.id} />
-          <span className="g-label">Gatehouse · Anti-raid</span>
-          <label className="check">
-            <input
-              type="checkbox"
-              name="antiRaidEnabled"
-              defaultChecked={g?.antiRaidEnabled ?? true}
+            <Place
+              href={`${base}/gatehouse?edit=anti-raid#anti-raid`}
+              name="Anti-raid"
+              value={
+                g?.antiRaidEnabled
+                  ? `Armed · ${g.raidJoinCount} joins in ${g.raidWindowSeconds} s`
+                  : "Off"
+              }
             />
-            <span>Watch the join rate for raids</span>
-          </label>
-          <div className="field-row">
-            <label className="g-field" htmlFor="raidJoinCount">
-              <span>Joins</span>
-              <input
-                className="g-input"
-                id="raidJoinCount"
-                name="raidJoinCount"
-                type="number"
-                min={3}
-                max={200}
-                defaultValue={g?.raidJoinCount ?? 10}
-              />
-            </label>
-            <label className="g-field" htmlFor="raidWindowSeconds">
-              <span>Within (s)</span>
-              <input
-                className="g-input"
-                id="raidWindowSeconds"
-                name="raidWindowSeconds"
-                type="number"
-                min={5}
-                max={600}
-                defaultValue={g?.raidWindowSeconds ?? 30}
-              />
-            </label>
+            <Place
+              href={`${base}/gatehouse?edit=verification#verification`}
+              name="Verification"
+              value={
+                g?.verifyRoleId
+                  ? `Gives @${roleNames.get(g.verifyRoleId) ?? "deleted-role"}`
+                  : "Off"
+              }
+            />
+            <Place
+              href={`${base}/gatehouse`}
+              name="Lockdown and anti-nuke"
+              value="Anti-nuke is owner only"
+            />
+            <Place
+              href={`${base}/ledger?edit=settings#settings`}
+              name="Ledger"
+              value={`${channel(ledger.channelId, "Dashboard only")} · kept ${ledger.retentionDays} days`}
+            />
+            <Place
+              href={`${base}/ranks?edit=settings#settings`}
+              name="Ranks"
+              value={`XP ${ranks.enabled ? "on" : "off"} · level-ups ${ANNOUNCE[ranks.announce] ?? ranks.announce}`}
+            />
+            <Place
+              href={`${base}/ranks#rewards`}
+              name="Level rewards"
+              value="Roles given at a level"
+            />
+            <Place
+              href={`${base}/rally/templates`}
+              name="LFG templates"
+              value="Roles and wording per game"
+            />
           </div>
-          <label className="g-field" htmlFor="raidResponse">
-            <span>On a raid</span>
-            <select
-              className="g-input"
-              id="raidResponse"
-              name="raidResponse"
-              defaultValue={g?.raidResponse ?? "lockdown"}
-            >
-              <option value="lockdown">Lock the server and pause invites</option>
-              <option value="alert">Alert only</option>
-            </select>
-          </label>
-          <div className="field-row">
-            <label className="g-field" htmlFor="autoUnlockMinutes">
-              <span>Auto-unlock (min)</span>
-              <input
-                className="g-input"
-                id="autoUnlockMinutes"
-                name="autoUnlockMinutes"
-                type="number"
-                min={0}
-                max={1440}
-                defaultValue={g?.autoUnlockMinutes ?? 15}
-              />
-            </label>
-            <label className="g-field" htmlFor="flagAccountAgeDays">
-              <span>Flag accounts under (days)</span>
-              <input
-                className="g-input"
-                id="flagAccountAgeDays"
-                name="flagAccountAgeDays"
-                type="number"
-                min={0}
-                max={365}
-                defaultValue={g?.flagAccountAgeDays ?? 7}
-              />
-            </label>
-          </div>
-          <label className="g-field" htmlFor="alertChannelId">
-            <span>Alert channel</span>
-            <ChannelSelect
-              name="alertChannelId"
-              value={g?.alertChannelId ?? null}
-              channels={channels}
-              none="Use the Watch log channel"
-            />
-          </label>
-          <label className="g-field" htmlFor="staffRoleIds">
-            <span>Staff roles (keep talking during a lockdown)</span>
-            <select
-              className="g-input"
-              id="staffRoleIds"
-              name="staffRoleIds"
-              multiple
-              size={4}
-              defaultValue={g?.staffRoleIds ?? []}
-            >
-              {roles.map((r) => (
-                <option key={r.id} value={r.id}>
-                  @{r.name}
-                </option>
-              ))}
-            </select>
-            <span className="g-help">Up to 10. Ctrl/⌘-click to pick several.</span>
-          </label>
-          <div className="field-row">
-            <label className="g-field" htmlFor="verifyRoleId">
-              <span>Verification gives</span>
-              <select
-                className="g-input"
-                id="verifyRoleId"
-                name="verifyRoleId"
-                defaultValue={g?.verifyRoleId ?? ""}
-              >
-                <option value="">Verification off</option>
-                {roles
-                  .filter((r) => !r.managed && !isDangerousRole(r.permissions))
-                  .map((r) => (
-                    <option key={r.id} value={r.id}>
-                      @{r.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <label className="g-field" htmlFor="verifyMinAccountAgeDays">
-              <span>Min account age (days)</span>
-              <input
-                className="g-input"
-                id="verifyMinAccountAgeDays"
-                name="verifyMinAccountAgeDays"
-                type="number"
-                min={0}
-                max={365}
-                defaultValue={g?.verifyMinAccountAgeDays ?? 0}
-              />
-            </label>
-          </div>
-          <p className="g-help">
-            Post the Verify button from the Gatehouse page. Roles with admin or moderation powers
-            can't be the verified role. Anti-nuke is owner-only, also on the Gatehouse page.
-          </p>
-          <button type="submit" className="g-btn g-btn--secondary">
-            Save Gatehouse
-          </button>
-        </form>
-
-        <form action={saveOps} id="ops" className="g-card card-col" key={`ops-${timezone}`}>
-          <input type="hidden" name="guildId" value={guild.id} />
-          <span className="g-label">Ops · Events</span>
-          <label className="g-field" htmlFor="timezone">
-            <span>Raid time zone</span>
-            <input
-              className="g-input"
-              id="timezone"
-              name="timezone"
-              maxLength={64}
-              defaultValue={timezone}
-              placeholder="America/Chicago"
-            />
-            <span className="g-help">Used when /raid create gets a date without a time zone.</span>
-          </label>
-          <button type="submit" className="g-btn g-btn--secondary">
-            Save time zone
-          </button>
-        </form>
-
-        <form
-          action={saveRanks}
-          id="ranks"
-          className="g-card card-col"
-          key={`ranks-${ranks.updatedAt.getTime()}`}
-        >
-          <input type="hidden" name="guildId" value={guild.id} />
-          <span className="g-label">Ranks · Leveling</span>
-          <label className="check">
-            <input type="checkbox" name="enabled" defaultChecked={ranks.enabled} />
-            <span>Give XP for messages</span>
-          </label>
-          <label className="g-field" htmlFor="announce">
-            <span>Level-up messages</span>
-            <select className="g-input" id="announce" name="announce" defaultValue={ranks.announce}>
-              <option value="same_channel">Where the member posted</option>
-              <option value="channel">In one channel</option>
-              <option value="off">Don't announce</option>
-            </select>
-          </label>
-          <label className="g-field" htmlFor="announceChannelId">
-            <span>Level-up channel</span>
-            <ChannelSelect
-              name="announceChannelId"
-              value={ranks.announceChannelId}
-              channels={channels}
-              none="Pick a channel"
-            />
-            <span className="g-help">Only used when level-ups go to one channel.</span>
-          </label>
-          <p className="g-help">
-            Garrison counts who posted and when, never what they wrote. Level rewards are on the
-            Ranks page.
-          </p>
-          <button type="submit" className="g-btn g-btn--secondary">
-            Save Ranks
-          </button>
-        </form>
-
-        <form
-          action={saveLedger}
-          id="ledger"
-          className="g-card card-col"
-          key={`ledger-${ledger.updatedAt.getTime()}`}
-        >
-          <input type="hidden" name="guildId" value={guild.id} />
-          <span className="g-label">Ledger · Logs</span>
-          <label className="g-field" htmlFor="channelId">
-            <span>Ledger channel</span>
-            <ChannelSelect
-              name="channelId"
-              value={ledger.channelId}
-              channels={channels}
-              none="Dashboard only"
-            />
-            <span className="g-help">Each event also gets a line here.</span>
-          </label>
-          <label className="g-field" htmlFor="retentionDays">
-            <span>Keep events for (days)</span>
-            <input
-              className="g-input"
-              id="retentionDays"
-              name="retentionDays"
-              type="number"
-              min={7}
-              max={365}
-              defaultValue={ledger.retentionDays}
-            />
-            <span className="g-help">7 to 365. Older events are removed automatically.</span>
-          </label>
-          <button type="submit" className="g-btn g-btn--secondary">
-            Save Ledger
-          </button>
-        </form>
+        </nav>
       </div>
 
-      <div className="g-card table-card">
-        <div className="table-card__head">
+      <div className="g-card table-card" id="history">
+        <div className="table-card__head row-between">
           <span className="g-label">History</span>
+          <span className="g-help">Garrison picks changes up within a minute.</span>
         </div>
         <div className="table-wrap">
           <table className="g-table">

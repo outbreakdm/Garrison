@@ -44,7 +44,6 @@ export default async function QuartermasterPage({
     <>
       <div className="page-head">
         <div>
-          <span className="g-label">Quartermaster · AI builder</span>
           <h1>Builds</h1>
           <p>
             Describe channels and roles with /qm build in Discord, review the plan, then apply.

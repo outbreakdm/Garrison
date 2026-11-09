@@ -25,10 +25,18 @@ const page = (
   path,
   keywords,
 });
-const setting = (anchor: string, module: string, title: string, keywords: string): SearchEntry => ({
+/** Where each module's settings are edited: on that module's own page, already open. */
+const PANELS: Record<string, string> = {
+  watch: "/watch?edit=settings#settings",
+  "anti-raid": "/gatehouse?edit=anti-raid#anti-raid",
+  server: "/settings#server",
+  ranks: "/ranks?edit=settings#settings",
+  ledger: "/ledger?edit=settings#settings",
+};
+const setting = (panel: string, module: string, title: string, keywords: string): SearchEntry => ({
   title,
   where: `Settings · ${module}`,
-  path: `/settings#${anchor}`,
+  path: PANELS[panel] ?? "/settings",
   keywords,
 });
 
@@ -66,7 +74,7 @@ export const SEARCH_INDEX: SearchEntry[] = [
     modules.quartermaster.plain,
     "ai build channels roles undo",
   ),
-  page("/settings", "Settings", null, "configure history undo"),
+  page("/settings", "Settings", null, "configure history undo account theme sign out"),
   page(
     "/rally/templates",
     "LFG templates",
@@ -76,11 +84,11 @@ export const SEARCH_INDEX: SearchEntry[] = [
   setting("watch", "Watch", "Log channel", "mod log cases channel"),
   setting("watch", "Watch", "DM members when moderated", "direct message notify"),
   setting("watch", "Watch", "How to appeal", "appeal text ban"),
-  setting("gatehouse", "Gatehouse", "Anti-raid", "join rate raid lockdown"),
-  setting("gatehouse", "Gatehouse", "Auto-unlock", "lockdown minutes"),
-  setting("gatehouse", "Gatehouse", "Flag new accounts", "account age days alt"),
-  setting("gatehouse", "Gatehouse", "Alert channel", "security alerts"),
-  setting("ops", "Ops", "Raid time zone", "timezone events schedule"),
+  setting("anti-raid", "Gatehouse", "Anti-raid", "join rate raid lockdown"),
+  setting("anti-raid", "Gatehouse", "Auto-unlock", "lockdown minutes"),
+  setting("anti-raid", "Gatehouse", "Flag new accounts", "account age days alt"),
+  setting("anti-raid", "Gatehouse", "Alert channel", "security alerts"),
+  setting("server", "Server", "Time zone", "timezone raid events schedule ops"),
   setting("ranks", "Ranks", "Give XP for messages", "leveling on off enable"),
   setting("ranks", "Ranks", "Level-up messages", "announce channel"),
   setting("ledger", "Ledger", "Ledger channel", "logs channel events"),

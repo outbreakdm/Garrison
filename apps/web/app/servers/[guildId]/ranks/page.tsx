@@ -1,20 +1,25 @@
 import { getLeaderboard, getRanksSettings, levelForXp, listRankRewards } from "@garrison/db";
 import type { Metadata } from "next";
-import Link from "next/link";
+import {
+  ChannelSelect,
+  FormFoot,
+  GearIcon,
+  isEditing,
+  SettingsNotice,
+  SettingsPanel,
+  Switch,
+} from "@/components/settings";
 import { getDb } from "@/lib/db";
-import { listGuildRoles } from "@/lib/discord";
+import { listGuildRoles, listTextChannels } from "@/lib/discord";
 import { isDangerousRole } from "@/lib/permissions";
 import { requireGuildAccess } from "@/lib/session";
 import { REWARD_ROWS } from "@/lib/settings-schema";
-import { saveRewards } from "../settings/actions";
+import { saveRanks, saveRewards } from "../settings/actions";
 
-const NOTICES: Record<string, string> = {
-  rewards: "Saved level rewards. Members get them at their next level-up.",
-  reward_level: "Levels go from 1 to 500. Nothing was saved.",
-  reward_role: "Pick each reward role from this server's list. Nothing was saved.",
-  reward_duplicate: "Each level can have one reward. Nothing was saved.",
-  reward_dangerous: "A reward role can't have admin or moderation powers. Nothing was saved.",
-  unchanged: "Nothing changed.",
+const ANNOUNCE: Record<string, string> = {
+  off: "Off",
+  same_channel: "Where they posted",
+  channel: "One channel",
 };
 
 export const metadata: Metadata = { title: "Ranks" };
@@ -30,40 +35,88 @@ export default async function RanksPage({
   const { guild } = await requireGuildAccess(guildId);
   const query = await searchParams;
   const db = await getDb();
-  const [settings, top, rewards, roles] = await Promise.all([
+  const [settings, top, rewards, roles, channels] = await Promise.all([
     getRanksSettings(db, guild.id),
     getLeaderboard(db, guild.id, 25),
     listRankRewards(db, guild.id),
     listGuildRoles(guild.id).catch(() => []),
+    listTextChannels(guild.id).catch(() => []),
   ]);
   const roleName = new Map(roles.map((r) => [r.id, r.name]));
   const grantable = roles.filter((r) => !r.managed && !isDangerousRole(r.permissions));
-  const ok = typeof query.saved === "string" ? NOTICES[query.saved] : undefined;
-  const err = typeof query.error === "string" ? NOTICES[query.error] : undefined;
+  const announceChannel = channels.find((c) => c.id === settings.announceChannelId);
   return (
     <>
       <div className="page-head">
         <div>
-          <span className="g-label">Ranks · Leveling</span>
           <h1>Leaderboard</h1>
           <p>
             {settings.enabled
               ? "Members earn XP for chatting, once a minute at most."
               : "Ranks are off: members earn no XP."}{" "}
-            <Link href={`/servers/${guild.id}/settings#ranks`}>Ranks settings</Link>
+            Garrison counts who posted and when, never what they wrote.
           </p>
         </div>
+        <a className="g-btn g-btn--secondary" href="?edit=settings#settings">
+          <GearIcon />
+          Ranks settings
+        </a>
       </div>
-      {ok ? (
-        <div className="notice notice--ok" role="status">
-          {ok}
-        </div>
-      ) : null}
-      {err ? (
-        <div className="notice" role="alert">
-          {err}
-        </div>
-      ) : null}
+      <SettingsNotice query={query} />
+
+      <SettingsPanel
+        title="Ranks settings"
+        open={isEditing(query, "settings")}
+        facts={[
+          { label: "XP", value: settings.enabled ? "On" : "Off" },
+          {
+            label: "Level-ups",
+            value:
+              settings.announce === "channel" && announceChannel
+                ? `#${announceChannel.name}`
+                : (ANNOUNCE[settings.announce] ?? settings.announce),
+          },
+        ]}
+      >
+        <form action={saveRanks} className="settings-form" key={settings.updatedAt.getTime()}>
+          <input type="hidden" name="guildId" value={guild.id} />
+          <div className="settings-grid">
+            <Switch
+              name="enabled"
+              defaultChecked={settings.enabled}
+              label="Give XP for messages"
+              help="Turning this off keeps everyone's XP; nobody earns more."
+            />
+            <div className="card-col">
+              <label className="g-field" htmlFor="announce">
+                <span>Level-up messages</span>
+                <select
+                  className="g-input"
+                  id="announce"
+                  name="announce"
+                  defaultValue={settings.announce}
+                >
+                  <option value="same_channel">Where the member posted</option>
+                  <option value="channel">In one channel</option>
+                  <option value="off">Don't announce</option>
+                </select>
+              </label>
+              <label className="g-field" htmlFor="announceChannelId">
+                <span>Level-up channel</span>
+                <ChannelSelect
+                  name="announceChannelId"
+                  value={settings.announceChannelId}
+                  channels={channels}
+                  none="Pick a channel"
+                />
+                <span className="g-help">Only used when level-ups go to one channel.</span>
+              </label>
+            </div>
+          </div>
+          <FormFoot label="Save Ranks settings" guildId={guild.id} />
+        </form>
+      </SettingsPanel>
+
       <div className="grid-cards">
         <div className="g-card table-card">
           <div className="table-wrap">
@@ -100,7 +153,12 @@ export default async function RanksPage({
             ) : null}
           </div>
         </div>
-        <form action={saveRewards} className="g-card card-col" key={JSON.stringify(rewards)}>
+        <form
+          action={saveRewards}
+          id="rewards"
+          className="g-card card-col"
+          key={JSON.stringify(rewards)}
+        >
           <input type="hidden" name="guildId" value={guild.id} />
           <span className="g-label">Level rewards</span>
           <p className="g-help">

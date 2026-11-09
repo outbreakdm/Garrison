@@ -46,7 +46,6 @@ export default async function AccountPage({
         <div className="main">
           <div className="page-head">
             <div>
-              <span className="g-label">Barracks · Members</span>
               <h1>Your game accounts</h1>
               <p>
                 Servers see these only after you share with them (/link in that server). Garrison
