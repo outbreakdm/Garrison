@@ -38,6 +38,10 @@ const check = (name, ok, detail = "") =>
 
   const ok = await page.goto(`${B}/servers/${G}/settings`);
   check("settings page loads for a manager", ok.status() === 200);
+  // Settings live on each module's page, in a panel that ?edit= opens.
+  const WATCH = `${B}/servers/${G}/watch?edit=settings`;
+  const RAID = `${B}/servers/${G}/gatehouse?edit=anti-raid`;
+  await page.goto(WATCH);
   const options = await page.$$eval("#logChannelId option", (o) => o.map((x) => x.textContent));
   check(
     "channel picker lists only text channels",
@@ -48,7 +52,7 @@ const check = (name, ok, detail = "") =>
   // 1. A normal save.
   await page.selectOption("#logChannelId", "300000000000000002");
   await page.uncheck('input[name="dmMembers"]');
-  await page.click("text=Save Watch");
+  await page.click("text=Save Watch settings");
   await page.waitForURL(/saved=watch/);
   check(
     "save Watch",
@@ -64,7 +68,7 @@ const check = (name, ok, detail = "") =>
   await page.screenshot({ path: `${S}/settings.png`, fullPage: true });
 
   // 2. Forge the hidden guildId to a server the user can't manage.
-  await page.goto(`${B}/servers/${G}/settings`);
+  await page.goto(WATCH);
   const otherBefore = sql(`select dm_members from watch_settings where guild_id='${OTHER}'`);
   await page.$eval(
     'form:has(#logChannelId) input[name="guildId"]',
@@ -74,7 +78,7 @@ const check = (name, ok, detail = "") =>
     OTHER,
   );
   await page.uncheck('input[name="dmMembers"]');
-  await page.click("text=Save Watch");
+  await page.click("text=Save Watch settings");
   await page.waitForLoadState("networkidle");
   check(
     "forged guildId is refused",
@@ -83,8 +87,8 @@ const check = (name, ok, detail = "") =>
     page.url(),
   );
 
-  // 3. Smuggle anti-nuke fields into the Gatehouse form.
-  await page.goto(`${B}/servers/${G}/settings`);
+  // 3. Smuggle anti-nuke fields into the anti-raid form.
+  await page.goto(RAID);
   await page.$eval("form:has(#raidJoinCount)", (f) => {
     for (const [n, v] of [
       ["antiNukeEnabled", ""],
@@ -98,8 +102,8 @@ const check = (name, ok, detail = "") =>
     }
   });
   await page.fill("#raidJoinCount", "6");
-  await page.click("text=Save Gatehouse");
-  await page.waitForURL(/saved=gatehouse/);
+  await page.click("text=Save anti-raid");
+  await page.waitForURL(/saved=antiraid/);
   check(
     "smuggled anti-nuke fields ignored",
     sql(
@@ -114,15 +118,15 @@ const check = (name, ok, detail = "") =>
   );
 
   // 4. A channel from outside the picker (the voice channel).
-  await page.goto(`${B}/servers/${G}/settings`);
+  await page.goto(RAID);
   await page.$eval("#alertChannelId", (s) => {
     const o = document.createElement("option");
     o.value = "300000000000000003";
     s.appendChild(o);
     s.value = o.value;
   });
-  await page.click("text=Save Gatehouse");
-  await page.waitForURL(/error=channel/);
+  await page.click("text=Save anti-raid");
+  await page.waitForURL(/error=bad_channel/);
   check(
     "non-text channel refused",
     sql(
@@ -131,13 +135,13 @@ const check = (name, ok, detail = "") =>
   );
 
   // 5. Out-of-range number, bypassing the browser's min/max.
-  await page.goto(`${B}/servers/${G}/settings`);
+  await page.goto(RAID);
   await page.$eval("#raidJoinCount", (i) => {
     i.removeAttribute("min");
     i.value = "1";
   });
-  await page.click("text=Save Gatehouse");
-  await page.waitForURL(/error=invalid/);
+  await page.click("text=Save anti-raid");
+  await page.waitForURL(/error=range/);
   check(
     "out-of-range value refused",
     sql(`select raid_join_count from gatehouse_settings where guild_id='${G}'`) === "6",
@@ -156,6 +160,7 @@ const check = (name, ok, detail = "") =>
       `select coalesce(log_channel_id,'none') || '/' || dm_members from watch_settings where guild_id='${G}'`,
     ) === "none/true",
   );
+  await page.goto(WATCH);
   const shown = await page.evaluate(() => [
     document.querySelector("#logChannelId").value,
     document.querySelector('input[name="dmMembers"]').checked,
@@ -173,7 +178,7 @@ const check = (name, ok, detail = "") =>
   // 7. Replay a real Server Action from another origin.
   const before = sql(`select count(*) from settings_changes`);
   const replay = execSync(
-    `curl -s -o /dev/null -w "%{http_code}" -X POST ${B}/servers/${G}/settings -H "Origin: https://evil.example" -H "Next-Action: ${actionId}" -H "Cookie: __Host-garrison_session=${process.env.E2E_SESSION_TOKEN}" -F guildId=${G} -F logChannelId= -F appealText=pwned`,
+    `curl -s -o /dev/null -w "%{http_code}" -X POST ${B}/servers/${G}/watch -H "Origin: https://evil.example" -H "Next-Action: ${actionId}" -H "Cookie: __Host-garrison_session=${process.env.E2E_SESSION_TOKEN}" -F guildId=${G} -F logChannelId= -F appealText=pwned`,
   ).toString();
   check(
     "cross-origin Server Action refused",

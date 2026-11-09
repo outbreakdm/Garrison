@@ -98,7 +98,6 @@ export default async function RallyTemplatesPage({
     <>
       <div className="page-head">
         <div>
-          <span className="g-label">Rally · Templates</span>
           <h1>LFG templates</h1>
           <p>
             Make Rally fit each game: default roles, the words on every button and message, where it
@@ -322,8 +321,9 @@ export default async function RallyTemplatesPage({
         </div>
       ) : null}
       <p className="g-help">
-        Every change is in <Link href={`/servers/${guild.id}/settings`}>Settings history</Link> and
-        can be undone. Posts already up keep the wording they were posted with.
+        Every change is in{" "}
+        <Link href={`/servers/${guild.id}/settings#history`}>Settings history</Link> and can be
+        undone. Posts already up keep the wording they were posted with.
       </p>
     </>
   );

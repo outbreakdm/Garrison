@@ -1,9 +1,25 @@
-import { cleanQuery, listEscalationRules, listRecentCases, searchCases } from "@garrison/db";
+import {
+  cleanQuery,
+  getOverview,
+  listEscalationRules,
+  listRecentCases,
+  searchCases,
+} from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ActionBadge, formatDuration, plainMentions } from "@/components/format";
 import { RequestsPanel } from "@/components/RequestsPanel";
+import {
+  ChannelSelect,
+  FormFoot,
+  GearIcon,
+  isEditing,
+  SettingsNotice,
+  SettingsPanel,
+  Switch,
+} from "@/components/settings";
 import { getDb } from "@/lib/db";
+import { listTextChannels } from "@/lib/discord";
 import { requireGuildAccess } from "@/lib/session";
 import {
   durationText,
@@ -13,7 +29,7 @@ import {
   windowText,
 } from "@/lib/settings-schema";
 import { requestAction } from "../requests";
-import { saveLadder } from "../settings/actions";
+import { saveLadder, saveWatch } from "../settings/actions";
 
 export const metadata: Metadata = { title: "Watch" };
 
@@ -39,36 +55,84 @@ export default async function WatchPage({
   const query = await searchParams;
   const q = cleanQuery(query.q);
   const db = await getDb();
-  const [cases, rules] = await Promise.all([
+  const [cases, rules, { watch: w }, channels] = await Promise.all([
     q ? searchCases(db, guild.id, q, 50) : listRecentCases(db, guild.id, 50),
     listEscalationRules(db, guild.id),
+    getOverview(db, guild.id),
+    listTextChannels(guild.id).catch(() => []),
   ]);
   const first = rules[0]?.warnCount ?? 0;
+  const logChannel = channels.find((c) => c.id === w?.logChannelId);
   return (
     <>
       <div className="page-head">
         <div>
-          <span className="g-label">Watch · Moderation</span>
           <h1>Watch</h1>
           <p>Escalation rules and every moderation case. Undo a case from Discord with /case.</p>
         </div>
+        <a className="g-btn g-btn--secondary" href="?edit=settings#settings">
+          <GearIcon />
+          Watch settings
+        </a>
       </div>
 
       <RequestsPanel guildId={guild.id} kinds={["undo_case"]} query={query} />
-      {query.saved === "escalation" ? (
-        <div className="notice notice--ok" role="status">
-          Saved the escalation ladder. It applies from the next warning.
-        </div>
-      ) : query.error === "ladder" ? (
-        <div className="notice" role="alert">
-          Nothing was saved. Each step needs warnings (1 to 50), a time window and an action, a
-          timeout needs a length, and no two steps can share a warning count.
-        </div>
-      ) : query.error === "unchanged" ? (
-        <div className="notice" role="alert">
-          Nothing changed.
-        </div>
-      ) : null}
+      <SettingsNotice query={query} />
+
+      {/* Keyed by last update: after a save or undo the form re-mounts with the stored
+          values, instead of keeping stale browser state that a later save would re-apply. */}
+      <SettingsPanel
+        title="Watch settings"
+        open={isEditing(query, "settings")}
+        facts={[
+          {
+            label: "Log channel",
+            value: logChannel ? `#${logChannel.name}` : w?.logChannelId ? "Deleted" : "None",
+          },
+          { label: "DMs", value: (w?.dmMembers ?? true) ? "On" : "Off" },
+          { label: "Appeal text", value: w?.appealText ? "Custom" : "Default" },
+        ]}
+      >
+        <form action={saveWatch} className="settings-form" key={w?.updatedAt.getTime() ?? 0}>
+          <input type="hidden" name="guildId" value={guild.id} />
+          <div className="settings-grid">
+            <div className="card-col">
+              <label className="g-field" htmlFor="logChannelId">
+                <span>Log channel</span>
+                <ChannelSelect
+                  name="logChannelId"
+                  value={w?.logChannelId ?? null}
+                  channels={channels}
+                  none="Don't log cases"
+                />
+                <span className="g-help">Every case is posted here.</span>
+              </label>
+              <Switch
+                name="dmMembers"
+                defaultChecked={w?.dmMembers ?? true}
+                label="DM members when they're moderated"
+                help="They get the action, the reason and how to appeal."
+              />
+            </div>
+            <label className="g-field" htmlFor="appealText">
+              <span>How to appeal</span>
+              <textarea
+                className="g-input"
+                id="appealText"
+                name="appealText"
+                maxLength={300}
+                rows={4}
+                defaultValue={w?.appealText ?? ""}
+              />
+              <span className="g-help">
+                Shown in moderation DMs, 300 characters at most. Leave blank for the default.
+              </span>
+            </label>
+          </div>
+          <FormFoot label="Save Watch settings" guildId={guild.id} />
+        </form>
+      </SettingsPanel>
+
       <div className="g-card card-col">
         <div className="row-between">
           <div>
@@ -78,7 +142,7 @@ export default async function WatchPage({
               don't count.
             </div>
           </div>
-          <a className="g-btn g-btn--ghost" href="?edit=1#edit-ladder">
+          <a className="g-btn g-btn--ghost" href="?edit=edit-ladder#edit-ladder">
             Edit ladder
           </a>
         </div>
@@ -116,7 +180,11 @@ export default async function WatchPage({
         )}
       </div>
 
-      <details className="g-card ladder-edit" id="edit-ladder" open={query.edit === "1"}>
+      <details
+        className="g-card ladder-edit"
+        id="edit-ladder"
+        open={isEditing(query, "edit-ladder")}
+      >
         <summary className="g-label">Edit ladder</summary>
         <form
           action={saveLadder}

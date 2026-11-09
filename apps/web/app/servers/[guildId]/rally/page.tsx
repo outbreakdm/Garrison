@@ -75,7 +75,6 @@ export default async function RallyPage({
     <>
       <div className="page-head">
         <div>
-          <span className="g-label">Rally · LFG and events</span>
           <h1>Rally and Ops</h1>
           <p>Open groups, upcoming raids and who's signed up. Members post groups with /lfg.</p>
         </div>

@@ -46,7 +46,12 @@ export function ServerNav({ guildId }: { guildId: string }) {
             <Link
               className="g-nav__item"
               href={href}
-              aria-current={pathname === href ? "page" : undefined}
+              // Sub-pages (Rally templates) keep their module lit.
+              aria-current={
+                pathname === href || (item.href && pathname.startsWith(`${href}/`))
+                  ? "page"
+                  : undefined
+              }
             >
               <span className="g-nav__name">{item.name}</span>
               {item.plain ? <span className="g-nav__plain">{item.plain}</span> : null}

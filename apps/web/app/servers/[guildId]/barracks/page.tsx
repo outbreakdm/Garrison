@@ -21,7 +21,6 @@ export default async function BarracksPage({ params }: { params: Promise<{ guild
     <>
       <div className="page-head">
         <div>
-          <span className="g-label">Barracks · Members</span>
           <h1>Roster</h1>
           <p>
             Game accounts members chose to share here with /link. Verified accounts were proven

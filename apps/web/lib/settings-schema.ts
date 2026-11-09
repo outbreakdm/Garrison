@@ -44,6 +44,21 @@ export const gatehouseForm = z.object({
   verifyMinAccountAgeDays: int(0, 365, "Verification account age"),
 });
 
+/** The Gatehouse page edits anti-raid and verification as two separate forms. */
+export const antiRaidForm = gatehouseForm.pick({
+  alertChannelId: true,
+  antiRaidEnabled: true,
+  raidJoinCount: true,
+  raidWindowSeconds: true,
+  raidResponse: true,
+  autoUnlockMinutes: true,
+  flagAccountAgeDays: true,
+});
+export const verificationForm = gatehouseForm.pick({
+  verifyRoleId: true,
+  verifyMinAccountAgeDays: true,
+});
+
 /** Staff roles come from a multi-select: up to 10 distinct role IDs. */
 export function parseStaffRoles(form: FormData) {
   const ids = form

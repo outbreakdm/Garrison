@@ -33,7 +33,6 @@ export default async function SearchPage({
     <>
       <div className="page-head">
         <div>
-          <span className="g-label">Search</span>
           <h1>{q ? `Results for “${q}”` : "Search"}</h1>
           <p>Settings, pages, members and cases in {guild.name}.</p>
         </div>
