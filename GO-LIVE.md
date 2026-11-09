@@ -56,7 +56,11 @@ address like `dash.yourdomain.com`.
    - Database: `postgres`
    - User: `garrison_web.pijtbyfnhdxhtyidgcda`
    - Password: **[10] dashboard password**
+   - Pick **connect to an existing/public database** (PostgreSQL / Supabase), **not**
+     "Create a PlanetScale database" (that's a separate paid database you don't need).
    - **Create**. If it errors, the password or host is wrong.
+   - Open the new config → **Settings** → **Caching** → turn caching **off**.
+     (Cached reads would show stale settings and let a signed-out session work for up to a minute.)
    - Copy the **ID** (32 letters and numbers) → **[3] Hyperdrive ID**.
 4. **API token for GitHub.** Click your profile icon (top right) → **My Profile** →
    **API Tokens** (or **Manage Account → Account API Tokens**) → **Create Token** →
