@@ -1,1 +1,92 @@
-{}
+{
+  "hero": {
+    "src": "/art/hero.webp?v=43377e0d9a",
+    "width": 1672,
+    "height": 941,
+    "alt": "The garrison gate at night, lit by one volt-lime signal lamp."
+  },
+  "hero-light": {
+    "src": "/art/hero-light.webp?v=8436f4d5da",
+    "width": 1672,
+    "height": 941,
+    "alt": "The garrison gate at dawn in pale fog."
+  },
+  "og": {
+    "src": "/art/og.jpg?v=6b07e8a8b6",
+    "width": 1200,
+    "height": 630,
+    "alt": "The Garrison gate at night."
+  },
+  "security": {
+    "src": "/art/security.webp?v=e6ad48528b",
+    "width": 1402,
+    "height": 1122,
+    "alt": "A sealed vault door with a single lime lock light."
+  },
+  "login": {
+    "src": "/art/login.webp?v=2752c88126",
+    "width": 1200,
+    "height": 600,
+    "alt": "A checkpoint booth with its window lit lime."
+  },
+  "not-found": {
+    "src": "/art/not-found.webp?v=b7acaece32",
+    "width": 1200,
+    "height": 600,
+    "alt": "An empty corridor ending at a blank wall."
+  },
+  "empty": {
+    "src": "/art/empty.webp?v=60d2e88b1e",
+    "width": 800,
+    "height": 800,
+    "alt": "A quiet watch post, lamp on, nothing to report."
+  },
+  "module-watch": {
+    "src": "/art/module-watch.webp?v=44565f88e6",
+    "width": 1024,
+    "height": 1024,
+    "alt": "A watchtower searchlight."
+  },
+  "module-gatehouse": {
+    "src": "/art/module-gatehouse.webp?v=800369fb8a",
+    "width": 1024,
+    "height": 1024,
+    "alt": "A heavy gate with its lock engaged."
+  },
+  "module-ledger": {
+    "src": "/art/module-ledger.webp?v=c035a10b62",
+    "width": 1024,
+    "height": 1024,
+    "alt": "A ruggedised logbook terminal."
+  },
+  "module-rally": {
+    "src": "/art/module-rally.webp?v=6152291091",
+    "width": 1024,
+    "height": 1024,
+    "alt": "A signal flare beacon with five marker lights."
+  },
+  "module-ops": {
+    "src": "/art/module-ops.webp?v=a6cbf16bf9",
+    "width": 1024,
+    "height": 1024,
+    "alt": "A briefing table with a lit map."
+  },
+  "module-barracks": {
+    "src": "/art/module-barracks.webp?v=f0fe80342d",
+    "width": 1024,
+    "height": 1024,
+    "alt": "A row of lockers, one open and lit."
+  },
+  "module-ranks": {
+    "src": "/art/module-ranks.webp?v=f0209c9a86",
+    "width": 1024,
+    "height": 1024,
+    "alt": "Three stacked rank chevrons in steel."
+  },
+  "module-quartermaster": {
+    "src": "/art/module-quartermaster.webp?v=ebf9662f4c",
+    "width": 1024,
+    "height": 1024,
+    "alt": "A supply crate being assembled by a small arm."
+  }
+}

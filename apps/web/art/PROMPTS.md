@@ -23,21 +23,21 @@ text, letters, numbers, words, logo, watermark, signature, frame, border, UI scr
 
 | Slot                  | File                        | Size      | Where it shows                                                                      | Have it |
 | --------------------- | --------------------------- | --------- | ----------------------------------------------------------------------------------- | ------- |
-| hero                  | `hero.webp`                 | 2400×1350 | Landing page, behind the example messages on the right of the hero.                 | no      |
-| hero-light (optional) | `hero-light.webp`           | 2400×1350 | Landing page hero in the light theme. Without it the light theme shows no hero art. | no      |
-| og                    | `og.jpg`                    | 1200×630  | Link preview image when the site is shared in Discord, X and elsewhere.             | no      |
-| security              | `security.webp`             | 1600×1200 | Landing page, beside the security checklist.                                        | no      |
-| login                 | `login.webp`                | 1200×600  | Banner across the top of the sign-in card.                                          | no      |
-| not-found             | `not-found.webp`            | 1200×600  | Banner on the 'Nothing here' page.                                                  | no      |
-| empty                 | `empty.webp`                | 800×800   | Small picture in empty tables (no cases, no events, nobody ranked yet).             | no      |
-| module-watch          | `module-watch.webp`         | 1024×1024 | Watch (moderation) card on the landing page.                                        | no      |
-| module-gatehouse      | `module-gatehouse.webp`     | 1024×1024 | Gatehouse (security) card on the landing page.                                      | no      |
-| module-ledger         | `module-ledger.webp`        | 1024×1024 | Ledger (logs) card on the landing page.                                             | no      |
-| module-rally          | `module-rally.webp`         | 1024×1024 | Rally (looking for group) card on the landing page.                                 | no      |
-| module-ops            | `module-ops.webp`           | 1024×1024 | Ops (events) card on the landing page.                                              | no      |
-| module-barracks       | `module-barracks.webp`      | 1024×1024 | Barracks (members) card on the landing page.                                        | no      |
-| module-ranks          | `module-ranks.webp`         | 1024×1024 | Ranks (leveling) card on the landing page.                                          | no      |
-| module-quartermaster  | `module-quartermaster.webp` | 1024×1024 | Quartermaster (AI builder) card on the landing page.                                | no      |
+| hero                  | `hero.webp`                 | 2400×1350 | Landing page, behind the example messages on the right of the hero.                 | yes     |
+| hero-light (optional) | `hero-light.webp`           | 2400×1350 | Landing page hero in the light theme. Without it the light theme shows no hero art. | yes     |
+| og                    | `og.jpg`                    | 1200×630  | Link preview image when the site is shared in Discord, X and elsewhere.             | yes     |
+| security              | `security.webp`             | 1600×1200 | Landing page, beside the security checklist.                                        | yes     |
+| login                 | `login.webp`                | 1200×600  | Banner across the top of the sign-in card.                                          | yes     |
+| not-found             | `not-found.webp`            | 1200×600  | Banner on the 'Nothing here' page.                                                  | yes     |
+| empty                 | `empty.webp`                | 800×800   | Small picture in empty tables (no cases, no events, nobody ranked yet).             | yes     |
+| module-watch          | `module-watch.webp`         | 1024×1024 | Watch (moderation) card on the landing page.                                        | yes     |
+| module-gatehouse      | `module-gatehouse.webp`     | 1024×1024 | Gatehouse (security) card on the landing page.                                      | yes     |
+| module-ledger         | `module-ledger.webp`        | 1024×1024 | Ledger (logs) card on the landing page.                                             | yes     |
+| module-rally          | `module-rally.webp`         | 1024×1024 | Rally (looking for group) card on the landing page.                                 | yes     |
+| module-ops            | `module-ops.webp`           | 1024×1024 | Ops (events) card on the landing page.                                              | yes     |
+| module-barracks       | `module-barracks.webp`      | 1024×1024 | Barracks (members) card on the landing page.                                        | yes     |
+| module-ranks          | `module-ranks.webp`         | 1024×1024 | Ranks (leveling) card on the landing page.                                          | yes     |
+| module-quartermaster  | `module-quartermaster.webp` | 1024×1024 | Quartermaster (AI builder) card on the landing page.                                | yes     |
 
 ## hero
 
