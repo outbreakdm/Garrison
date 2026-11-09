@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, isNull, lte } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, lte } from "drizzle-orm";
 import type { Db } from "../client";
 import {
   type GatehouseSettings,
@@ -125,4 +125,14 @@ export async function markQuarantineRestored(db: Db, id: string, restoredById: s
     .where(and(eq(quarantines.id, id), isNull(quarantines.restoredAt)))
     .returning();
   return row ?? null;
+}
+
+/** Quarantines still waiting for the owner or a trusted user, newest first. */
+export async function listOpenQuarantines(db: Db, guildId: string, limit = 25) {
+  return db
+    .select()
+    .from(quarantines)
+    .where(and(eq(quarantines.guildId, guildId), isNull(quarantines.restoredAt)))
+    .orderBy(desc(quarantines.createdAt))
+    .limit(limit);
 }

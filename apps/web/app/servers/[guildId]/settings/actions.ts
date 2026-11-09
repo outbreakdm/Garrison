@@ -3,7 +3,8 @@
 import { applySettingsChange, type SettingsModule, undoSettingsChange } from "@garrison/db";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
-import { listTextChannels } from "@/lib/discord";
+import { listGuildRoles, listTextChannels } from "@/lib/discord";
+import { isDangerousRole } from "@/lib/permissions";
 import { isSnowflake } from "@/lib/security";
 import { checkGuildAccess } from "@/lib/session";
 import {
@@ -11,6 +12,8 @@ import {
   ledgerForm,
   opsForm,
   parseLadder,
+  parseRewards,
+  parseStaffRoles,
   pick,
   ranksForm,
   watchForm,
@@ -79,12 +82,42 @@ export async function saveGatehouse(form: FormData) {
     "raidResponse",
     "autoUnlockMinutes",
     "flagAccountAgeDays",
+    "verifyRoleId",
+    "verifyMinAccountAgeDays",
   ];
   const parsed = gatehouseForm.safeParse(pick(form, keys));
-  if (!parsed.success) back(guild.id, { error: "invalid", module: "gatehouse" });
+  const staffRoleIds = parseStaffRoles(form);
+  if (!parsed.success || !staffRoleIds) back(guild.id, { error: "invalid", module: "gatehouse" });
   else if (!(await channelBelongs(guild.id, parsed.data.alertChannelId)))
     back(guild.id, { error: "channel" });
-  else await save("gatehouse", form, parsed.data);
+  else {
+    const roles = await listGuildRoles(guild.id).catch(() => null);
+    const byId = new Map((roles ?? []).map((r) => [r.id, r]));
+    const verify = parsed.data.verifyRoleId ? byId.get(parsed.data.verifyRoleId) : null;
+    if (!roles || !staffRoleIds.every((id) => byId.has(id)) || verify === undefined)
+      back(guild.id, { error: "role" });
+    // Anyone can press Verify, so the role it gives must carry no admin or moderation powers.
+    else if (verify && (verify.managed || isDangerousRole(verify.permissions)))
+      back(guild.id, { error: "dangerous_role" });
+    else await save("gatehouse", form, { ...parsed.data, staffRoleIds });
+  }
+}
+
+/** Level rewards are edited on the Ranks page and saved like any other setting. */
+export async function saveRewards(form: FormData) {
+  const { guild } = await authorize(form);
+  const parsed = parseRewards(form);
+  if (!parsed.ok) back(guild.id, { error: `reward_${parsed.error}` }, "ranks");
+  else {
+    const roles = await listGuildRoles(guild.id).catch(() => null);
+    const byId = new Map((roles ?? []).map((r) => [r.id, r]));
+    const rows = parsed.value.map((r) => byId.get(r.roleId));
+    if (!roles || rows.some((r) => !r)) back(guild.id, { error: "reward_role" }, "ranks");
+    // Chatting must never earn moderation or admin powers.
+    else if (rows.some((r) => r && (r.managed || isDangerousRole(r.permissions))))
+      back(guild.id, { error: "reward_dangerous" }, "ranks");
+    else await save("rewards", form, { rewards: parsed.value }, "ranks");
+  }
 }
 
 export async function saveOps(form: FormData) {

@@ -40,7 +40,37 @@ export const gatehouseForm = z.object({
   raidResponse: z.enum(["lockdown", "alert"], { message: "Pick what happens on a raid." }),
   autoUnlockMinutes: int(0, 1440, "Auto-unlock"),
   flagAccountAgeDays: int(0, 365, "Account age"),
+  verifyRoleId: snowflakeOrNone,
+  verifyMinAccountAgeDays: int(0, 365, "Verification account age"),
 });
+
+/** Staff roles come from a multi-select: up to 10 distinct role IDs. */
+export function parseStaffRoles(form: FormData) {
+  const ids = form
+    .getAll("staffRoleIds")
+    .map((v) => String(v))
+    .filter(Boolean);
+  if (ids.length > 10 || !ids.every((id) => /^\d{17,20}$/.test(id))) return null;
+  return [...new Set(ids)];
+}
+
+export const REWARD_ROWS = 10;
+
+/** Level rewards: rows reward{i}_level / reward{i}_role. Blank rows are dropped. */
+export function parseRewards(form: FormData) {
+  const out: { level: number; roleId: string }[] = [];
+  for (let i = 0; i < REWARD_ROWS; i++) {
+    const level = String(form.get(`reward${i}_level`) ?? "").trim();
+    const roleId = String(form.get(`reward${i}_role`) ?? "").trim();
+    if (!level && !roleId) continue;
+    const n = Number(level);
+    if (!Number.isInteger(n) || n < 1 || n > 500) return { ok: false as const, error: "level" };
+    if (!/^\d{17,20}$/.test(roleId)) return { ok: false as const, error: "role" };
+    if (out.some((r) => r.level === n)) return { ok: false as const, error: "duplicate" };
+    out.push({ level: n, roleId });
+  }
+  return { ok: true as const, value: out };
+}
 
 export const opsForm = z.object({
   timezone: z
@@ -171,6 +201,10 @@ export const FIELD_LABELS: Record<string, string> = {
   autoUnlockMinutes: "Auto-unlock (min)",
   flagAccountAgeDays: "Flag accounts under (days)",
   timezone: "Time zone",
+  staffRoleIds: "Staff roles",
+  verifyRoleId: "Verified role",
+  verifyMinAccountAgeDays: "Verify: min account age (days)",
+  rewards: "Level rewards",
   enabled: "Ranks",
   announce: "Level-ups",
   announceChannelId: "Level-up channel",

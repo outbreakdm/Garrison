@@ -1,4 +1,7 @@
 import {
+  createLfgPost,
+  getGatehouseSettings,
+  getLfgPost,
   listDashboardActions,
   listSignups,
   listUpcomingOps,
@@ -11,7 +14,7 @@ import { type Client, Collection } from "discord.js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { BotContext } from "../../commands/types.js";
 import { createLogger } from "../../lib/logger.js";
-import { processDashboardActions } from "./actions.js";
+import { plainOutcome, processDashboardActions } from "./actions.js";
 
 const G = "980000000000000001";
 const CH = "980000000000000002";
@@ -19,6 +22,7 @@ const SECRET = "980000000000000003";
 const ADMIN = "980000000000000010";
 const NOBODY = "980000000000000011";
 const ADMIN2 = "980000000000000012";
+const OWNER = "980000000000000013";
 
 type Sent = { channel: string; body: Record<string, unknown> };
 const sent: Sent[] = [];
@@ -47,10 +51,11 @@ const members: Record<string, { id: string; permissions: { has: () => boolean } 
   [ADMIN]: { id: ADMIN, permissions: { has: () => true } },
   [NOBODY]: { id: NOBODY, permissions: { has: () => false } },
   [ADMIN2]: { id: ADMIN2, permissions: { has: () => true } },
+  [OWNER]: { id: OWNER, permissions: { has: () => true } },
 };
 const guild = {
   id: G,
-  ownerId: "someone-else",
+  ownerId: OWNER,
   channels: { cache: channels },
   members: {
     me: { id: "garrison" },
@@ -163,5 +168,57 @@ describe("dashboard actions, run by the bot", () => {
     expect(moved).toMatchObject({ status: "done" });
     const me = (await listSignups(ctx.db, event.id)).find((x) => x.userId === P(3));
     expect(me).toMatchObject({ role: "DPS", bench: false, spec: "Prot" });
+  });
+
+  it("lets only the server owner change anti-nuke, within its limits", async () => {
+    const settings = { enabled: false, trustedIds: [ADMIN], deleteThreshold: 4, banThreshold: 6 };
+    const admin = await run(ADMIN2, { kind: "anti_nuke", payload: settings });
+    expect(admin).toMatchObject({
+      status: "failed",
+      message: "Only the server owner can change anti-nuke.",
+    });
+    expect((await getGatehouseSettings(ctx.db, G)).antiNukeEnabled).toBe(true);
+    const owner = await run(OWNER, { kind: "anti_nuke", payload: settings });
+    expect(owner).toMatchObject({ status: "done" });
+    expect(await getGatehouseSettings(ctx.db, G)).toMatchObject({
+      antiNukeEnabled: false,
+      antiNukeTrustedIds: [ADMIN],
+      nukeDeleteThreshold: 4,
+      nukeBanThreshold: 6,
+    });
+    const tooHigh = await run(OWNER, {
+      kind: "anti_nuke",
+      payload: { ...settings, deleteThreshold: 999 },
+    });
+    expect(tooHigh).toMatchObject({ status: "failed" });
+  });
+
+  it("closes a group from the dashboard, once", async () => {
+    const post = await createLfgPost(ctx.db, {
+      guildId: G,
+      channelId: CH,
+      hostId: "980000000000000020",
+      hostSlot: "",
+      title: "Key",
+      note: null,
+      slots: [{ name: "", count: 5 }],
+      startsAt: new Date(),
+      expiresAt: new Date(Date.now() + 3_600_000),
+    });
+    if (!post) throw new Error("no post");
+    expect(await run(OWNER, { kind: "close_lfg", payload: { id: post.id } })).toMatchObject({
+      status: "done",
+    });
+    expect((await getLfgPost(ctx.db, G, post.id))?.status).toBe("closed");
+    expect(await run(OWNER, { kind: "close_lfg", payload: { id: post.id } })).toMatchObject({
+      status: "failed",
+      message: "That group is already closed.",
+    });
+  });
+
+  it("writes outcomes as plain text", () => {
+    expect(plainOutcome("<@123456789012345678> isn't here; <@&5> and <#6>")).toBe(
+      "that member isn't here; a role and a channel",
+    );
   });
 });

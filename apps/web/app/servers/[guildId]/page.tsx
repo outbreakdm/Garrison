@@ -12,13 +12,22 @@ import {
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ActionBadge, formatTime, plainMentions } from "@/components/format";
+import { RequestsPanel } from "@/components/RequestsPanel";
 import { getDb } from "@/lib/db";
 import { requireGuildAccess } from "@/lib/session";
+import { requestAction } from "./requests";
 
 export const metadata: Metadata = { title: "Overview" };
 
-export default async function OverviewPage({ params }: { params: Promise<{ guildId: string }> }) {
+export default async function OverviewPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ guildId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { guildId } = await params;
+  const query = await searchParams;
   const { guild } = await requireGuildAccess(guildId);
   const db = await getDb();
   const [o, cases, activity, latency, health, [build]] = await Promise.all([
@@ -59,7 +68,7 @@ export default async function OverviewPage({ params }: { params: Promise<{ guild
               <a
                 className="g-btn g-btn--ghost"
                 href={`/servers/${guild.id}/quartermaster`}
-                title={`Undo with /qm undo version:${build.version} in Discord`}
+                title={`Review and undo v${build.version}`}
               >
                 Undo
               </a>
@@ -67,6 +76,7 @@ export default async function OverviewPage({ params }: { params: Promise<{ guild
           </div>
         ) : null}
       </div>
+      <RequestsPanel guildId={guild.id} kinds={["run_health"]} query={query} />
 
       <div className="grid-stats">
         <div className="g-card">
@@ -122,7 +132,10 @@ export default async function OverviewPage({ params }: { params: Promise<{ guild
               </div>
             </>
           ) : (
-            <div className="muted">No raids scheduled. Create one with /raid create.</div>
+            <div className="muted">
+              No raids scheduled.{" "}
+              <a href={`/servers/${guild.id}/rally?create=1#create-raid`}>Create one</a>
+            </div>
           )}
         </div>
 
@@ -194,14 +207,24 @@ export default async function OverviewPage({ params }: { params: Promise<{ guild
             ))
           ) : (
             <span className="muted">
-              Garrison checks this server every 30 minutes. Run /health for a check now.
+              Garrison checks this server every 30 minutes. Run a check now below.
             </span>
           )}
-          {health && health.problems > 0 && fixUrl ? (
-            <a className="g-btn g-btn--primary" href={fixUrl}>
-              Fix permissions
-            </a>
-          ) : null}
+          <div className="g-row">
+            {health && health.problems > 0 && fixUrl ? (
+              <a className="g-btn g-btn--primary" href={fixUrl}>
+                Fix permissions
+              </a>
+            ) : null}
+            <form action={requestAction}>
+              <input type="hidden" name="guildId" value={guild.id} />
+              <input type="hidden" name="page" value="" />
+              <input type="hidden" name="kind" value="run_health" />
+              <button type="submit" className="g-btn g-btn--secondary">
+                Run health check
+              </button>
+            </form>
+          </div>
         </div>
         <div className="g-card card-col">
           <span className="g-label">Open groups</span>

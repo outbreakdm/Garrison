@@ -1,17 +1,33 @@
 import { and, count, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import {
+  type AntiNukePayload,
+  type BuildVersionPayload,
   type CallSignupsPayload,
+  type CaseNumberPayload,
   type CreateRaidPayload,
   type DashboardAction,
   dashboardActions,
+  type IdPayload,
+  type LockdownStartPayload,
   type MoveSignupPayload,
+  type VerifyPanelPayload,
 } from "../schema";
 
 export type QueueInput =
   | { kind: "create_raid"; payload: CreateRaidPayload }
   | { kind: "move_signup"; payload: MoveSignupPayload }
-  | { kind: "call_signups"; payload: CallSignupsPayload };
+  | { kind: "call_signups"; payload: CallSignupsPayload }
+  | { kind: "lockdown_start"; payload: LockdownStartPayload }
+  | { kind: "lockdown_end"; payload: Record<string, never> }
+  | { kind: "release_quarantine"; payload: IdPayload }
+  | { kind: "undo_case"; payload: CaseNumberPayload }
+  | { kind: "cancel_raid"; payload: IdPayload }
+  | { kind: "close_lfg"; payload: IdPayload }
+  | { kind: "undo_build"; payload: BuildVersionPayload }
+  | { kind: "run_health"; payload: Record<string, never> }
+  | { kind: "post_verify_panel"; payload: VerifyPanelPayload }
+  | { kind: "anti_nuke"; payload: AntiNukePayload };
 
 /** Per server: at most this many requests waiting at once. */
 export const MAX_PENDING_PER_GUILD = 10;

@@ -166,7 +166,7 @@ describe("dashboard settings, as garrison_web", () => {
     expect(await undoSettingsChange(db, G, ledger.change.id, kel)).toMatchObject({ ok: true });
   });
 
-  it("holds Ledger retention to 7..365 days and keeps XP and rewards bot-only", async () => {
+  it("holds Ledger retention to 7..365 days, keeps XP bot-only, and bounds reward levels", async () => {
     const tooShort = await applySettingsChange(db, {
       guildId: G,
       module: "ledger",
@@ -178,7 +178,14 @@ describe("dashboard settings, as garrison_web", () => {
     );
     expect(tooShort).toMatch(/ledger_retention_range/);
     await denied(db.update(memberXp).set({ xp: 999999 }));
-    await denied(db.insert(rankRewards).values({ guildId: G, level: 5, roleId: "1" }));
+    // Rewards are dashboard-editable now, but only within the levels /ranks allows.
+    const outOfRange = await Promise.resolve(
+      db.insert(rankRewards).values({ guildId: G, level: 9999, roleId: "1" }),
+    ).then(
+      () => "",
+      (e: Error & { cause?: Error }) => `${e.message} ${e.cause?.message ?? ""}`,
+    );
+    expect(outOfRange).toMatch(/rank_rewards_level/);
     await denied(db.delete(ledgerSettings));
   });
 
@@ -228,6 +235,57 @@ describe("dashboard settings, as garrison_web", () => {
     expect(bad).toMatch(/escalation_duration/);
     await denied(db.delete(escalationRules));
     await denied(db.update(escalationRules).set({ guildId: "961" }));
+  });
+
+  it("edits Gatehouse staff roles and verification, but never anti-nuke", async () => {
+    const res = await applySettingsChange(db, {
+      guildId: G,
+      module: "gatehouse",
+      patch: {
+        staffRoleIds: ["100000000000000001"],
+        verifyRoleId: "100000000000000002",
+        verifyMinAccountAgeDays: 7,
+      },
+      ...taner,
+    });
+    expect(res).toMatchObject({ ok: true });
+    const bad = await applySettingsChange(db, {
+      guildId: G,
+      module: "gatehouse",
+      patch: { verifyMinAccountAgeDays: 9999 },
+      ...taner,
+    }).then(
+      () => "",
+      (e: Error & { cause?: Error }) => `${e.message} ${e.cause?.message ?? ""}`,
+    );
+    expect(bad).toMatch(/gatehouse_verify_age/);
+  });
+
+  it("replaces level rewards as one list, with undo", async () => {
+    const rewards = [
+      { level: 20, roleId: "100000000000000020" },
+      { level: 5, roleId: "100000000000000005" },
+    ];
+    const res = await applySettingsChange(db, {
+      guildId: G,
+      module: "rewards",
+      patch: { rewards },
+      ...taner,
+    });
+    expect(res).toMatchObject({ ok: true });
+    const next = await applySettingsChange(db, {
+      guildId: G,
+      module: "rewards",
+      patch: { rewards: [{ level: 5, roleId: "100000000000000005" }] },
+      ...taner,
+    });
+    expect(next).toMatchObject({
+      ok: true,
+      change: { changes: { rewards: { to: [{ level: 5 }] } } },
+    });
+    if (!next.ok) throw new Error("unreachable");
+    expect(await undoSettingsChange(db, G, next.change.id, kel)).toMatchObject({ ok: true });
+    await denied(db.delete(rankRewards));
   });
 
   it("keeps history append-only", async () => {

@@ -148,32 +148,62 @@ export async function listTextChannels(guildId: string) {
   return channels;
 }
 
-const roleCache = new Map<
-  string,
-  { roles: { id: string; name: string; mentionable: boolean }[]; at: number }
->();
+export interface GuildRole {
+  id: string;
+  name: string;
+  position: number;
+  managed: boolean;
+  mentionable: boolean;
+  /** Permission bits as a decimal string, as Discord sends them. */
+  permissions: string;
+}
 
-/**
- * Roles a Rally template could notify: not @everyone, not managed by an
- * integration. Highest first, as Discord shows them. Cached 30 s.
- */
-export async function listNotifiableRoles(guildId: string) {
+const roleCache = new Map<string, { roles: GuildRole[]; ownerId: string; at: number }>();
+
+/** Every role except @everyone, highest first, as Discord shows them. Cached 30 s. */
+export async function listGuildRoles(guildId: string): Promise<GuildRole[]> {
+  return (await guildInfo(guildId)).roles;
+}
+
+/** The server's owner, asked of Discord (cached 30 s). Anti-nuke controls are theirs alone. */
+export async function guildOwnerId(guildId: string): Promise<string> {
+  return (await guildInfo(guildId)).ownerId;
+}
+
+async function guildInfo(guildId: string) {
   const hit = roleCache.get(guildId);
-  if (hit && Date.now() - hit.at < ACCESS_TTL_MS) return hit.roles;
+  if (hit && Date.now() - hit.at < ACCESS_TTL_MS) return hit;
   const guild = await discord<{
     id: string;
+    owner_id: string;
     roles: {
       id: string;
       name: string;
       position: number;
       managed?: boolean;
       mentionable?: boolean;
+      permissions?: string;
     }[];
   }>(`/guilds/${guildId}`, { headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` } });
   const roles = guild.roles
-    .filter((r) => r.id !== guild.id && !r.managed)
+    .filter((r) => r.id !== guild.id)
     .sort((a, b) => b.position - a.position)
-    .map(({ id, name, mentionable }) => ({ id, name, mentionable: mentionable === true }));
-  roleCache.set(guildId, { roles, at: Date.now() });
-  return roles;
+    .map((r) => ({
+      id: r.id,
+      name: r.name,
+      position: r.position,
+      managed: r.managed === true,
+      mentionable: r.mentionable === true,
+      permissions: r.permissions ?? "0",
+    }));
+  const entry = { roles, ownerId: guild.owner_id, at: Date.now() };
+  roleCache.set(guildId, entry);
+  return entry;
+}
+
+/** Roles a Rally template could notify: not @everyone, not managed by an integration. */
+export async function listNotifiableRoles(guildId: string) {
+  return (await listGuildRoles(guildId))
+    .filter((r) => !r.managed)
+    .map(({ id, name, mentionable }) => ({ id, name, mentionable }));
 }

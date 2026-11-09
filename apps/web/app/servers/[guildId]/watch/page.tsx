@@ -2,6 +2,7 @@ import { cleanQuery, listEscalationRules, listRecentCases, searchCases } from "@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ActionBadge, formatDuration, plainMentions } from "@/components/format";
+import { RequestsPanel } from "@/components/RequestsPanel";
 import { getDb } from "@/lib/db";
 import { requireGuildAccess } from "@/lib/session";
 import {
@@ -11,9 +12,18 @@ import {
   LADDER_WINDOWS,
   windowText,
 } from "@/lib/settings-schema";
+import { requestAction } from "../requests";
 import { saveLadder } from "../settings/actions";
 
 export const metadata: Metadata = { title: "Watch" };
+
+/** Cases Discord can reverse: a warning is withdrawn, a timeout lifted, a ban removed. */
+const UNDOABLE = new Set(["warn", "timeout", "ban"]);
+const UNDO_LABEL: Record<string, string> = {
+  warn: "Withdraw the warning",
+  timeout: "Lift the timeout",
+  ban: "Unban",
+};
 
 const ACTION_LABEL = { timeout: "Timeout", kick: "Kick", ban: "Ban" } as const;
 
@@ -44,6 +54,7 @@ export default async function WatchPage({
         </div>
       </div>
 
+      <RequestsPanel guildId={guild.id} kinds={["undo_case"]} query={query} />
       {query.saved === "escalation" ? (
         <div className="notice notice--ok" role="status">
           Saved the escalation ladder. It applies from the next warning.
@@ -214,8 +225,8 @@ export default async function WatchPage({
           <table className="g-table">
             <thead>
               <tr>
-                {["Case", "Action", "Member", "Reason", "By", "When"].map((h) => (
-                  <th key={h} scope="col">
+                {["Case", "Action", "Member", "Reason", "By", "When", ""].map((h) => (
+                  <th key={h || "actions"} scope="col">
                     <span className="g-label">{h}</span>
                   </th>
                 ))}
@@ -248,6 +259,23 @@ export default async function WatchPage({
                   </td>
                   <td className="mono">
                     {c.createdAt.toISOString().slice(0, 16).replace("T", " ")} UTC
+                  </td>
+                  <td>
+                    {!c.revokedAt && UNDOABLE.has(c.action) ? (
+                      <form action={requestAction}>
+                        <input type="hidden" name="guildId" value={guild.id} />
+                        <input type="hidden" name="page" value="watch" />
+                        <input type="hidden" name="kind" value="undo_case" />
+                        <input type="hidden" name="caseNumber" value={c.caseNumber} />
+                        <button
+                          type="submit"
+                          className="g-btn g-btn--ghost"
+                          title={UNDO_LABEL[c.action]}
+                        >
+                          Undo
+                        </button>
+                      </form>
+                    ) : null}
                   </td>
                 </tr>
               ))}

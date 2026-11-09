@@ -53,6 +53,8 @@ describe("gatehouseForm", () => {
     raidResponse: "lockdown",
     autoUnlockMinutes: "15",
     flagAccountAgeDays: "7",
+    verifyRoleId: "",
+    verifyMinAccountAgeDays: "0",
   };
   it("coerces numbers within the slash-command ranges", () => {
     expect(gatehouseForm.parse(ok)).toMatchObject({
@@ -68,6 +70,8 @@ describe("gatehouseForm", () => {
     ["autoUnlockMinutes", "-1"],
     ["raidResponse", "ban everyone"],
     ["flagAccountAgeDays", "abc"],
+    ["verifyMinAccountAgeDays", "400"],
+    ["verifyRoleId", "everyone"],
   ])("rejects %s = %j", (field, value) => {
     expect(gatehouseForm.safeParse({ ...ok, [field]: value }).success).toBe(false);
   });

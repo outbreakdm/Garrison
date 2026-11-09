@@ -1,19 +1,45 @@
 import { getLeaderboard, getRanksSettings, levelForXp, listRankRewards } from "@garrison/db";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { getDb } from "@/lib/db";
+import { listGuildRoles } from "@/lib/discord";
+import { isDangerousRole } from "@/lib/permissions";
 import { requireGuildAccess } from "@/lib/session";
+import { REWARD_ROWS } from "@/lib/settings-schema";
+import { saveRewards } from "../settings/actions";
+
+const NOTICES: Record<string, string> = {
+  rewards: "Saved level rewards. Members get them at their next level-up.",
+  reward_level: "Levels go from 1 to 500. Nothing was saved.",
+  reward_role: "Pick each reward role from this server's list. Nothing was saved.",
+  reward_duplicate: "Each level can have one reward. Nothing was saved.",
+  reward_dangerous: "A reward role can't have admin or moderation powers. Nothing was saved.",
+  unchanged: "Nothing changed.",
+};
 
 export const metadata: Metadata = { title: "Ranks" };
 
-export default async function RanksPage({ params }: { params: Promise<{ guildId: string }> }) {
+export default async function RanksPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ guildId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { guildId } = await params;
   const { guild } = await requireGuildAccess(guildId);
+  const query = await searchParams;
   const db = await getDb();
-  const [settings, top, rewards] = await Promise.all([
+  const [settings, top, rewards, roles] = await Promise.all([
     getRanksSettings(db, guild.id),
     getLeaderboard(db, guild.id, 25),
     listRankRewards(db, guild.id),
+    listGuildRoles(guild.id).catch(() => []),
   ]);
+  const roleName = new Map(roles.map((r) => [r.id, r.name]));
+  const grantable = roles.filter((r) => !r.managed && !isDangerousRole(r.permissions));
+  const ok = typeof query.saved === "string" ? NOTICES[query.saved] : undefined;
+  const err = typeof query.error === "string" ? NOTICES[query.error] : undefined;
   return (
     <>
       <div className="page-head">
@@ -23,10 +49,21 @@ export default async function RanksPage({ params }: { params: Promise<{ guildId:
           <p>
             {settings.enabled
               ? "Members earn XP for chatting, once a minute at most."
-              : "Ranks are off. Turn them on with /ranks settings in Discord."}
+              : "Ranks are off: members earn no XP."}{" "}
+            <Link href={`/servers/${guild.id}/settings#ranks`}>Ranks settings</Link>
           </p>
         </div>
       </div>
+      {ok ? (
+        <div className="notice notice--ok" role="status">
+          {ok}
+        </div>
+      ) : null}
+      {err ? (
+        <div className="notice" role="alert">
+          {err}
+        </div>
+      ) : null}
       <div className="grid-cards">
         <div className="g-card table-card">
           <div className="table-wrap">
@@ -63,20 +100,51 @@ export default async function RanksPage({ params }: { params: Promise<{ guildId:
             ) : null}
           </div>
         </div>
-        <div className="g-card card-col">
+        <form action={saveRewards} className="g-card card-col" key={JSON.stringify(rewards)}>
+          <input type="hidden" name="guildId" value={guild.id} />
           <span className="g-label">Level rewards</span>
-          {rewards.length ? (
-            rewards.map((r) => (
-              <div className="list-row" key={r.level}>
-                <span>Level {r.level}</span>
-                <span className="mono">{r.roleId}</span>
+          <p className="g-help">
+            Members get the role when they reach the level, and keep it. Roles with admin or
+            moderation powers aren't offered. Garrison's role must sit above these roles.
+          </p>
+          {Array.from({ length: REWARD_ROWS }, (_, i) => {
+            const r = rewards[i];
+            return (
+              <div className="reward-row" key={r ? `lvl-${r.level}` : `new-${i}`}>
+                <input
+                  className="g-input"
+                  name={`reward${i}_level`}
+                  type="number"
+                  min={1}
+                  max={500}
+                  placeholder="Level"
+                  aria-label={`Reward ${i + 1} level`}
+                  defaultValue={r?.level ?? ""}
+                />
+                <select
+                  className="g-input"
+                  name={`reward${i}_role`}
+                  aria-label={`Reward ${i + 1} role`}
+                  defaultValue={r?.roleId ?? ""}
+                >
+                  <option value="">No reward</option>
+                  {r?.roleId && !grantable.some((g) => g.id === r.roleId) ? (
+                    <option value={r.roleId}>@{roleName.get(r.roleId) ?? "deleted role"}</option>
+                  ) : null}
+                  {grantable.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      @{g.name}
+                    </option>
+                  ))}
+                </select>
               </div>
-            ))
-          ) : (
-            <span className="muted">No rewards. Add one with /ranks reward.</span>
-          )}
-          <p className="g-help">Rewards can't carry moderation or admin powers.</p>
-        </div>
+            );
+          })}
+          <button type="submit" className="g-btn g-btn--primary">
+            Save rewards
+          </button>
+          <p className="g-help">Every change is in Settings history and can be undone.</p>
+        </form>
       </div>
     </>
   );

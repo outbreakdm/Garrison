@@ -15,17 +15,20 @@ import { getDb } from "@/lib/db";
 import { listTextChannels } from "@/lib/discord";
 import { ACTION_KIND, ACTION_STATUS } from "@/lib/rally-schema";
 import { requireGuildAccess } from "@/lib/session";
+import { requestAction } from "../requests";
 import { requestCallSignups, requestCreateRaid, requestMoveSignup } from "./actions";
 
 const QUEUED: Record<string, string> = {
   create_raid: "Queued. Garrison posts the raid in a few seconds.",
   move_signup: "Queued. Garrison moves them and updates the card.",
   call_signups: "Queued. Garrison posts the call in the raid's channel.",
+  cancel_raid: "Queued. Garrison cancels the raid and updates its card.",
+  close_lfg: "Queued. Garrison closes the group and updates its card.",
 };
 const ERRORS: Record<string, string> = {
   invalid: "Some fields weren't valid. Nothing was queued.",
   channel: "That channel isn't a text channel in this server.",
-  not_found: "That raid or signup has changed. Refresh and try again.",
+  not_found: "That raid, group or signup has changed. Refresh and try again.",
   busy: "Garrison has 10 requests waiting for this server. Try again shortly.",
   too_fast: "That's a lot of requests at once. Wait a minute and try again.",
   cooldown: "A call for signups for this raid went out in the last hour.",
@@ -200,6 +203,15 @@ export default async function RallyPage({
                       </span>
                     ))}
                   </div>
+                  <form action={requestAction}>
+                    <input type="hidden" name="guildId" value={guild.id} />
+                    <input type="hidden" name="page" value="rally" />
+                    <input type="hidden" name="kind" value="close_lfg" />
+                    <input type="hidden" name="id" value={p.id} />
+                    <button type="submit" className="g-btn g-btn--ghost">
+                      Close group
+                    </button>
+                  </form>
                 </div>
               );
             })
@@ -299,6 +311,18 @@ export default async function RallyPage({
                       {seated.length} / {capacity(r.slots)}
                       {short.length ? ` · ${short.join(", ")}` : " · full"}
                     </span>
+                    <details className="confirm">
+                      <summary className="confirm__toggle g-btn g-btn--ghost">Cancel raid…</summary>
+                      <form action={requestAction}>
+                        <input type="hidden" name="guildId" value={guild.id} />
+                        <input type="hidden" name="page" value="rally" />
+                        <input type="hidden" name="kind" value="cancel_raid" />
+                        <input type="hidden" name="id" value={r.id} />
+                        <button type="submit" className="g-btn g-btn--danger">
+                          Yes, cancel {r.title}
+                        </button>
+                      </form>
+                    </details>
                     {short.length ? (
                       <form action={requestCallSignups}>
                         <input type="hidden" name="guildId" value={guild.id} />

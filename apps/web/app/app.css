@@ -810,3 +810,31 @@ a.g-btn--primary,
 a.g-btn--primary:hover {
   color: var(--accent-ink);
 }
+.reward-row {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: var(--space-2);
+}
+.jump {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  font-size: 14px;
+}
+.jump__sep {
+  color: var(--text-muted);
+}
+
+/* "Are you sure?" toggles for destructive actions */
+.confirm__toggle {
+  list-style: none;
+  cursor: pointer;
+  align-self: flex-start;
+}
+.confirm__toggle::-webkit-details-marker {
+  display: none;
+}
+.confirm[open] .confirm__toggle {
+  margin-bottom: var(--space-3);
+}

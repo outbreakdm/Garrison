@@ -24,3 +24,25 @@ export function memberPermissions(
 
 /** Dashboard access rule: Manage Server or Administrator. */
 export const canManage = (perms: bigint) => (perms & (ADMINISTRATOR | MANAGE_GUILD)) !== 0n;
+
+/**
+ * Permissions that let one account wreck a server (same set as the bot's
+ * anti-nuke). A level reward must never carry any of them.
+ */
+export const DANGEROUS_PERMISSIONS =
+  (1n << 3n) | // Administrator
+  (1n << 5n) | // Manage Server
+  (1n << 28n) | // Manage Roles
+  (1n << 4n) | // Manage Channels
+  (1n << 29n) | // Manage Webhooks
+  (1n << 2n) | // Ban Members
+  (1n << 1n) | // Kick Members
+  (1n << 17n); // Mention Everyone
+
+export function isDangerousRole(permissions: string) {
+  try {
+    return (BigInt(permissions) & DANGEROUS_PERMISSIONS) !== 0n;
+  } catch {
+    return true;
+  }
+}

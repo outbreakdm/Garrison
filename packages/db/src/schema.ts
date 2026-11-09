@@ -135,37 +135,44 @@ export const raidResponse = pgEnum("raid_response", ["alert", "lockdown"]);
 export const lockdownSource = pgEnum("lockdown_source", ["manual", "anti_raid"]);
 
 /** Gatehouse settings, one row per guild. */
-export const gatehouseSettings = pgTable("gatehouse_settings", {
-  guildId: text("guild_id")
-    .primaryKey()
-    .references(() => guilds.id, { onDelete: "cascade" }),
-  /** Channel for raid alerts, lockdown notices and new-account flags. Null falls back to the Watch log channel. */
-  alertChannelId: text("alert_channel_id"),
-  antiRaidEnabled: boolean("anti_raid_enabled").notNull().default(true),
-  /** A raid is `raidJoinCount` joins within `raidWindowSeconds`. */
-  raidJoinCount: integer("raid_join_count").notNull().default(10),
-  raidWindowSeconds: integer("raid_window_seconds").notNull().default(30),
-  raidResponse: raidResponse("raid_response").notNull().default("lockdown"),
-  /** Anti-raid lockdowns lift on their own after this long. */
-  autoUnlockMinutes: integer("auto_unlock_minutes").notNull().default(15),
-  /** Flag joining accounts younger than this many days. 0 turns flags off. */
-  flagAccountAgeDays: integer("flag_account_age_days").notNull().default(7),
-  /** Roles that keep talking during a lockdown. */
-  staffRoleIds: text("staff_role_ids").array().notNull().default(sql`'{}'::text[]`),
-  /** Role the verification button gives. Null means verification is off. */
-  verifyRoleId: text("verify_role_id"),
-  verifyMinAccountAgeDays: integer("verify_min_account_age_days").notNull().default(0),
-  /** Anti-nuke: stop one actor deleting channels/roles or mass-banning. Owner-only to change. */
-  antiNukeEnabled: boolean("anti_nuke_enabled").notNull().default(true),
-  /** Users and bots anti-nuke never acts on. The owner is always trusted. Owner-only to change. */
-  antiNukeTrustedIds: text("anti_nuke_trusted_ids").array().notNull().default(sql`'{}'::text[]`),
-  /** Channel or role deletions by one actor within the window that count as a nuke. */
-  nukeDeleteThreshold: integer("nuke_delete_threshold").notNull().default(3),
-  /** Bans plus kicks by one actor within the window that count as a nuke. */
-  nukeBanThreshold: integer("nuke_ban_threshold").notNull().default(5),
-  nukeWindowSeconds: integer("nuke_window_seconds").notNull().default(60),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}).enableRLS();
+export const gatehouseSettings = pgTable(
+  "gatehouse_settings",
+  {
+    guildId: text("guild_id")
+      .primaryKey()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    /** Channel for raid alerts, lockdown notices and new-account flags. Null falls back to the Watch log channel. */
+    alertChannelId: text("alert_channel_id"),
+    antiRaidEnabled: boolean("anti_raid_enabled").notNull().default(true),
+    /** A raid is `raidJoinCount` joins within `raidWindowSeconds`. */
+    raidJoinCount: integer("raid_join_count").notNull().default(10),
+    raidWindowSeconds: integer("raid_window_seconds").notNull().default(30),
+    raidResponse: raidResponse("raid_response").notNull().default("lockdown"),
+    /** Anti-raid lockdowns lift on their own after this long. */
+    autoUnlockMinutes: integer("auto_unlock_minutes").notNull().default(15),
+    /** Flag joining accounts younger than this many days. 0 turns flags off. */
+    flagAccountAgeDays: integer("flag_account_age_days").notNull().default(7),
+    /** Roles that keep talking during a lockdown. */
+    staffRoleIds: text("staff_role_ids").array().notNull().default(sql`'{}'::text[]`),
+    /** Role the verification button gives. Null means verification is off. */
+    verifyRoleId: text("verify_role_id"),
+    verifyMinAccountAgeDays: integer("verify_min_account_age_days").notNull().default(0),
+    /** Anti-nuke: stop one actor deleting channels/roles or mass-banning. Owner-only to change. */
+    antiNukeEnabled: boolean("anti_nuke_enabled").notNull().default(true),
+    /** Users and bots anti-nuke never acts on. The owner is always trusted. Owner-only to change. */
+    antiNukeTrustedIds: text("anti_nuke_trusted_ids").array().notNull().default(sql`'{}'::text[]`),
+    /** Channel or role deletions by one actor within the window that count as a nuke. */
+    nukeDeleteThreshold: integer("nuke_delete_threshold").notNull().default(3),
+    /** Bans plus kicks by one actor within the window that count as a nuke. */
+    nukeBanThreshold: integer("nuke_ban_threshold").notNull().default(5),
+    nukeWindowSeconds: integer("nuke_window_seconds").notNull().default(60),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check("gatehouse_verify_age", sql`${t.verifyMinAccountAgeDays} BETWEEN 0 AND 365`),
+    check("gatehouse_staff_roles", sql`cardinality(${t.staffRoleIds}) <= 10`),
+  ],
+).enableRLS();
 
 /** One permission overwrite as it was before a lockdown. `before: null` means there was none. */
 export interface LockdownSnapshotEntry {
@@ -412,6 +419,7 @@ export const settingsModule = pgEnum("settings_module", [
   "ledger",
   "escalation",
   "rally",
+  "rewards",
 ]);
 
 /** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */
@@ -476,7 +484,10 @@ export const rankRewards = pgTable(
     roleId: text("role_id"),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [primaryKey({ columns: [t.guildId, t.level] })],
+  (t) => [
+    primaryKey({ columns: [t.guildId, t.level] }),
+    check("rank_rewards_level", sql`${t.level} BETWEEN 1 AND 500`),
+  ],
 ).enableRLS();
 
 export const memberXp = pgTable(
@@ -765,6 +776,16 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "create_raid",
   "move_signup",
   "call_signups",
+  "lockdown_start",
+  "lockdown_end",
+  "release_quarantine",
+  "undo_case",
+  "cancel_raid",
+  "close_lfg",
+  "undo_build",
+  "run_health",
+  "post_verify_panel",
+  "anti_nuke",
 ]);
 export const dashboardActionStatus = pgEnum("dashboard_action_status", [
   "pending",
@@ -790,6 +811,31 @@ export interface MoveSignupPayload {
 }
 export interface CallSignupsPayload {
   eventId: string;
+}
+export interface LockdownStartPayload {
+  /** Minutes until it lifts on its own; null waits for someone to lift it. */
+  durationMinutes: number | null;
+  pauseInvites: boolean;
+  reason: string | null;
+}
+export interface IdPayload {
+  id: string;
+}
+export interface CaseNumberPayload {
+  caseNumber: number;
+}
+export interface BuildVersionPayload {
+  version: number;
+}
+export interface VerifyPanelPayload {
+  channelId: string;
+}
+/** Owner only: the bot applies it after confirming the requester owns the server. */
+export interface AntiNukePayload {
+  enabled: boolean;
+  trustedIds: string[];
+  deleteThreshold: number;
+  banThreshold: number;
 }
 
 /**

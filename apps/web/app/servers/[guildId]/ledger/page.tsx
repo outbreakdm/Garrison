@@ -44,7 +44,7 @@ export default async function LedgerPage({
           <h1>Event log</h1>
           <p>
             Who did what, kept {settings.retentionDays} days. Message content is never stored.
-            Change retention or the log channel with /logs settings.
+            <a href={`/servers/${guild.id}/settings#ledger`}>Change retention or the log channel</a>
           </p>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, notInArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, notInArray, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import {
   type EscalationRule,
@@ -7,6 +7,7 @@ import {
   ledgerSettings,
   opsSettings,
   rallySettings,
+  rankRewards,
   ranksSettings,
   type SettingsChange,
   type SettingsDiff,
@@ -30,6 +31,9 @@ export const EDITABLE_FIELDS = {
     "raidResponse",
     "autoUnlockMinutes",
     "flagAccountAgeDays",
+    "staffRoleIds",
+    "verifyRoleId",
+    "verifyMinAccountAgeDays",
   ],
   ops: ["timezone"],
   ranks: ["enabled", "announce", "announceChannelId"],
@@ -38,6 +42,8 @@ export const EDITABLE_FIELDS = {
   escalation: ["rules"],
   // Templates are checked with checkTemplates before they get here.
   rally: ["templates"],
+  // Level rewards are one list too: [{ level, roleId }].
+  rewards: ["rewards"],
 } as const satisfies Record<SettingsModule, readonly string[]>;
 
 /** One step of the escalation ladder, as the dashboard edits it and history stores it. */
@@ -58,6 +64,50 @@ export function normalizeLadder(steps: LadderStep[]): LadderStep[] {
       action: r.action,
       durationSeconds: r.action === "timeout" ? r.durationSeconds : null,
     }));
+}
+
+/** One level reward, as the dashboard edits it. */
+export interface RewardStep {
+  level: number;
+  roleId: string;
+}
+
+export function normalizeRewards(steps: RewardStep[]): RewardStep[] {
+  return [...steps]
+    .sort((a, b) => a.level - b.level)
+    .map((r) => ({ level: r.level, roleId: r.roleId }));
+}
+
+async function readRewards(tx: Tx, guildId: string) {
+  const rows = await tx
+    .select({ level: rankRewards.level, roleId: rankRewards.roleId })
+    .from(rankRewards)
+    .where(and(eq(rankRewards.guildId, guildId), isNotNull(rankRewards.roleId)));
+  return normalizeRewards(rows as RewardStep[]);
+}
+
+/** Make the active rewards exactly `rewards`. Removed levels keep their row with no role. */
+async function writeRewards(tx: Tx, guildId: string, rewards: RewardStep[]) {
+  for (const r of rewards) {
+    await tx
+      .insert(rankRewards)
+      .values({ guildId, level: r.level, roleId: r.roleId, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: [rankRewards.guildId, rankRewards.level],
+        set: { roleId: r.roleId, updatedAt: new Date() },
+      });
+  }
+  const keep = rewards.map((r) => r.level);
+  await tx
+    .update(rankRewards)
+    .set({ roleId: null, updatedAt: new Date() })
+    .where(
+      and(
+        eq(rankRewards.guildId, guildId),
+        isNotNull(rankRewards.roleId),
+        keep.length ? notInArray(rankRewards.level, keep) : sql`true`,
+      ),
+    );
 }
 
 async function readLadder(tx: Tx, guildId: string) {
@@ -126,6 +176,10 @@ function stable(value: unknown): string {
 const same = (a: unknown, b: unknown) => stable(a) === stable(b);
 
 async function lockRow(tx: Tx, module: SettingsModule, guildId: string): Promise<Row | null> {
+  if (module === "rewards") {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`garrison:rewards:${guildId}`}))`);
+    return { rewards: await readRewards(tx, guildId) };
+  }
   if (module === "escalation") {
     // The ladder spans several rows; one lock per server serialises edits to it.
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`garrison:ladder:${guildId}`}))`);
@@ -147,6 +201,10 @@ async function lockRow(tx: Tx, module: SettingsModule, guildId: string): Promise
 async function writeRow(tx: Tx, module: SettingsModule, guildId: string, values: Row) {
   if (module === "escalation") {
     await writeLadder(tx, guildId, normalizeLadder(values.rules as LadderStep[]));
+    return;
+  }
+  if (module === "rewards") {
+    await writeRewards(tx, guildId, normalizeRewards(values.rewards as RewardStep[]));
     return;
   }
   const set = { ...values, updatedAt: new Date() };
@@ -213,7 +271,9 @@ export async function applySettingsChange(db: Db, input: ApplyInput): Promise<Ap
     const patch =
       input.module === "escalation" && Array.isArray(input.patch.rules)
         ? { rules: normalizeLadder(input.patch.rules as LadderStep[]) }
-        : input.patch;
+        : input.module === "rewards" && Array.isArray(input.patch.rewards)
+          ? { rewards: normalizeRewards(input.patch.rewards as RewardStep[]) }
+          : input.patch;
     for (const field of EDITABLE_FIELDS[input.module] as readonly string[]) {
       if (!(field in patch)) continue;
       const to = patch[field];

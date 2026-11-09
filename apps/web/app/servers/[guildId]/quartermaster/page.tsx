@@ -1,7 +1,9 @@
 import { listQmBuilds, type QmBuild } from "@garrison/db";
 import type { Metadata } from "next";
+import { RequestsPanel } from "@/components/RequestsPanel";
 import { getDb } from "@/lib/db";
 import { requireGuildAccess } from "@/lib/session";
+import { requestAction } from "../requests";
 
 export const metadata: Metadata = { title: "Quartermaster" };
 
@@ -29,10 +31,13 @@ function opLine(op: QmBuild["plan"][number]) {
 
 export default async function QuartermasterPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ guildId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { guildId } = await params;
+  const query = await searchParams;
   const { guild } = await requireGuildAccess(guildId);
   const builds = await listQmBuilds(await getDb(), guild.id, 25);
   return (
@@ -43,10 +48,11 @@ export default async function QuartermasterPage({
           <h1>Builds</h1>
           <p>
             Describe channels and roles with /qm build in Discord, review the plan, then apply.
-            Every build is versioned and can be undone with /qm undo.
+            Every build is versioned and can be undone here or with /qm undo.
           </p>
         </div>
       </div>
+      <RequestsPanel guildId={guild.id} kinds={["undo_build"]} query={query} />
       {builds.length === 0 ? <div className="g-card muted">No builds yet.</div> : null}
       <div className="card-col">
         {builds.map((b) => (
@@ -68,6 +74,24 @@ export default async function QuartermasterPage({
             <pre className="diff">{b.plan.map(opLine).join("\n")}</pre>
             {b.created.length ? <span className="mono">{b.created.length} created</span> : null}
             {b.error ? <span className="notice">{b.error}</span> : null}
+            {b.status === "applied" || b.status === "failed" ? (
+              <details className="confirm">
+                <summary className="confirm__toggle g-btn g-btn--ghost">Undo v{b.version}…</summary>
+                <form action={requestAction} className="card-col">
+                  <input type="hidden" name="guildId" value={guild.id} />
+                  <input type="hidden" name="page" value="quartermaster" />
+                  <input type="hidden" name="kind" value="undo_build" />
+                  <input type="hidden" name="version" value={b.version} />
+                  <p className="g-help">
+                    Deletes exactly the {b.created.length} channels and roles this build created,
+                    and nothing else.
+                  </p>
+                  <button type="submit" className="g-btn g-btn--danger">
+                    Yes, undo v{b.version}
+                  </button>
+                </form>
+              </details>
+            ) : null}
           </div>
         ))}
       </div>

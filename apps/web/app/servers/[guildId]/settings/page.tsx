@@ -8,7 +8,8 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import { getDb } from "@/lib/db";
-import { listTextChannels } from "@/lib/discord";
+import { listGuildRoles, listTextChannels } from "@/lib/discord";
+import { isDangerousRole } from "@/lib/permissions";
 import { requireGuildAccess } from "@/lib/session";
 import { FIELD_LABELS, ladderText, templatesChangeText } from "@/lib/settings-schema";
 import { saveGatehouse, saveLedger, saveOps, saveRanks, saveWatch, undoChange } from "./actions";
@@ -23,12 +24,16 @@ const SAVED: Record<string, string> = {
   ledger: "Saved Ledger settings.",
   escalation: "Saved the escalation ladder.",
   rally: "Saved Rally templates.",
+  rewards: "Saved level rewards.",
   undo: "Undone.",
 };
 const ERRORS: Record<string, string> = {
   invalid: "Some values were out of range. Nothing was saved.",
   channel: "That channel isn't a text channel in this server. Nothing was saved.",
   timezone: "That isn't a time zone. Use a name like America/Chicago.",
+  role: "Pick roles from this server's list. Nothing was saved.",
+  dangerous_role:
+    "That role has admin or moderation powers, so it can't be handed out by the Verify button.",
   unchanged: "Nothing changed.",
   not_ready: "Garrison hasn't finished setting up this server. Try again in a minute.",
   not_found: "That change doesn't exist.",
@@ -37,8 +42,28 @@ const ERRORS: Record<string, string> = {
   conflict: "Someone changed these settings since. Undo the newer change first.",
 };
 
-function describe(field: string, value: unknown, channels: Map<string, string>) {
+function describe(
+  field: string,
+  value: unknown,
+  channels: Map<string, string>,
+  roleNames: Map<string, string>,
+) {
   if (field === "rules") return ladderText(value);
+  if (field === "rewards")
+    return Array.isArray(value) && value.length
+      ? value
+          .map(
+            (r: { level: number; roleId: string }) =>
+              `level ${r.level}: @${roleNames.get(r.roleId) ?? "deleted-role"}`,
+          )
+          .join("; ")
+      : "none";
+  if (field === "staffRoleIds")
+    return Array.isArray(value) && value.length
+      ? value.map((id) => `@${roleNames.get(String(id)) ?? "deleted-role"}`).join(", ")
+      : "none";
+  if (field === "verifyRoleId" && value)
+    return `@${roleNames.get(String(value)) ?? "deleted-role"}`;
   if (field === "templates")
     return Array.isArray(value) && value.length
       ? value.map((t: { name?: string }) => t.name ?? "?").join(", ")
@@ -90,17 +115,19 @@ export default async function SettingsPage({
   const { guild } = await requireGuildAccess(guildId);
   const query = await searchParams;
   const db = await getDb();
-  const [overview, timezone, ranks, ledger, history, channels] = await Promise.all([
+  const [overview, timezone, ranks, ledger, history, channels, roles] = await Promise.all([
     getOverview(db, guild.id),
     getOpsTimezone(db, guild.id),
     getRanksSettings(db, guild.id),
     getLedgerSettings(db, guild.id),
     listSettingsChanges(db, guild.id),
     listTextChannels(guild.id).catch(() => []),
+    listGuildRoles(guild.id).catch(() => []),
   ]);
   const w = overview.watch;
   const g = overview.gatehouse;
   const names = new Map(channels.map((c) => [c.id, c.name]));
+  const roleNames = new Map(roles.map((r) => [r.id, r.name]));
   const undone = new Set(history.map((h) => h.revertsChangeId).filter(Boolean));
   const message = query.saved ? SAVED[query.saved] : undefined;
   const error = query.error ? ERRORS[query.error] : undefined;
@@ -127,6 +154,22 @@ export default async function SettingsPage({
           {error}
         </div>
       ) : null}
+
+      <nav className="jump" aria-label="Settings sections">
+        <span className="g-label">Jump to</span>
+        <a href="#watch">Watch</a>
+        <a href="#gatehouse">Gatehouse</a>
+        <a href="#ops">Ops</a>
+        <a href="#ranks">Ranks</a>
+        <a href="#ledger">Ledger</a>
+        <span className="jump__sep" aria-hidden="true">
+          ·
+        </span>
+        <a href={`/servers/${guild.id}/watch?edit=1#edit-ladder`}>Escalation ladder</a>
+        <a href={`/servers/${guild.id}/ranks`}>Level rewards</a>
+        <a href={`/servers/${guild.id}/rally/templates`}>LFG templates</a>
+        <a href={`/servers/${guild.id}/gatehouse`}>Lockdown, verification, anti-nuke</a>
+      </nav>
 
       <div className="grid-cards">
         {/* Keyed by last update: after a save or undo the form re-mounts with the stored
@@ -259,8 +302,59 @@ export default async function SettingsPage({
               none="Use the Watch log channel"
             />
           </label>
+          <label className="g-field" htmlFor="staffRoleIds">
+            <span>Staff roles (keep talking during a lockdown)</span>
+            <select
+              className="g-input"
+              id="staffRoleIds"
+              name="staffRoleIds"
+              multiple
+              size={4}
+              defaultValue={g?.staffRoleIds ?? []}
+            >
+              {roles.map((r) => (
+                <option key={r.id} value={r.id}>
+                  @{r.name}
+                </option>
+              ))}
+            </select>
+            <span className="g-help">Up to 10. Ctrl/⌘-click to pick several.</span>
+          </label>
+          <div className="field-row">
+            <label className="g-field" htmlFor="verifyRoleId">
+              <span>Verification gives</span>
+              <select
+                className="g-input"
+                id="verifyRoleId"
+                name="verifyRoleId"
+                defaultValue={g?.verifyRoleId ?? ""}
+              >
+                <option value="">Verification off</option>
+                {roles
+                  .filter((r) => !r.managed && !isDangerousRole(r.permissions))
+                  .map((r) => (
+                    <option key={r.id} value={r.id}>
+                      @{r.name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label className="g-field" htmlFor="verifyMinAccountAgeDays">
+              <span>Min account age (days)</span>
+              <input
+                className="g-input"
+                id="verifyMinAccountAgeDays"
+                name="verifyMinAccountAgeDays"
+                type="number"
+                min={0}
+                max={365}
+                defaultValue={g?.verifyMinAccountAgeDays ?? 0}
+              />
+            </label>
+          </div>
           <p className="g-help">
-            Anti-nuke and trusted users stay owner-only: change them with /security in Discord.
+            Post the Verify button from the Gatehouse page. Roles with admin or moderation powers
+            can't be the verified role. Anti-nuke is owner-only, also on the Gatehouse page.
           </p>
           <button type="submit" className="g-btn g-btn--secondary">
             Save Gatehouse
@@ -318,8 +412,8 @@ export default async function SettingsPage({
             <span className="g-help">Only used when level-ups go to one channel.</span>
           </label>
           <p className="g-help">
-            Garrison counts who posted and when, never what they wrote. Set level rewards with
-            /ranks reward in Discord.
+            Garrison counts who posted and when, never what they wrote. Level rewards are on the
+            Ranks page.
           </p>
           <button type="submit" className="g-btn g-btn--secondary">
             Save Ranks
@@ -392,7 +486,7 @@ export default async function SettingsPage({
                         {FIELD_LABELS[field] ?? field}:{" "}
                         {field === "templates"
                           ? templatesChangeText(from, to)
-                          : `${describe(field, from, names)} → ${describe(field, to, names)}`}
+                          : `${describe(field, from, names, roleNames)} → ${describe(field, to, names, roleNames)}`}
                       </div>
                     ))}
                   </td>

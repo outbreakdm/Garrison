@@ -1,24 +1,38 @@
 import {
+  cancelOpsEvent,
   claimDashboardActions,
+  closeLfg,
   countScheduledOps,
   createOpsEvent,
   type DashboardAction,
   finishDashboardAction,
+  getGatehouseSettings,
+  getLfgPost,
   getOpsEvent,
   getOpsTimezone,
+  getQmBuildByVersion,
   listSignups,
+  saveHealthSnapshot,
   setOpsMessage,
   signUp,
+  updateGatehouseSettings,
 } from "@garrison/db";
 import { type Client, type Guild, type GuildMember, PermissionFlagsBits } from "discord.js";
 import { z } from "zod";
 import type { BotContext } from "../../commands/types.js";
 import { safeText } from "../../lib/text.js";
+import { restoreQuarantine } from "../gatehouse/anti-nuke.js";
+import { verifyPanel } from "../gatehouse/embeds.js";
+import { invalidateGatehouseSettings, lockGuild, unlockGuild } from "../gatehouse/service.js";
+import { healthFor } from "../health/command.js";
 import { opsCard, shortages } from "../ops/card.js";
 import { MAX_SCHEDULED } from "../ops/commands.js";
 import { announcePromotion, refreshOpsCard } from "../ops/service.js";
 import { parseWhen } from "../ops/when.js";
+import { undoBuild } from "../quartermaster/service.js";
 import { parseSlots } from "../rally/parse.js";
+import { refreshCard } from "../rally/service.js";
+import { undoCase } from "../watch/service.js";
 
 /**
  * Works through requests the dashboard queued. Nothing from the row is
@@ -42,6 +56,30 @@ const createRaid = z.object({
 });
 const moveSignup = z.object({ eventId: uuid, userId: snowflake, role: z.string().min(1).max(40) });
 const callSignups = z.object({ eventId: uuid });
+const idOnly = z.object({ id: uuid });
+const lockdownStart = z.object({
+  durationMinutes: z.number().int().min(1).max(1440).nullable(),
+  pauseInvites: z.boolean(),
+  reason: z.string().trim().max(200).nullable(),
+});
+const caseNumber = z.object({ caseNumber: z.number().int().min(1) });
+const buildVersion = z.object({ version: z.number().int().min(1) });
+const verifyPanelPayload = z.object({ channelId: snowflake });
+const antiNuke = z.object({
+  enabled: z.boolean(),
+  trustedIds: z.array(snowflake).max(10),
+  deleteThreshold: z.number().int().min(2).max(50),
+  banThreshold: z.number().int().min(2).max(100),
+});
+
+/** Outcomes are shown as plain text on the dashboard: turn Discord mention codes into words. */
+export function plainOutcome(text: string) {
+  return text
+    .replace(/<@&\d+>/g, "a role")
+    .replace(/<#\d+>/g, "a channel")
+    .replace(/<@!?\d+>/g, "that member")
+    .slice(0, 300);
+}
 
 async function requester(guild: Guild, userId: string): Promise<GuildMember | null> {
   const member = await guild.members.fetch(userId).catch(() => null);
@@ -130,6 +168,149 @@ async function doCallSignups(ctx: BotContext, guild: Guild, raw: unknown) {
   return sent ? { ok: true, message: `Posted a call for ${short}.` } : fail("Posting failed.");
 }
 
+async function doLockdownStart(ctx: BotContext, guild: Guild, member: GuildMember, raw: unknown) {
+  const p = lockdownStart.safeParse(raw);
+  if (!p.success) return fail("That lockdown request wasn't valid.");
+  const res = await lockGuild(ctx, guild, {
+    source: "manual",
+    reason: p.data.reason || "Locked from the dashboard",
+    actorId: member.id,
+    actorTag: member.user.username,
+    durationMinutes: p.data.durationMinutes,
+    pauseInvites: p.data.pauseInvites,
+  });
+  if (!res.ok) return fail(res.error);
+  const lifts = p.data.durationMinutes ? ` It lifts in ${p.data.durationMinutes} min.` : "";
+  return {
+    ok: true,
+    message: `Server locked: ${res.channels} channels${res.failed ? `, ${res.failed} couldn't be changed` : ""}.${lifts}`,
+  };
+}
+
+async function doLockdownEnd(ctx: BotContext, guild: Guild, member: GuildMember) {
+  const res = await unlockGuild(ctx, guild, { id: member.id, tag: member.user.username });
+  if (!res.ok) return fail(res.error);
+  return {
+    ok: true,
+    message: `Lockdown lifted: ${res.restored} channels restored${res.failed ? `, ${res.failed} couldn't be` : ""}.`,
+  };
+}
+
+async function doReleaseQuarantine(
+  ctx: BotContext,
+  guild: Guild,
+  member: GuildMember,
+  raw: unknown,
+) {
+  const p = idOnly.safeParse(raw);
+  if (!p.success) return fail("That request wasn't valid.");
+  // restoreQuarantine itself allows only the owner or a trusted user.
+  const res = await restoreQuarantine(ctx, guild, p.data.id, member);
+  return res.ok ? { ok: true, message: `Restored ${res.restored} roles.` } : fail(res.error);
+}
+
+async function doUndoCase(ctx: BotContext, guild: Guild, member: GuildMember, raw: unknown) {
+  const p = caseNumber.safeParse(raw);
+  if (!p.success) return fail("That request wasn't valid.");
+  // undoCase also checks the requester has Ban Members / Moderate Members as the case needs.
+  const res = await undoCase(ctx, guild, p.data.caseNumber, member);
+  return res.ok ? { ok: true, message: `Case #${p.data.caseNumber} undone.` } : fail(res.error);
+}
+
+async function doCancelRaid(ctx: BotContext, guild: Guild, raw: unknown) {
+  const p = idOnly.safeParse(raw);
+  if (!p.success) return fail("That request wasn't valid.");
+  const event = await getOpsEvent(ctx.db, guild.id, p.data.id);
+  if (event?.status !== "scheduled") return fail("That raid isn't scheduled any more.");
+  const cancelled = await cancelOpsEvent(ctx.db, event.id);
+  if (!cancelled) return fail("That raid isn't scheduled any more.");
+  await refreshOpsCard(ctx, guild, cancelled);
+  return { ok: true, message: `Cancelled ${event.title}.` };
+}
+
+async function doCloseLfg(ctx: BotContext, guild: Guild, raw: unknown) {
+  const p = idOnly.safeParse(raw);
+  if (!p.success) return fail("That request wasn't valid.");
+  const post = await getLfgPost(ctx.db, guild.id, p.data.id);
+  if (!post || (post.status !== "open" && post.status !== "full"))
+    return fail("That group is already closed.");
+  const closed = await closeLfg(ctx.db, post.id);
+  if (!closed) return fail("That group is already closed.");
+  await refreshCard(ctx, guild, closed);
+  return { ok: true, message: `Closed ${post.title}.` };
+}
+
+async function doUndoBuild(ctx: BotContext, guild: Guild, member: GuildMember, raw: unknown) {
+  const p = buildVersion.safeParse(raw);
+  if (!p.success) return fail("That request wasn't valid.");
+  const build = await getQmBuildByVersion(ctx.db, guild.id, p.data.version);
+  if (!build) return fail(`There's no build v${p.data.version}.`);
+  const res = await undoBuild(ctx, guild, build, member.id);
+  return res.ok
+    ? {
+        ok: true,
+        message: `Undid v${p.data.version}: removed ${res.removed}${res.missing ? `, ${res.missing} already gone` : ""}.`,
+      }
+    : fail(res.error);
+}
+
+async function doRunHealth(ctx: BotContext, guild: Guild) {
+  const checks = await healthFor(ctx, guild);
+  await saveHealthSnapshot(ctx.db, guild.id, checks);
+  const problems = checks.filter((c) => c.status !== "ok").length;
+  return {
+    ok: true,
+    message: problems
+      ? `Health check done: ${problems} to look at.`
+      : "Health check done: all good.",
+  };
+}
+
+async function doPostVerifyPanel(ctx: BotContext, guild: Guild, member: GuildMember, raw: unknown) {
+  const p = verifyPanelPayload.safeParse(raw);
+  if (!p.success) return fail("That request wasn't valid.");
+  const settings = await getGatehouseSettings(ctx.db, guild.id);
+  if (!settings.verifyRoleId) return fail("Pick the verified role in Settings → Gatehouse first.");
+  const role = guild.roles.cache.get(settings.verifyRoleId);
+  const me = guild.members.me ?? (await guild.members.fetchMe());
+  if (!role || role.managed)
+    return fail("The verified role is gone or managed. Pick another in Settings.");
+  if (
+    !me.permissions.has(PermissionFlagsBits.ManageRoles) ||
+    role.position >= me.roles.highest.position
+  )
+    return fail(
+      "Garrison's role sits below the verified role. Drag Garrison above it in Server Settings → Roles.",
+    );
+  const channel = guild.channels.cache.get(p.data.channelId);
+  if (!channel?.isSendable() || !channel.isTextBased()) return fail("Pick a text channel.");
+  const needed = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages];
+  if (!channel.permissionsFor(member)?.has(needed)) return fail("You can't post in that channel.");
+  if (!channel.permissionsFor(me)?.has([...needed, PermissionFlagsBits.EmbedLinks]))
+    return fail("Garrison can't post embeds in that channel.");
+  await channel.send(verifyPanel(settings));
+  return { ok: true, message: `Posted the Verify button in #${channel.name}.` };
+}
+
+/** Owner only, checked here against Discord: anti-nuke is the guard against rogue admins. */
+async function doAntiNuke(ctx: BotContext, guild: Guild, member: GuildMember, raw: unknown) {
+  if (member.id !== guild.ownerId) return fail("Only the server owner can change anti-nuke.");
+  const p = antiNuke.safeParse(raw);
+  if (!p.success) return fail("Those anti-nuke settings weren't valid.");
+  const trusted = [...new Set(p.data.trustedIds)];
+  await updateGatehouseSettings(ctx.db, guild.id, {
+    antiNukeEnabled: p.data.enabled,
+    antiNukeTrustedIds: trusted,
+    nukeDeleteThreshold: p.data.deleteThreshold,
+    nukeBanThreshold: p.data.banThreshold,
+  });
+  invalidateGatehouseSettings(guild.id);
+  return {
+    ok: true,
+    message: `Anti-nuke ${p.data.enabled ? "on" : "off"} · ${trusted.length} trusted · deletes ${p.data.deleteThreshold} / bans ${p.data.banThreshold} per minute.`,
+  };
+}
+
 export async function runDashboardAction(
   ctx: BotContext,
   client: Client<true>,
@@ -146,6 +327,26 @@ export async function runDashboardAction(
       return doMoveSignup(ctx, guild, action.payload);
     case "call_signups":
       return doCallSignups(ctx, guild, action.payload);
+    case "lockdown_start":
+      return doLockdownStart(ctx, guild, member, action.payload);
+    case "lockdown_end":
+      return doLockdownEnd(ctx, guild, member);
+    case "release_quarantine":
+      return doReleaseQuarantine(ctx, guild, member, action.payload);
+    case "undo_case":
+      return doUndoCase(ctx, guild, member, action.payload);
+    case "cancel_raid":
+      return doCancelRaid(ctx, guild, action.payload);
+    case "close_lfg":
+      return doCloseLfg(ctx, guild, action.payload);
+    case "undo_build":
+      return doUndoBuild(ctx, guild, member, action.payload);
+    case "run_health":
+      return doRunHealth(ctx, guild);
+    case "post_verify_panel":
+      return doPostVerifyPanel(ctx, guild, member, action.payload);
+    case "anti_nuke":
+      return doAntiNuke(ctx, guild, member, action.payload);
     default:
       return fail("Garrison doesn't know that request.");
   }
@@ -164,6 +365,9 @@ export async function processDashboardActions(ctx: BotContext, client: Client<tr
       });
       outcome = fail("Something went wrong. Try again.");
     }
-    await finishDashboardAction(ctx.db, action.id, outcome);
+    await finishDashboardAction(ctx.db, action.id, {
+      ok: outcome.ok,
+      message: plainOutcome(outcome.message),
+    });
   }
 }
