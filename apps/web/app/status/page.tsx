@@ -1,20 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { siteUrl } from "@/lib/hosts";
 import { publicMetrics } from "@/lib/public-metrics";
 
 export const metadata: Metadata = { title: "Status", robots: { index: true, follow: true } };
 
 export default async function StatusPage() {
   const m = await publicMetrics();
+  const home = siteUrl(process.env.APP_URL) || "/";
   return (
     <div className="landing">
       <header className="topbar landing__bar">
-        <Link href="/" aria-label="Garrison home">
+        <Link href={home} aria-label="Garrison home">
           <Logo />
         </Link>
         <span className="topbar__spacer" />
-        <Link className="g-btn g-btn--ghost" href="/">
+        <Link className="g-btn g-btn--ghost" href={home}>
           Home
         </Link>
       </header>

@@ -127,6 +127,13 @@
       "when": 1794025687256,
       "tag": "0017_rally_templates",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794258802105,
+      "tag": "0018_session_guilds",
+      "breakpoints": true
     }
   ]
 }

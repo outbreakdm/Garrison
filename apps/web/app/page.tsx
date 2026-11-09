@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { siteUrl } from "@/lib/hosts";
 import { publicMetrics } from "@/lib/public-metrics";
 import { SESSION_COOKIE } from "@/lib/session";
 import { currentTheme } from "@/lib/theme";
@@ -73,6 +74,9 @@ const SECURITY = [
 
 export default async function Home() {
   const signedIn = Boolean((await cookies()).get(SESSION_COOKIE));
+  // On garrisonbot.com the dashboard lives at dash.garrisonbot.com; locally it's this host.
+  const appUrl = process.env.APP_URL;
+  const dashboard = `${siteUrl(appUrl) && appUrl ? appUrl : ""}/servers`;
   const clientId = process.env.DISCORD_CLIENT_ID;
   const invite = clientId && /^\d+$/.test(clientId) ? inviteUrl(clientId) : null;
   const [metrics, theme] = await Promise.all([publicMetrics(), currentTheme()]);
@@ -89,7 +93,7 @@ export default async function Home() {
         </nav>
         <span className="topbar__spacer" />
         <ThemeToggle back="/" theme={theme} />
-        <Link className="g-btn g-btn--ghost" href={signedIn ? "/servers" : "/login"}>
+        <Link className="g-btn g-btn--ghost" href={dashboard}>
           {signedIn ? "Open dashboard" : "Sign in"}
         </Link>
       </header>
@@ -112,7 +116,7 @@ export default async function Home() {
                 Add to Discord
               </a>
             ) : null}
-            <Link className="g-btn g-btn--secondary" href={signedIn ? "/servers" : "/login"}>
+            <Link className="g-btn g-btn--secondary" href={dashboard}>
               Open the dashboard
             </Link>
           </div>

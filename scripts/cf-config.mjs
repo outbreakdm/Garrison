@@ -20,6 +20,23 @@ const domain = (process.env.DASHBOARD_DOMAIN ?? "").trim();
 if (domain && !/^[a-z0-9.-]+$/i.test(domain))
   throw new Error(`DASHBOARD_DOMAIN doesn't look right: "${domain}".`);
 
+/**
+ * The dashboard's domain, plus the public site when the dashboard is on a
+ * dash. subdomain: dash.example.com also serves example.com (the landing page)
+ * and www.example.com (which redirects to example.com). See apps/web/lib/hosts.ts.
+ */
+function routesFor(dashDomain) {
+  const routes = [{ pattern: dashDomain, custom_domain: true }];
+  if (dashDomain.startsWith("dash.")) {
+    const site = dashDomain.slice(5);
+    routes.push(
+      { pattern: site, custom_domain: true },
+      { pattern: `www.${site}`, custom_domain: true },
+    );
+  }
+  return routes;
+}
+
 function fill(path, swaps) {
   let text = readFileSync(path, "utf8");
   for (const [from, to] of swaps) {
@@ -38,7 +55,7 @@ fill("apps/web/wrangler.jsonc", [
     ? [
         [
           '// "routes": [{ "pattern": "dash.example.com", "custom_domain": true }],',
-          `"routes": [{ "pattern": ${JSON.stringify(domain)}, "custom_domain": true }],`,
+          `"routes": ${JSON.stringify(routesFor(domain))},`,
         ],
       ]
     : []),

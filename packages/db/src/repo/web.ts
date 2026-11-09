@@ -19,6 +19,7 @@ export interface CreateSessionInput {
   userId: string;
   username: string;
   manageableGuildIds: string[];
+  manageableGuilds?: { id: string; name: string; icon: string | null }[];
   expiresAt: Date;
 }
 

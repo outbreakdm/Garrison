@@ -1,0 +1,1 @@
+ALTER TABLE "web_sessions" ADD COLUMN "manageable_guilds" jsonb DEFAULT '[]'::jsonb NOT NULL;

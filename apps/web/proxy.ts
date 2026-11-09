@@ -1,11 +1,22 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { hostRedirect } from "./lib/hosts";
 
 /**
- * Security headers only. Authorization lives in each page and route
+ * Routes the public site and dashboard hosts (lib/hosts.ts), then sets
+ * security headers. Authorization lives in each page and route
  * (requireSession / requireGuildAccess), never here: a proxy-only auth check
  * is one bypass away from no auth at all.
  */
 export function proxy(request: NextRequest) {
+  // garrisonbot.com is the public site; dash.garrisonbot.com is the dashboard.
+  const moved = hostRedirect(
+    request.headers.get("host"),
+    request.nextUrl.pathname,
+    request.nextUrl.search,
+    process.env.APP_URL,
+  );
+  if (moved) return NextResponse.redirect(moved, 308);
+
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const isDev = process.env.NODE_ENV === "development";
   const csp = [

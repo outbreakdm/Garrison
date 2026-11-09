@@ -385,6 +385,11 @@ export const webSessions = pgTable(
     username: text("username").notNull(),
     /** Servers the user could manage at login, for the server picker only. Access is re-checked live. */
     manageableGuildIds: text("manageable_guild_ids").array().notNull().default(sql`'{}'::text[]`),
+    /** Name and icon of each of those servers, as Discord reported them at login. Display only. */
+    manageableGuilds: jsonb("manageable_guilds")
+      .$type<{ id: string; name: string; icon: string | null }[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),

@@ -1,5 +1,5 @@
 import { discordConnectionProviders } from "@garrison/brand";
-import { createWebSession, listActiveGuilds, syncLinksFromSource } from "@garrison/db";
+import { createWebSession, syncLinksFromSource } from "@garrison/db";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { linksFromConnections } from "@/lib/barracks";
@@ -77,17 +77,25 @@ export async function GET(request: Request) {
     }
 
     const [me, guilds] = await Promise.all([fetchMe(token), fetchMyGuilds(token)]);
-    const manageable = guilds
+    // Every server the user can manage, with or without Garrison: the server list
+    // offers to add Garrison to the rest. Display data only; access is checked live.
+    const manageableGuilds = guilds
       .filter((g) => g.owner || canManage(BigInt(g.permissions)))
-      .map((g) => g.id);
-    const withGarrison = (await listActiveGuilds(await getDb(), manageable)).map((g) => g.id);
+      .filter((g) => /^\d{17,20}$/.test(g.id))
+      .slice(0, 200)
+      .map((g) => ({
+        id: g.id,
+        name: String(g.name ?? "").slice(0, 100) || "Unnamed server",
+        icon: typeof g.icon === "string" && /^(a_)?[0-9a-f]{32}$/.test(g.icon) ? g.icon : null,
+      }));
 
     const sessionToken = randomToken();
     await createWebSession(await getDb(), {
       tokenHash: hashToken(sessionToken),
       userId: me.id,
       username: me.global_name || me.username,
-      manageableGuildIds: withGarrison,
+      manageableGuildIds: manageableGuilds.map((g) => g.id),
+      manageableGuilds,
       expiresAt: new Date(Date.now() + SESSION_TTL_MS),
     });
 

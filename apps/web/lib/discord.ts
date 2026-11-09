@@ -81,9 +81,12 @@ export const fetchMyConnections = (token: string) =>
   discord<unknown>("/users/@me/connections", { headers: { Authorization: `Bearer ${token}` } });
 
 export const fetchMyGuilds = (token: string) =>
-  discord<{ id: string; owner: boolean; permissions: string }[]>("/users/@me/guilds", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  discord<{ id: string; name: string; icon: string | null; owner: boolean; permissions: string }[]>(
+    "/users/@me/guilds",
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
 
 // --- Live permission checks, with the bot token ------------------------------
 
