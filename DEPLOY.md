@@ -1,5 +1,7 @@
 # Deploying Garrison on Cloudflare
 
+> Want to do it all in the browser, with nothing installed? Follow **[GO-LIVE.md](GO-LIVE.md)** instead.
+
 Garrison is two programs and a database:
 
 | Part                       | Where it runs                               | What it does                                              |

@@ -129,7 +129,7 @@ Set `APP_URL`, `DISCORD_CLIENT_SECRET` and `WEB_DATABASE_URL` in `.env`, and add
 
 ## Deploying
 
-See **[DEPLOY.md](DEPLOY.md)**: Cloudflare (the dashboard as a Worker with Hyperdrive, the bot as one always-on Container), Discord Developer Portal settings, turning on the database roles, a one-server `docker compose` setup with automatic HTTPS, and `pnpm preflight` (or `node dist/preflight.js` in the image), which checks the token, intents, database roles and schema before you go live.
+**Fastest: [GO-LIVE.md](GO-LIVE.md)**, a browser-only checklist that deploys to Cloudflare from GitHub Actions. Details and other routes: **[DEPLOY.md](DEPLOY.md)**: Cloudflare (the dashboard as a Worker with Hyperdrive, the bot as one always-on Container), Discord Developer Portal settings, turning on the database roles, a one-server `docker compose` setup with automatic HTTPS, and `pnpm preflight` (or `node dist/preflight.js` in the image), which checks the token, intents, database roles and schema before you go live.
 
 ## Getting started
 
