@@ -33,6 +33,18 @@ import { undoBuild } from "../quartermaster/service.js";
 import { parseSlots } from "../rally/parse.js";
 import { refreshCard } from "../rally/service.js";
 import { undoCase } from "../watch/service.js";
+import {
+  doCreateLfg,
+  doLfgJoin,
+  doLfgLeave,
+  doModAction,
+  doPurge,
+  doQmApply,
+  doQmCancel,
+  doQmPlan,
+  doRaidSignup,
+  doRaidWithdraw,
+} from "./more.js";
 
 /**
  * Works through requests the dashboard queued. Nothing from the row is
@@ -347,6 +359,26 @@ export async function runDashboardAction(
       return doPostVerifyPanel(ctx, guild, member, action.payload);
     case "anti_nuke":
       return doAntiNuke(ctx, guild, member, action.payload);
+    case "mod_action":
+      return doModAction(ctx, guild, member, action.payload);
+    case "purge":
+      return doPurge(ctx, guild, member, action.payload);
+    case "create_lfg":
+      return doCreateLfg(ctx, guild, member, action.payload);
+    case "lfg_join":
+      return doLfgJoin(ctx, guild, member, action.payload);
+    case "lfg_leave":
+      return doLfgLeave(ctx, guild, member, action.payload);
+    case "raid_signup":
+      return doRaidSignup(ctx, guild, member, action.payload);
+    case "raid_withdraw":
+      return doRaidWithdraw(ctx, guild, member, action.payload);
+    case "qm_plan":
+      return doQmPlan(ctx, guild, member, action.payload);
+    case "qm_apply":
+      return doQmApply(ctx, guild, member, action.payload);
+    case "qm_cancel":
+      return doQmCancel(ctx, guild, action.payload);
     default:
       return fail("Garrison doesn't know that request.");
   }

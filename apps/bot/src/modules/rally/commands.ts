@@ -233,7 +233,7 @@ export const lfg: Command = {
  * Pro: tell a template's role a group is up. One ping per template every 15
  * minutes, only that role, and only if Discord lets Garrison mention it.
  */
-async function notifyTemplateRole(
+export async function notifyTemplateRole(
   ctx: BotContext,
   guild: Guild,
   channel: SendableChannels,

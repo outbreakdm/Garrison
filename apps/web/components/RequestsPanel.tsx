@@ -12,6 +12,9 @@ const ERRORS: Record<string, string> = {
   busy: "Garrison has 10 requests waiting for this server. Try again shortly.",
   too_fast: "That's a lot of requests at once. Wait a minute and try again.",
   cooldown: "That was done recently. Try again later.",
+  self: "You can't moderate yourself.",
+  qm_request: "Describe what to build, in 500 characters or fewer.",
+  qm_not_yours: "Only the person who asked for a plan can apply it. You can discard it.",
 };
 
 /**

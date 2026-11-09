@@ -49,6 +49,8 @@ ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0 NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
 COPY --from=build --chown=root:root /repo/apps/web/.next/standalone ./
 COPY --from=build --chown=root:root /repo/apps/web/.next/static ./apps/web/.next/static
+# Site art and other public files: the standalone build doesn't carry them.
+COPY --from=build --chown=root:root /repo/apps/web/public ./apps/web/public
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \

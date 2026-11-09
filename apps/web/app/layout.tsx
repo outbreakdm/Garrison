@@ -4,6 +4,8 @@ import "./app.css";
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Saira_Semi_Condensed } from "next/font/google";
 import type { ReactNode } from "react";
+import { artSrc } from "@/components/Art";
+import { siteUrl } from "@/lib/hosts";
 import { currentTheme } from "@/lib/theme";
 
 // Self-hosted at build time, so the CSP can stay at font-src 'self'.
@@ -27,6 +29,14 @@ export const metadata: Metadata = {
   title: { default: "Garrison", template: "%s · Garrison" },
   description: "Guard the gate. Rally the squad.",
   robots: { index: false, follow: false },
+  // The link-preview picture, once apps/web/public/art has one. Absolute, as previews require.
+  ...(artSrc("og") && process.env.APP_URL
+    ? {
+        metadataBase: new URL(siteUrl(process.env.APP_URL) || process.env.APP_URL),
+        openGraph: { images: [artSrc("og") as string] },
+        twitter: { card: "summary_large_image" as const, images: [artSrc("og") as string] },
+      }
+    : {}),
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {

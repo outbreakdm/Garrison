@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Art } from "@/components/Art";
 import { Logo } from "@/components/Logo";
 import { safeNext } from "@/lib/security";
 
@@ -23,6 +24,7 @@ export default async function LoginPage({
   return (
     <main className="center">
       <div className="g-card g-card--hud login">
+        <Art slot="login" className="card-banner" decorative eager />
         <Logo />
         <h1>Sign in to your servers</h1>
         <p className="muted">

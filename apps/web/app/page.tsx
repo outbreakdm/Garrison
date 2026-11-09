@@ -2,6 +2,7 @@ import { brand, inviteUrl, modules } from "@garrison/brand";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
+import { Art, hasArt } from "@/components/Art";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { siteUrl } from "@/lib/hosts";
@@ -99,6 +100,9 @@ export default async function Home() {
       </header>
 
       <section className="hero">
+        {/* Night art for the dark theme, dawn art for the light one. Either may be absent. */}
+        <Art slot="hero" className="hero__art hero__art--dark" decorative eager />
+        <Art slot="hero-light" className="hero__art hero__art--light" decorative eager />
         <div className="hero__copy">
           <span className="g-label">Discord bot for gaming communities</span>
           <h1 className="hero__title">{brand.tagline}</h1>
@@ -178,6 +182,7 @@ export default async function Home() {
           <div className="module-grid">
             {MODULE_LINES.map((m) => (
               <div className="g-card card-col" key={m.key}>
+                <Art slot={`module-${m.key}`} className="module-art" />
                 <div className="row-between">
                   <span className="big">{modules[m.key].name}</span>
                   {m.soon ? (
@@ -192,7 +197,11 @@ export default async function Home() {
           </div>
         </section>
 
-        <section id="security" className="g-card g-card--hud security">
+        <section
+          id="security"
+          className={`g-card g-card--hud security ${hasArt("security") ? "security--art" : ""}`}
+        >
+          <Art slot="security" className="security__art" />
           <div className="section-head">
             <span className="g-label">Security</span>
             <h2 className="section-title">Built so one bad login can't wreck your server</h2>

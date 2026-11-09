@@ -2,6 +2,7 @@ import { ledgerTypeLabels } from "@garrison/brand";
 import { getLedgerSettings, searchLedger } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Art } from "@/components/Art";
 import {
   ChannelSelect,
   FormFoot,
@@ -194,6 +195,7 @@ export default async function LedgerPage({
           </table>
           {events.length === 0 ? (
             <div className="table-card__head muted">
+              <Art slot="empty" className="empty-art" decorative />
               No events{user || type ? " match these filters" : " yet"}.
             </div>
           ) : null}

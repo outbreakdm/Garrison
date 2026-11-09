@@ -1,5 +1,6 @@
 import { getLeaderboard, getRanksSettings, levelForXp, listRankRewards } from "@garrison/db";
 import type { Metadata } from "next";
+import { Art } from "@/components/Art";
 import {
   ChannelSelect,
   FormFoot,
@@ -149,7 +150,10 @@ export default async function RanksPage({
               </tbody>
             </table>
             {top.length === 0 ? (
-              <div className="table-card__head muted">Nobody has XP yet.</div>
+              <div className="table-card__head muted">
+                <Art slot="empty" className="empty-art" decorative />
+                Nobody has XP yet.
+              </div>
             ) : null}
           </div>
         </div>

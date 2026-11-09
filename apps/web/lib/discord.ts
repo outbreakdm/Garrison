@@ -207,3 +207,171 @@ export async function listNotifiableRoles(guildId: string) {
     .filter((r) => !r.managed)
     .map(({ id, name, mentionable }) => ({ id, name, mentionable }));
 }
+
+// --- Members, for moderating from the dashboard --------------------------------
+
+const SNOWFLAKE = /^\d{17,20}$/;
+
+export interface MemberCard {
+  id: string;
+  username: string;
+  /** Server nickname, else display name, else username. */
+  name: string;
+  /** A cdn.discordapp.com URL, or null for the default avatar. */
+  avatar: string | null;
+  bot: boolean;
+  /** Null when they aren't in this server (banned, left, or never joined). */
+  joinedAt: Date | null;
+  roleIds: string[];
+  timedOutUntil: Date | null;
+}
+
+interface RawUser {
+  id: string;
+  username: string;
+  global_name?: string | null;
+  avatar?: string | null;
+  bot?: boolean;
+}
+interface RawMember {
+  user: RawUser;
+  nick?: string | null;
+  roles: string[];
+  joined_at?: string | null;
+  communication_disabled_until?: string | null;
+}
+
+const avatarUrl = (u: RawUser) =>
+  u.avatar && /^[a-z0-9_]+$/i.test(u.avatar)
+    ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.webp?size=96`
+    : null;
+
+function memberCard(m: RawMember): MemberCard {
+  const until = m.communication_disabled_until ? new Date(m.communication_disabled_until) : null;
+  return {
+    id: m.user.id,
+    username: m.user.username,
+    name: m.nick || m.user.global_name || m.user.username,
+    avatar: avatarUrl(m.user),
+    bot: m.user.bot === true,
+    joinedAt: m.joined_at ? new Date(m.joined_at) : null,
+    roleIds: m.roles,
+    timedOutUntil: until && until.getTime() > Date.now() ? until : null,
+  };
+}
+
+const botAuth = () => ({ headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` } });
+
+/**
+ * One person by ID: their member record when they're in the server, else the
+ * bare user (someone who left or was banned can still be banned or looked up).
+ * Null when Discord doesn't know the ID.
+ */
+export async function fetchMemberCard(guildId: string, userId: string): Promise<MemberCard | null> {
+  if (!SNOWFLAKE.test(userId)) return null;
+  try {
+    return memberCard(await discord<RawMember>(`/guilds/${guildId}/members/${userId}`, botAuth()));
+  } catch (error) {
+    if (!(error instanceof DiscordError) || error.status !== 404) throw error;
+  }
+  try {
+    const user = await discord<RawUser>(`/users/${userId}`, botAuth());
+    return memberCard({ user, roles: [], joined_at: null });
+  } catch {
+    return null;
+  }
+}
+
+/** Members whose name or nickname starts with `query`; a user ID finds that one person. */
+export async function searchMembers(guildId: string, query: string): Promise<MemberCard[]> {
+  const q = query.trim().replace(/^@/, "").slice(0, 32);
+  if (!q) return [];
+  if (SNOWFLAKE.test(q)) {
+    const one = await fetchMemberCard(guildId, q);
+    return one ? [one] : [];
+  }
+  const found = await discord<RawMember[]>(
+    `/guilds/${guildId}/members/search?${new URLSearchParams({ query: q, limit: "12" })}`,
+    botAuth(),
+  );
+  return found.map(memberCard);
+}
+
+// --- The server's shape, for the Quartermaster preview ---------------------------
+
+export interface LayoutChannel {
+  id: string;
+  name: string;
+  kind: "text" | "voice" | "other";
+  /** Hidden from @everyone. */
+  locked: boolean;
+}
+export interface ServerLayout {
+  /** Channels outside any category, as Discord lists them first. */
+  loose: LayoutChannel[];
+  categories: { id: string; name: string; channels: LayoutChannel[] }[];
+  /** Highest first, without @everyone. */
+  roles: { id: string; name: string; color: number; managed: boolean }[];
+}
+
+const VIEW_CHANNEL = 1n << 10n;
+const layoutCache = new Map<string, { layout: ServerLayout; at: number }>();
+
+/** Every category, channel and role, in Discord's order. Cached 30 s. */
+export async function getServerLayout(guildId: string): Promise<ServerLayout> {
+  const hit = layoutCache.get(guildId);
+  if (hit && Date.now() - hit.at < ACCESS_TTL_MS) return hit.layout;
+  const [raw, guild] = await Promise.all([
+    discord<
+      {
+        id: string;
+        name: string;
+        type: number;
+        position: number;
+        parent_id?: string | null;
+        permission_overwrites?: { id: string; deny: string }[];
+      }[]
+    >(`/guilds/${guildId}/channels`, botAuth()),
+    discord<{
+      id: string;
+      roles: { id: string; name: string; position: number; color?: number; managed?: boolean }[];
+    }>(`/guilds/${guildId}`, botAuth()),
+  ]);
+  const isVoice = (t: number) => t === 2 || t === 13;
+  const channel = (c: (typeof raw)[number]): LayoutChannel => {
+    const everyone = c.permission_overwrites?.find((o) => o.id === guildId);
+    let locked = false;
+    try {
+      locked = everyone ? (BigInt(everyone.deny) & VIEW_CHANNEL) !== 0n : false;
+    } catch {
+      locked = false;
+    }
+    return {
+      id: c.id,
+      name: c.name,
+      kind: c.type === 0 || c.type === 5 ? "text" : isVoice(c.type) ? "voice" : "other",
+      locked,
+    };
+  };
+  // Discord lists text channels above voice ones inside each category.
+  const order = (a: (typeof raw)[number], b: (typeof raw)[number]) =>
+    Number(isVoice(a.type)) - Number(isVoice(b.type)) || a.position - b.position;
+  const inside = (parent: string | null) =>
+    raw
+      .filter((c) => c.type !== 4 && (c.parent_id ?? null) === parent)
+      .sort(order)
+      .map(channel);
+  const layout: ServerLayout = {
+    loose: inside(null),
+    categories: raw
+      .filter((c) => c.type === 4)
+      .sort((a, b) => a.position - b.position)
+      .map((c) => ({ id: c.id, name: c.name, channels: inside(c.id) })),
+    roles: guild.roles
+      .filter((r) => r.id !== guild.id)
+      .sort((a, b) => b.position - a.position)
+      .map((r) => ({ id: r.id, name: r.name, color: r.color ?? 0, managed: r.managed === true })),
+  };
+  layoutCache.set(guildId, { layout, at: Date.now() });
+  return layout;
+}
