@@ -54,18 +54,19 @@ describe("every reply goes through the helper", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("sends plain text only where a message has to ping someone", () => {
-    // Mentions inside an embed don't notify, so pings stay as text. Nothing else does.
-    const PINGS = new Set([
-      "modules/ops/service.ts", // raid reminders and bench promotions
-      "modules/rally/service.ts", // "the squad is full"
-      "modules/rally/commands.ts", // the role a template notifies
-    ]);
+  it("never sends words as plain text: only the mentions that have to ping", () => {
+    // A mention inside an embed doesn't notify, so a ping keeps its mentions
+    // (and nothing else) outside. Everything said is inside an embed.
+    const MENTIONS_ONLY =
+      /^(pings|`<@&\$\{role\.id\}>`|userIds\.map\(\(id\) => `<@\$\{id\}>`\)\.join\(" "\)|"")$/;
     const offenders = files
-      .filter((f) => !PINGS.has(f.path) && f.path !== "lib/embeds.ts")
+      .filter((f) => f.path !== "lib/embeds.ts")
       .filter((f) => !f.path.startsWith("modules/quartermaster/planner"))
-      .filter((f) => /\bcontent:(?!\s*"")/.test(f.text))
-      .map((f) => f.path);
+      .flatMap((f) =>
+        [...f.text.matchAll(/\bcontent:\s*([^\n]*?),?\n/g)]
+          .filter((m) => !MENTIONS_ONLY.test((m[1] ?? "").trim()))
+          .map((m) => `${f.path}: ${m[1]}`),
+      );
     expect(offenders).toEqual([]);
   });
 });

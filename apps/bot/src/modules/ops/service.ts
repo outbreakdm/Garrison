@@ -9,6 +9,7 @@ import {
 } from "@garrison/db";
 import type { Client, Guild } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
+import { brandEmbed } from "../../lib/embeds.js";
 import { safeText } from "../../lib/text.js";
 import { opsCard, shortages } from "./card.js";
 
@@ -29,12 +30,19 @@ export async function refreshOpsCard(
   }
 }
 
-/** Ping exactly these users, and nobody else. */
-async function sendTo(guild: Guild, channelId: string, content: string, userIds: string[]) {
+/**
+ * Say `text` in an embed and ping exactly these users, and nobody else. The
+ * mentions sit outside the embed, because a mention inside one doesn't notify.
+ */
+async function sendTo(guild: Guild, channelId: string, text: string, userIds: string[]) {
   const channel = guild.channels.cache.get(channelId);
   if (!channel?.isSendable()) return;
   await channel
-    .send({ content, allowedMentions: { users: userIds, roles: [], parse: [] } })
+    .send({
+      content: userIds.map((id) => `<@${id}>`).join(" "),
+      embeds: [brandEmbed({ description: text, module: "ops" })],
+      allowedMentions: { users: userIds, roles: [], parse: [] },
+    })
     .catch(() => {});
 }
 
@@ -58,11 +66,12 @@ async function sendReminders(ctx: BotContext, client: Client<true>, kind: Remind
     if (!seated.length) continue;
     const short = shortages(event, signups);
     const when = `<t:${Math.floor(event.startsAt.getTime() / 1000)}:R>`;
-    const lines = [
-      `${safeText(event.title)} starts ${when} (${LEAD[kind]}).${short ? ` ${short}.` : ""}`,
-    ];
-    lines.push(seated.map((id) => `<@${id}>`).join(" "));
-    await sendTo(guild, event.channelId, lines.join("\n"), seated);
+    await sendTo(
+      guild,
+      event.channelId,
+      `**${safeText(event.title)}** starts ${when} (${LEAD[kind]}).${short ? `\nStill ${short}.` : ""}`,
+      seated,
+    );
   }
 }
 

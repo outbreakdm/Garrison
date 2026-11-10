@@ -223,9 +223,10 @@ preview.
   (`done`) for a confirmation that what was asked for happened, red (`danger`)
   for an error or a confirmation of something severe or hard to undo (kick, ban,
   cleared messages, lockdown, security alerts, "are you sure?"). One-line replies
-  use `info()`, `done()` or `failed()`. Plain text is only for messages that have
-  to ping someone, because mentions inside an embed don't notify. A test fails
-  if an embed sets its own colour or a reply goes out as plain text.
+  use `info()`, `done()` or `failed()`. No words are ever sent as plain text.
+  A message that pings someone puts only the mentions outside the embed (a
+  mention inside one doesn't notify) and its words in a no-colour embed. A test
+  fails if an embed sets its own colour or any words go out as plain text.
 - **Checks before pushing**: `pnpm -r exec tsc --noEmit`, `pnpm test`,
   `pnpm exec biome check apps packages` (warnings about
   `noDescendingSpecificity` are known).

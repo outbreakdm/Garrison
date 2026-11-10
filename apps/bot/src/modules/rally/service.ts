@@ -16,6 +16,7 @@ import {
   PermissionFlagsBits,
 } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
+import { brandEmbed } from "../../lib/embeds.js";
 import { lfgCard, safeText } from "./card.js";
 import { voiceChannelName } from "./parse.js";
 import { postWording } from "./templates.js";
@@ -104,9 +105,15 @@ export async function announceFullSquad(
   const pings = memberIds.map((id) => `<@${id}>`).join(" ");
   await channel
     .send({
-      content: voiceId
-        ? `${safeText(renderWording(w.full, w, { title: post.title }))} Voice is open: <#${voiceId}>\n${pings}`
-        : `${safeText(renderWording(w.full, w, { title: post.title }))}\n${pings}`,
+      // Mentions outside the embed, so they notify; the words inside it.
+      content: pings,
+      embeds: [
+        brandEmbed({
+          title: safeText(post.title),
+          description: `${safeText(renderWording(w.full, w, { title: post.title }))}${voiceId ? `\nVoice is open: <#${voiceId}>` : ""}`,
+          module: "rally",
+        }),
+      ],
       // Ping the squad and nobody else.
       allowedMentions: { users: memberIds, roles: [], parse: [] },
     })

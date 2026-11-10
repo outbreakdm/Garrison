@@ -253,7 +253,15 @@ export async function notifyTemplateRole(
   const w = postWording(post.wording);
   await channel
     .send({
-      content: `<@&${role.id}> ${safeText(renderWording("New {group}", w))}: ${safeText(post.title)} ${url}`,
+      // The role outside the embed, so it notifies; the words inside it.
+      content: `<@&${role.id}>`,
+      embeds: [
+        brandEmbed({
+          title: `${safeText(renderWording("New {group}", w))}: ${safeText(post.title)}`,
+          description: `[Open the card to join](${url})`,
+          module: "rally",
+        }),
+      ],
       allowedMentions: { roles: [role.id], users: [], parse: [] },
     })
     .catch((error: unknown) => ctx.logger.warn("Could not notify a Rally role", { error }));
