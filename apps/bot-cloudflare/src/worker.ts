@@ -23,6 +23,8 @@ interface Env {
   ANTHROPIC_API_KEY?: string;
   // Plain settings, from wrangler.jsonc vars:
   DISCORD_CLIENT_ID: string;
+  /** The dashboard's address, for links in replies. */
+  APP_URL?: string;
   QM_MODEL?: string;
   LOG_LEVEL?: string;
 }
@@ -45,6 +47,7 @@ export class GarrisonBot extends Container<Env> {
     };
     if (env.ANTHROPIC_API_KEY) vars.ANTHROPIC_API_KEY = env.ANTHROPIC_API_KEY;
     if (env.QM_MODEL) vars.QM_MODEL = env.QM_MODEL;
+    if (env.APP_URL) vars.APP_URL = env.APP_URL;
     this.envVars = vars;
   }
 

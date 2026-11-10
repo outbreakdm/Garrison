@@ -7,6 +7,7 @@ import { listTextChannels } from "@/lib/discord";
 import { callSignupsForm, createRaidForm, moveSignupForm } from "@/lib/rally-schema";
 import { checkGuildAccess } from "@/lib/session";
 import { pick } from "@/lib/settings-schema";
+import { backTo } from "../back";
 
 /**
  * Rally requests from the dashboard. These only queue work: the bot does it,
@@ -14,8 +15,9 @@ import { pick } from "@/lib/settings-schema";
  * named in the form, because that value comes from the browser.
  */
 
-const back = (guildId: string, query: Record<string, string>) =>
-  redirect(`/servers/${guildId}/rally?${new URLSearchParams(query)}`);
+/** Back to Rally, on the raid card the form came from when it names one. */
+const back = (form: FormData, guildId: string, query: Record<string, string>) =>
+  backTo(`/servers/${guildId}/rally`, String(form.get("at") ?? ""), query);
 
 async function authorize(form: FormData) {
   const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
@@ -31,8 +33,8 @@ async function queue(form: FormData, input: QueueInput) {
     { id: session.userId, name: session.username },
     input,
   );
-  if (!result.ok) back(guild.id, { error: result.reason });
-  back(guild.id, { queued: input.kind });
+  if (!result.ok) back(form, guild.id, { error: result.reason });
+  back(form, guild.id, { queued: input.kind });
 }
 
 /** The event must be a scheduled raid in this server. */
@@ -45,10 +47,11 @@ export async function requestCreateRaid(form: FormData) {
   const { guild } = await authorize(form);
   const keys = ["channelId", "title", "date", "time", "roles", "note", "repeatWeekly"];
   const parsed = createRaidForm.safeParse(pick(form, keys));
-  if (!parsed.success) back(guild.id, { error: "invalid" });
+  if (!parsed.success) back(form, guild.id, { error: "invalid" });
   else {
     const channels = await listTextChannels(guild.id).catch(() => []);
-    if (!channels.some((c) => c.id === parsed.data.channelId)) back(guild.id, { error: "channel" });
+    if (!channels.some((c) => c.id === parsed.data.channelId))
+      back(form, guild.id, { error: "channel" });
     else await queue(form, { kind: "create_raid", payload: parsed.data });
   }
 }
@@ -56,7 +59,7 @@ export async function requestCreateRaid(form: FormData) {
 export async function requestMoveSignup(form: FormData) {
   const { guild } = await authorize(form);
   const parsed = moveSignupForm.safeParse(pick(form, ["eventId", "userId", "role"]));
-  if (!parsed.success) back(guild.id, { error: "invalid" });
+  if (!parsed.success) back(form, guild.id, { error: "invalid" });
   else {
     const event = await eventBelongs(guild.id, parsed.data.eventId);
     const benched = event
@@ -65,7 +68,7 @@ export async function requestMoveSignup(form: FormData) {
         )
       : false;
     if (!event || !benched || !event.slots.some((g) => g.name === parsed.data.role))
-      back(guild.id, { error: "not_found" });
+      back(form, guild.id, { error: "not_found" });
     else await queue(form, { kind: "move_signup", payload: parsed.data });
   }
 }
@@ -74,6 +77,6 @@ export async function requestCallSignups(form: FormData) {
   const { guild } = await authorize(form);
   const parsed = callSignupsForm.safeParse(pick(form, ["eventId"]));
   if (!parsed.success || !(await eventBelongs(guild.id, parsed.data.eventId)))
-    back(guild.id, { error: "not_found" });
+    back(form, guild.id, { error: "not_found" });
   else await queue(form, { kind: "call_signups", payload: parsed.data });
 }

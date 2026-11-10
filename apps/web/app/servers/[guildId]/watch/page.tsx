@@ -1,6 +1,7 @@
 import {
   cleanQuery,
   getOverview,
+  listDashboardActions,
   listEscalationRules,
   listRecentCases,
   searchCases,
@@ -10,6 +11,7 @@ import Link from "next/link";
 import { Art } from "@/components/Art";
 import { ActionBadge, formatDuration, plainMentions } from "@/components/format";
 import { MemberAvatar } from "@/components/MemberAvatar";
+import { Outcome } from "@/components/Outcome";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import {
   ChannelSelect,
@@ -22,6 +24,7 @@ import {
 } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { listTextChannels, searchMembers } from "@/lib/discord";
+import { errorAt, latestOutcome } from "@/lib/outcome";
 import { requireGuildAccess } from "@/lib/session";
 import {
   durationText,
@@ -53,19 +56,22 @@ export default async function WatchPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { guildId } = await params;
-  const { guild } = await requireGuildAccess(guildId);
+  const { guild, session } = await requireGuildAccess(guildId);
   const query = await searchParams;
   const q = cleanQuery(query.q);
   const memberQuery = typeof query.member === "string" ? query.member.trim().slice(0, 32) : "";
   const db = await getDb();
-  const [cases, rules, { watch: w }, channels, found] = await Promise.all([
+  const [cases, rules, { watch: w }, channels, found, actions] = await Promise.all([
     q ? searchCases(db, guild.id, q, 50) : listRecentCases(db, guild.id, 50),
     listEscalationRules(db, guild.id),
     getOverview(db, guild.id),
     listTextChannels(guild.id).catch(() => []),
     // null means Discord didn't answer, which the page says rather than showing nobody.
     memberQuery ? searchMembers(guild.id, memberQuery).catch(() => null) : null,
+    listDashboardActions(db, guild.id, 30),
   ]);
+  const yours = (kinds: string[]) => latestOutcome(actions, { userId: session.userId, kinds });
+  const undone = yours(["undo_case"]);
   const first = rules[0]?.warnCount ?? 0;
   const logChannel = channels.find((c) => c.id === w?.logChannelId);
   return (
@@ -85,6 +91,7 @@ export default async function WatchPage({
         guildId={guild.id}
         kinds={["undo_case", "mod_action", "purge"]}
         query={query}
+        actions={actions}
       />
       <SettingsNotice query={query} />
 
@@ -154,6 +161,7 @@ export default async function WatchPage({
             <input type="hidden" name="guildId" value={guild.id} />
             <input type="hidden" name="page" value="watch" />
             <input type="hidden" name="kind" value="purge" />
+            <input type="hidden" name="at" value="moderate" />
             <div className="field-row">
               <label className="g-field" htmlFor="purge-channel">
                 <span>Channel</span>
@@ -216,6 +224,7 @@ export default async function WatchPage({
             </div>
           </form>
         </details>
+        <Outcome action={yours(["purge"])} error={errorAt(query, "moderate")} />
       </section>
 
       {/* Keyed by last update: after a save or undo the form re-mounts with the stored
@@ -403,7 +412,7 @@ export default async function WatchPage({
         </form>
       </details>
 
-      <div className="g-card table-card">
+      <div className="g-card table-card" id="cases">
         <div className="table-card__head row-between">
           <span className="g-label">{q ? `Cases matching “${q}”` : "Latest 50 cases"}</span>
           <search>
@@ -428,6 +437,11 @@ export default async function WatchPage({
             </form>
           </search>
         </div>
+        {undone || errorAt(query, "cases") ? (
+          <div className="table-card__head">
+            <Outcome action={undone} error={errorAt(query, "cases")} />
+          </div>
+        ) : null}
         <div className="table-wrap">
           <table className="g-table">
             <thead>
@@ -482,6 +496,7 @@ export default async function WatchPage({
                         <input type="hidden" name="page" value="watch" />
                         <input type="hidden" name="kind" value="undo_case" />
                         <input type="hidden" name="caseNumber" value={c.caseNumber} />
+                        <input type="hidden" name="at" value="cases" />
                         <button
                           type="submit"
                           className="g-btn g-btn--ghost"

@@ -123,7 +123,7 @@ export function runHealthChecks(h: HealthInput): Check[] {
     "log",
     h.logChannelId,
     h.logChannel,
-    "Cases aren't logged anywhere. Set a channel with /moderation log_channel.",
+    "Cases aren't logged anywhere. Pick a log channel in the dashboard, under Watch.",
   );
   if (h.alertChannelId) channelCheck("alert", h.alertChannelId, h.alertChannel, "");
 
@@ -133,7 +133,7 @@ export function runHealthChecks(h: HealthInput): Check[] {
     if (!role)
       checks.push({
         status: "fix",
-        text: "The verified role was deleted. Run /verify setup again.",
+        text: "The verified role was deleted. Pick another in the dashboard, under Security → Verification.",
       });
     else if (role.position >= h.botTop) {
       checks.push({
@@ -146,16 +146,19 @@ export function runHealthChecks(h: HealthInput): Check[] {
   if (missingStaff.length) {
     checks.push({
       status: "warn",
-      text: `${missingStaff.length} staff ${missingStaff.length === 1 ? "role was" : "roles were"} deleted. Remove ${missingStaff.length === 1 ? "it" : "them"} with /security staff_role_remove.`,
+      text: `${missingStaff.length} staff ${missingStaff.length === 1 ? "role was" : "roles were"} deleted. Remove ${missingStaff.length === 1 ? "it" : "them"} in the dashboard, under Security → Anti-raid.`,
     });
   }
 
   if (!h.antiRaidEnabled)
-    checks.push({ status: "warn", text: "Anti-raid is off. Turn it on with /security anti_raid." });
+    checks.push({
+      status: "warn",
+      text: "Anti-raid is off. Turn it on in the dashboard, under Security.",
+    });
   if (!h.antiNukeEnabled)
     checks.push({
       status: "warn",
-      text: "Anti-nuke is off. The owner can turn it on with /security anti_nuke.",
+      text: "Anti-nuke is off. The owner can turn it on in the dashboard, under Security.",
     });
 
   const order: Record<CheckStatus, number> = { fix: 0, warn: 1, ok: 2 };

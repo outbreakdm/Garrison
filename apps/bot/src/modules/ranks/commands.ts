@@ -1,19 +1,13 @@
-import {
-  getLeaderboard,
-  getMemberRank,
-  levelForXp,
-  listRankRewards,
-  setRankReward,
-  updateRanksSettings,
-} from "@garrison/db";
-import { ChannelType, PermissionFlagsBits } from "discord.js";
+import { getLeaderboard, getMemberRank, levelForXp, listRankRewards } from "@garrison/db";
+import { PermissionFlagsBits } from "discord.js";
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { Command } from "../../commands/types.js";
+import { linkRow, serverUrl, settingsReply } from "../../lib/dashboard.js";
 import { brandEmbed } from "../../lib/embeds.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { safeText } from "../../lib/text.js";
-import { progressBar, rewardProblem, rewardProblemText } from "./rules.js";
-import { cachedRanksSettings, invalidateRanksSettings } from "./service.js";
+import { progressBar } from "./rules.js";
+import { cachedRanksSettings } from "./service.js";
 
 /** /rank and /leaderboard are open to everyone, so each person gets one every 10 s. */
 const LOOKUP_COOLDOWN_MS = 10_000;
@@ -26,7 +20,7 @@ function rateLimited(userId: string) {
   return false;
 }
 
-const OFF = "Ranks are off in this server. A moderator can turn them on with /ranks settings.";
+const OFF = "Ranks are off in this server. A moderator can turn them on in the dashboard.";
 
 export const rank: Command = {
   data: guildCommand("rank", "Show your level and XP, or someone else's.", null)
@@ -98,60 +92,24 @@ export const leaderboard: Command = {
   },
 };
 
+/**
+ * Ranks settings and level rewards are changed on the dashboard, with history
+ * and undo. The subcommands people know stay, and show where things are at.
+ */
 export const ranks: Command = {
   data: guildCommand(
     "ranks",
-    "Set up leveling: turn it on, announcements and level rewards.",
+    "See leveling settings and rewards, with a link to change them on the dashboard.",
     PermissionFlagsBits.ManageGuild,
   )
     .addSubcommand((s) =>
-      s
-        .setName("settings")
-        .setDescription("Turn ranks on or off and choose where level-ups are announced")
-        .addBooleanOption((o) => o.setName("enabled").setDescription("Count XP from messages"))
-        .addStringOption((o) =>
-          o
-            .setName("announce")
-            .setDescription("Where to announce level-ups")
-            .addChoices(
-              { name: "In the channel they leveled up in", value: "same_channel" },
-              { name: "In one channel", value: "channel" },
-              { name: "Don't announce", value: "off" },
-            ),
-        )
-        .addChannelOption((o) =>
-          o
-            .setName("announce_channel")
-            .setDescription("The channel, if announcing in one channel")
-            .addChannelTypes(ChannelType.GuildText),
-        ),
+      s.setName("settings").setDescription("Ranks on or off, and where level-ups are announced"),
     )
     .addSubcommand((s) =>
-      s
-        .setName("reward")
-        .setDescription("Give a role at a level")
-        .addIntegerOption((o) =>
-          o
-            .setName("level")
-            .setDescription("Level")
-            .setRequired(true)
-            .setMinValue(1)
-            .setMaxValue(500),
-        )
-        .addRoleOption((o) => o.setName("role").setDescription("Role to give").setRequired(true)),
+      s.setName("reward").setDescription("Give a role at a level, on the dashboard"),
     )
     .addSubcommand((s) =>
-      s
-        .setName("unreward")
-        .setDescription("Stop giving a role at a level")
-        .addIntegerOption((o) =>
-          o
-            .setName("level")
-            .setDescription("Level")
-            .setRequired(true)
-            .setMinValue(1)
-            .setMaxValue(500),
-        ),
+      s.setName("unreward").setDescription("Stop giving a role at a level, on the dashboard"),
     )
     .addSubcommand((s) => s.setName("rewards").setDescription("List level rewards"))
     .toJSON(),
@@ -161,88 +119,51 @@ export const ranks: Command = {
     const sub = interaction.options.getSubcommand();
 
     if (sub === "settings") {
-      const enabled = interaction.options.getBoolean("enabled");
-      const announce = interaction.options.getString("announce");
-      const channel = interaction.options.getChannel("announce_channel");
-      const patch: Parameters<typeof updateRanksSettings>[2] = {};
-      if (enabled !== null) patch.enabled = enabled;
-      if (announce === "off" || announce === "same_channel" || announce === "channel")
-        patch.announce = announce;
-      if (channel) patch.announceChannelId = channel.id;
-      if (
-        patch.announce === "channel" &&
-        !channel &&
-        !(await cachedRanksSettings(ctx, guild.id)).announceChannelId
-      ) {
-        await interaction.reply({
-          content: "Pick the channel with announce_channel.",
-          ...ephemeral,
-        });
-        return;
-      }
-      const s = Object.keys(patch).length
-        ? await updateRanksSettings(ctx.db, guild.id, patch)
-        : await cachedRanksSettings(ctx, guild.id);
-      invalidateRanksSettings(guild.id);
+      const s = await cachedRanksSettings(ctx, guild.id);
       const where =
         s.announce === "off"
           ? "Off"
           : s.announce === "channel"
             ? `<#${s.announceChannelId}>`
             : "Where they leveled up";
-      await interaction.reply({
-        embeds: [
-          brandEmbed({
-            title: Object.keys(patch).length ? "Saved. Ranks settings updated" : "Ranks settings",
+      await interaction.reply(
+        settingsReply({
+          subject: "Ranks settings are",
+          url: serverUrl(guild.id, "ranks?edit=settings#settings"),
+          label: "Change Ranks settings",
+          embed: brandEmbed({
+            title: "Ranks settings",
             fields: [
               { name: "Ranks", value: s.enabled ? "On" : "Off", inline: true },
               { name: "Level-ups", value: where, inline: true },
             ],
             module: "ranks",
           }),
-        ],
-        ...ephemeral,
-      });
-      return;
-    }
-
-    if (sub === "reward") {
-      const level = interaction.options.getInteger("level", true);
-      const role = interaction.options.getRole("role", true);
-      const me = guild.members.me ?? (await guild.members.fetchMe());
-      const facts = {
-        id: role.id,
-        name: role.name,
-        managed: role.managed,
-        position: role.position,
-        permissions: BigInt(role.permissions.valueOf()),
-      };
-      const problem = rewardProblem(facts, guild.roles.everyone.id, me.roles.highest.position);
-      if (problem) {
-        await interaction.reply({ content: rewardProblemText(problem, facts), ...ephemeral });
-        return;
-      }
-      await setRankReward(ctx.db, guild.id, level, role.id);
-      await interaction.reply({
-        content: `Saved. Members get <@&${role.id}> at level ${level}.`,
-        ...ephemeral,
-      });
-      return;
-    }
-
-    if (sub === "unreward") {
-      const level = interaction.options.getInteger("level", true);
-      await setRankReward(ctx.db, guild.id, level, null);
-      await interaction.reply({ content: `Saved. No reward at level ${level}.`, ...ephemeral });
+        }),
+      );
       return;
     }
 
     const rewards = await listRankRewards(ctx.db, guild.id);
-    await interaction.reply({
-      content: rewards.length
-        ? rewards.map((r) => `Level ${r.level}: <@&${r.roleId}>`).join("\n")
-        : "No level rewards. Add one with /ranks reward.",
-      ...ephemeral,
-    });
+    const list = rewards.length
+      ? rewards.map((r) => `Level ${r.level}: <@&${r.roleId}>`).join("\n")
+      : "No level rewards yet.";
+    const url = serverUrl(guild.id, "ranks?edit=rewards#rewards");
+    if (sub === "rewards") {
+      await interaction.reply({
+        content: list,
+        components: url ? [linkRow(url, "Change level rewards")] : [],
+        ...ephemeral,
+      });
+      return;
+    }
+    await interaction.reply(
+      settingsReply({
+        subject: "Level rewards are",
+        url,
+        label: "Change level rewards",
+        embed: brandEmbed({ title: "Level rewards", description: list, module: "ranks" }),
+      }),
+    );
   },
 };

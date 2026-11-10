@@ -9,6 +9,8 @@
   "observability": { "enabled": true },
   "vars": {
     "DISCORD_CLIENT_ID": "000000000000000000",
+    // The dashboard's address, for the links the bot sends. Filled in by scripts/cf-config.mjs.
+    "APP_URL": "https://dash.example.com",
     "LOG_LEVEL": "info"
   },
   "containers": [

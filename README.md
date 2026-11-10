@@ -34,18 +34,17 @@ packages/
 - **Undo** on every confirmation: revokes a warning, lifts a timeout, or unbans. Kicks and purges can't be reversed.
 - **Escalation rules**: new servers start with _3 warnings in 24 h → 1 h timeout_. Change the ladder on the dashboard's Watch page. Rules fire once, as the count reaches the threshold. Undone warnings stop counting.
 - **Role checks before acting**, with errors that name the fix ("Drag Garrison above it in Server Settings → Roles").
-- Members get a neutral DM with the reason and how to appeal (`/moderation dm_members` and `appeal_text`).
-- `/moderation log_channel:#mod-log` posts every case to a channel.
+- Members get a neutral DM with the reason and how to appeal, and every case can be posted to a log channel. Both are set on the dashboard's Watch page; `/moderation` shows them, with a link there.
 
 ### Gatehouse
 
-- **Anti-raid**: watches the join rate. By default, 10 joins in 30 s is a raid. Garrison then locks the server, pauses invites and lifts the lockdown after 15 min, or only alerts if you set `raid_response:Alert only`. One raid gives one alert.
-- **`/lockdown start|end|status`**: denies posting, threads, reactions and polls to @everyone in every channel it can see, while staff roles (`/security staff_role_add`) keep talking. Every overwrite it changes is saved first, so `/lockdown end` restores each channel exactly as it was. Private channels are left alone.
+- **Anti-raid**: watches the join rate. By default, 10 joins in 30 s is a raid. Garrison then locks the server, pauses invites and lifts the lockdown after 15 min, or only alerts if you set it to alert only (dashboard → Security). One raid gives one alert.
+- **`/lockdown start|end|status`**: denies posting, threads, reactions and polls to @everyone in every channel it can see, while staff roles (set on the dashboard's Security page) keep talking. Every overwrite it changes is saved first, so `/lockdown end` restores each channel exactly as it was. Private channels are left alone.
 - **New-account flags**: joins from accounts under 7 days old get an alert ("Flagged a 2-day-old account on join").
-- **`/verify setup`**: posts a Verify button that gives a role, with an optional minimum account age.
+- **Verification**: a Verify button that gives a role, with an optional minimum account age. Set the role and post the button from the dashboard's Security page; `/verify setup` links there.
 - **Anti-nuke**: watches the audit log. One actor making 3 channel or role deletions, or 5 bans and kicks, within 60 s is quarantined: Garrison removes every role it can, saves the list, and posts an alert with a **Restore roles** button only the owner or a trusted user can use. Rogue bots are kicked. Giving @everyone a dangerous permission (Administrator, Manage Server, Ban Members…) is reverted on the spot. Bans and kicks made through Garrison's own `/ban` and `/kick` count against the moderator who ran them.
-- Anti-nuke settings and the trusted list (`/security anti_nuke`, `trusted_add`…) are **owner-only**, so a compromised admin can't switch it off first. Keep Garrison's role at the top of the role list, or it can't strip roles above it.
-- Alerts go to `/security alert_channel`, or to the Watch log channel if none is set.
+- Anti-nuke settings and the trusted list are **owner-only** (dashboard → Security), so a compromised admin can't switch it off first. Keep Garrison's role at the top of the role list, or it can't strip roles above it.
+- Alerts go to the alert channel set on the dashboard, or to the Watch log channel if none is set. `/security` shows every Gatehouse setting, with a link to change them.
 
 ### Rally
 
@@ -67,7 +66,7 @@ After pulling this change, run `pnpm commands:deploy` once: `/lfg create` has a 
 
 ### Ops
 
-- **`/raid create`** (Manage Events) posts a roster card: `when:2026-11-12 8pm` in the server's time zone (set once with `/raid timezone America/Chicago`, or per raid with `timezone:`), `roles:Tank 4, Healer 8, DPS 28`, an optional note and `repeat_weekly`.
+- **`/raid create`** (Manage Events) posts a roster card: `when:2026-11-12 8pm` in the server's time zone (set once on the dashboard's Settings page, or per raid with `timezone:`), `roles:Tank 4, Healer 8, DPS 28`, an optional note and `repeat_weekly`.
 - **Sign up as …** asks for an optional class or spec ("Prot", "Resto"). A full role puts you on the **bench**; when someone withdraws, the earliest benched player for that role moves up and is told so.
 - The card shows each role's cap ("Tank · 2/4"), who's in with their spec, the bench, and a shortage badge ("2 Tank short") or Ready.
 - **Reminders** 24 h and 30 min before ping only the players signed up, never the bench or anyone else.
@@ -92,15 +91,15 @@ After pulling this change, run `pnpm commands:deploy` once: `/lfg create` has a 
 ### Ledger
 
 - Records **who did what, when**: joins and leaves (with account age), kicks, bans, timeouts, role and nickname changes, channel, role and permission edits (with exactly which permissions changed), invites, webhooks, bots added, deleted messages (author and channel), and voice joins, leaves and moves. The actor comes from Discord's audit log. **Message content is never stored.**
-- `/logs settings channel:#mod-log` posts each event there; `/logs search user:@member` shows a member's recent events. The dashboard's Ledger page filters by member and event type, with paging.
-- Events are kept 30 days by default (`keep_days` 7–365). Expired events are removed by a database function that the bot may call but that only deletes rows past retention, and never newer than 7 days, so a compromised bot can't erase recent history.
+- Events can be posted to a channel (dashboard → Ledger; `/logs settings` links there); `/logs search user:@member` shows a member's recent events. The dashboard's Ledger page filters by member and event type, with paging.
+- Events are kept 30 days by default (7–365, set on the dashboard). Expired events are removed by a database function that the bot may call but that only deletes rows past retention, and never newer than 7 days, so a compromised bot can't erase recent history.
 
 ### Ranks
 
-- **Off by default.** Turn it on with `/ranks settings enabled:true`. Members then earn 15–25 XP for chatting, at most once a minute. The cooldown is enforced in the database, so spam and multiple bot processes can't farm XP. Only who posted and when is used: no message content.
+- **Off by default.** Turn it on on the dashboard's Ranks page (`/ranks settings` links there). Members then earn 15–25 XP for chatting, at most once a minute. The cooldown is enforced in the database, so spam and multiple bot processes can't farm XP. Only who posted and when is used: no message content.
 - **`/rank [user]`** shows level, progress, rank, total XP and messages. **`/leaderboard`** shows the top 10. Both are open to everyone, one lookup per person every 10 s.
 - **Level-ups** are announced where the member leveled up, in one channel, or not at all, and never ping.
-- **Rewards:** `/ranks reward level:10 role:@Veteran` gives a role at a level (`unreward`, `rewards` to manage). Roles with moderation or admin powers, integration roles and roles above Garrison are refused when set _and_ skipped at grant time, so editing a reward role later can't hand out power.
+- **Rewards:** give a role at a level on the dashboard's Ranks page; `/ranks rewards` lists them. Roles with moderation or admin powers, integration roles and roles above Garrison are refused when set _and_ skipped at grant time, so editing a reward role later can't hand out power.
 - The dashboard has a Ranks page with the leaderboard and rewards.
 
 ### Health
@@ -119,7 +118,7 @@ The bot keeps a few counts, never content: messages per server per UTC day, when
 
 `apps/web` serves the public landing page at `/` and the dashboard. The landing page covers the modules, security and early-access pricing, with an **Add to Discord** button that requests exactly the permissions `/health` checks (set `DISCORD_CLIENT_ID`).
 
-The dashboard: Sign in with Discord to see the servers you manage, switch between them from the top bar, search settings, members and cases (⌘K / Ctrl+K), and pick a light or dark theme. An **Overview** (active members, messages today, mod actions, command reply p95, the latest Quartermaster build, saved health checks with a Fix permissions button, open groups, next raid, Gatehouse status, recent cases), **Watch** (the escalation ladder, editable up to five steps, and the latest 50 cases, searchable by member or case number), **Gatehouse** (lockdown, anti-raid and anti-nuke settings) and **Rally** (open groups and raid rosters by role; create a raid, move a player off the bench, or post a call for missing roles, which Garrison then does in Discord) and **Gatehouse** (lock and lift the server, post the Verify button, restore quarantined roles, and owner-only anti-nuke), **Settings**: Watch, Gatehouse anti-raid, staff roles and verification, the raid time zone, Ranks (on or off, where level-ups go) and Ledger (channel, 7 to 365 days of retention), with a history of every change and one-click **Undo**. Anti-nuke and the trusted list stay owner-only commands in Discord, and Ranks rewards stay in `/ranks reward`.
+The dashboard: Sign in with Discord to see the servers you manage, switch between them from the top bar, search settings, members and cases (⌘K / Ctrl+K), and pick a light or dark theme. An **Overview** (active members, messages today, mod actions, command reply p95, the latest Quartermaster build, saved health checks with a Fix permissions button, open groups, next raid, Gatehouse status, recent cases), **Watch** (the escalation ladder, editable up to five steps, and the latest 50 cases, searchable by member or case number), **Gatehouse** (lockdown, anti-raid and anti-nuke settings) and **Rally** (open groups and raid rosters by role; create a raid, move a player off the bench, or post a call for missing roles, which Garrison then does in Discord) and **Gatehouse** (lock and lift the server, post the Verify button, restore quarantined roles, and owner-only anti-nuke), **Settings**: Watch, Gatehouse anti-raid, staff roles and verification, the raid time zone, Ranks (on or off, where level-ups go) and Ledger (channel, 7 to 365 days of retention), with a history of every change and one-click **Undo**. Settings are changed only on the dashboard, so every change is in that history; the settings commands in Discord show the current values and link to the right page. Anti-nuke and the trusted list stay owner-only. `/dashboard` links to the server's dashboard.
 
 ```sh
 pnpm --filter @garrison/web dev     # http://localhost:3000

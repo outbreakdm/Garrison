@@ -12,35 +12,31 @@ import {
   memberNames,
 } from "@garrison/db";
 import type { Metadata } from "next";
-import { AutoRefresh } from "@/components/AutoRefresh";
 import { formatTime } from "@/components/format";
+import { Outcome } from "@/components/Outcome";
+import { RequestsPanel } from "@/components/RequestsPanel";
 import { getDb } from "@/lib/db";
 import { listTextChannels } from "@/lib/discord";
-import { ACTION_KIND, ACTION_STATUS } from "@/lib/rally-schema";
+import { errorAt, latestOutcome, payloadField } from "@/lib/outcome";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
 import { requestCallSignups, requestCreateRaid, requestMoveSignup } from "./actions";
 
-const QUEUED: Record<string, string> = {
-  create_raid: "Queued. Garrison posts the raid in a few seconds.",
-  move_signup: "Queued. Garrison moves them and updates the card.",
-  call_signups: "Queued. Garrison posts the call in the raid's channel.",
-  cancel_raid: "Queued. Garrison cancels the raid and updates its card.",
-  close_lfg: "Queued. Garrison closes the group and updates its card.",
-  create_lfg: "Queued. Garrison posts your group in a few seconds.",
-  lfg_join: "Queued. Garrison adds you and updates the card.",
-  lfg_leave: "Queued. Garrison takes you out and updates the card.",
-  raid_signup: "Queued. Garrison signs you up and updates the card.",
-  raid_withdraw: "Queued. Garrison withdraws you and updates the card.",
-};
-const ERRORS: Record<string, string> = {
-  invalid: "Some fields weren't valid. Nothing was queued.",
-  channel: "That channel isn't a text channel in this server.",
-  not_found: "That raid, group or signup has changed. Refresh and try again.",
-  busy: "Garrison has 10 requests waiting for this server. Try again shortly.",
-  too_fast: "That's a lot of requests at once. Wait a minute and try again.",
-  cooldown: "A call for signups for this raid went out in the last hour.",
-};
+/** Everything asked from this page. Moderation and builds show on their own pages. */
+const KINDS = [
+  "create_raid",
+  "move_signup",
+  "call_signups",
+  "cancel_raid",
+  "close_lfg",
+  "create_lfg",
+  "lfg_join",
+  "lfg_leave",
+  "raid_signup",
+  "raid_withdraw",
+];
+const GROUP_KINDS = ["lfg_join", "lfg_leave", "close_lfg"];
+const RAID_KINDS = ["raid_signup", "raid_withdraw", "move_signup", "call_signups", "cancel_raid"];
 
 export const metadata: Metadata = { title: "Rally" };
 
@@ -80,11 +76,13 @@ export default async function RallyPage({
     raidSignups.flat().map((s) => s.userId),
   );
   const nameOf = (id: string) => names.get(id) ?? `Member ${id.slice(-4)}`;
-  // Only what was asked from this page: moderation and builds show on their own pages.
-  const recent = allActions.filter((a) => a.kind in QUEUED).slice(0, 8);
-  const working = recent.some((a) => a.status === "pending" || a.status === "running");
-  const queued = typeof query.queued === "string" ? QUEUED[query.queued] : undefined;
-  const error = typeof query.error === "string" ? ERRORS[query.error] : undefined;
+  /** Your last request about this group or raid, shown on its card. */
+  const outcomeFor = (kinds: string[], id: string) =>
+    latestOutcome(allActions, {
+      userId: session.userId,
+      kinds,
+      match: (p) => payloadField(p, "id") === id || payloadField(p, "eventId") === id,
+    });
 
   return (
     <>
@@ -105,17 +103,13 @@ export default async function RallyPage({
           </a>
         </div>
       </div>
-      {working ? <AutoRefresh /> : null}
-      {queued ? (
-        <div className="notice notice--ok" role="status">
-          {queued}
-        </div>
-      ) : null}
-      {error ? (
-        <div className="notice" role="alert">
-          {error}
-        </div>
-      ) : null}
+      <RequestsPanel
+        guildId={guild.id}
+        kinds={KINDS}
+        query={query}
+        actions={allActions}
+        limit={8}
+      />
 
       <details className="g-card raid-create" id="post-group" open={query.post === "1"}>
         <summary className="g-label">Post a group</summary>
@@ -298,7 +292,7 @@ export default async function RallyPage({
               const members = postMembers[i] ?? [];
               const total = capacity(p.slots);
               return (
-                <div className="g-lfg g-lfg--wide" key={p.id}>
+                <div className="g-lfg g-lfg--wide" id={`group-${p.id}`} key={p.id}>
                   <div className="g-lfg__head">
                     <span className="g-lfg__title">{p.title}</span>
                     <span
@@ -333,6 +327,7 @@ export default async function RallyPage({
                         <input type="hidden" name="page" value="rally" />
                         <input type="hidden" name="kind" value="lfg_leave" />
                         <input type="hidden" name="id" value={p.id} />
+                        <input type="hidden" name="at" value={`group-${p.id}`} />
                         <button type="submit" className="g-btn g-btn--secondary">
                           Leave
                         </button>
@@ -343,6 +338,7 @@ export default async function RallyPage({
                         <input type="hidden" name="page" value="rally" />
                         <input type="hidden" name="kind" value="lfg_join" />
                         <input type="hidden" name="id" value={p.id} />
+                        <input type="hidden" name="at" value={`group-${p.id}`} />
                         {p.slots.length > 1 || p.slots[0]?.name ? (
                           <select
                             className="g-input g-input--sm"
@@ -370,11 +366,16 @@ export default async function RallyPage({
                       <input type="hidden" name="page" value="rally" />
                       <input type="hidden" name="kind" value="close_lfg" />
                       <input type="hidden" name="id" value={p.id} />
+                      <input type="hidden" name="at" value={`group-${p.id}`} />
                       <button type="submit" className="g-btn g-btn--ghost">
                         Close group
                       </button>
                     </form>
                   </div>
+                  <Outcome
+                    action={outcomeFor(GROUP_KINDS, p.id)}
+                    error={errorAt(query, `group-${p.id}`)}
+                  />
                 </div>
               );
             })
@@ -397,7 +398,7 @@ export default async function RallyPage({
               const short = missing.filter((m) => m.n > 0).map((m) => `${m.n} ${m.name} short`);
               const mine = signups.find((s) => s.userId === session.userId);
               return (
-                <div className="g-card g-card--hud card-col" key={r.id}>
+                <div className="g-card g-card--hud card-col" id={`raid-${r.id}`} key={r.id}>
                   <div>
                     <div className="g-label">
                       Ops · raid{r.repeatWeekly ? " · repeats weekly" : ""}
@@ -444,6 +445,7 @@ export default async function RallyPage({
                           <input type="hidden" name="guildId" value={guild.id} />
                           <input type="hidden" name="eventId" value={r.id} />
                           <input type="hidden" name="userId" value={b.userId} />
+                          <input type="hidden" name="at" value={`raid-${r.id}`} />
                           <span>
                             {nameOf(b.userId)}{" "}
                             <span className="mono">
@@ -476,6 +478,7 @@ export default async function RallyPage({
                       <input type="hidden" name="page" value="rally" />
                       <input type="hidden" name="kind" value="raid_withdraw" />
                       <input type="hidden" name="eventId" value={r.id} />
+                      <input type="hidden" name="at" value={`raid-${r.id}`} />
                       <span>
                         You're {mine.bench ? "on the bench" : "signed up"}{" "}
                         <span className="mono">
@@ -493,6 +496,7 @@ export default async function RallyPage({
                       <input type="hidden" name="page" value="rally" />
                       <input type="hidden" name="kind" value="raid_signup" />
                       <input type="hidden" name="eventId" value={r.id} />
+                      <input type="hidden" name="at" value={`raid-${r.id}`} />
                       <span className="g-label">Sign up</span>
                       <select
                         className="g-input g-input--sm"
@@ -518,6 +522,10 @@ export default async function RallyPage({
                       </button>
                     </form>
                   )}
+                  <Outcome
+                    action={outcomeFor(RAID_KINDS, r.id)}
+                    error={errorAt(query, `raid-${r.id}`)}
+                  />
                   <div className="row-between raid-foot">
                     <span className="mono">
                       {seated.length} / {capacity(r.slots)}
@@ -530,6 +538,7 @@ export default async function RallyPage({
                         <input type="hidden" name="page" value="rally" />
                         <input type="hidden" name="kind" value="cancel_raid" />
                         <input type="hidden" name="id" value={r.id} />
+                        <input type="hidden" name="at" value={`raid-${r.id}`} />
                         <button type="submit" className="g-btn g-btn--danger">
                           Yes, cancel {r.title}
                         </button>
@@ -539,6 +548,7 @@ export default async function RallyPage({
                       <form action={requestCallSignups}>
                         <input type="hidden" name="guildId" value={guild.id} />
                         <input type="hidden" name="eventId" value={r.id} />
+                        <input type="hidden" name="at" value={`raid-${r.id}`} />
                         <button type="submit" className="g-btn g-btn--secondary">
                           Post a call for signups
                         </button>
@@ -553,35 +563,6 @@ export default async function RallyPage({
           )}
         </section>
       </div>
-
-      {recent.length ? (
-        <div className="g-card table-card">
-          <div className="table-card__head row-between">
-            <span className="g-label">Recent requests</span>
-            <span className="g-help">Garrison does these in Discord, usually within seconds.</span>
-          </div>
-          <div className="table-wrap">
-            <table className="g-table">
-              <tbody>
-                {recent.map((a) => {
-                  const st = ACTION_STATUS[a.status] ?? { label: a.status, tone: "g-badge" };
-                  return (
-                    <tr key={a.id}>
-                      <td>
-                        <span className={st.tone}>{st.label}</span>
-                      </td>
-                      <td>{ACTION_KIND[a.kind] ?? a.kind}</td>
-                      <td className="muted">{a.message ?? "Waiting for Garrison"}</td>
-                      <td>{a.requestedByName}</td>
-                      <td className="mono">{formatTime(a.createdAt)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : null}
     </>
   );
 }

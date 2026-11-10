@@ -62,4 +62,5 @@ fill("apps/web/wrangler.jsonc", [
 ]);
 fill("apps/bot-cloudflare/wrangler.jsonc", [
   ['"DISCORD_CLIENT_ID": "000000000000000000"', `"DISCORD_CLIENT_ID": ${JSON.stringify(clientId)}`],
+  ['"APP_URL": "https://dash.example.com"', `"APP_URL": ${JSON.stringify(appUrl)}`],
 ]);

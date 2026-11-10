@@ -28,6 +28,8 @@ services:
       QM_MODEL: ${QM_MODEL:-claude-opus-5-5}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       HEALTH_PORT: "8080"
+      # For the dashboard links in the bot's replies.
+      APP_URL: https://${DOMAIN:?set DOMAIN in .env}
 
   web:
     <<: *hardening

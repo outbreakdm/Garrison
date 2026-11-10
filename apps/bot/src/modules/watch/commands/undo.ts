@@ -1,5 +1,5 @@
 import type { ButtonHandler } from "../../../commands/types.js";
-import { caseEmbed, UNDO_PREFIX, undoRow } from "../embeds.js";
+import { caseEmbed, caseRow, UNDO_PREFIX } from "../embeds.js";
 import { undoCase } from "../service.js";
 import { ephemeral } from "./shared.js";
 
@@ -17,7 +17,7 @@ export const undoButton: ButtonHandler = {
     }
     await interaction.editReply({
       embeds: [caseEmbed(result.case)],
-      components: [undoRow(result.case, true)],
+      components: [caseRow(result.case, { undone: true })].filter((r) => r !== null),
     });
   },
 };

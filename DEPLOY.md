@@ -369,8 +369,12 @@ pnpm cf:bot
 ```
 
 If an update includes a **database migration**, it's applied from your computer
-with Supabase's admin string in `DATABASE_MIGRATION_URL` (`.env`):
-`pnpm db:migrate`. Never put that string into Cloudflare.
+with Supabase's admin string in `DATABASE_MIGRATION_URL`, in the `.env` at the
+top of the repo (Supabase → **Connect** → **Session pooler**, user
+`postgres.<project-ref>`, port 5432, your database password):
+`pnpm db:migrate`. It applies only the migrations the database doesn't have yet,
+and says `migrations applied successfully`. Never put that string into
+Cloudflare.
 
 ---
 

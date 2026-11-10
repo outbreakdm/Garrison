@@ -83,7 +83,9 @@ describe("runHealthChecks", () => {
 
   it("asks for a log channel when none is set", () => {
     const checks = runHealthChecks({ ...healthy, logChannelId: null, logChannel: null });
-    expect(checks.find((c) => c.status === "warn")?.text).toContain("/moderation log_channel");
+    expect(checks.find((c) => c.status === "warn")?.text).toContain(
+      "Pick a log channel in the dashboard",
+    );
   });
 });
 

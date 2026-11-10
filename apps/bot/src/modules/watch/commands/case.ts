@@ -1,8 +1,7 @@
 import { getCase } from "@garrison/db";
 import { PermissionFlagsBits } from "discord.js";
 import type { Command } from "../../../commands/types.js";
-import { canUndo } from "../copy.js";
-import { caseEmbed, undoRow } from "../embeds.js";
+import { caseEmbed, caseRow } from "../embeds.js";
 import { ephemeral, watchCommand } from "./shared.js";
 
 export const caseCommand: Command = {
@@ -27,7 +26,7 @@ export const caseCommand: Command = {
     }
     await interaction.reply({
       embeds: [caseEmbed(c)],
-      components: canUndo(c.action) && !c.revokedAt ? [undoRow(c)] : [],
+      components: [caseRow(c)].filter((r) => r !== null),
       ...ephemeral,
     });
   },

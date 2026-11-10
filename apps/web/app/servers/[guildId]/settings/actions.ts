@@ -30,8 +30,8 @@ import {
  */
 
 interface Place {
-  /** Page under /servers/:id. */
-  page: "settings" | "watch" | "gatehouse" | "ranks" | "ledger";
+  /** Page under /servers/:id; "" is the overview. */
+  page: "" | "settings" | "watch" | "gatehouse" | "ranks" | "ledger";
   /** The panel's element ID on that page, and its ?edit= value. */
   panel: string;
 }
@@ -46,14 +46,18 @@ const PLACES = {
   ledger: { page: "ledger", panel: "settings" },
   ops: { page: "settings", panel: "server" },
   history: { page: "settings", panel: "history" },
+  setup: { page: "", panel: "setup" },
 } as const satisfies Record<string, Place>;
 
+const path = (guildId: string, place: Place) =>
+  `/servers/${guildId}${place.page ? `/${place.page}` : ""}`;
+
 const saved = (guildId: string, place: Place, what: string) =>
-  redirect(`/servers/${guildId}/${place.page}?${new URLSearchParams({ saved: what })}`);
+  redirect(`${path(guildId, place)}?${new URLSearchParams({ saved: what })}`);
 
 const failed = (guildId: string, place: Place, error: string) =>
   redirect(
-    `/servers/${guildId}/${place.page}?${new URLSearchParams({ error, edit: place.panel })}#${place.panel}`,
+    `${path(guildId, place)}?${new URLSearchParams({ error, edit: place.panel })}#${place.panel}`,
   );
 
 async function authorize(form: FormData) {
@@ -196,6 +200,11 @@ export async function saveLadder(form: FormData) {
   const parsed = parseLadder(form);
   if (!parsed.success) failed(guild.id, PLACES.ladder, "ladder");
   else await save("escalation", form, { rules: parsed.data }, PLACES.ladder);
+}
+
+/** Hide the overview's setup checklist. It's in history, so Undo there brings it back. */
+export async function hideSetup(form: FormData) {
+  await save("dashboard", form, { setupDismissed: true }, PLACES.setup, "setup");
 }
 
 export async function undoChange(form: FormData) {

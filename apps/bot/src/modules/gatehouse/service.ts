@@ -320,7 +320,8 @@ export async function verifyMember(ctx: BotContext, member: GuildMember): Promis
   const settings = await getGatehouseSettings(ctx.db, member.guild.id);
   if (!settings.verifyRoleId) return "Verification is off in this server.";
   const role = member.guild.roles.cache.get(settings.verifyRoleId);
-  if (!role) return "The verified role was deleted. Ask a moderator to run /verify setup again.";
+  if (!role)
+    return "The verified role was deleted. Ask a moderator to pick a new one in the dashboard.";
   if (member.roles.cache.has(role.id)) return "You're already verified.";
 
   const days = accountAgeDays(member.user.createdTimestamp);

@@ -15,6 +15,7 @@ import { z } from "zod";
 import { getDb } from "@/lib/db";
 import { guildOwnerId, listTextChannels } from "@/lib/discord";
 import { checkGuildAccess } from "@/lib/session";
+import { backTo } from "./back";
 
 /**
  * Dashboard buttons that ask Garrison to do something in Discord. Each request
@@ -22,6 +23,10 @@ import { checkGuildAccess } from "@/lib/session";
  * (a case, raid, group, build or quarantine) belongs to that server, and only
  * then queues it. The bot checks everything again before acting, including
  * the requester's own Discord permissions.
+ *
+ * A form may name the control it came from (`at`, an element ID). The answer
+ * then lands back on that control, where <Outcome> shows how it went, instead
+ * of on the Requests panel at the top of the page.
  */
 
 const PAGES = new Set(["", "gatehouse", "watch", "rally", "quartermaster"]);
@@ -282,14 +287,15 @@ export async function requestAction(form: FormData) {
   const asked = field(form, "page");
   const page = PAGES.has(asked) || MEMBER_PAGE.test(asked) ? asked : "";
   const base = `/servers/${guild.id}${page ? `/${page}` : ""}`;
+  const at = field(form, "at");
   const built = await build(form, guild.id, session.userId);
-  if (!built.ok) redirect(`${base}?${new URLSearchParams({ error: built.error })}#requests`);
+  if (!built.ok) return backTo(base, at, { error: built.error });
   const result = await queueDashboardAction(
     await getDb(),
     guild.id,
     { id: session.userId, name: session.username },
     built.input,
   );
-  if (!result.ok) redirect(`${base}?${new URLSearchParams({ error: result.reason })}#requests`);
-  redirect(`${base}?${new URLSearchParams({ queued: built.input.kind })}#requests`);
+  if (!result.ok) return backTo(base, at, { error: result.reason });
+  return backTo(base, at, { queued: built.input.kind });
 }

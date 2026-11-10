@@ -1,40 +1,37 @@
-import { listDashboardActions } from "@garrison/db";
+import { type DashboardAction, listDashboardActions } from "@garrison/db";
 import { getDb } from "@/lib/db";
+import { REQUEST_ERRORS } from "@/lib/outcome";
 import { ACTION_KIND, ACTION_STATUS } from "@/lib/rally-schema";
 import { AutoRefresh } from "./AutoRefresh";
 import { formatTime } from "./format";
 
-const ERRORS: Record<string, string> = {
-  invalid: "Some values weren't valid. Nothing was queued.",
-  not_found: "That has changed since the page loaded. Refresh and try again.",
-  channel: "Pick a text channel from this server.",
-  owner_only: "Only the server owner can change anti-nuke.",
-  busy: "Garrison has 10 requests waiting for this server. Try again shortly.",
-  too_fast: "That's a lot of requests at once. Wait a minute and try again.",
-  cooldown: "That was done recently. Try again later.",
-  self: "You can't moderate yourself.",
-  qm_request: "Describe what to build, in 500 characters or fewer.",
-  qm_not_yours: "Only the person who asked for a plan can apply it. You can discard it.",
-};
-
 /**
  * What you asked Garrison to do from this page, and how it went. Refreshes
- * itself while a request is waiting.
+ * itself while a request is waiting. A form that names the control to come
+ * back to (`at`) gets its result shown beside that control instead, by
+ * <Outcome>, so the panel doesn't repeat the notice.
  */
 export async function RequestsPanel({
   guildId,
   kinds,
   query,
+  actions: loaded,
+  limit = 6,
 }: {
   guildId: string;
   kinds: string[];
   query: Record<string, string | string[] | undefined>;
+  /** The page's own listDashboardActions, newest first, to save a second read. */
+  actions?: DashboardAction[];
+  limit?: number;
 }) {
-  const all = await listDashboardActions(await getDb(), guildId, 30);
-  const actions = all.filter((a) => kinds.includes(a.kind)).slice(0, 6);
+  const all = loaded ?? (await listDashboardActions(await getDb(), guildId, 30));
+  const actions = all.filter((a) => kinds.includes(a.kind)).slice(0, limit);
   const working = actions.some((a) => a.status === "pending" || a.status === "running");
-  const queued = typeof query.queued === "string" && kinds.includes(query.queued);
-  const error = typeof query.error === "string" ? ERRORS[query.error] : undefined;
+  const inline = typeof query.at === "string";
+  const queued = !inline && typeof query.queued === "string" && kinds.includes(query.queued);
+  const error =
+    !inline && typeof query.error === "string" ? REQUEST_ERRORS[query.error] : undefined;
   if (!actions.length && !queued && !error) return null;
   return (
     <section id="requests" className="g-card table-card" aria-label="Requests">

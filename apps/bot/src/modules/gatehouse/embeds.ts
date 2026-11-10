@@ -111,10 +111,10 @@ export function verifyPanel(
   return { embeds: [embed], components: [row] };
 }
 
-export function settingsEmbed(s: GatehouseSettings, saved: boolean): EmbedBuilder {
+export function settingsEmbed(s: GatehouseSettings): EmbedBuilder {
   const onOff = (v: boolean) => (v ? "On" : "Off");
   return brandEmbed({
-    title: saved ? "Saved. Gatehouse settings updated" : "Gatehouse settings",
+    title: "Security settings",
     fields: [
       {
         name: "Alert channel",

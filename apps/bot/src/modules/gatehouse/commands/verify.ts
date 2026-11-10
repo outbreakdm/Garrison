@@ -1,100 +1,57 @@
-import { getGatehouseSettings, updateGatehouseSettings } from "@garrison/db";
-import { ChannelType, PermissionFlagsBits } from "discord.js";
+import { getGatehouseSettings } from "@garrison/db";
+import { PermissionFlagsBits } from "discord.js";
 import { ephemeral, guildCommand } from "../../../commands/builders.js";
 import type { ButtonHandler, Command } from "../../../commands/types.js";
+import { serverUrl, settingsReply } from "../../../lib/dashboard.js";
+import { brandEmbed } from "../../../lib/embeds.js";
 import { ensureGuild } from "../../../lib/guild-registry.js";
-import { VERIFY_BUTTON_ID, verifyPanel } from "../embeds.js";
-import { invalidateGatehouseSettings, verifyMember } from "../service.js";
+import { VERIFY_BUTTON_ID } from "../embeds.js";
+import { verifyMember } from "../service.js";
 
+/**
+ * Verification is set up on the dashboard: the role, the minimum account age,
+ * and posting the Verify button. `setup` and `off` stay so the commands people
+ * know still lead there; both only show where it's at.
+ */
 export const verify: Command = {
   data: guildCommand(
     "verify",
-    "Set up the verification button that lets new members in.",
+    "See verification, with a link to set it up on the dashboard.",
     PermissionFlagsBits.ManageGuild,
   )
     .addSubcommand((s) =>
-      s
-        .setName("setup")
-        .setDescription("Post a Verify button that gives a role")
-        .addRoleOption((o) =>
-          o.setName("role").setDescription("Role verified members get").setRequired(true),
-        )
-        .addChannelOption((o) =>
-          o
-            .setName("channel")
-            .setDescription("Where to post the button")
-            .addChannelTypes(ChannelType.GuildText)
-            .setRequired(true),
-        )
-        .addIntegerOption((o) =>
-          o
-            .setName("min_account_age_days")
-            .setDescription("Turn away accounts younger than this (default: 0)")
-            .setMinValue(0)
-            .setMaxValue(365),
-        ),
+      s.setName("setup").setDescription("Set up the Verify button, on the dashboard"),
     )
     .addSubcommand((s) =>
-      s.setName("off").setDescription("Turn verification off. Existing buttons stop working"),
+      s.setName("off").setDescription("Turn verification off, on the dashboard"),
     )
     .toJSON(),
   async execute(interaction, ctx) {
     await ensureGuild(ctx, interaction.guild);
-    if (interaction.options.getSubcommand() === "off") {
-      await updateGatehouseSettings(ctx.db, interaction.guild.id, { verifyRoleId: null });
-      invalidateGatehouseSettings(interaction.guild.id);
-      await interaction.reply({
-        content: "Verification is off. Delete the old Verify message when you're ready.",
-        ...ephemeral,
-      });
-      return;
-    }
-
-    const role = interaction.options.getRole("role", true);
-    const channel = interaction.options.getChannel("channel", true, [ChannelType.GuildText]);
-    const minAge = interaction.options.getInteger("min_account_age_days") ?? 0;
-    const me = interaction.guild.members.me ?? (await interaction.guild.members.fetchMe());
-
-    if (role.managed || role.id === interaction.guild.roles.everyone.id) {
-      await interaction.reply({
-        content: `<@&${role.id}> is managed by Discord or an integration. Pick a normal role.`,
-        ...ephemeral,
-      });
-      return;
-    }
-    if (
-      !me.permissions.has(PermissionFlagsBits.ManageRoles) ||
-      role.position >= me.roles.highest.position
-    ) {
-      await interaction.reply({
-        content: `I can't give <@&${role.id}>: my role sits below it. Drag Garrison above it in Server Settings → Roles.`,
-        ...ephemeral,
-      });
-      return;
-    }
-    if (
-      !channel
-        .permissionsFor(me)
-        ?.has([PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks])
-    ) {
-      await interaction.reply({
-        content: `I can't post in <#${channel.id}>. Give Garrison Send Messages and Embed Links there.`,
-        ...ephemeral,
-      });
-      return;
-    }
-
-    await updateGatehouseSettings(ctx.db, interaction.guild.id, {
-      verifyRoleId: role.id,
-      verifyMinAccountAgeDays: minAge,
-    });
-    invalidateGatehouseSettings(interaction.guild.id);
-    const settings = await getGatehouseSettings(ctx.db, interaction.guild.id);
-    await channel.send(verifyPanel(settings));
-    await interaction.reply({
-      content: `Saved. The Verify button is up in <#${channel.id}> and gives <@&${role.id}>.`,
-      ...ephemeral,
-    });
+    const s = await getGatehouseSettings(ctx.db, interaction.guild.id);
+    await interaction.reply(
+      settingsReply({
+        subject: "Verification is",
+        url: serverUrl(interaction.guild.id, "gatehouse?edit=verification#verification"),
+        label: s.verifyRoleId ? "Change verification" : "Set up verification",
+        embed: brandEmbed({
+          title: "Verification",
+          fields: [
+            {
+              name: "Status",
+              value: s.verifyRoleId ? `On · gives <@&${s.verifyRoleId}>` : "Off",
+              inline: true,
+            },
+            {
+              name: "Min account age",
+              value: s.verifyMinAccountAgeDays ? `${s.verifyMinAccountAgeDays} days` : "Any",
+              inline: true,
+            },
+          ],
+          module: "gatehouse",
+        }),
+      }),
+    );
   },
 };
 
