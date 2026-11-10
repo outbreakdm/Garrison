@@ -1,18 +1,18 @@
 import { listDashboardActions, listQmBuilds, type QmBuild } from "@garrison/db";
 import type { Metadata } from "next";
 import { formatTime } from "@/components/format";
+import { Outcome } from "@/components/Outcome";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { ServerPreview } from "@/components/ServerPreview";
+import { PLAN_TTL_MS } from "@/lib/attention";
 import { getDb } from "@/lib/db";
 import { getServerLayout } from "@/lib/discord";
+import { errorAt, latestOutcome, payloadField } from "@/lib/outcome";
 import { addedText, planLines, previewServer } from "@/lib/qm-preview";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
 
 export const metadata: Metadata = { title: "Quartermaster" };
-
-/** Plans wait this long to be built, as the bot enforces. */
-const PLAN_TTL_MS = 15 * 60_000;
 
 const STATUS: Record<QmBuild["status"], { label: string; tone: string }> = {
   pending: { label: "Not built", tone: "g-badge--intel" },
@@ -76,6 +76,16 @@ export default async function QuartermasterPage({
     ? Math.max(1, Math.ceil((plan.createdAt.getTime() + PLAN_TTL_MS - now) / 60_000))
     : 0;
   const mine = plan?.requestedById === session.userId;
+  const yours = (kinds: string[], match: (p: unknown) => boolean) =>
+    latestOutcome(actions, { userId: session.userId, kinds, match });
+  // A plan that worked shows up as the plan itself; only say so here when it didn't.
+  const asked = yours(["qm_plan"], () => true);
+  const planFailed = asked?.status === "failed" ? asked : null;
+  const forBuild = (b: QmBuild) =>
+    yours(
+      ["qm_apply", "qm_cancel", "undo_build"],
+      (p) => payloadField(p, "id") === b.id || payloadField(p, "version") === String(b.version),
+    );
 
   return (
     <>
@@ -98,6 +108,7 @@ export default async function QuartermasterPage({
           <input type="hidden" name="guildId" value={guild.id} />
           <input type="hidden" name="page" value="quartermaster" />
           <input type="hidden" name="kind" value="qm_plan" />
+          <input type="hidden" name="at" value="describe" />
           <label className="qm-compose__label" htmlFor="qm-request">
             What should Quartermaster build?
           </label>
@@ -124,6 +135,7 @@ export default async function QuartermasterPage({
               {planning ? "Planning…" : "Draw up a plan"}
             </button>
           </div>
+          <Outcome action={planFailed} error={errorAt(query, "describe")} />
           <ul className="qm-rules">
             <li>Adds only: nothing you have is edited or deleted</li>
             <li>New roles get no permissions</li>
@@ -137,6 +149,7 @@ export default async function QuartermasterPage({
         guildId={guild.id}
         kinds={["qm_plan", "qm_apply", "qm_cancel", "undo_build"]}
         query={query}
+        actions={actions}
       />
 
       {plan && preview ? (
@@ -166,6 +179,7 @@ export default async function QuartermasterPage({
                 <input type="hidden" name="page" value="quartermaster" />
                 <input type="hidden" name="kind" value="qm_cancel" />
                 <input type="hidden" name="id" value={plan.id} />
+                <input type="hidden" name="at" value="plan" />
                 <button type="submit" className="g-btn g-btn--ghost" disabled={building}>
                   Discard
                 </button>
@@ -176,12 +190,14 @@ export default async function QuartermasterPage({
                   <input type="hidden" name="page" value="quartermaster" />
                   <input type="hidden" name="kind" value="qm_apply" />
                   <input type="hidden" name="id" value={plan.id} />
+                  <input type="hidden" name="at" value="plan" />
                   <button type="submit" className="g-btn g-btn--primary" disabled={building}>
                     {building ? "Building…" : `Build v${plan.version}`}
                   </button>
                 </form>
               ) : null}
             </div>
+            <Outcome action={forBuild(plan)} error={errorAt(query, "plan")} />
           </div>
         </section>
       ) : (
@@ -211,7 +227,7 @@ export default async function QuartermasterPage({
           // A plan nobody built in time reads as expired, whatever the row still says.
           const st = STATUS[b.status === "pending" ? "expired" : b.status];
           return (
-            <div className="g-card card-col" key={b.id}>
+            <div className="g-card card-col" id={`build-${b.version}`} key={b.id}>
               <div className="row-between">
                 <h2>
                   <span className="mono muted">v{b.version}</span> {b.summary}
@@ -223,6 +239,7 @@ export default async function QuartermasterPage({
               </p>
               <pre className="diff">{planLines(b.plan).join("\n")}</pre>
               {b.error ? <span className="notice">{b.error}</span> : null}
+              <Outcome action={forBuild(b)} error={errorAt(query, `build-${b.version}`)} />
               {b.status === "applied" || b.status === "failed" ? (
                 <details className="confirm">
                   <summary className="confirm__toggle g-btn g-btn--ghost">
@@ -233,6 +250,7 @@ export default async function QuartermasterPage({
                     <input type="hidden" name="page" value="quartermaster" />
                     <input type="hidden" name="kind" value="undo_build" />
                     <input type="hidden" name="version" value={b.version} />
+                    <input type="hidden" name="at" value={`build-${b.version}`} />
                     <p className="g-help">
                       Deletes exactly the {b.created.length} channels and roles this build created,
                       with any messages posted in them since. Nothing else is touched.

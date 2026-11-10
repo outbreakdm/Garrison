@@ -68,7 +68,9 @@ const client = new Client({
 
 const SWEEP_INTERVAL_MS = 60_000;
 let sweepTimer: NodeJS.Timeout | undefined;
-const ACTIONS_INTERVAL_MS = 5_000;
+// Dashboard requests: every 2 s, so a result lands beside its button in a few
+// seconds. A poll is one small indexed query when nothing is waiting.
+const ACTIONS_INTERVAL_MS = 2_000;
 let actionsTimer: NodeJS.Timeout | undefined;
 const HEALTH_EVERY_MS = 30 * 60_000;
 let lastHealthSnapshot = 0;

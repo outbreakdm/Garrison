@@ -1,6 +1,7 @@
-import { getOverview, listOpenQuarantines } from "@garrison/db";
+import { getOverview, listDashboardActions, listOpenQuarantines } from "@garrison/db";
 import type { Metadata } from "next";
 import { formatTime } from "@/components/format";
+import { Outcome } from "@/components/Outcome";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import {
   ChannelSelect,
@@ -12,6 +13,7 @@ import {
 } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { guildOwnerId, listGuildRoles, listTextChannels } from "@/lib/discord";
+import { errorAt, latestOutcome } from "@/lib/outcome";
 import { isDangerousRole } from "@/lib/permissions";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
@@ -36,12 +38,14 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Hidden({ guildId, kind }: { guildId: string; kind: string }) {
+/** The fields every request form here sends; `at` is the card its result shows on. */
+function Hidden({ guildId, kind, at }: { guildId: string; kind: string; at: string }) {
   return (
     <>
       <input type="hidden" name="guildId" value={guildId} />
       <input type="hidden" name="page" value="gatehouse" />
       <input type="hidden" name="kind" value={kind} />
+      <input type="hidden" name="at" value={at} />
     </>
   );
 }
@@ -57,14 +61,22 @@ export default async function GatehousePage({
   const { guild, session } = await requireGuildAccess(guildId);
   const query = await searchParams;
   const db = await getDb();
-  const [{ gatehouse: g, activeLockdown: l }, quarantines, channels, roles, ownerId] =
+  const [{ gatehouse: g, activeLockdown: l }, quarantines, channels, roles, ownerId, actions] =
     await Promise.all([
       getOverview(db, guild.id),
       listOpenQuarantines(db, guild.id),
       listTextChannels(guild.id).catch(() => []),
       listGuildRoles(guild.id).catch(() => []),
       guildOwnerId(guild.id).catch(() => null),
+      listDashboardActions(db, guild.id, 30),
     ]);
+  /** Your last request from one card, and why it wasn't sent if it wasn't. */
+  const result = (at: string, kinds: string[]) => (
+    <Outcome
+      action={latestOutcome(actions, { userId: session.userId, kinds })}
+      error={errorAt(query, at)}
+    />
+  );
   const isOwner = ownerId === session.userId;
   const roleName = (id: string | null | undefined) =>
     id ? `@${roles.find((r) => r.id === id)?.name ?? "deleted role"}` : "None";
@@ -78,11 +90,11 @@ export default async function GatehousePage({
         </div>
       </div>
 
-      <RequestsPanel guildId={guild.id} kinds={KINDS} query={query} />
+      <RequestsPanel guildId={guild.id} kinds={KINDS} query={query} actions={actions} />
       <SettingsNotice query={query} />
 
       <div className="grid-cards">
-        <div className={`g-card card-col ${l ? "g-card--hud" : ""}`}>
+        <div className={`g-card card-col ${l ? "g-card--hud" : ""}`} id="lockdown">
           <span className="g-label">Lockdown</span>
           {l ? (
             <>
@@ -95,7 +107,7 @@ export default async function GatehousePage({
               <Row label="Invites" value={l.invitesPaused ? "Paused" : "Open"} />
               <Row label="Reason" value={l.reason ?? "No reason given"} />
               <form action={requestAction}>
-                <Hidden guildId={guild.id} kind="lockdown_end" />
+                <Hidden guildId={guild.id} kind="lockdown_end" at="lockdown" />
                 <button type="submit" className="g-btn g-btn--primary">
                   Lift lockdown
                 </button>
@@ -112,7 +124,7 @@ export default async function GatehousePage({
                   Lock the server…
                 </summary>
                 <form action={requestAction} className="card-col">
-                  <Hidden guildId={guild.id} kind="lockdown_start" />
+                  <Hidden guildId={guild.id} kind="lockdown_start" at="lockdown" />
                   <label className="g-field">
                     <span>Lift automatically after</span>
                     <select className="g-input" name="durationMinutes" defaultValue="60">
@@ -145,6 +157,7 @@ export default async function GatehousePage({
               </details>
             </>
           )}
+          {result("lockdown", ["lockdown_start", "lockdown_end"])}
         </div>
 
         <div className="g-card card-col" id="anti-raid">
@@ -293,7 +306,7 @@ export default async function GatehousePage({
           />
           {g?.verifyRoleId ? (
             <form action={requestAction} className="card-col">
-              <Hidden guildId={guild.id} kind="post_verify_panel" />
+              <Hidden guildId={guild.id} kind="post_verify_panel" at="verification" />
               <label className="g-field">
                 <span>Post the Verify button in</span>
                 <select className="g-input" name="channelId" required defaultValue="">
@@ -312,6 +325,7 @@ export default async function GatehousePage({
               </button>
             </form>
           ) : null}
+          {result("verification", ["post_verify_panel"])}
           <details className="card-edit" open={isEditing(query, "verification")}>
             <summary className="g-btn g-btn--secondary">
               <GearIcon />
@@ -361,11 +375,11 @@ export default async function GatehousePage({
           </details>
         </div>
 
-        <div className="g-card card-col">
+        <div className="g-card card-col" id="anti-nuke">
           <span className="g-label">Anti-nuke · owner only</span>
           {isOwner ? (
             <form action={requestAction} className="card-col" key={JSON.stringify(g)}>
-              <Hidden guildId={guild.id} kind="anti_nuke" />
+              <Hidden guildId={guild.id} kind="anti_nuke" at="anti-nuke" />
               <label className="check">
                 <input type="checkbox" name="enabled" defaultChecked={g?.antiNukeEnabled ?? true} />
                 <span>Strip a rogue admin's roles when they mass-delete or mass-ban</span>
@@ -430,9 +444,10 @@ export default async function GatehousePage({
               </p>
             </>
           )}
+          {result("anti-nuke", ["anti_nuke"])}
         </div>
 
-        <div className="g-card card-col">
+        <div className="g-card card-col" id="quarantines">
           <span className="g-label">Quarantined by anti-nuke · {quarantines.length}</span>
           {quarantines.length ? (
             quarantines.map((q) => (
@@ -446,7 +461,7 @@ export default async function GatehousePage({
                   <span className="mono">Bot kicked</span>
                 ) : (
                   <form action={requestAction}>
-                    <Hidden guildId={guild.id} kind="release_quarantine" />
+                    <Hidden guildId={guild.id} kind="release_quarantine" at="quarantines" />
                     <input type="hidden" name="id" value={q.id} />
                     <button type="submit" className="g-btn g-btn--secondary">
                       Restore roles
@@ -459,6 +474,7 @@ export default async function GatehousePage({
             <span className="muted">Nobody is quarantined.</span>
           )}
           <p className="g-help">Only the owner or a trusted user can restore roles.</p>
+          {result("quarantines", ["release_quarantine"])}
         </div>
       </div>
     </>

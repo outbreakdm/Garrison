@@ -227,6 +227,7 @@ export const FIELD_LABELS: Record<string, string> = {
   retentionDays: "Keep events (days)",
   rules: "Escalation ladder",
   templates: "LFG templates",
+  setupDismissed: "Setup checklist hidden",
 };
 
 type NamedTemplate = { id?: string; name?: string };

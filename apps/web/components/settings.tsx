@@ -17,6 +17,7 @@ const SAVED: Record<string, string> = {
   ledger: "Saved Ledger settings.",
   escalation: "Saved the escalation ladder. It applies from the next warning.",
   rewards: "Saved level rewards. Members get them at their next level-up.",
+  setup: "Hid the setup checklist. To bring it back, undo that in Settings, under History.",
   undo: "Undone.",
 };
 

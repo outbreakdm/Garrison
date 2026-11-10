@@ -420,6 +420,7 @@ export const settingsModule = pgEnum("settings_module", [
   "escalation",
   "rally",
   "rewards",
+  "dashboard",
 ]);
 
 /** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */
@@ -965,5 +966,19 @@ export const guildPlans = pgTable("guild_plans", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
 
+/**
+ * Dashboard preferences for a server, such as hiding the setup checklist.
+ * Only the dashboard reads or writes these, with history like any setting.
+ */
+export const dashboardSettings = pgTable("dashboard_settings", {
+  guildId: text("guild_id")
+    .primaryKey()
+    .references(() => guilds.id, { onDelete: "cascade" }),
+  /** The overview stops showing the setup checklist, even with steps left. */
+  setupDismissed: boolean("setup_dismissed").notNull().default(false),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
+
+export type DashboardSettings = typeof dashboardSettings.$inferSelect;
 export type RallySettings = typeof rallySettings.$inferSelect;
 export type { GuildPlan };

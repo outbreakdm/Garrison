@@ -5,6 +5,7 @@ export * from "./repo/barracks";
 export * from "./repo/cases";
 export * from "./repo/gatehouse";
 export * from "./repo/guilds";
+export * from "./repo/home";
 export * from "./repo/ledger";
 export * from "./repo/metrics";
 export * from "./repo/ops";
@@ -20,6 +21,7 @@ export type {
   CaseAction,
   CreateRaidPayload,
   DashboardAction,
+  DashboardSettings,
   EscalationAction,
   EscalationRule,
   GatehouseSettings,

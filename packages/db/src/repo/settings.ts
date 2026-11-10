@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, isNotNull, notInArray, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import {
+  dashboardSettings,
   type EscalationRule,
   escalationRules,
   gatehouseSettings,
@@ -44,6 +45,8 @@ export const EDITABLE_FIELDS = {
   rally: ["templates"],
   // Level rewards are one list too: [{ level, roleId }].
   rewards: ["rewards"],
+  // Dashboard preferences, such as hiding the setup checklist.
+  dashboard: ["setupDismissed"],
 } as const satisfies Record<SettingsModule, readonly string[]>;
 
 /** One step of the escalation ladder, as the dashboard edits it and history stores it. */
@@ -155,10 +158,11 @@ const TABLES = {
   ranks: ranksSettings,
   ledger: ledgerSettings,
   rally: rallySettings,
+  dashboard: dashboardSettings,
 } as const;
 
 /** Modules whose settings row is created on first use, by the bot or the dashboard. */
-const LAZY = new Set<SettingsModule>(["ops", "ranks", "ledger", "rally"]);
+const LAZY = new Set<SettingsModule>(["ops", "ranks", "ledger", "rally", "dashboard"]);
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 type Row = Record<string, unknown>;
@@ -244,6 +248,12 @@ async function writeRow(tx: Tx, module: SettingsModule, guildId: string, values:
         .update(rallySettings)
         .set(set as Partial<typeof rallySettings.$inferInsert>)
         .where(eq(rallySettings.guildId, guildId));
+      return;
+    case "dashboard":
+      await tx
+        .update(dashboardSettings)
+        .set(set as Partial<typeof dashboardSettings.$inferInsert>)
+        .where(eq(dashboardSettings.guildId, guildId));
       return;
   }
 }

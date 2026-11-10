@@ -1,12 +1,14 @@
-import { getMemberRank, levelForXp, listCasesForTarget } from "@garrison/db";
+import { getMemberRank, levelForXp, listCasesForTarget, listDashboardActions } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionBadge, formatDuration, formatTime, plainMentions } from "@/components/format";
 import { MemberAvatar } from "@/components/MemberAvatar";
+import { Outcome } from "@/components/Outcome";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { getDb } from "@/lib/db";
 import { fetchMemberCard, listGuildRoles } from "@/lib/discord";
+import { errorAt, latestOutcome, payloadField } from "@/lib/outcome";
 import { requireGuildAccess } from "@/lib/session";
 import { durationText } from "@/lib/settings-schema";
 import { requestAction } from "../../../requests";
@@ -28,11 +30,12 @@ export default async function MemberPage({
   if (!/^\d{17,20}$/.test(userId)) notFound();
   const query = await searchParams;
   const db = await getDb();
-  const [member, cases, rank, roles] = await Promise.all([
+  const [member, cases, rank, roles, actions] = await Promise.all([
     fetchMemberCard(guild.id, userId).catch(() => null),
     listCasesForTarget(db, guild.id, userId, 25),
     getMemberRank(db, guild.id, userId),
     listGuildRoles(guild.id).catch(() => []),
+    listDashboardActions(db, guild.id, 30),
   ]);
   // Someone Discord no longer knows can still have cases here: show those under their last name.
   const name = member?.name ?? cases[0]?.targetTag ?? rank?.username ?? null;
@@ -43,6 +46,18 @@ export default async function MemberPage({
   const memberRoles = roles.filter((r) => member?.roleIds.includes(r.id));
   const warnings = cases.filter((c) => c.action === "warn" && !c.revokedAt).length;
   const level = rank ? levelForXp(rank.xp) : null;
+  // Your last action on this member, and your last undo of one of their cases.
+  const moderated = latestOutcome(actions, {
+    userId: session.userId,
+    kinds: ["mod_action"],
+    match: (p) => payloadField(p, "userId") === userId,
+  });
+  const theirCases = new Set(cases.map((c) => String(c.caseNumber)));
+  const undone = latestOutcome(actions, {
+    userId: session.userId,
+    kinds: ["undo_case"],
+    match: (p) => theirCases.has(payloadField(p, "caseNumber") ?? ""),
+  });
 
   const hidden = (action: string) => (
     <>
@@ -51,6 +66,7 @@ export default async function MemberPage({
       <input type="hidden" name="kind" value="mod_action" />
       <input type="hidden" name="userId" value={userId} />
       <input type="hidden" name="action" value={action} />
+      <input type="hidden" name="at" value="moderate" />
     </>
   );
   const reason = (id: string) => (
@@ -85,7 +101,12 @@ export default async function MemberPage({
         </Link>
       </div>
 
-      <RequestsPanel guildId={guild.id} kinds={["mod_action", "undo_case"]} query={query} />
+      <RequestsPanel
+        guildId={guild.id}
+        kinds={["mod_action", "undo_case"]}
+        query={query}
+        actions={actions}
+      />
 
       <div className="grid-stats">
         <div className="g-card">
@@ -135,7 +156,7 @@ export default async function MemberPage({
       {isSelf ? (
         <div className="g-card muted">This is you. Moderators can't act on themselves.</div>
       ) : (
-        <section className="g-card card-col" aria-label="Moderate">
+        <section className="g-card card-col" id="moderate" aria-label="Moderate">
           <div>
             <div className="g-label">Moderate</div>
             <p className="g-help">
@@ -143,6 +164,7 @@ export default async function MemberPage({
               the matching Discord permission, such as Kick Members to kick.
             </p>
           </div>
+          <Outcome action={moderated} error={errorAt(query, "moderate")} />
           <div className="mod-grid">
             <form action={requestAction} className="mod-action">
               {hidden("warn")}
@@ -225,13 +247,18 @@ export default async function MemberPage({
         </section>
       )}
 
-      <div className="g-card table-card">
+      <div className="g-card table-card" id="cases">
         <div className="table-card__head row-between">
           <span className="g-label">Cases</span>
           <Link className="g-btn g-btn--ghost" href={`/servers/${guild.id}/ledger?user=${userId}`}>
             Their Ledger events
           </Link>
         </div>
+        {undone || errorAt(query, "cases") ? (
+          <div className="table-card__head">
+            <Outcome action={undone} error={errorAt(query, "cases")} />
+          </div>
+        ) : null}
         {cases.length ? (
           <div className="table-wrap">
             <table className="g-table">
@@ -278,6 +305,7 @@ export default async function MemberPage({
                           <input type="hidden" name="page" value={page} />
                           <input type="hidden" name="kind" value="undo_case" />
                           <input type="hidden" name="caseNumber" value={c.caseNumber} />
+                          <input type="hidden" name="at" value="cases" />
                           <button type="submit" className="g-btn g-btn--ghost">
                             Undo
                           </button>

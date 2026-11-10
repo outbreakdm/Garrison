@@ -11,8 +11,8 @@ then update the Status section before stopping.
 | Phase | What | State |
 |---|---|---|
 | 1 | Nothing is Discord-only for managers | **Done**, deployed from branch `dashboard-first` |
-| 2 | Dashboard as home: what needs attention, setup checklist, instant feedback | Not started |
-| 3 | Slim the bot: settings commands become link replies, `/dashboard`, link buttons | Not started |
+| 2 | Dashboard as home: what needs attention, setup checklist, instant feedback | **Done** on branch `claude/sweet-sagan-jrl5aa`, not deployed yet. Needs migration `0022` |
+| 3 | Slim the bot: settings commands become link replies, `/dashboard`, link buttons | Not started. **Next.** Owner chose link replies |
 | 4 | Member pages: people without Manage Server use the site too | Not started, needs an owner decision (below) |
 | 5 | Landing page and README copy say "dashboard first" | Not started |
 
@@ -21,8 +21,11 @@ Open decisions for the owner:
 - **Member pages (phase 4): in or out?** Today the dashboard opens only for people
   with Manage Server. Members still join groups, sign up for raids and check their
   rank in Discord.
-- **Settings slash commands (phase 3): remove them, or keep them replying with a
-  link to the right dashboard page?** The plan assumes link replies.
+
+Decided:
+
+- **Settings slash commands (phase 3) stay, and reply with a link** to the
+  matching dashboard page instead of changing anything (owner).
 
 ## What phase 1 added
 
@@ -46,34 +49,55 @@ warn, time out, kick, ban, clearing messages, posting a group, and building a pl
 from the dashboard. Try each once on a test server after a deploy. Member search
 uses Discord's `GET /guilds/{id}/members/search`, also untested live.
 
-## Phase 2: the dashboard as home
+## What phase 2 added
 
-Goal: opening a server shows what needs doing, not a set of numbers.
+Opening a server now shows what needs doing first.
 
-1. **Needs attention** at the top of the overview
-   (`apps/web/app/servers/[guildId]/page.tsx`): an active lockdown, members in
-   quarantine, a Quartermaster plan waiting, raids short of players, failed
-   requests in the last day, health checks that aren't ok. Each item links to the
-   page that fixes it. Show nothing when there is nothing.
-2. **Setup checklist** for a new server: log channel, verification, anti-raid,
-   ranks on or off, first raid or template. Derive each step from stored settings;
-   hide the checklist once every step is done or it is dismissed (a per-server
-   setting through `applySettingsChange`, so it is in history).
-3. **Instant feedback**: `RequestsPanel` already refreshes while a request is
-   pending. Make the outcome land where the user is looking: show the result
-   beside the control that was used (member page, raid card, plan), not only in
-   the panel. Consider shortening the bot's poll interval
-   (`ACTIONS_INTERVAL_MS` in `apps/bot/src/index.ts`).
-4. Move the Rally page onto `RequestsPanel`; it still has its own copy of the
-   requests table and notice strings.
+- **Needs attention** at the top of the overview: an active lockdown, members
+  quarantined by anti-nuke (not kicked bots), health checks that aren't ok, a
+  build that stopped partway, a Quartermaster plan waiting, raids in the next 48 h
+  that are short, and failed requests from the last day (unless the same kind
+  worked since). Each links to the card that fixes it. Nothing shows when nothing
+  needs doing. The rules are in `apps/web/lib/attention.ts`, unit tested.
+- **Setup checklist** under it: log channel, verification, anti-raid with a
+  channel for alerts, Ranks decided (on, or saved off), and Rally used (a raid, a
+  group or a template). Each step is worked out from stored settings by
+  `getSetupFacts` (`packages/db/src/repo/home.ts`). It goes away when every step is
+  done, or with "Hide checklist", which is a setting: new module `dashboard`, table
+  `dashboard_settings`, field `setupDismissed`, migration `0022_dashboard_home`.
+  It shows in Settings history and Undo there brings the checklist back. Until
+  `0022` is applied the overview works without the checklist.
+- **Results beside the button**: request forms send `at`, the ID of the card they
+  came from. The action redirects back to that card (`back.ts`), and `<Outcome>`
+  shows your latest request from it (queued, working, done or failed, with the
+  bot's message) or why it wasn't queued. The Requests panel then skips its own
+  notice. Done on the overview's health card, Rally group and raid cards, the
+  member page (Moderate, Cases), Quartermaster (describe, plan, each build),
+  Security (lockdown, verification, anti-nuke, quarantines) and Watch (clear
+  messages, cases). The page's `RequestsPanel` must list the kinds a card sends,
+  because its auto-refresh is what updates the result.
+- The bot checks for requests every 2 s instead of 5 s (`ACTIONS_INTERVAL_MS`).
+- Rally uses `RequestsPanel` like every other page. Request error strings live
+  in one place, `REQUEST_ERRORS` in `apps/web/lib/outcome.ts`.
 
-## Phase 3: a smaller bot
+Not yet proven against real Discord: same as phase 1. The flows above were
+checked in a browser against the local stand-in (hide and undo the checklist,
+withdraw from a raid, a cooldown error on a raid card, warn from a member page),
+and a production build showed no CSP violations on any server page.
+
+## Phase 3: a smaller bot (next)
+
+The owner chose link replies: the settings commands stay registered, but only
+point at the dashboard.
 
 1. Add `/dashboard`: replies with a link button to the server's dashboard.
 2. Settings commands (`/moderation`, `/security`, `/verify setup`,
    `/ledger settings`, `/ranks settings|reward|unreward`, `/raid timezone`) reply
    with a link to the matching page instead of changing anything. The page map is
-   `PLACES` in `apps/web/app/servers/[guildId]/settings/actions.ts`.
+   `PLACES` in `apps/web/app/servers/[guildId]/settings/actions.ts`; link to the
+   panel with `?edit=<panel>#<panel>`, as the setup checklist does
+   (`setupSteps` in `apps/web/lib/attention.ts`). Reply ephemerally, and keep the
+   command's permission check so the link only goes to people who can use it.
 3. Add a link button ("Open in dashboard") to case confirmations, raid cards and
    Quartermaster plan embeds.
 4. Keep as they are: `/warn`, `/timeout`, `/kick`, `/ban`, `/purge`, `/lfg`,
@@ -109,7 +133,10 @@ preview.
 3. Web: a case in `build()` in `apps/web/app/servers/[guildId]/requests.ts`
    (validate, and check what it points at belongs to this server), a label in
    `ACTION_KIND` (`apps/web/lib/rally-schema.ts`), any new error string in
-   `components/RequestsPanel.tsx`.
+   `REQUEST_ERRORS` (`apps/web/lib/outcome.ts`), and where a failure links to in
+   `requestPage` (`apps/web/lib/attention.ts`). Give the form a hidden `at` with
+   its card's ID and put an `<Outcome>` in that card (`latestOutcome` +
+   `errorAt`), and add the kind to that page's `RequestsPanel`.
 4. Bot: a `do…` handler in `apps/bot/src/modules/dashboard/more.ts` that parses
    the payload again with zod and checks the requester's own Discord permission,
    then a case in `runDashboardAction` (`actions.ts`).
@@ -146,7 +173,8 @@ Use `target=dashboard -f register_commands=false` when only `apps/web` changed.
 applied to the production database separately, from a machine that has
 `DATABASE_MIGRATION_URL` in `.env`: `pnpm db:migrate` (see `DEPLOY.md`). Until
 `0021_dashboard_first` is applied, every phase 1 button fails with an error;
-everything older keeps working.
+until `0022_dashboard_home` is applied, the overview has no setup checklist.
+Everything older keeps working. Both are safe to re-run.
 
 ## Art
 
@@ -164,12 +192,19 @@ A slot with no file shows nothing, so pieces can arrive one at a time.
 There is no local bot. The dashboard can run against a throwaway Postgres and the
 stand-in Discord server in `apps/web/e2e/mock-discord.cjs` (port 4100):
 
-- Postgres 16 in Docker, migrated with `DATABASE_URL=… pnpm db:migrate`, with the
-  `garrison_web` and `garrison_bot` roles given test passwords.
+- Postgres 16 (Docker, or the `postgresql-16` binaries with `initdb` and
+  `pg_ctl` on port 55432), migrated with
+  `DATABASE_MIGRATION_URL=postgres://postgres@127.0.0.1:55432/postgres pnpm db:migrate`,
+  with the `garrison_web` and `garrison_bot` roles given test passwords.
 - `next dev` started with `DISCORD_API_BASE=http://127.0.0.1:4100`,
   `DISCORD_TOKEN=test-bot-token`, `WEB_DATABASE_URL` pointing at that Postgres.
-- A row in `web_sessions` and its cookie (`garrison_session` in development) to
-  be signed in. The mock knows one server, `111111111111111111`.
+- A row in `web_sessions` (its `token_hash` is the SHA-256 of the cookie value)
+  and its cookie (`garrison_session` in development, `__Host-garrison_session`
+  in a production build) to be signed in. The mock knows one server,
+  `111111111111111111`.
+- To see "Needs attention", insert an active `lockdowns` row, a `quarantines`
+  row, a `failed` row in `dashboard_actions`, or an `ops_events` raid a few hours
+  out with few `ops_signups`.
 
 Requests queued locally stay "Queued" until they expire, because nothing claims
 them. To see a Quartermaster plan, insert a `qm_builds` row with status `pending`.

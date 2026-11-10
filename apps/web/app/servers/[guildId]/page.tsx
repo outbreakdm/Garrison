@@ -5,17 +5,27 @@ import {
   getHealthSnapshot,
   getLatency,
   getOverview,
+  getSetupFacts,
+  listDashboardActions,
+  listOpenQuarantines,
   listQmBuilds,
   listRecentCases,
   listSignups,
+  listUpcomingOps,
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ActionBadge, formatTime, plainMentions } from "@/components/format";
+import { NeedsAttention, SetupChecklist } from "@/components/NeedsAttention";
+import { Outcome } from "@/components/Outcome";
 import { RequestsPanel } from "@/components/RequestsPanel";
+import { SettingsNotice } from "@/components/settings";
+import { needsAttention, SHORT_RAID_WINDOW_MS, setupSteps, showSetup } from "@/lib/attention";
 import { getDb } from "@/lib/db";
+import { errorAt, latestOutcome } from "@/lib/outcome";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "./requests";
+import { hideSetup } from "./settings/actions";
 
 export const metadata: Metadata = { title: "Overview" };
 
@@ -28,16 +38,49 @@ export default async function OverviewPage({
 }) {
   const { guildId } = await params;
   const query = await searchParams;
-  const { guild } = await requireGuildAccess(guildId);
+  const { guild, session } = await requireGuildAccess(guildId);
   const db = await getDb();
-  const [o, cases, activity, latency, health, [build]] = await Promise.all([
-    getOverview(db, guild.id),
-    listRecentCases(db, guild.id, 5),
-    getActivity(db, guild.id),
-    getLatency(db, guild.id),
-    getHealthSnapshot(db, guild.id),
-    listQmBuilds(db, guild.id, 1),
-  ]);
+  const [o, cases, activity, latency, health, [build], quarantines, raids, actions, facts] =
+    await Promise.all([
+      getOverview(db, guild.id),
+      listRecentCases(db, guild.id, 5),
+      getActivity(db, guild.id),
+      getLatency(db, guild.id),
+      getHealthSnapshot(db, guild.id),
+      listQmBuilds(db, guild.id, 1),
+      listOpenQuarantines(db, guild.id),
+      listUpcomingOps(db, guild.id),
+      listDashboardActions(db, guild.id, 50),
+      // Fails until migration 0022 is applied. The overview still works, without the checklist.
+      getSetupFacts(db, guild.id).catch(() => null),
+    ]);
+  const now = new Date();
+  // Signups only for the raids the page shows: the next one, and any starting soon.
+  const soon = raids
+    .filter((r) => r.startsAt.getTime() - now.getTime() <= SHORT_RAID_WINDOW_MS)
+    .slice(0, 5);
+  const shown = o.nextOp && !soon.some((r) => r.id === o.nextOp?.id) ? [...soon, o.nextOp] : soon;
+  const signups = new Map(
+    await Promise.all(shown.map(async (r) => [r.id, await listSignups(db, r.id)] as const)),
+  );
+  const attention = needsAttention({
+    now,
+    lockdown: o.activeLockdown,
+    quarantines,
+    build: build ?? null,
+    raids: soon.map((r) => ({
+      ...r,
+      seated: (signups.get(r.id) ?? []).filter((x) => !x.bench),
+    })),
+    actions,
+    health,
+  });
+  const steps = facts ? setupSteps(facts) : [];
+  const healthOutcome = latestOutcome(actions, {
+    userId: session.userId,
+    kinds: ["run_health"],
+    now,
+  });
   const clientId = process.env.DISCORD_CLIENT_ID;
   const fixUrl = clientId && /^\d+$/.test(clientId) ? inviteUrl(clientId, guild.id) : null;
   const ago = (d: Date) => {
@@ -48,7 +91,7 @@ export default async function OverviewPage({
         ? `${Math.round(m / 60)} h ago`
         : `${Math.round(m / 1440)} d ago`;
   };
-  const nextSignups = o.nextOp ? await listSignups(db, o.nextOp.id) : [];
+  const nextSignups = o.nextOp ? (signups.get(o.nextOp.id) ?? []) : [];
   const g = o.gatehouse;
 
   return (
@@ -76,7 +119,12 @@ export default async function OverviewPage({
           </div>
         ) : null}
       </div>
-      <RequestsPanel guildId={guild.id} kinds={["run_health"]} query={query} />
+      <SettingsNotice query={query} />
+      <NeedsAttention guildId={guild.id} items={attention} />
+      {facts && showSetup(facts, steps) ? (
+        <SetupChecklist guildId={guild.id} steps={steps} hide={hideSetup} />
+      ) : null}
+      <RequestsPanel guildId={guild.id} kinds={["run_health"]} query={query} actions={actions} />
 
       <div className="grid-stats">
         <div className="g-card">
@@ -189,7 +237,7 @@ export default async function OverviewPage({
         </div>
       </div>
       <div className="grid-cards">
-        <div className="g-card card-col">
+        <div className="g-card card-col" id="health">
           <div className="row-between">
             <span className="g-label">Health checks</span>
             {health ? <span className="mono">{ago(health.computedAt)}</span> : null}
@@ -220,11 +268,13 @@ export default async function OverviewPage({
               <input type="hidden" name="guildId" value={guild.id} />
               <input type="hidden" name="page" value="" />
               <input type="hidden" name="kind" value="run_health" />
+              <input type="hidden" name="at" value="health" />
               <button type="submit" className="g-btn g-btn--secondary">
                 Run health check
               </button>
             </form>
           </div>
+          <Outcome action={healthOutcome} error={errorAt(query, "health")} />
         </div>
         <div className="g-card card-col">
           <span className="g-label">Open groups</span>
