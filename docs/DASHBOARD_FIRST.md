@@ -16,6 +16,10 @@ then update the Status section before stopping.
 | 4 | Member pages: people without Manage Server use the site too | Not started, needs an owner decision (below) |
 | 5 | Landing page and README copy say "dashboard first" | Not started. **Next** unless phase 4 is a yes. The README's command lines were corrected in phase 3 |
 
+**Layout pass** (after phase 3): done on branch `claude/sweet-sagan-jrl5aa`, not
+deployed yet. Dashboard only, apart from one health-check sentence in the bot, so
+`target=dashboard` is enough. See "What the layout pass changed".
+
 Open decisions for the owner:
 
 - **Member pages (phase 4): in or out?** Today the dashboard opens only for people
@@ -122,6 +126,43 @@ Not yet proven in real Discord: the new replies were tested with unit tests
 server. After deploying, run `/dashboard`, `/moderation` and `/ranks reward`
 once and press their buttons.
 
+## What the layout pass changed
+
+Every page was gone over for how easy it is to read and find things.
+
+- **One name per page, in plain words.** `apps/web/lib/pages.ts` names every page
+  once: Moderation (Watch), Security (Gatehouse), Event log (Ledger), Groups and
+  raids (Rally), Game accounts (Barracks), Levels (Ranks), Server builder
+  (Quartermaster). The menu, each page's title, the search index and the Settings
+  page read from it. The module name stays small beside the title, because
+  members see it in Discord ("Watch · case #14"). URLs didn't change.
+- **Menu and top bar.** The menu is grouped Safety, Community, Setup. The top bar
+  has one menu for the signed-in person (account, theme, sign out), so it stays
+  one row on a phone.
+- **Headings.** `PageHead` and `CardHead` (`components/PageHead.tsx`) give every
+  page a title, a sentence on what it's for, and real `h2` card titles. Sub-pages
+  (a member, LFG templates, your account) link back to the page above them.
+- **Requests.** `RequestsPanel` shows only what is in progress or finished in the
+  last ten minutes; `RequestsHistory` folds earlier ones away at the bottom of
+  the page. Both take the page's own `actions`; a member's page passes `match`
+  so it lists only requests about that member.
+- **One way in.** Page settings are a `SettingsPanel` at the bottom of the page,
+  opened by the "Settings" link in the page head. Forms opened from page-head
+  buttons (`form-card`) aren't shown while closed.
+- **Per page.** Overview: plain-word numbers, the next raid with how full each
+  role is, security and health beside it. Moderation: search and cases first,
+  then what warnings lead to, then settings. Security: lockdown on top, each
+  protection explained with its state. Event log: member names instead of IDs,
+  and the member filter takes a name. Levels: rewards show the rows in use plus
+  two blank ones, and clearing a row's role removes that reward.
+- **Times** read "3 h ago" (`<When>` in `components/format.tsx`, `lib/time.ts`),
+  with the exact time on hover.
+
+Checked on a production build: every page at 1280 and 390 px wide returns 200
+with no console or CSP errors and no sideways scroll; the changed interactions
+were driven in a browser; `apps/web/e2e/settings.e2e.cjs` passes. That script
+needs a fresh database: it assumes the server has one Moderation settings change.
+
 ## Phase 4: member pages (if the owner says yes)
 
 A signed-in member of a server without Manage Server gets a reduced view: open
@@ -168,8 +209,11 @@ preview.
   token and queues requests. Never trust the row: the bot re-validates.
 - **The repo is public.** Never commit `.env*`, `.claude/launch.json`, or
   anything with a real ID, token or name in it.
+- **Names**: a page is called what `apps/web/lib/pages.ts` calls it, everywhere.
+  Add a page there first. Don't write "Watch page" or "Ledger" in dashboard copy.
 - **Copy**: plain words, no eyebrow labels above headings, say what happened and
-  what to do next. Settings live on the page they affect; the Settings page keeps
+  what to do next. Card and section titles are headings (`CardHead`, `h2`), not
+  `g-label`; keep `g-label` for table headers and small field labels. Settings live on the page they affect; the Settings page keeps
   only server-wide and account settings.
 - **Checks before pushing**: `pnpm -r exec tsc --noEmit`, `pnpm test`,
   `pnpm exec biome check apps packages` (warnings about
