@@ -53,16 +53,36 @@ function explain(error) {
   return null;
 }
 
+// Anything that goes wrong past this point, in plain words rather than a stack trace.
+process.on("uncaughtException", (error) =>
+  stop(
+    explain(error) ?? "Something went wrong.",
+    `Postgres said: ${error.message ?? error}`,
+    error.code === "42501"
+      ? "This login isn't allowed to change the database. Migrations need the admin login (user postgres.<project-ref>)."
+      : "",
+  ),
+);
+
+const fromShell = Boolean(process.env.DATABASE_MIGRATION_URL);
 loadEnv(rootEnv);
-const url = process.env.DATABASE_MIGRATION_URL ?? process.env.DATABASE_URL ?? "";
+// Only the admin string: DATABASE_URL is the bot's login, which can't change tables.
+const url = process.env.DATABASE_MIGRATION_URL ?? "";
+const source = fromShell
+  ? "DATABASE_MIGRATION_URL set in this shell"
+  : `DATABASE_MIGRATION_URL in ${rootEnv}`;
 if (!url)
   stop(
     "DATABASE_MIGRATION_URL isn't set.",
     `Put it in ${rootEnv}, or set it in this shell first:`,
     "  PowerShell:  $env:DATABASE_MIGRATION_URL = 'postgresql://...'",
     "  macOS/Linux: export DATABASE_MIGRATION_URL='postgresql://...'",
+    "Use the admin login: Supabase → Connect → Session pooler, user postgres.<project-ref>.",
     existsSync(`${rootEnv}.txt`) ? `Found ${rootEnv}.txt: rename it to .env.` : "",
   );
+// The project ref, from a Supabase pooler user like garrison_web.abcd1234.
+const ref =
+  decodeURIComponent(url.split("://")[1]?.split(":")[0] ?? "").split(".")[1] ?? "<project-ref>";
 
 // A password with @ or # breaks the URL in ways that read as a wrong host.
 const afterScheme = url.split("://")[1] ?? "";
@@ -105,6 +125,23 @@ try {
   });
   const [me] = await sql`select current_user as user, current_database() as db`;
   console.log(`Connected as ${me.user} to ${me.db}.`);
+  // Garrison's own logins can use its data but not change its tables.
+  const [{ owner, canAlter }] = await sql`
+    select pg_get_userbyid(c.relowner) as owner,
+           pg_has_role(current_user, c.relowner, 'MEMBER') as "canAlter"
+    from (select to_regclass('public.guilds') as oid) g
+    left join pg_class c on c.oid = g.oid`;
+  if (/^garrison_/.test(me.user) || (owner && !canAlter))
+    stop(
+      `That's the wrong login: ${me.user} ${
+        /^garrison_/.test(me.user)
+          ? "is one of Garrison's own logins, which can use its data but not change its tables."
+          : `can't change Garrison's tables (they belong to ${owner}).`
+      }`,
+      "Migrations need the admin login: Supabase → Connect → Session pooler, with",
+      `user postgres.${ref} and your database password (not garrison_web or garrison_bot).`,
+      `The string came from ${source}.`,
+    );
 } catch (error) {
   stop("Couldn't connect.", explain(error) ?? "", `Postgres said: ${error.message ?? error}`);
 }
