@@ -1,11 +1,13 @@
 import type { EmbedTone } from "@garrison/brand";
 import type { ModCase } from "@garrison/db";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, type EmbedBuilder } from "discord.js";
+import { serverUrl } from "../../lib/dashboard.js";
 import { formatDuration } from "../../lib/duration.js";
 import { brandEmbed } from "../../lib/embeds.js";
 import { safeText } from "../../lib/text.js";
 import {
   actionNoun,
+  canUndo,
   confirmationTitle,
   DEFAULT_APPEAL_TEXT,
   dmTitle,
@@ -113,6 +115,26 @@ export function undoRow(c: Pick<ModCase, "caseNumber">, disabled = false) {
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(disabled),
   );
+}
+
+/**
+ * The buttons under a case: Undo, when it can be undone (shown disabled once
+ * it has been), and a link to the member's page on the dashboard. Null when
+ * there's neither.
+ */
+export function caseRow(
+  c: Pick<ModCase, "caseNumber" | "guildId" | "targetId" | "action" | "revokedAt">,
+  opts: { undone?: boolean } = {},
+) {
+  const buttons: ButtonBuilder[] = [];
+  if (opts.undone || (canUndo(c.action) && !c.revokedAt))
+    buttons.push(...undoRow(c, Boolean(opts.undone)).components);
+  const url = c.targetId ? serverUrl(c.guildId, `watch/member/${c.targetId}`) : null;
+  if (url)
+    buttons.push(
+      new ButtonBuilder().setStyle(ButtonStyle.Link).setURL(url).setLabel("Open in dashboard"),
+    );
+  return buttons.length ? new ActionRowBuilder<ButtonBuilder>().addComponents(buttons) : null;
 }
 
 export function confirmationEmbedForPurge(

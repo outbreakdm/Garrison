@@ -1,17 +1,18 @@
-import { searchLedger, updateLedgerSettings } from "@garrison/db";
-import { ChannelType, PermissionFlagsBits } from "discord.js";
+import { searchLedger } from "@garrison/db";
+import { PermissionFlagsBits } from "discord.js";
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { Command } from "../../commands/types.js";
+import { linkRow, serverUrl, settingsReply } from "../../lib/dashboard.js";
 import { brandEmbed } from "../../lib/embeds.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { safeText } from "../../lib/text.js";
 import { TYPE_LABELS } from "./describe.js";
-import { cachedLedgerSettings, invalidateLedgerSettings } from "./service.js";
+import { cachedLedgerSettings } from "./service.js";
 
 export const logs: Command = {
   data: guildCommand(
     "logs",
-    "Search the server's event log, or choose where events are posted.",
+    "Search the server's event log, or see where events are posted.",
     PermissionFlagsBits.ManageGuild,
   )
     .addSubcommand((s) =>
@@ -25,23 +26,7 @@ export const logs: Command = {
     .addSubcommand((s) =>
       s
         .setName("settings")
-        .setDescription("Where events are posted, and how long they're kept")
-        .addChannelOption((o) =>
-          o
-            .setName("channel")
-            .setDescription("Post each event here")
-            .addChannelTypes(ChannelType.GuildText),
-        )
-        .addBooleanOption((o) =>
-          o.setName("stop_posting").setDescription("Keep events in the dashboard only"),
-        )
-        .addIntegerOption((o) =>
-          o
-            .setName("keep_days")
-            .setDescription("Days to keep events, 7 to 365 (default: 30)")
-            .setMinValue(7)
-            .setMaxValue(365),
-        ),
+        .setDescription("Where events are posted and how long they're kept, set on the dashboard"),
     )
     .toJSON(),
   async execute(interaction, ctx) {
@@ -51,6 +36,7 @@ export const logs: Command = {
     if (interaction.options.getSubcommand() === "search") {
       const user = interaction.options.getUser("user", true);
       const events = await searchLedger(ctx.db, { guildId: guild.id, userId: user.id, limit: 15 });
+      const url = serverUrl(guild.id, `ledger?user=${user.id}`);
       const lines = events.map((e) => {
         const when = `<t:${Math.floor(e.createdAt.getTime() / 1000)}:R>`;
         const role = e.actorId === user.id ? "did" : "to them";
@@ -66,38 +52,31 @@ export const logs: Command = {
             ref: `latest ${events.length}`,
           }),
         ],
+        components: url ? [linkRow(url, "All their events")] : [],
         ...ephemeral,
       });
       return;
     }
 
-    const channel = interaction.options.getChannel("channel");
-    const stop = interaction.options.getBoolean("stop_posting");
-    const keep = interaction.options.getInteger("keep_days");
-    const patch: { channelId?: string | null; retentionDays?: number } = {};
-    if (channel) patch.channelId = channel.id;
-    if (stop) patch.channelId = null;
-    if (keep !== null) patch.retentionDays = keep;
-    const s = Object.keys(patch).length
-      ? await updateLedgerSettings(ctx.db, guild.id, patch)
-      : await cachedLedgerSettings(ctx, guild.id);
-    invalidateLedgerSettings(guild.id);
-    await interaction.reply({
-      embeds: [
-        brandEmbed({
-          title: Object.keys(patch).length ? "Saved. Ledger settings updated" : "Ledger settings",
+    const settings = await cachedLedgerSettings(ctx, guild.id);
+    await interaction.reply(
+      settingsReply({
+        subject: "Ledger settings are",
+        url: serverUrl(guild.id, "ledger?edit=settings#settings"),
+        label: "Change Ledger settings",
+        embed: brandEmbed({
+          title: "Ledger settings",
           fields: [
             {
               name: "Posting to",
-              value: s.channelId ? `<#${s.channelId}>` : "Dashboard only",
+              value: settings.channelId ? `<#${settings.channelId}>` : "Dashboard only",
               inline: true,
             },
-            { name: "Kept for", value: `${s.retentionDays} days`, inline: true },
+            { name: "Kept for", value: `${settings.retentionDays} days`, inline: true },
           ],
           module: "ledger",
         }),
-      ],
-      ...ephemeral,
-    });
+      }),
+    );
   },
 };

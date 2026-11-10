@@ -8,6 +8,7 @@ import {
 } from "@garrison/db";
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { Command } from "../../commands/types.js";
+import { dashboardBase } from "../../lib/dashboard.js";
 import { brandEmbed } from "../../lib/embeds.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { safeText } from "../../lib/text.js";
@@ -31,8 +32,8 @@ function rateLimited(userId: string) {
 }
 
 function dashboardUrl(path: string) {
-  const base = process.env.APP_URL;
-  return base && /^https?:\/\//.test(base) ? `${base.replace(/\/$/, "")}${path}` : null;
+  const base = dashboardBase();
+  return base ? `${base}${path}` : null;
 }
 
 export const link: Command = {

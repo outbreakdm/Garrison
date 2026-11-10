@@ -8,6 +8,7 @@ import {
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } from "discord.js";
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { ButtonHandler, Command } from "../../commands/types.js";
+import { serverUrl } from "../../lib/dashboard.js";
 import { brandEmbed } from "../../lib/embeds.js";
 import { safeText } from "../../lib/text.js";
 import { describePlan, type ServerSnapshot } from "./plan.js";
@@ -17,10 +18,15 @@ export const QM_PREFIX = "qm";
 const UUID = /^[0-9a-f-]{36}$/;
 const NOT_SET_UP = "Quartermaster isn't set up on this Garrison: the bot has no Claude API key.";
 
-const row = (...buttons: ButtonBuilder[]) =>
-  new ActionRowBuilder<ButtonBuilder>().addComponents(buttons);
+const row = (...buttons: (ButtonBuilder | null)[]) =>
+  new ActionRowBuilder<ButtonBuilder>().addComponents(buttons.filter((b) => b !== null));
 const button = (id: string, label: string, style: ButtonStyle) =>
   new ButtonBuilder().setCustomId(id).setLabel(label).setStyle(style);
+/** A link to the Quartermaster page, where the plan shows as the server with it slotted in. */
+const dashboardLink = (guildId: string, anchor: string, label: string) => {
+  const url = serverUrl(guildId, `quartermaster${anchor}`);
+  return url ? new ButtonBuilder().setStyle(ButtonStyle.Link).setURL(url).setLabel(label) : null;
+};
 
 function planEmbed(build: QmBuild, server: ServerSnapshot, notes: string) {
   const lines = describePlan(build.plan, server).map((l) => safeText(l));
@@ -92,6 +98,9 @@ export const qm: Command = {
             module: "quartermaster",
           }),
         ],
+        components: [row(dashboardLink(guild.id, "", "Open in dashboard"))].filter(
+          (r) => r.components.length,
+        ),
         ...ephemeral,
       });
       return;
@@ -151,6 +160,7 @@ export const qm: Command = {
             ButtonStyle.Primary,
           ),
           button(`${QM_PREFIX}:cancel:${outcome.build.id}`, "Cancel", ButtonStyle.Secondary),
+          dashboardLink(guild.id, "#plan", "See it on the dashboard"),
         ),
       ],
     });
@@ -226,6 +236,7 @@ export const qmButtons: ButtonHandler = {
               `Undo v${build.version}`,
               ButtonStyle.Secondary,
             ),
+            dashboardLink(interaction.guild.id, `#build-${build.version}`, "Open in dashboard"),
           ),
         ],
       });

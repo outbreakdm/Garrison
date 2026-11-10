@@ -113,7 +113,7 @@ export const ranksForm = z
 
 export const ledgerForm = z.object({
   channelId: snowflakeOrNone,
-  // Matches /logs settings and the database check; ledger_prune() clamps to the same range.
+  // Matches the database check; ledger_prune() clamps to the same range.
   retentionDays: int(7, 365, "Keep events for"),
 });
 

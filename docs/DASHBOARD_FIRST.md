@@ -11,10 +11,10 @@ then update the Status section before stopping.
 | Phase | What | State |
 |---|---|---|
 | 1 | Nothing is Discord-only for managers | **Done**, deployed from branch `dashboard-first` |
-| 2 | Dashboard as home: what needs attention, setup checklist, instant feedback | **Done** on branch `claude/sweet-sagan-jrl5aa`, not deployed yet. Needs migration `0022` |
-| 3 | Slim the bot: settings commands become link replies, `/dashboard`, link buttons | Not started. **Next.** Owner chose link replies |
+| 2 | Dashboard as home: what needs attention, setup checklist, instant feedback | **Done** on branch `claude/sweet-sagan-jrl5aa`, not deployed yet. Migrations `0021` and `0022` are applied in production (by hand) |
+| 3 | Slim the bot: settings commands become link replies, `/dashboard`, link buttons | **Done** on branch `claude/sweet-sagan-jrl5aa`, not deployed yet. Deploy `everything` with `register_commands=true` |
 | 4 | Member pages: people without Manage Server use the site too | Not started, needs an owner decision (below) |
-| 5 | Landing page and README copy say "dashboard first" | Not started |
+| 5 | Landing page and README copy say "dashboard first" | Not started. **Next** unless phase 4 is a yes. The README's command lines were corrected in phase 3 |
 
 Open decisions for the owner:
 
@@ -85,25 +85,42 @@ checked in a browser against the local stand-in (hide and undo the checklist,
 withdraw from a raid, a cooldown error on a raid card, warn from a member page),
 and a production build showed no CSP violations on any server page.
 
-## Phase 3: a smaller bot (next)
+## What phase 3 added
 
-The owner chose link replies: the settings commands stay registered, but only
-point at the dashboard.
+Settings are changed only on the dashboard now, so every change is in Settings
+history with undo. Discord keeps the actions and lookups.
 
-1. Add `/dashboard`: replies with a link button to the server's dashboard.
-2. Settings commands (`/moderation`, `/security`, `/verify setup`,
-   `/ledger settings`, `/ranks settings|reward|unreward`, `/raid timezone`) reply
-   with a link to the matching page instead of changing anything. The page map is
-   `PLACES` in `apps/web/app/servers/[guildId]/settings/actions.ts`; link to the
-   panel with `?edit=<panel>#<panel>`, as the setup checklist does
-   (`setupSteps` in `apps/web/lib/attention.ts`). Reply ephemerally, and keep the
-   command's permission check so the link only goes to people who can use it.
-3. Add a link button ("Open in dashboard") to case confirmations, raid cards and
-   Quartermaster plan embeds.
-4. Keep as they are: `/warn`, `/timeout`, `/kick`, `/ban`, `/purge`, `/lfg`,
-   `/raid create`, `/rank`, `/leaderboard`, `/lockdown`, and every button on a
-   card. These are the "double capabilities".
-5. Re-register commands on deploy (`register_commands=true`).
+- **`/dashboard`** (Manage Server): a link button to the server's dashboard.
+- **Settings commands show and link.** `/moderation`, `/security`, `/verify
+  setup|off`, `/logs settings`, `/ranks settings|reward|unreward` and `/raid
+  timezone` take no options any more. Each replies privately with the current
+  values and a button to the page and panel that changes them (`settingsReply`
+  in `apps/bot/src/lib/dashboard.ts`). A test fails if any of them gets an option
+  back.
+- **Links on private replies**: case confirmations, `/case` and `/history` (the
+  member's page), `/logs search` (their Ledger events), `/raid list` (Rally),
+  Quartermaster plans ("See it on the dashboard", the visual preview), built
+  plans and `/qm history`.
+- **Not on public cards.** Raid and group cards are seen by every member, and
+  only managers can open the dashboard, so they get no link until phase 4 is
+  decided. If phase 4 is a yes, add one there.
+- Health checks, the anti-nuke bot-kick alert, the Verify error and the Ranks
+  "off" message point at the dashboard instead of old command options.
+- **The bot now knows the dashboard's address.** It reads `APP_URL`, which the
+  Cloudflare bot never received before (so `/link accounts` said the dashboard
+  wasn't set up). `scripts/cf-config.mjs` fills it into
+  `apps/bot-cloudflare/wrangler.jsonc` from the same GitHub variable as the
+  dashboard, and `docker-compose.yml` passes it too. Without it, replies say the
+  bot doesn't know the dashboard's address and show no buttons.
+
+Kept as they are: `/warn`, `/timeout`, `/kick`, `/ban`, `/purge`, `/lfg`, `/raid
+create|list`, `/rank`, `/leaderboard`, `/lockdown`, `/case`, `/history`, `/logs
+search`, `/qm`, `/link`, `/roster`, `/health`, and every button on a card.
+
+Not yet proven in real Discord: the new replies were tested with unit tests
+(`apps/bot/src/lib/dashboard.test.ts`) against a test database, not a live
+server. After deploying, run `/dashboard`, `/moderation` and `/ranks reward`
+once and press their buttons.
 
 ## Phase 4: member pages (if the owner says yes)
 
@@ -179,10 +196,14 @@ Everything older keeps working. Both are safe to re-run.
 `pnpm db:migrate` is `packages/db/scripts/migrate.mjs`, not `drizzle-kit migrate`
 (which hides the database's error). It reads the root `.env` in any encoding,
 applies each missing migration in its own transaction, keeps drizzle's record so
-drizzle-kit agrees, and explains connection errors. The production database was
-first set up with Supabase's tools, without that record; the script spots this,
-says which migrations are there, and prints the `--baseline` command to record
-them before applying the rest.
+drizzle-kit agrees, and explains connection errors, including using
+`garrison_web` or `garrison_bot` instead of the admin login. For a database
+built without drizzle's record it says which migrations are there and prints a
+`--baseline` command.
+
+`0021` and `0022` were applied to production by hand, so drizzle's record there
+doesn't list them: the next `pnpm db:migrate` runs them again (harmless, both
+are idempotent) before any newer one.
 
 ## Art
 

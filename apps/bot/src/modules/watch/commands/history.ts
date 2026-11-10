@@ -1,6 +1,7 @@
 import { listCasesForTarget } from "@garrison/db";
 import { PermissionFlagsBits } from "discord.js";
 import type { Command } from "../../../commands/types.js";
+import { linkRow, serverUrl } from "../../../lib/dashboard.js";
 import { formatDuration } from "../../../lib/duration.js";
 import { brandEmbed } from "../../../lib/embeds.js";
 import { safeText } from "../../../lib/text.js";
@@ -20,6 +21,8 @@ export const history: Command = {
   async execute(interaction, ctx) {
     const user = interaction.options.getUser("user", true);
     const cases = await listCasesForTarget(ctx.db, interaction.guild.id, user.id, LIMIT);
+    // Every case, their rank and roles, and moderation buttons.
+    const url = serverUrl(interaction.guild.id, `watch/member/${user.id}`);
     if (!cases.length) {
       await interaction.reply({
         content: `<@${user.id}> has no cases. Clean record.`,
@@ -48,6 +51,7 @@ export const history: Command = {
           ref: cases.length === LIMIT ? `latest ${LIMIT}` : `${cases.length} cases`,
         }),
       ],
+      components: url ? [linkRow(url, "Open in dashboard")] : [],
       ...ephemeral,
     });
   },

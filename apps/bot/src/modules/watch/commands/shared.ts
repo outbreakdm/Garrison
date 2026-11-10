@@ -1,8 +1,8 @@
 import type { ChatInputCommandInteraction } from "discord.js";
 import { ephemeral } from "../../../commands/builders.js";
 import type { BotContext } from "../../../commands/types.js";
-import { canUndo, type MemberAction } from "../copy.js";
-import { confirmationEmbed, undoRow } from "../embeds.js";
+import type { MemberAction } from "../copy.js";
+import { caseRow, confirmationEmbed } from "../embeds.js";
 import { applyMemberAction, checkMemberAction } from "../service.js";
 
 export const REASON_MAX = 512;
@@ -57,6 +57,6 @@ export async function runMemberAction(
     embeds: [
       confirmationEmbed(result.case, { dmSent: result.dmSent, escalated: result.escalated }),
     ],
-    components: canUndo(result.case.action) ? [undoRow(result.case)] : [],
+    components: [caseRow(result.case)].filter((r) => r !== null),
   });
 }

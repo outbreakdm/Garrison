@@ -167,7 +167,7 @@ async function quarantineActor(ctx: BotContext, guild: Guild, userId: string, re
         alertEmbed(
           `Kicked the bot ${member.user.username}`,
           reason,
-          "Bots that trip anti-nuke are kicked. Re-invite it only if you trust it, and add it with /security trusted_add.",
+          "Bots that trip anti-nuke are kicked. Re-invite it only if you trust it, and have the owner add it to anti-nuke's trusted list in the dashboard, under Security.",
         ),
       );
       return;

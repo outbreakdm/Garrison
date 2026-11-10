@@ -7,7 +7,6 @@ import {
   listSignups,
   listUpcomingOps,
   setOpsMessage,
-  setOpsTimezone,
   signUp,
   withdraw,
 } from "@garrison/db";
@@ -20,6 +19,7 @@ import {
 } from "discord.js";
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { ButtonHandler, Command, ModalHandler } from "../../commands/types.js";
+import { linkRow, serverUrl, settingsReply } from "../../lib/dashboard.js";
 import { brandEmbed } from "../../lib/embeds.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { safeText } from "../../lib/text.js";
@@ -81,14 +81,7 @@ export const raid: Command = {
     .addSubcommand((s) =>
       s
         .setName("timezone")
-        .setDescription("Set the server's default time zone for raids")
-        .addStringOption((o) =>
-          o
-            .setName("name")
-            .setDescription("e.g. America/Chicago")
-            .setRequired(true)
-            .setMaxLength(64),
-        ),
+        .setDescription("See the server's time zone for raids, with a link to change it"),
     )
     .toJSON(),
   async execute(interaction, ctx) {
@@ -97,16 +90,15 @@ export const raid: Command = {
     const sub = interaction.options.getSubcommand();
 
     if (sub === "timezone") {
-      const tz = parseTimeZone(interaction.options.getString("name", true), "UTC");
-      if (!tz.ok) {
-        await interaction.reply({ content: tz.error, ...ephemeral });
-        return;
-      }
-      await setOpsTimezone(ctx.db, guild.id, tz.value);
-      await interaction.reply({
-        content: `Saved. Raids use ${tz.value} unless you say otherwise.`,
-        ...ephemeral,
-      });
+      const zone = await getOpsTimezone(ctx.db, guild.id);
+      await interaction.reply(
+        settingsReply({
+          subject: `Raids use ${zone} unless a raid says otherwise. The time zone is`,
+          url: serverUrl(guild.id, "settings#server"),
+          label: "Change the time zone",
+          note: "Opening the dashboard needs Manage Server.",
+        }),
+      );
       return;
     }
 
@@ -125,6 +117,7 @@ export const raid: Command = {
           : `<#${e.channelId}>`;
         return `[${safeText(e.title)}](${link}) · <t:${Math.floor(e.startsAt.getTime() / 1000)}:F>${e.repeatWeekly ? " · weekly" : ""}`;
       });
+      const url = serverUrl(guild.id, "rally");
       await interaction.reply({
         embeds: [
           brandEmbed({
@@ -133,6 +126,8 @@ export const raid: Command = {
             module: "ops",
           }),
         ],
+        // Rosters, the bench and signups, for whoever can open the dashboard.
+        components: url ? [linkRow(url, "Open in dashboard")] : [],
         ...ephemeral,
       });
       return;
