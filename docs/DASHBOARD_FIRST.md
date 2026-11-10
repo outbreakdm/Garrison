@@ -176,6 +176,14 @@ applied to the production database separately, from a machine that has
 until `0022_dashboard_home` is applied, the overview has no setup checklist.
 Everything older keeps working. Both are safe to re-run.
 
+`pnpm db:migrate` is `packages/db/scripts/migrate.mjs`, not `drizzle-kit migrate`
+(which hides the database's error). It reads the root `.env` in any encoding,
+applies each missing migration in its own transaction, keeps drizzle's record so
+drizzle-kit agrees, and explains connection errors. The production database was
+first set up with Supabase's tools, without that record; the script spots this,
+says which migrations are there, and prints the `--baseline` command to record
+them before applying the rest.
+
 ## Art
 
 1. Prompts for every slot are in `apps/web/art/PROMPTS.md` (written from
