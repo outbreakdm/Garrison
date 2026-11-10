@@ -8,8 +8,8 @@ import {
 } from "@garrison/db";
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { Command } from "../../commands/types.js";
-import { dashboardBase } from "../../lib/dashboard.js";
-import { brandEmbed } from "../../lib/embeds.js";
+import { dashboardBase, linkRow, NO_DASHBOARD } from "../../lib/dashboard.js";
+import { brandEmbed, done, failed, info } from "../../lib/embeds.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { safeText } from "../../lib/text.js";
 import { describeLink, providerLabel } from "./format.js";
@@ -20,6 +20,7 @@ const PROVIDER_CHOICES = Object.entries(linkProviders).map(([value, p]) => ({
   value,
 }));
 const ROSTER_LIMIT = 25;
+const SLOW_DOWN = "That's one lookup every 10 seconds. Try again in a moment.";
 
 /** Open to everyone: members link their own accounts. Each person gets one lookup every 10 s. */
 const lastUse = new Map<string, number>();
@@ -80,12 +81,17 @@ export const link: Command = {
 
     if (sub === "accounts") {
       const url = dashboardUrl("/account");
-      await interaction.reply({
-        content: url
-          ? `Link verified accounts on your Garrison account page: ${url}\nSign in with Discord, then choose what to link. Garrison never keeps your Discord or Battle.net password or token.`
-          : "Verified linking needs the Garrison dashboard, which isn't set up on this bot yet.",
-        ...ephemeral,
-      });
+      await interaction.reply(
+        url
+          ? {
+              ...info(
+                "Link Steam, Battle.net, Xbox, World of Warcraft and more on your Garrison account page. Sign in with Discord, then choose what to link.\nGarrison never keeps your Discord or Battle.net password or token.",
+              ),
+              components: [linkRow(url, "Open your account page")],
+              ...ephemeral,
+            }
+          : { ...failed(NO_DASHBOARD), ...ephemeral },
+      );
       return;
     }
 
@@ -93,9 +99,11 @@ export const link: Command = {
       const visible = interaction.options.getBoolean("visible", true);
       await setRosterShare(ctx.db, interaction.guild.id, user.id, user.username, visible);
       await interaction.reply({
-        content: visible
-          ? "Your linked accounts now show in this server's roster."
-          : "Your linked accounts are hidden from this server's roster.",
+        ...done(
+          visible
+            ? "Your linked accounts now show in this server's roster."
+            : "Your linked accounts are hidden from this server's roster.",
+        ),
         ...ephemeral,
       });
       return;
@@ -120,13 +128,13 @@ export const link: Command = {
 
     // osrs
     if (rateLimited(user.id)) {
-      await interaction.reply({ content: "One lookup every 10 s.", ...ephemeral });
+      await interaction.reply({ ...failed(SLOW_DOWN), ...ephemeral });
       return;
     }
     const name = interaction.options.getString("name", true);
     if (!isValidRsn(name)) {
       await interaction.reply({
-        content: "RuneScape names are 1 to 12 letters, numbers, spaces, hyphens or underscores.",
+        ...failed("RuneScape names are 1 to 12 letters, numbers, spaces, hyphens or underscores."),
         ...ephemeral,
       });
       return;
@@ -135,9 +143,11 @@ export const link: Command = {
     const result = await fetchHiscores(name);
     if (!result.ok) {
       await interaction.editReply(
-        result.reason === "not_found"
-          ? `I can't find ${safeText(name)} on the OSRS hiscores. Check the spelling: very new accounts don't appear until they've trained a little.`
-          : "The OSRS hiscores aren't answering. Try again in a minute.",
+        failed(
+          result.reason === "not_found"
+            ? `I can't find ${safeText(name)} on the OSRS hiscores. Check the spelling: very new accounts don't appear until they've trained a little.`
+            : "The OSRS hiscores aren't answering. Try again in a minute.",
+        ),
       );
       return;
     }
@@ -152,7 +162,9 @@ export const link: Command = {
     });
     await setRosterShare(ctx.db, interaction.guild.id, user.id, user.username, true);
     await interaction.editReply(
-      `Linked ${safeText(result.name)}: total ${result.stats.totalLevel}, combat ${result.stats.combatLevel}. It shows as claimed, because OSRS has no way to prove an account is yours. It's visible in this server's roster; hide it with /link share visible:false.`,
+      done(
+        `Linked ${safeText(result.name)}: total level ${result.stats.totalLevel}, combat ${result.stats.combatLevel}.\nIt shows as claimed, because Old School RuneScape has no way to prove an account is yours. It's visible in this server's roster; hide it with /link share visible:false.`,
+      ),
     );
   },
 };
@@ -175,9 +187,9 @@ export const unlink: Command = {
       ? " It came from your Discord Connections, so it comes back if you link accounts again while it's still connected in Discord."
       : "";
     await interaction.reply({
-      content: n
-        ? `Removed your ${providerLabel(provider)} link${n === 1 ? "" : "s"}.${note}`
-        : `You have no ${providerLabel(provider)} link.`,
+      ...(n
+        ? done(`Removed your ${providerLabel(provider)} link${n === 1 ? "" : "s"}.${note}`)
+        : failed(`You have no ${providerLabel(provider)} account linked.`)),
       ...ephemeral,
     });
   },
@@ -198,7 +210,7 @@ export const roster: Command = {
     .toJSON(),
   async execute(interaction, ctx) {
     if (rateLimited(interaction.user.id)) {
-      await interaction.reply({ content: "One lookup every 10 s.", ...ephemeral });
+      await interaction.reply({ ...failed(SLOW_DOWN), ...ephemeral });
       return;
     }
     const provider = interaction.options.getString("game") ?? undefined;
@@ -210,7 +222,6 @@ export const roster: Command = {
     await interaction.reply({
       embeds: [
         brandEmbed({
-          tone: "intel",
           title: provider ? `Roster · ${providerLabel(provider)}` : "Roster",
           description: lines.length
             ? lines.slice(0, 40).join("\n")

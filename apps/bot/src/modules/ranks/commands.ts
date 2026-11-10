@@ -3,7 +3,7 @@ import { PermissionFlagsBits } from "discord.js";
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { Command } from "../../commands/types.js";
 import { linkRow, serverUrl, settingsReply } from "../../lib/dashboard.js";
-import { brandEmbed } from "../../lib/embeds.js";
+import { brandEmbed, failed, info } from "../../lib/embeds.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { safeText } from "../../lib/text.js";
 import { progressBar } from "./rules.js";
@@ -20,6 +20,7 @@ function rateLimited(userId: string) {
   return false;
 }
 
+const SLOW_DOWN = "That's one lookup every 10 seconds. Try again in a moment.";
 const OFF = "Ranks are off in this server. A moderator can turn them on in the dashboard.";
 
 export const rank: Command = {
@@ -28,17 +29,17 @@ export const rank: Command = {
     .toJSON(),
   async execute(interaction, ctx) {
     if (rateLimited(interaction.user.id)) {
-      await interaction.reply({ content: "One rank lookup every 10 s.", ...ephemeral });
+      await interaction.reply({ ...failed(SLOW_DOWN), ...ephemeral });
       return;
     }
     if (!(await cachedRanksSettings(ctx, interaction.guild.id)).enabled) {
-      await interaction.reply({ content: OFF, ...ephemeral });
+      await interaction.reply({ ...failed(OFF), ...ephemeral });
       return;
     }
     const user = interaction.options.getUser("user") ?? interaction.user;
     const r = await getMemberRank(ctx.db, interaction.guild.id, user.id);
     if (!r) {
-      await interaction.reply({ content: `<@${user.id}> hasn't earned any XP yet.`, ...ephemeral });
+      await interaction.reply({ ...info(`<@${user.id}> hasn't earned any XP yet.`), ...ephemeral });
       return;
     }
     const { intoLevel, needed } = levelForXp(r.xp);
@@ -63,16 +64,16 @@ export const leaderboard: Command = {
   data: guildCommand("leaderboard", "Show the server's top 10 by XP.", null).toJSON(),
   async execute(interaction, ctx) {
     if (rateLimited(interaction.user.id)) {
-      await interaction.reply({ content: "One rank lookup every 10 s.", ...ephemeral });
+      await interaction.reply({ ...failed(SLOW_DOWN), ...ephemeral });
       return;
     }
     if (!(await cachedRanksSettings(ctx, interaction.guild.id)).enabled) {
-      await interaction.reply({ content: OFF, ...ephemeral });
+      await interaction.reply({ ...failed(OFF), ...ephemeral });
       return;
     }
     const top = await getLeaderboard(ctx.db, interaction.guild.id, 10);
     if (!top.length) {
-      await interaction.reply({ content: "Nobody has XP yet. Start talking.", ...ephemeral });
+      await interaction.reply({ ...info("Nobody has XP yet. Start talking."), ...ephemeral });
       return;
     }
     const lines = top.map(
@@ -151,7 +152,7 @@ export const ranks: Command = {
     const url = serverUrl(guild.id, "ranks?edit=rewards#rewards");
     if (sub === "rewards") {
       await interaction.reply({
-        content: list,
+        embeds: [brandEmbed({ title: "Level rewards", description: list, module: "ranks" })],
         components: url ? [linkRow(url, "Change level rewards")] : [],
         ...ephemeral,
       });

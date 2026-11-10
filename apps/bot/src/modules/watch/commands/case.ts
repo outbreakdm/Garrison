@@ -1,6 +1,7 @@
 import { getCase } from "@garrison/db";
 import { PermissionFlagsBits } from "discord.js";
 import type { Command } from "../../../commands/types.js";
+import { failed } from "../../../lib/embeds.js";
 import { caseEmbed, caseRow } from "../embeds.js";
 import { ephemeral, watchCommand } from "./shared.js";
 
@@ -19,7 +20,7 @@ export const caseCommand: Command = {
     const c = await getCase(ctx.db, interaction.guild.id, number);
     if (!c) {
       await interaction.reply({
-        content: `There is no case #${number} in this server.`,
+        ...failed(`There is no case #${number} in this server.`),
         ...ephemeral,
       });
       return;

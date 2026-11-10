@@ -3,7 +3,7 @@ import { PermissionFlagsBits } from "discord.js";
 import { ephemeral, guildCommand } from "../../../commands/builders.js";
 import type { ButtonHandler, Command } from "../../../commands/types.js";
 import { serverUrl, settingsReply } from "../../../lib/dashboard.js";
-import { brandEmbed } from "../../../lib/embeds.js";
+import { brandEmbed, done, failed } from "../../../lib/embeds.js";
 import { ensureGuild } from "../../../lib/guild-registry.js";
 import { VERIFY_BUTTON_ID } from "../embeds.js";
 import { verifyMember } from "../service.js";
@@ -59,6 +59,7 @@ export const verifyButton: ButtonHandler = {
   prefix: VERIFY_BUTTON_ID,
   async execute(interaction, ctx) {
     await interaction.deferReply(ephemeral);
-    await interaction.editReply(await verifyMember(ctx, interaction.member));
+    const result = await verifyMember(ctx, interaction.member);
+    await interaction.editReply(result.ok ? done(result.message) : failed(result.message));
   },
 };

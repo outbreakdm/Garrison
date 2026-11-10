@@ -20,6 +20,9 @@ then update the Status section before stopping.
 deployed yet. Dashboard only, apart from one health-check sentence in the bot, so
 `target=dashboard` is enough. See "What the layout pass changed".
 
+**Bot replies pass**: done on the same branch, not deployed. Bot only, so
+`target=bot`; commands didn't change shape, so `register_commands=false` is fine.
+
 Open decisions for the owner:
 
 - **Member pages (phase 4): in or out?** Today the dashboard opens only for people
@@ -215,6 +218,14 @@ preview.
   what to do next. Card and section titles are headings (`CardHead`, `h2`), not
   `g-label`; keep `g-label` for table headers and small field labels. Settings live on the page they affect; the Settings page keeps
   only server-wide and account settings.
+- **Bot replies are embeds, in three kinds only** (`apps/bot/src/lib/embeds.ts`):
+  no colour for most things (cards, lists, records, log lines, notices), green
+  (`done`) for a confirmation that what was asked for happened, red (`danger`)
+  for an error or a confirmation of something severe or hard to undo (kick, ban,
+  cleared messages, lockdown, security alerts, "are you sure?"). One-line replies
+  use `info()`, `done()` or `failed()`. Plain text is only for messages that have
+  to ping someone, because mentions inside an embed don't notify. A test fails
+  if an embed sets its own colour or a reply goes out as plain text.
 - **Checks before pushing**: `pnpm -r exec tsc --noEmit`, `pnpm test`,
   `pnpm exec biome check apps packages` (warnings about
   `noDescendingSpecificity` are known).

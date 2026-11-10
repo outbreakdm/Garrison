@@ -20,6 +20,7 @@ import {
 import { type Client, type Guild, type GuildMember, PermissionFlagsBits } from "discord.js";
 import { z } from "zod";
 import type { BotContext } from "../../commands/types.js";
+import { brandEmbed } from "../../lib/embeds.js";
 import { safeText } from "../../lib/text.js";
 import { restoreQuarantine } from "../gatehouse/anti-nuke.js";
 import { verifyPanel } from "../gatehouse/embeds.js";
@@ -168,11 +169,17 @@ async function doCallSignups(ctx: BotContext, guild: Guild, raw: unknown) {
   const channel = guild.channels.cache.get(event.channelId);
   if (!channel?.isSendable()) return fail("Garrison can't post in the raid's channel.");
   const link = event.messageId
-    ? ` Sign up: https://discord.com/channels/${guild.id}/${event.channelId}/${event.messageId}`
+    ? `\n[Sign up on the raid's card](https://discord.com/channels/${guild.id}/${event.channelId}/${event.messageId})`
     : "";
   const sent = await channel
     .send({
-      content: `**${safeText(event.title)}** <t:${Math.floor(event.startsAt.getTime() / 1000)}:R> still needs players: ${short}.${link}`,
+      embeds: [
+        brandEmbed({
+          title: `${safeText(event.title)} still needs players`,
+          description: `Starts <t:${Math.floor(event.startsAt.getTime() / 1000)}:R>. Needs ${short.replaceAll(" short", "")}.${link}`,
+          module: "ops",
+        }),
+      ],
       // Never pings: a call for signups is a message, not a mention.
       allowedMentions: { parse: [] },
     })

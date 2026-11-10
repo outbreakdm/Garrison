@@ -208,8 +208,9 @@ async function quarantineActor(ctx: BotContext, guild: Guild, userId: string, re
 }
 
 function alertEmbed(title: string, reason: string, detail: string, q?: Quarantine) {
+  // Anti-nuke only speaks when it has acted against someone: always red.
   return brandEmbed({
-    tone: "alert",
+    kind: "danger",
     title,
     description: detail,
     fields: [{ name: "Why", value: reason }],

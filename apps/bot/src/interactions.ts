@@ -1,6 +1,7 @@
 import { type Interaction, MessageFlags } from "discord.js";
 import { buttons, commandsByName, modals } from "./commands/index.js";
 import type { BotContext } from "./commands/types.js";
+import { failed } from "./lib/embeds.js";
 
 const FAILURE = "Something went wrong on my side. Try again in a moment.";
 
@@ -22,7 +23,7 @@ export async function handleInteraction(interaction: Interaction, ctx: BotContex
   if (!interaction.inCachedGuild()) {
     if (interaction.isRepliable()) {
       await interaction.reply({
-        content: "Garrison commands work inside a server.",
+        ...failed("Garrison commands work inside a server."),
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -54,9 +55,9 @@ export async function handleInteraction(interaction: Interaction, ctx: BotContex
     });
     try {
       if (interaction.deferred || interaction.replied) {
-        await interaction.followUp({ content: FAILURE, flags: MessageFlags.Ephemeral });
+        await interaction.followUp({ ...failed(FAILURE), flags: MessageFlags.Ephemeral });
       } else {
-        await interaction.reply({ content: FAILURE, flags: MessageFlags.Ephemeral });
+        await interaction.reply({ ...failed(FAILURE), flags: MessageFlags.Ephemeral });
       }
     } catch {
       // The interaction token may have expired; nothing more we can do.

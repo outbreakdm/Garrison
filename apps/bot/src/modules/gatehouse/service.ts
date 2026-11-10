@@ -316,20 +316,27 @@ export async function handleMemberJoin(ctx: BotContext, member: GuildMember) {
 
 // --- Verification ----------------------------------------------------------
 
-export async function verifyMember(ctx: BotContext, member: GuildMember): Promise<string> {
+/** How pressing Verify went: `ok` only when the member is (now or already) verified. */
+export async function verifyMember(
+  ctx: BotContext,
+  member: GuildMember,
+): Promise<{ ok: boolean; message: string }> {
+  const no = (message: string) => ({ ok: false, message });
   const settings = await getGatehouseSettings(ctx.db, member.guild.id);
-  if (!settings.verifyRoleId) return "Verification is off in this server.";
+  if (!settings.verifyRoleId) return no("Verification is off in this server.");
   const role = member.guild.roles.cache.get(settings.verifyRoleId);
   if (!role)
-    return "The verified role was deleted. Ask a moderator to pick a new one in the dashboard.";
-  if (member.roles.cache.has(role.id)) return "You're already verified.";
+    return no("The verified role was deleted. Ask a moderator to pick a new one in the dashboard.");
+  if (member.roles.cache.has(role.id)) return { ok: true, message: "You're already verified." };
 
   const days = accountAgeDays(member.user.createdTimestamp);
   if (days < settings.verifyMinAccountAgeDays) {
     const ready = new Date(
       member.user.createdTimestamp + settings.verifyMinAccountAgeDays * 86_400_000,
     );
-    return `Your account is ${describeAccountAge(days)}. This server needs accounts at least ${settings.verifyMinAccountAgeDays} days old. Try again <t:${Math.floor(ready.getTime() / 1000)}:R>.`;
+    return no(
+      `Your account is ${describeAccountAge(days)}. This server needs accounts at least ${settings.verifyMinAccountAgeDays} days old. Try again <t:${Math.floor(ready.getTime() / 1000)}:R>.`,
+    );
   }
 
   const me = member.guild.members.me ?? (await member.guild.members.fetchMe());
@@ -337,8 +344,10 @@ export async function verifyMember(ctx: BotContext, member: GuildMember): Promis
     !me.permissions.has(PermissionFlagsBits.ManageRoles) ||
     role.position >= me.roles.highest.position
   ) {
-    return `I can't give <@&${role.id}>: my role sits below it. Ask a moderator to drag Garrison above it in Server Settings → Roles.`;
+    return no(
+      `I can't give <@&${role.id}>: my role sits below it. Ask a moderator to drag Garrison above it in Server Settings → Roles.`,
+    );
   }
   await member.roles.add(role, "Passed verification");
-  return "Verified. Welcome in.";
+  return { ok: true, message: "You're verified. Welcome in." };
 }

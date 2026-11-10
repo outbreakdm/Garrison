@@ -161,7 +161,10 @@ describe("dashboard actions, run by the bot", () => {
     expect(row).toMatchObject({ status: "done" });
     const last = sent.at(-1)?.body;
     expect(last?.allowedMentions).toEqual({ parse: [] });
-    expect(String(last?.content)).toMatch(/2 Tank short, 3 Healer short, 5 DPS short/);
+    const embed = JSON.parse(JSON.stringify(last?.embeds))[0];
+    expect(embed.title).toBe("Molten Core still needs players");
+    expect(embed.description).toMatch(/Needs 2 Tank, 3 Healer, 5 DPS\./);
+    expect(embed.color).toBeUndefined();
   });
 
   it("moves a benched player onto a role with room, and not onto a full one", async () => {

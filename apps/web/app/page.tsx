@@ -127,7 +127,7 @@ export default async function Home() {
         </div>
 
         <figure className="hero__demo" aria-label="Examples of Garrison messages">
-          <div className="g-embed g-embed--alert">
+          <div className="g-embed g-embed--danger">
             <div className="g-embed__bar" />
             <div className="g-embed__body">
               <div className="g-embed__title">Server locked: raid detected</div>
@@ -152,7 +152,7 @@ export default async function Home() {
               <span className="g-slot">D</span>
             </div>
           </div>
-          <div className="g-embed">
+          <div className="g-embed g-embed--done">
             <div className="g-embed__bar" />
             <div className="g-embed__body">
               <div className="g-embed__title">Timeout applied to Kel for 1 h</div>

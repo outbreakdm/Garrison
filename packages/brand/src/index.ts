@@ -39,18 +39,22 @@ export const colors = {
 const hexToInt = (hex: string): number => Number.parseInt(hex.slice(1), 16);
 
 /**
- * Discord embed bar colours. Volt marks a normal message; the status colours
- * mark moderation and alerts, and are never used for decoration.
+ * Discord embeds come in three kinds, and only three, so the colour always
+ * means the same thing:
+ *
+ * - neutral: no colour. Most embeds: cards, lists, records, notices.
+ * - done: green. A confirmation that what was asked for happened.
+ * - danger: red. An error, or a confirmation of something severe or hard to
+ *   undo (a kick or ban, a lockdown, deleted messages, "are you sure?").
+ *
+ * Neutral has no entry here on purpose: its embed sets no colour at all.
  */
 export const embedColors = {
-  volt: hexToInt(colors.dark.accent),
-  go: hexToInt(colors.dark.go),
-  caution: hexToInt(colors.dark.caution),
-  alert: hexToInt(colors.dark.alert),
-  intel: hexToInt(colors.dark.intel),
+  done: hexToInt(colors.dark.go),
+  danger: hexToInt(colors.dark.alert),
 } as const;
 
-export type EmbedTone = keyof typeof embedColors;
+export type EmbedKind = "neutral" | keyof typeof embedColors;
 
 export const fonts = {
   display: '"Saira Semi Condensed", "Arial Narrow", sans-serif',

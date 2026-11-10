@@ -75,7 +75,8 @@ describe("Watch embeds", () => {
     const json = caseEmbed(baseCase).toJSON();
     expect(json.footer?.text).toBe("Watch · case #1042");
     expect(json.title).toBe("Timeout · kel");
-    expect(json.color).toBe(0xffb547);
+    // A record has no colour.
+    expect(json.color).toBeUndefined();
   });
 
   it("confirms with what happened and flags closed DMs", () => {
@@ -94,13 +95,22 @@ describe("Watch embeds", () => {
     };
     const json = confirmationEmbed(warn, { dmSent: true, escalated }).toJSON();
     expect(json.description).toContain("3 warnings in 24 h");
-    expect(json.description).toContain("timeout for 1 h. See case #1043");
+    expect(json.description).toContain("timeout for 1 h too (case #1043)");
   });
 
-  it("marks undone cases in green", () => {
-    const json = caseEmbed({ ...baseCase, revokedAt: new Date(), revokedById: "7" }).toJSON();
+  it("shows an undone case in green only as the answer to Undo", () => {
+    const undone = { ...baseCase, revokedAt: new Date(), revokedById: "7" };
+    expect(caseEmbed(undone).toJSON().color).toBeUndefined();
+    const json = caseEmbed(undone, "done").toJSON();
     expect(json.color).toBe(0x2bd99f);
     expect(json.title).toContain("(undone)");
+  });
+
+  it("confirms a warning or timeout in green, and a kick or ban in red", () => {
+    const kind = (action: ModCase["action"]) =>
+      confirmationEmbed({ ...baseCase, action }, { dmSent: true }).toJSON().color;
+    expect([kind("warn"), kind("timeout")]).toEqual([0x2bd99f, 0x2bd99f]);
+    expect([kind("kick"), kind("ban")]).toEqual([0xff5c5c, 0xff5c5c]);
   });
 
   it("writes neutral DMs with an appeal line", () => {

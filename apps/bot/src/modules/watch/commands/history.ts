@@ -3,7 +3,7 @@ import { PermissionFlagsBits } from "discord.js";
 import type { Command } from "../../../commands/types.js";
 import { linkRow, serverUrl } from "../../../lib/dashboard.js";
 import { formatDuration } from "../../../lib/duration.js";
-import { brandEmbed } from "../../../lib/embeds.js";
+import { brandEmbed, info } from "../../../lib/embeds.js";
 import { safeText } from "../../../lib/text.js";
 import { actionNoun, NO_REASON } from "../copy.js";
 import { ephemeral, watchCommand } from "./shared.js";
@@ -25,7 +25,7 @@ export const history: Command = {
     const url = serverUrl(interaction.guild.id, `watch/member/${user.id}`);
     if (!cases.length) {
       await interaction.reply({
-        content: `<@${user.id}> has no cases. Clean record.`,
+        ...info(`<@${user.id}> has no cases. A clean record.`),
         ...ephemeral,
       });
       return;
@@ -44,8 +44,7 @@ export const history: Command = {
     await interaction.reply({
       embeds: [
         brandEmbed({
-          tone: "intel",
-          title: `History for ${user.username}`,
+          title: `Cases for ${safeText(user.username)}`,
           description: lines.join("\n"),
           module: "watch",
           ref: cases.length === LIMIT ? `latest ${LIMIT}` : `${cases.length} cases`,

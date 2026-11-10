@@ -91,7 +91,7 @@ describe("lfgCard", () => {
     const card = lfgCard(fireteam, [member("taz", "")]);
     const json = card.embeds[0]?.toJSON();
     expect(json?.fields?.[0]?.name).toBe("Fireteam · 1/6");
-    expect(json?.description).toContain("Power: 1810");
+    expect(json?.description).toContain("**Power:** 1810");
     const labels = card.components.flatMap((row) =>
       (row.toJSON().components as { label: string }[]).map((b) => b.label),
     );

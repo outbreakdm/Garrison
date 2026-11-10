@@ -1,4 +1,3 @@
-import type { EmbedTone } from "@garrison/brand";
 import { capacity, type LfgMember, type LfgPost, renderWording } from "@garrison/db";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import { brandEmbed } from "../../lib/embeds.js";
@@ -11,12 +10,12 @@ export const RALLY_PREFIX = "rally";
 
 const ts = (d: Date) => `<t:${Math.floor(d.getTime() / 1000)}:R>`;
 
-function statusLine(post: LfgPost, filled: number, total: number) {
-  if (post.status === "closed") return { label: "Closed", tone: "caution" as EmbedTone };
-  if (post.status === "expired") return { label: "Expired", tone: "caution" as EmbedTone };
-  if (post.status === "full" || filled >= total) return { label: "Full", tone: "go" as EmbedTone };
-  const left = total - filled;
-  return { label: left === 1 ? "1 left" : "Open", tone: "volt" as EmbedTone };
+/** The card says its state in words, in the title: cards have no colour. */
+function statusLabel(post: LfgPost, filled: number, total: number) {
+  if (post.status === "closed") return "Closed";
+  if (post.status === "expired") return "Expired";
+  if (post.status === "full" || filled >= total) return "Full";
+  return total - filled === 1 ? "1 left" : "Open";
 }
 
 /** Button labels are plain text; keep them inside Discord's 80 characters and never empty. */
@@ -25,16 +24,18 @@ const label = (text: string, fallback: string) => (text || fallback).slice(0, 80
 /** The LFG card: one embed plus Join/Leave/Close buttons, in the post's wording. Embeds never ping. */
 export function lfgCard(post: LfgPost, members: LfgMember[]) {
   const total = capacity(post.slots);
-  const status = statusLine(post, members.length, total);
+  const status = statusLabel(post, members.length, total);
   const active = post.status === "open" || post.status === "full";
   const starts =
-    post.startsAt.getTime() <= Date.now() + 60_000 ? "now" : `starts ${ts(post.startsAt)}`;
+    post.startsAt.getTime() <= Date.now() + 60_000 ? "starting now" : `starts ${ts(post.startsAt)}`;
 
   const w = postWording(post.wording);
-  const meta = [`<@${post.hostId}>`, starts];
+  const lines = [`Hosted by <@${post.hostId}> · ${starts}`];
   if (post.note)
-    meta.push(
-      w.requirement ? `${safeText(w.requirement)}: ${safeText(post.note)}` : safeText(post.note),
+    lines.push(
+      w.requirement
+        ? `**${safeText(w.requirement)}:** ${safeText(post.note)}`
+        : safeText(post.note),
     );
 
   const fields = post.slots.map((group, i) => {
@@ -50,9 +51,8 @@ export function lfgCard(post: LfgPost, members: LfgMember[]) {
   });
 
   const embed = brandEmbed({
-    tone: status.tone,
-    title: `${safeText(post.title)} · ${status.label}`,
-    description: meta.join(" · "),
+    title: `${safeText(post.title)} · ${status}`,
+    description: lines.join("\n"),
     fields,
     module: "rally",
     ref: `${members.length}/${total}`,

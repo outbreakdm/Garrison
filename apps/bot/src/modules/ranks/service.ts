@@ -2,6 +2,7 @@ import { randomInt } from "node:crypto";
 import { awardXp, getRanksSettings, listRankRewards, type RanksSettings } from "@garrison/db";
 import type { GuildMember, Message } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
+import { brandEmbed } from "../../lib/embeds.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { earnedRewards, rewardProblem, XP_COOLDOWN_MS, XP_MAX, XP_MIN } from "./rules.js";
 
@@ -93,5 +94,6 @@ export async function handleMessage(ctx: BotContext, message: Message) {
       ? message.guild.channels.cache.get(settings.announceChannelId)
       : message.channel;
   // The client's default allowedMentions means this never pings.
-  if (target?.isSendable()) await target.send(text).catch(() => {});
+  if (target?.isSendable())
+    await target.send({ embeds: [brandEmbed({ description: text })] }).catch(() => {});
 }

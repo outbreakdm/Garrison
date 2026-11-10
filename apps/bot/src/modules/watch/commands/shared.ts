@@ -1,6 +1,7 @@
 import type { ChatInputCommandInteraction } from "discord.js";
 import { ephemeral } from "../../../commands/builders.js";
 import type { BotContext } from "../../../commands/types.js";
+import { failed } from "../../../lib/embeds.js";
 import type { MemberAction } from "../copy.js";
 import { caseRow, confirmationEmbed } from "../embeds.js";
 import { applyMemberAction, checkMemberAction } from "../service.js";
@@ -21,7 +22,7 @@ export async function runMemberAction(
   const reason = interaction.options.getString("reason")?.slice(0, REASON_MAX) ?? null;
 
   if (!member && action !== "ban") {
-    await interaction.reply({ content: `<@${target.id}> isn't in this server.`, ...ephemeral });
+    await interaction.reply({ ...failed(`<@${target.id}> isn't in this server.`), ...ephemeral });
     return;
   }
 
@@ -34,7 +35,7 @@ export async function runMemberAction(
     action,
   );
   if (problem) {
-    await interaction.editReply(problem);
+    await interaction.editReply(failed(problem));
     return;
   }
 
@@ -49,7 +50,7 @@ export async function runMemberAction(
     deleteMessageSeconds: opts.deleteMessageSeconds,
   });
   if (!result.ok) {
-    await interaction.editReply(result.error);
+    await interaction.editReply(failed(result.error));
     return;
   }
 

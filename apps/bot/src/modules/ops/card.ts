@@ -40,17 +40,8 @@ export function opsCard(event: OpsEvent, signups: OpsSignup[]) {
       : event.status === "done"
         ? "Done"
         : (short ?? "Ready");
-  const tone =
-    event.status === "cancelled"
-      ? "caution"
-      : event.status === "done"
-        ? "intel"
-        : short
-          ? "caution"
-          : "go";
-
   const lines = [`${ts(event.startsAt, "F")} · ${ts(event.startsAt, "R")}`];
-  const extras = [`Host <@${event.hostId}>`];
+  const extras = [`Hosted by <@${event.hostId}>`];
   if (event.repeatWeekly) extras.push("repeats weekly");
   if (scheduled) extras.push("reminders 24 h and 30 min before");
   lines.push(extras.join(" · "));
@@ -79,7 +70,6 @@ export function opsCard(event: OpsEvent, signups: OpsSignup[]) {
   }
 
   const embed = brandEmbed({
-    tone,
     title: `${safeText(event.title)} · ${badge}`,
     description: lines.join("\n"),
     fields,

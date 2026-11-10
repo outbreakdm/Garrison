@@ -83,7 +83,8 @@ export const health: Command = {
         me.permissions.has(PermissionFlagsBits.Administrator));
 
     const embed = brandEmbed({
-      tone: checks.some((c) => c.status === "fix") ? "alert" : problems ? "caution" : "go",
+      // Something to fix is an error; a clean bill is a confirmation; notes alone are neither.
+      kind: checks.some((c) => c.status === "fix") ? "danger" : problems ? "neutral" : "done",
       title: problems
         ? `${problems} ${problems === 1 ? "thing needs" : "things need"} attention`
         : "All checks passed",

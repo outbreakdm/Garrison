@@ -1,9 +1,8 @@
-import type { EmbedTone } from "@garrison/brand";
 import type { ModCase } from "@garrison/db";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, type EmbedBuilder } from "discord.js";
 import { serverUrl } from "../../lib/dashboard.js";
 import { formatDuration } from "../../lib/duration.js";
-import { brandEmbed } from "../../lib/embeds.js";
+import { brandEmbed, type EmbedKind } from "../../lib/embeds.js";
 import { safeText } from "../../lib/text.js";
 import {
   actionNoun,
@@ -17,10 +16,9 @@ import {
 
 export const UNDO_PREFIX = "watch:undo";
 
-const toneFor = (c: ModCase): EmbedTone => {
-  if (c.revokedAt) return "go";
-  return c.action === "kick" || c.action === "ban" ? "alert" : "caution";
-};
+/** A kick or ban is severe, so its confirmation is red. Anything undone, or milder, is green. */
+const confirmationKind = (c: ModCase): EmbedKind =>
+  !c.revokedAt && (c.action === "kick" || c.action === "ban") ? "danger" : "done";
 
 const ts = (date: Date, style: "R" | "f" = "R") =>
   `<t:${Math.floor(date.getTime() / 1000)}:${style}>`;
@@ -52,11 +50,14 @@ function caseFields(c: ModCase) {
   return fields;
 }
 
-/** Full record of a case, for the log channel and `/case`. */
-export function caseEmbed(c: ModCase): EmbedBuilder {
+/**
+ * Full record of a case, for the log channel and `/case`. A record has no
+ * colour; pass "done" when it's the answer to someone pressing Undo.
+ */
+export function caseEmbed(c: ModCase, kind: EmbedKind = "neutral"): EmbedBuilder {
   const title = `${actionNoun(c.action)}${c.revokedAt ? " (undone)" : ""}${c.targetTag ? ` · ${c.targetTag}` : ""}`;
   return brandEmbed({
-    tone: toneFor(c),
+    kind,
     title,
     fields: caseFields(c),
     module: "watch",
@@ -72,16 +73,16 @@ export function confirmationEmbed(
 ): EmbedBuilder {
   const action = c.action as MemberAction;
   const lines = [`**Reason:** ${c.reason ? safeText(c.reason) : NO_REASON}`];
-  if (opts.dmSent === false) lines.push("I couldn't DM them: their DMs are closed.");
+  if (opts.dmSent === false) lines.push("They weren't told by DM: their DMs are closed.");
   if (opts.escalated) {
     const e = opts.escalated;
     const forDuration = e.durationSeconds ? ` for ${formatDuration(e.durationSeconds)}` : "";
     lines.push(
-      `That reached an escalation rule (${e.reason}), so I applied a ${actionNoun(e.action).toLowerCase()}${forDuration}. See ${caseRef(e)}.`,
+      `**Also:** that made ${e.reason}, so they got a ${actionNoun(e.action).toLowerCase()}${forDuration} too (${caseRef(e)}).`,
     );
   }
   return brandEmbed({
-    tone: toneFor(c),
+    kind: confirmationKind(c),
     title: confirmationTitle(action, c.targetTag ?? "member", c.durationSeconds),
     description: lines.join("\n"),
     module: "watch",
@@ -96,8 +97,8 @@ export function dmEmbed(opts: {
   durationSeconds?: number | null;
   appealText?: string | null;
 }): EmbedBuilder {
+  // A notice to the member: plain and factual, so no colour.
   return brandEmbed({
-    tone: opts.action === "kick" || opts.action === "ban" ? "alert" : "caution",
     title: dmTitle(opts.action, opts.guildName, opts.durationSeconds),
     fields: [
       { name: "Reason", value: opts.reason ? safeText(opts.reason) : NO_REASON },
@@ -142,17 +143,19 @@ export function confirmationEmbedForPurge(
   opts: { requested: number; deleted: number; channelId: string },
 ): EmbedBuilder {
   const noun = opts.deleted === 1 ? "message" : "messages";
-  const lines: string[] = [];
+  const lines = [
+    `In <#${opts.channelId}>${c.targetTag ? `, only from ${safeText(c.targetTag)}` : ""}. This can't be undone.`,
+  ];
   if (opts.deleted < opts.requested) {
     lines.push(
-      "I skip pinned messages and anything older than 14 days, which Discord can't bulk-delete.",
+      `${opts.requested - opts.deleted} were left: pinned messages and anything older than 14 days can't be bulk-deleted.`,
     );
   }
-  if (c.targetTag) lines.push(`Only messages from ${c.targetTag}.`);
+  // Deleted messages don't come back, so this confirmation is red.
   return brandEmbed({
-    tone: "caution",
+    kind: "danger",
     title: `Deleted ${opts.deleted} ${noun}`,
-    description: [`In <#${opts.channelId}>.`, ...lines].join(" "),
+    description: lines.join("\n"),
     module: "watch",
     ref: caseRef(c),
   });

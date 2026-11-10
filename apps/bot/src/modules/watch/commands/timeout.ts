@@ -1,6 +1,8 @@
 import { PermissionFlagsBits } from "discord.js";
 import type { Command } from "../../../commands/types.js";
 import { formatDuration, MAX_TIMEOUT_SECONDS, parseDuration } from "../../../lib/duration.js";
+import { failed } from "../../../lib/embeds.js";
+import { safeText } from "../../../lib/text.js";
 import { ephemeral, REASON_MAX, runMemberAction, watchCommand } from "./shared.js";
 
 export const timeout: Command = {
@@ -29,14 +31,18 @@ export const timeout: Command = {
     const seconds = parseDuration(raw);
     if (!seconds) {
       await interaction.reply({
-        content: `I can't read "${raw}" as a duration. Use a number and a unit, like 10m, 1h or 2d.`,
+        ...failed(
+          `I can't read "${safeText(raw)}" as a length of time. Use a number and a unit, like 10m, 1h or 2d.`,
+        ),
         ...ephemeral,
       });
       return;
     }
     if (seconds > MAX_TIMEOUT_SECONDS) {
       await interaction.reply({
-        content: `Timeouts can last ${formatDuration(MAX_TIMEOUT_SECONDS)} at most. For longer, use /ban.`,
+        ...failed(
+          `Timeouts can last ${formatDuration(MAX_TIMEOUT_SECONDS)} at most. For longer, use /ban.`,
+        ),
         ...ephemeral,
       });
       return;

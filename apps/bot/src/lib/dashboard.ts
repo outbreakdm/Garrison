@@ -6,6 +6,7 @@ import {
   type InteractionReplyOptions,
 } from "discord.js";
 import { ephemeral } from "../commands/builders.js";
+import { brandEmbed } from "./embeds.js";
 
 /**
  * Links from Discord to the dashboard. APP_URL is the dashboard's address,
@@ -60,8 +61,15 @@ export function settingsReply(opts: {
 }): InteractionReplyOptions & typeof ephemeral {
   const lead = `${opts.subject} changed on the dashboard now, where every change is kept in history and can be undone.`;
   return {
-    content: [lead, opts.url ? opts.note : NO_DASHBOARD].filter(Boolean).join(" "),
-    embeds: opts.embed ? [opts.embed] : [],
+    content: "",
+    embeds: [
+      // No link to give is an error; otherwise this is a plain note above the values.
+      brandEmbed({
+        kind: opts.url ? "neutral" : "danger",
+        description: [lead, opts.url ? opts.note : NO_DASHBOARD].filter(Boolean).join(" "),
+      }),
+      ...(opts.embed ? [opts.embed] : []),
+    ],
     components: opts.url ? [linkRow(opts.url, opts.label)] : [],
     ...ephemeral,
   };

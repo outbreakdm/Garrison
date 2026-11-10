@@ -45,9 +45,8 @@ export const logs: Command = {
       await interaction.reply({
         embeds: [
           brandEmbed({
-            tone: "intel",
-            title: `Ledger for ${safeText(user.username)}`,
-            description: lines.length ? lines.join("\n") : "No events.",
+            title: `Events for ${safeText(user.username)}`,
+            description: lines.length ? lines.join("\n") : "No events in the log.",
             module: "ledger",
             ref: `latest ${events.length}`,
           }),

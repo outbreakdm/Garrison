@@ -44,16 +44,19 @@ describe("dashboard links", () => {
       url: `${APP}/x`,
       label: "Change Watch settings",
     });
-    expect(withLink.content).toBe(
-      "Watch settings are changed on the dashboard now, where every change is kept in history and can be undone.",
-    );
+    const text = (r: { embeds?: unknown }) => JSON.parse(JSON.stringify(r.embeds))[0];
+    expect(text(withLink)).toEqual({
+      description:
+        "Watch settings are changed on the dashboard now, where every change is kept in history and can be undone.",
+    });
     expect(JSON.parse(JSON.stringify(withLink.components))[0].components[0]).toMatchObject({
       style: 5,
       url: `${APP}/x`,
       label: "Change Watch settings",
     });
     const without = settingsReply({ subject: "Watch settings are", url: null, label: "x" });
-    expect(without.content).toContain(NO_DASHBOARD);
+    expect(text(without).description).toContain(NO_DASHBOARD);
+    expect(text(without).color).toBe(0xff5c5c);
     expect(without.components).toEqual([]);
   });
 });
@@ -149,9 +152,12 @@ describe("replies in Discord", () => {
     } as unknown as ChatInputCommandInteraction<"cached">;
     await commandsByName.get(name)?.execute(interaction, ctx);
     const json = JSON.parse(JSON.stringify(reply ?? {}));
+    const embeds: { title?: string; description?: string; color?: number }[] = json.embeds ?? [];
     return {
-      content: String(json.content ?? ""),
-      title: json.embeds?.[0]?.title as string | undefined,
+      // What it says: the text of every embed, in order.
+      content: embeds.map((e) => e.description ?? "").join("\n"),
+      title: embeds.find((e) => e.title)?.title,
+      colors: embeds.map((e) => e.color),
       link: json.components?.[0]?.components?.find((b: { url?: string }) => b.url)?.url as
         | string
         | undefined,

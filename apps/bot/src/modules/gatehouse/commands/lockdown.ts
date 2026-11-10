@@ -3,8 +3,8 @@ import { PermissionFlagsBits } from "discord.js";
 import { ephemeral, guildCommand } from "../../../commands/builders.js";
 import type { Command } from "../../../commands/types.js";
 import { formatDuration, parseDuration } from "../../../lib/duration.js";
-import { brandEmbed } from "../../../lib/embeds.js";
-import { lockdownEndedEmbed, lockdownRef, lockdownStartedEmbed } from "../embeds.js";
+import { failed, info } from "../../../lib/embeds.js";
+import { lockdownEndedEmbed, lockdownStartedEmbed } from "../embeds.js";
 import { lockGuild, unlockGuild } from "../service.js";
 
 const MAX_LOCKDOWN_SECONDS = 7 * 86_400;
@@ -48,8 +48,11 @@ export const lockdown: Command = {
             channels: new Set(active.snapshot.map((s) => s.channelId)).size,
             failed: 0,
           })
-        : brandEmbed({ tone: "go", title: "No lockdown active", module: "gatehouse" });
-      await interaction.reply({ embeds: [embed], ...ephemeral });
+        : null;
+      await interaction.reply({
+        ...(embed ? { embeds: [embed] } : info("The server isn't locked.")),
+        ...ephemeral,
+      });
       return;
     }
 
@@ -59,7 +62,7 @@ export const lockdown: Command = {
       await interaction.editReply(
         result.ok
           ? { embeds: [lockdownEndedEmbed(result.lockdown, result)] }
-          : { content: result.error },
+          : failed(result.error),
       );
       return;
     }
@@ -70,7 +73,9 @@ export const lockdown: Command = {
       const seconds = parseDuration(rawDuration);
       if (!seconds || seconds < 60 || seconds > MAX_LOCKDOWN_SECONDS) {
         await interaction.reply({
-          content: `Use a duration between 1 min and ${formatDuration(MAX_LOCKDOWN_SECONDS)}, like 30m or 2h.`,
+          ...failed(
+            `Use a length of time between 1 min and ${formatDuration(MAX_LOCKDOWN_SECONDS)}, like 30m or 2h.`,
+          ),
           ...ephemeral,
         });
         return;
@@ -88,12 +93,9 @@ export const lockdown: Command = {
       pauseInvites: interaction.options.getBoolean("pause_invites") ?? true,
     });
     if (!result.ok) {
-      await interaction.editReply(result.error);
+      await interaction.editReply(failed(result.error));
       return;
     }
-    await interaction.editReply({
-      content: `Locked. Lift it with /lockdown end. Ref: ${lockdownRef(result.lockdown)}`,
-      embeds: [lockdownStartedEmbed(result.lockdown, result)],
-    });
+    await interaction.editReply({ embeds: [lockdownStartedEmbed(result.lockdown, result)] });
   },
 };

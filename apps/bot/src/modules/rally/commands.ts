@@ -16,7 +16,7 @@ import {
 import { type Guild, PermissionFlagsBits, type SendableChannels } from "discord.js";
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { BotContext, ButtonHandler, Command } from "../../commands/types.js";
-import { brandEmbed } from "../../lib/embeds.js";
+import { brandEmbed, done, failed, info } from "../../lib/embeds.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { lfgCard, RALLY_PREFIX, safeText } from "./card.js";
 import { LIFETIME_AFTER_START_MS, matchSlot, parseSlots, parseStart } from "./parse.js";
@@ -90,7 +90,7 @@ export const lfg: Command = {
       const posts = await listOpenLfg(ctx.db, guild.id);
       if (!posts.length) {
         await interaction.reply({
-          content: "No open groups. Post one with /lfg create.",
+          ...info("No open groups. Post one with /lfg create."),
           ...ephemeral,
         });
         return;
@@ -121,17 +121,17 @@ export const lfg: Command = {
       const mine = await findOpenLfgByHost(ctx.db, guild.id, interaction.user.id);
       const closed = mine ? await closeLfg(ctx.db, mine.id) : null;
       if (!closed) {
-        await interaction.reply({ content: "You don't have an open group.", ...ephemeral });
+        await interaction.reply({ ...failed("You don't have an open group."), ...ephemeral });
         return;
       }
       await refreshCard(ctx, guild, closed);
-      await interaction.reply({ content: "Closed your group.", ...ephemeral });
+      await interaction.reply({ ...done("Closed your group."), ...ephemeral });
       return;
     }
 
     const channel = interaction.channel;
     if (!channel?.isSendable()) {
-      await interaction.reply({ content: "I can't post in this channel.", ...ephemeral });
+      await interaction.reply({ ...failed("I can't post in this channel."), ...ephemeral });
       return;
     }
     const { templates } = await cachedTemplates(ctx, guild.id);
@@ -139,16 +139,20 @@ export const lfg: Command = {
     const template = findTemplate(templates, picked);
     if (picked && !template) {
       await interaction.reply({
-        content: templates.length
-          ? `No template called "${safeText(picked)}". Pick one from the list.`
-          : "This server has no templates yet. A moderator can add them on the dashboard.",
+        ...failed(
+          templates.length
+            ? `No template called "${safeText(picked)}". Pick one from the list.`
+            : "This server has no templates yet. A moderator can add them on the dashboard.",
+        ),
         ...ephemeral,
       });
       return;
     }
     if (template?.channelIds.length && !template.channelIds.includes(channel.id)) {
       await interaction.reply({
-        content: `${safeText(template.name)} groups go in ${template.channelIds.map((c) => `<#${c}>`).join(", ")}.`,
+        ...failed(
+          `${safeText(template.name)} groups go in ${template.channelIds.map((c) => `<#${c}>`).join(", ")}.`,
+        ),
         ...ephemeral,
       });
       return;
@@ -161,18 +165,18 @@ export const lfg: Command = {
       typedSize ?? template?.size ?? null,
     );
     if (!slots.ok) {
-      await interaction.reply({ content: slots.error, ...ephemeral });
+      await interaction.reply({ ...failed(slots.error), ...ephemeral });
       return;
     }
     const start = parseStart(interaction.options.getString("starts"));
     if (!start.ok) {
-      await interaction.reply({ content: start.error, ...ephemeral });
+      await interaction.reply({ ...failed(start.error), ...ephemeral });
       return;
     }
     const hostSlot = matchSlot(slots.value, interaction.options.getString("my_role"));
     if (hostSlot === null) {
       await interaction.reply({
-        content: `Pick your role from: ${slots.value.map((g) => g.name).join(", ")}.`,
+        ...failed(`Pick your role from: ${slots.value.map((g) => safeText(g.name)).join(", ")}.`),
         ...ephemeral,
       });
       return;
@@ -196,7 +200,7 @@ export const lfg: Command = {
     });
     if (!post) {
       await interaction.reply({
-        content: "You already have an open group. Close it with /lfg close first.",
+        ...failed("You already have an open group. Close it with /lfg close first."),
         ...ephemeral,
       });
       return;
@@ -264,7 +268,7 @@ export const rallyButtons: ButtonHandler = {
     if (!postId || !UUID.test(postId)) return;
     const post = await getLfgPost(ctx.db, interaction.guild.id, postId);
     if (!post) {
-      await interaction.reply({ content: "That group is gone.", ...ephemeral });
+      await interaction.reply({ ...failed("That group is gone."), ...ephemeral });
       return;
     }
     const userId = interaction.user.id;
@@ -273,7 +277,7 @@ export const rallyButtons: ButtonHandler = {
       const canModerate = interaction.memberPermissions.has(PermissionFlagsBits.ManageMessages);
       if (userId !== post.hostId && !canModerate) {
         await interaction.reply({
-          content: "Only the host or a moderator can close this group.",
+          ...failed("Only the host or a moderator can close this group."),
           ...ephemeral,
         });
         return;
@@ -288,7 +292,7 @@ export const rallyButtons: ButtonHandler = {
       if (!result.ok) {
         const msg =
           result.reason === "not_member" ? "You're not in this group." : "This group is closed.";
-        await interaction.reply({ content: msg, ...ephemeral });
+        await interaction.reply({ ...failed(msg), ...ephemeral });
         return;
       }
       await interaction.update(lfgCard(result.post, result.members));
@@ -309,7 +313,7 @@ export const rallyButtons: ButtonHandler = {
           slot_full: `${group.name || "That role"} is full. Pick another role.`,
           no_such_slot: "That role doesn't exist any more.",
         }[result.reason];
-        await interaction.reply({ content: msg, ...ephemeral });
+        await interaction.reply({ ...failed(msg), ...ephemeral });
         return;
       }
       await interaction.update(lfgCard(result.post, result.members));

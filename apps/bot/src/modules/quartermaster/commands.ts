@@ -9,7 +9,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } fro
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { ButtonHandler, Command } from "../../commands/types.js";
 import { serverUrl } from "../../lib/dashboard.js";
-import { brandEmbed } from "../../lib/embeds.js";
+import { brandEmbed, done, failed } from "../../lib/embeds.js";
 import { safeText } from "../../lib/text.js";
 import { describePlan, type ServerSnapshot } from "./plan.js";
 import { applyBuild, PLAN_TTL_MS, planBuild, REQUEST_MAX, undoBuild } from "./service.js";
@@ -32,12 +32,11 @@ function planEmbed(build: QmBuild, server: ServerSnapshot, notes: string) {
   const lines = describePlan(build.plan, server).map((l) => safeText(l));
   const expires = Math.floor((build.createdAt.getTime() + PLAN_TTL_MS) / 1000);
   return brandEmbed({
-    tone: "intel",
     title: `Plan v${build.version}: ${safeText(build.summary)}`,
     description: [
       `\`\`\`diff\n${lines.join("\n").replaceAll("```", "'''")}\n\`\`\``,
       notes ? `**Left out:** ${safeText(notes)}` : null,
-      `New roles get no permissions. Nothing existing is changed. Expires <t:${expires}:R>.`,
+      `New roles get no permissions, and nothing you already have is changed. Nothing is built until you press Apply. This plan expires <t:${expires}:R>.`,
     ]
       .filter(Boolean)
       .join("\n"),
@@ -114,15 +113,24 @@ export const qm: Command = {
       );
       if (!build || (build.status !== "applied" && build.status !== "failed")) {
         await interaction.reply({
-          content: "There's no applied build with that version.",
+          ...failed("There's no applied build with that version."),
           ...ephemeral,
         });
         return;
       }
       const channels = build.created.filter((c) => c.kind !== "role").length;
       const roles = build.created.filter((c) => c.kind === "role").length;
+      // Deleting channels takes their messages with them: a red "are you sure?".
       await interaction.reply({
-        content: `Undo v${build.version}? This deletes the ${channels} channels and categories and ${roles} roles it created, including any messages posted in those channels since. Nothing else is touched.`,
+        embeds: [
+          brandEmbed({
+            kind: "danger",
+            title: `Undo v${build.version}?`,
+            description: `This deletes the ${channels} channels and categories and ${roles} roles that build created, with any messages posted in those channels since. Nothing else is touched.`,
+            module: "quartermaster",
+            ref: `v${build.version}`,
+          }),
+        ],
         components: [
           row(
             button(`${QM_PREFIX}:undo:${build.id}`, `Undo v${build.version}`, ButtonStyle.Danger),
@@ -134,7 +142,7 @@ export const qm: Command = {
     }
 
     if (!ctx.planner) {
-      await interaction.reply({ content: NOT_SET_UP, ...ephemeral });
+      await interaction.reply({ ...failed(NOT_SET_UP), ...ephemeral });
       return;
     }
     const request = interaction.options.getString("request", true).trim();
@@ -147,7 +155,7 @@ export const qm: Command = {
       request,
     );
     if (!outcome.ok) {
-      await interaction.editReply(outcome.error);
+      await interaction.editReply(failed(outcome.error));
       return;
     }
     await interaction.editReply({
@@ -174,22 +182,21 @@ export const qmButtons: ButtonHandler = {
     if (!id || !UUID.test(id)) return;
     // Re-checked on every click: the message may outlive someone's permissions.
     if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageGuild)) {
-      await interaction.reply({ content: "You need Manage Server to do that.", ...ephemeral });
+      await interaction.reply({ ...failed("You need Manage Server to do that."), ...ephemeral });
       return;
     }
     const build = await getQmBuild(ctx.db, interaction.guild.id, id);
     if (!build) {
-      await interaction.reply({ content: "That build doesn't exist.", ...ephemeral });
+      await interaction.reply({ ...failed("That build doesn't exist."), ...ephemeral });
       return;
     }
 
     if (action === "cancel") {
-      const done = await transitionQmBuild(ctx.db, build.id, "pending", "cancelled");
+      const cancelled = await transitionQmBuild(ctx.db, build.id, "pending", "cancelled");
       await interaction.update({
-        content: done
-          ? `Cancelled plan v${build.version}. Nothing was changed.`
-          : "That plan isn't pending any more.",
-        embeds: [],
+        ...(cancelled
+          ? done(`Discarded plan v${build.version}. Nothing was changed.`)
+          : failed("That plan isn't waiting any more.")),
         components: [],
       });
       return;
@@ -198,7 +205,7 @@ export const qmButtons: ButtonHandler = {
     if (action === "apply") {
       if (interaction.user.id !== build.requestedById) {
         await interaction.reply({
-          content: "Only the person who asked for this plan can apply it.",
+          ...failed("Only the person who asked for this plan can apply it."),
           ...ephemeral,
         });
         return;
@@ -206,7 +213,7 @@ export const qmButtons: ButtonHandler = {
       await interaction.deferUpdate();
       const result = await applyBuild(ctx, interaction.guild, build);
       if (!result.ok) {
-        await interaction.editReply({ content: result.error, embeds: [], components: [] });
+        await interaction.editReply({ ...failed(result.error), components: [] });
         return;
       }
       const lines = result.created.map((c) =>
@@ -220,11 +227,18 @@ export const qmButtons: ButtonHandler = {
         content: "",
         embeds: [
           brandEmbed({
-            tone: result.failed ? "caution" : "go",
+            // Stopping partway leaves the server half-built: that's an error.
+            kind: result.failed ? "danger" : "done",
             title: result.failed
               ? `v${build.version} stopped partway`
-              : `Applied v${build.version}: ${result.created.length} changes`,
-            description: [result.failed, lines.join(" · ")].filter(Boolean).join("\n"),
+              : `Built v${build.version}: ${result.created.length} ${result.created.length === 1 ? "change" : "changes"}`,
+            description: [
+              result.failed,
+              lines.length ? `**Created:** ${lines.join(" · ")}` : null,
+              result.failed ? "Undo removes what was created." : null,
+            ]
+              .filter(Boolean)
+              .join("\n"),
             module: "quartermaster",
             ref: `v${build.version}`,
           }),
@@ -247,16 +261,16 @@ export const qmButtons: ButtonHandler = {
       await interaction.deferReply(ephemeral);
       const result = await undoBuild(ctx, interaction.guild, build, interaction.user.id);
       if (!result.ok) {
-        await interaction.editReply(result.error);
+        await interaction.editReply(failed(result.error));
         return;
       }
       const extra = [
         result.missing ? `${result.missing} were already gone` : null,
         result.failed ? `${result.failed} couldn't be removed: check my role position` : null,
       ].filter(Boolean);
-      await interaction.editReply(
-        `Undone v${build.version}. Removed ${result.removed}.${extra.length ? ` ${extra.join("; ")}.` : ""}`,
-      );
+      const text = `Undid v${build.version}. Removed ${result.removed}.${extra.length ? ` ${extra.join("; ")}.` : ""}`;
+      // Anything left behind needs someone's attention, so that isn't a green tick.
+      await interaction.editReply(result.failed ? failed(text) : done(text));
     }
   },
 };

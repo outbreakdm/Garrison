@@ -1,4 +1,3 @@
-import type { EmbedTone } from "@garrison/brand";
 import {
   getLedgerSettings,
   type LedgerSettings,
@@ -33,13 +32,6 @@ export async function cachedLedgerSettings(ctx: BotContext, guildId: string) {
 
 export const invalidateLedgerSettings = (guildId: string) => cache.delete(guildId);
 
-const toneFor = (type: string): EmbedTone => {
-  if (/ban|kick|delete|timeout$|bot_add|webhook/.test(type)) return "alert";
-  if (/role|permissions|server_update|channel/.test(type)) return "caution";
-  if (type === "member_join") return "go";
-  return "intel";
-};
-
 /** Record an event and post it to the ledger channel. Never throws: logging must not break the bot. */
 export async function record(ctx: BotContext, guild: Guild, draft: LedgerDraft) {
   try {
@@ -51,15 +43,15 @@ export async function record(ctx: BotContext, guild: Guild, draft: LedgerDraft) 
     if (!channel?.isSendable()) return;
     const who = [
       draft.actorId ? `By <@${draft.actorId}>` : null,
-      draft.targetId ? `Target <@${draft.targetId}>` : null,
+      draft.targetId && draft.targetId !== draft.actorId ? `To <@${draft.targetId}>` : null,
       draft.channelId ? `In <#${draft.channelId}>` : null,
     ].filter(Boolean);
     const reason =
-      typeof draft.data.reason === "string" ? `\nReason: ${safeText(draft.data.reason)}` : "";
+      typeof draft.data.reason === "string" ? `\n**Reason:** ${safeText(draft.data.reason)}` : "";
     await channel.send({
       embeds: [
+        // A log line is a record, whatever it records: no colour.
         brandEmbed({
-          tone: toneFor(draft.type),
           title: TYPE_LABELS[draft.type] ?? draft.type,
           description: `${safeText(draft.summary)}${who.length ? `\n${who.join(" · ")}` : ""}${reason}`,
           module: "ledger",

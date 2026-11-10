@@ -1,5 +1,6 @@
 import { ephemeral } from "../../../commands/builders.js";
 import type { ButtonHandler } from "../../../commands/types.js";
+import { done, failed } from "../../../lib/embeds.js";
 import { RESTORE_PREFIX, restoreQuarantine, restoreRow } from "../anti-nuke.js";
 
 const UUID = /^[0-9a-f-]{36}$/;
@@ -13,14 +14,16 @@ export const restoreButton: ButtonHandler = {
     await interaction.deferReply(ephemeral);
     const result = await restoreQuarantine(ctx, interaction.guild, id, interaction.member);
     if (!result.ok) {
-      await interaction.editReply(result.error);
+      await interaction.editReply(failed(result.error));
       return;
     }
     await interaction.message
       .edit({ components: [restoreRow(result.quarantine, true)] })
       .catch(() => {});
     await interaction.editReply(
-      `Restored ${result.restored} ${result.restored === 1 ? "role" : "roles"} to <@${result.quarantine.userId}>.`,
+      done(
+        `Restored ${result.restored} ${result.restored === 1 ? "role" : "roles"} to <@${result.quarantine.userId}>.`,
+      ),
     );
   },
 };

@@ -20,7 +20,7 @@ import {
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { ButtonHandler, Command, ModalHandler } from "../../commands/types.js";
 import { linkRow, serverUrl, settingsReply } from "../../lib/dashboard.js";
-import { brandEmbed } from "../../lib/embeds.js";
+import { brandEmbed, done, failed, info } from "../../lib/embeds.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { safeText } from "../../lib/text.js";
 import { parseSlots } from "../rally/parse.js";
@@ -106,7 +106,7 @@ export const raid: Command = {
       const events = await listUpcomingOps(ctx.db, guild.id);
       if (!events.length) {
         await interaction.reply({
-          content: "No raids scheduled. Create one with /raid create.",
+          ...info("No raids scheduled. Create one with /raid create."),
           ...ephemeral,
         });
         return;
@@ -135,7 +135,7 @@ export const raid: Command = {
 
     const channel = interaction.channel;
     if (!channel?.isSendable()) {
-      await interaction.reply({ content: "I can't post in this channel.", ...ephemeral });
+      await interaction.reply({ ...failed("I can't post in this channel."), ...ephemeral });
       return;
     }
     const tz = parseTimeZone(
@@ -143,22 +143,24 @@ export const raid: Command = {
       await getOpsTimezone(ctx.db, guild.id),
     );
     if (!tz.ok) {
-      await interaction.reply({ content: tz.error, ...ephemeral });
+      await interaction.reply({ ...failed(tz.error), ...ephemeral });
       return;
     }
     const when = parseWhen(interaction.options.getString("when", true), tz.value);
     if (!when.ok) {
-      await interaction.reply({ content: when.error, ...ephemeral });
+      await interaction.reply({ ...failed(when.error), ...ephemeral });
       return;
     }
     const slots = parseSlots(interaction.options.getString("roles", true), null);
     if (!slots.ok) {
-      await interaction.reply({ content: slots.error, ...ephemeral });
+      await interaction.reply({ ...failed(slots.error), ...ephemeral });
       return;
     }
     if ((await countScheduledOps(ctx.db, guild.id)) >= MAX_SCHEDULED) {
       await interaction.reply({
-        content: `This server has ${MAX_SCHEDULED} raids scheduled, the most I hold. Cancel one first.`,
+        ...failed(
+          `This server has ${MAX_SCHEDULED} raids scheduled, the most I hold. Cancel one first.`,
+        ),
         ...ephemeral,
       });
       return;
@@ -176,7 +178,7 @@ export const raid: Command = {
       repeatWeekly: interaction.options.getBoolean("repeat_weekly") ?? false,
     });
     if (!event) {
-      await interaction.reply({ content: "I couldn't schedule that. Try again.", ...ephemeral });
+      await interaction.reply({ ...failed("I couldn't schedule that. Try again."), ...ephemeral });
       return;
     }
     const response = await interaction.reply({ ...opsCard(event, []), withResponse: true });
@@ -214,7 +216,7 @@ export const opsButtons: ButtonHandler = {
 
     const event = await getOpsEvent(ctx.db, interaction.guild.id, eventId);
     if (!event) {
-      await interaction.reply({ content: "That raid is gone.", ...ephemeral });
+      await interaction.reply({ ...failed("That raid is gone."), ...ephemeral });
       return;
     }
 
@@ -222,7 +224,7 @@ export const opsButtons: ButtonHandler = {
       const canManage = interaction.memberPermissions.has(PermissionFlagsBits.ManageEvents);
       if (interaction.user.id !== event.hostId && !canManage) {
         await interaction.reply({
-          content: "Only the host or someone with Manage Events can cancel this raid.",
+          ...failed("Only the host or someone with Manage Events can cancel this raid."),
           ...ephemeral,
         });
         return;
@@ -236,8 +238,9 @@ export const opsButtons: ButtonHandler = {
       const result = await withdraw(ctx.db, event.id, interaction.user.id);
       if (!result.ok) {
         await interaction.reply({
-          content:
+          ...failed(
             result.reason === "not_signed_up" ? "You're not signed up." : "This raid is closed.",
+          ),
           ...ephemeral,
         });
         return;
@@ -257,13 +260,13 @@ export const opsModals: ModalHandler = {
     const event = await getOpsEvent(ctx.db, interaction.guild.id, eventId);
     const group = event?.slots[Number(index)];
     if (!event || !group) {
-      await interaction.reply({ content: "That raid is gone.", ...ephemeral });
+      await interaction.reply({ ...failed("That raid is gone."), ...ephemeral });
       return;
     }
     const spec = interaction.fields.getTextInputValue("spec").trim();
     if (!SPEC.test(spec)) {
       await interaction.reply({
-        content: "Use letters and numbers for your class or spec, up to 20 characters.",
+        ...failed("Use letters and numbers for your class or spec, up to 20 characters."),
         ...ephemeral,
       });
       return;
@@ -277,14 +280,18 @@ export const opsModals: ModalHandler = {
         no_such_role: "That role doesn't exist any more.",
         unchanged: "You're already signed up like that.",
       }[result.reason];
-      await interaction.reply({ content: msg, ...ephemeral });
+      await interaction.reply({ ...failed(msg), ...ephemeral });
       return;
     }
     await refreshOpsCard(ctx, interaction.guild, result.event, result.signups);
-    const text =
-      result.benched === "role_full"
-        ? `${group.name} is full, so you're on the bench. You'll move up when a spot opens.`
-        : `Signed up as ${group.name}.`;
-    await interaction.reply({ content: text, ...ephemeral });
+    // On the bench isn't what they asked for, so it's a note, not a green tick.
+    await interaction.reply({
+      ...(result.benched === "role_full"
+        ? info(
+            `${safeText(group.name)} is full, so you're on the bench. You'll move up when a spot opens.`,
+          )
+        : done(`You're signed up as ${safeText(group.name)}.`)),
+      ...ephemeral,
+    });
   },
 };

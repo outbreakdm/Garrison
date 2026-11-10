@@ -30,8 +30,9 @@ export function lockdownStartedEmbed(
       `I couldn't change ${opts.failed} ${opts.failed === 1 ? "channel" : "channels"}: check Garrison's permissions there.`,
     );
   }
+  // The whole server was just silenced: severe, so red.
   return brandEmbed({
-    tone: "alert",
+    kind: "danger",
     title: opts.raid ? "Server locked: raid detected" : "Server locked",
     description: lines.join("\n"),
     fields: [{ name: "Reason", value: l.reason ? safeText(l.reason) : "No reason given" }],
@@ -56,7 +57,7 @@ export function lockdownEndedEmbed(
   if (opts.failed)
     lines.push(`${opts.failed} couldn't be restored: the channel or role may have been deleted.`);
   return brandEmbed({
-    tone: "go",
+    kind: "done",
     title: `Lockdown lifted after ${formatDuration(seconds)}`,
     description: lines.join("\n"),
     module: "gatehouse",
@@ -65,10 +66,11 @@ export function lockdownEndedEmbed(
 }
 
 export function raidAlertEmbed(joins: number, windowSeconds: number): EmbedBuilder {
+  // Nothing was done, but someone needs to look now: red.
   return brandEmbed({
-    tone: "alert",
+    kind: "danger",
     title: "Possible raid",
-    description: `${joins} joins in ${windowSeconds} s. Anti-raid is set to alert only, so nothing was locked. Run /lockdown start to lock the server.`,
+    description: `${joins} joins in ${windowSeconds} s. Anti-raid is set to alert only, so nothing was locked.\nRun /lockdown start to lock the server.`,
     module: "gatehouse",
   });
 }
@@ -78,8 +80,7 @@ export function newAccountFlagEmbed(
   days: number,
 ) {
   return brandEmbed({
-    tone: "caution",
-    title: `Flagged a ${describeAccountAge(days)} account on join`,
+    title: `New account joined: ${describeAccountAge(days)}`,
     fields: [
       { name: "Member", value: `<@${member.id}> · \`${member.id}\``, inline: true },
       { name: "Created", value: ts(member.createdAt), inline: true },
@@ -100,7 +101,6 @@ export function verifyPanel(
   const embed = brandEmbed({
     title: "Verify to join in",
     description: lines.join("\n"),
-    module: "gatehouse",
   });
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()

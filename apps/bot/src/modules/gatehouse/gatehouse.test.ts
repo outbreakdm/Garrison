@@ -112,6 +112,6 @@ describe("Gatehouse copy", () => {
       { id: "1", username: "kel", createdAt: new Date() },
       2,
     ).toJSON();
-    expect(json.title).toBe("Flagged a 2-day-old account on join");
+    expect(json.title).toBe("New account joined: 2-day-old");
   });
 });

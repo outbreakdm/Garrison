@@ -64,8 +64,10 @@
 
 /* Discord embed preview (Discord's own format: colour bar on the left) */
 .g-embed { display: grid; grid-template-columns: 4px 1fr; background: var(--surface-raised); border-radius: var(--radius-md); overflow: hidden; max-width: 440px; }
-.g-embed__bar { background: var(--accent); }
-.g-embed--alert .g-embed__bar { background: var(--alert); }
+/* Three kinds, as the bot sends them: no colour, green for done, red for danger. */
+.g-embed__bar { background: var(--line); }
+.g-embed--done .g-embed__bar { background: var(--go); }
+.g-embed--danger .g-embed__bar { background: var(--alert); }
 .g-embed__body { padding: var(--space-3) var(--space-4); display: flex; flex-direction: column; gap: 6px; }
 .g-embed__title { font: 600 15px/20px var(--font-sans); color: var(--text); }
 .g-embed__text { font-size: 14px; line-height: 20px; color: var(--text); }
