@@ -1,10 +1,12 @@
 import { type LinkProvider, linkProviders } from "@garrison/brand";
 import { getRoster } from "@garrison/db";
 import type { Metadata } from "next";
+import { PageHead } from "@/components/PageHead";
 import { getDb } from "@/lib/db";
+import { PAGES } from "@/lib/pages";
 import { requireGuildAccess } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Barracks" };
+export const metadata: Metadata = { title: PAGES.barracks.title };
 
 function detail(d: Record<string, unknown>) {
   if (typeof d.totalLevel === "number") return `total ${d.totalLevel} · combat ${d.combatLevel}`;
@@ -19,15 +21,10 @@ export default async function BarracksPage({ params }: { params: Promise<{ guild
   const roster = await getRoster(await getDb(), guild.id);
   return (
     <>
-      <div className="page-head">
-        <div>
-          <h1>Roster</h1>
-          <p>
-            Game accounts members chose to share here with /link. Verified accounts were proven
-            through Discord or Battle.net; claimed ones weren't.
-          </p>
-        </div>
-      </div>
+      <PageHead
+        title={PAGES.barracks.title}
+        description="The game accounts members chose to share with this server, using /link in Discord or their account page here. Verified accounts were proven through Discord or Battle.net. Claimed ones weren't."
+      />
       <div className="g-card table-card">
         <div className="table-wrap">
           <table className="g-table">

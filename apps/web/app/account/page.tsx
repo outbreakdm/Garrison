@@ -1,6 +1,7 @@
 import { type LinkProvider, linkProviders } from "@garrison/brand";
 import { listLinks, listSharesForUser } from "@garrison/db";
 import type { Metadata } from "next";
+import { PageHead } from "@/components/PageHead";
 import { Topbar } from "@/components/Topbar";
 import { WOW_REGIONS } from "@/lib/barracks";
 import { battlenetConfigured } from "@/lib/battlenet";
@@ -44,15 +45,11 @@ export default async function AccountPage({
       <Topbar username={session.username} theme={await currentTheme()} back="/account" />
       <main className="shell">
         <div className="main">
-          <div className="page-head">
-            <div>
-              <h1>Your game accounts</h1>
-              <p>
-                Servers see these only after you share with them (/link in that server). Garrison
-                never keeps your Discord or Battle.net token.
-              </p>
-            </div>
-          </div>
+          <PageHead
+            back={{ href: "/servers", label: "Your servers" }}
+            title="Your game accounts"
+            description="Link the accounts you play on. A server only sees them after you share with it, using /link in that server. Garrison never keeps your Discord or Battle.net token."
+          />
           {key ? (
             <div className={`notice ${key.startsWith("error") ? "" : "notice--ok"}`} role="status">
               {MESSAGES[key]}
@@ -61,7 +58,7 @@ export default async function AccountPage({
 
           <div className="grid-cards">
             <div className="g-card card-col">
-              <span className="g-label">Verified, from Discord</span>
+              <h2 className="card-title">From your Discord connections</h2>
               <p className="muted">
                 Steam, Battle.net, Riot, Xbox, PlayStation and more: whatever you've connected in
                 Discord under Settings → Connections. Run it again after you connect something new.
@@ -72,7 +69,7 @@ export default async function AccountPage({
             </div>
             {wow ? (
               <form className="g-card card-col" method="get" action="/auth/battlenet/login">
-                <span className="g-label">Verified, World of Warcraft</span>
+                <h2 className="card-title">World of Warcraft</h2>
                 <p className="muted">
                   Sign in with Battle.net to link your characters with level, class and realm.
                 </p>
@@ -92,7 +89,7 @@ export default async function AccountPage({
               </form>
             ) : null}
             <div className="g-card card-col">
-              <span className="g-label">Claimed, Old School RuneScape</span>
+              <h2 className="card-title">Old School RuneScape</h2>
               <p className="muted">
                 Use /link osrs in Discord. OSRS can't prove an account is yours, so it shows as
                 claimed.
@@ -102,7 +99,7 @@ export default async function AccountPage({
 
           <div className="g-card table-card">
             <div className="table-card__head">
-              <span className="g-label">Linked</span>
+              <h2>Linked accounts</h2>
             </div>
             <div className="table-wrap">
               <table className="g-table">
@@ -137,7 +134,7 @@ export default async function AccountPage({
           </div>
 
           <div className="g-card card-col">
-            <span className="g-label">Shared with</span>
+            <h2 className="card-title">Servers that can see them</h2>
             {shares.length ? (
               shares.map((s) => (
                 <form className="list-row" key={s.guildId} action={stopSharing}>

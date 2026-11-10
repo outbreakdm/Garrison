@@ -2,6 +2,7 @@ import { cleanQuery, searchCases, searchMembers } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ActionBadge, plainMentions } from "@/components/format";
+import { PageHead } from "@/components/PageHead";
 import { getDb } from "@/lib/db";
 import { searchIndex } from "@/lib/search-index";
 import { requireGuildAccess } from "@/lib/session";
@@ -31,12 +32,10 @@ export default async function SearchPage({
 
   return (
     <>
-      <div className="page-head">
-        <div>
-          <h1>{q ? `Results for “${q}”` : "Search"}</h1>
-          <p>Settings, pages, members and cases in {guild.name}.</p>
-        </div>
-      </div>
+      <PageHead
+        title={q ? `Results for “${q}”` : "Search"}
+        description={`Pages, settings, members and cases in ${guild.name}.`}
+      />
       {!q ? (
         <div className="g-card muted">
           Type a setting, a member's name or ID, or a case number like #12.
@@ -46,8 +45,10 @@ export default async function SearchPage({
       ) : (
         <div className="grid-cards">
           {places.length ? (
-            <section className="g-card card-col" aria-label="Settings and pages">
-              <span className="g-label">Settings and pages</span>
+            <section className="g-card card-col" aria-labelledby="hits-pages">
+              <h2 className="card-title" id="hits-pages">
+                Pages and settings
+              </h2>
               {places.map((p) => (
                 <Link key={`${p.path}-${p.title}`} className="search-hit" href={`${base}${p.path}`}>
                   <span>{p.title}</span>
@@ -57,13 +58,15 @@ export default async function SearchPage({
             </section>
           ) : null}
           {members.length ? (
-            <section className="g-card card-col" aria-label="Members">
-              <span className="g-label">Members</span>
+            <section className="g-card card-col" aria-labelledby="hits-members">
+              <h2 className="card-title" id="hits-members">
+                Members
+              </h2>
               {members.map((m) => (
                 <Link
                   key={m.userId}
                   className="search-hit"
-                  href={`${base}/ledger?user=${m.userId}`}
+                  href={`${base}/watch/member/${m.userId}`}
                 >
                   <span>{m.name}</span>
                   <span className="g-help">
@@ -75,8 +78,10 @@ export default async function SearchPage({
             </section>
           ) : null}
           {cases.length ? (
-            <section className="g-card card-col" aria-label="Cases">
-              <span className="g-label">Cases</span>
+            <section className="g-card card-col" aria-labelledby="hits-cases">
+              <h2 className="card-title" id="hits-cases">
+                Cases
+              </h2>
               {cases.map((c) => (
                 <Link key={c.id} className="search-hit" href={`${base}/watch?q=%23${c.caseNumber}`}>
                   <span>

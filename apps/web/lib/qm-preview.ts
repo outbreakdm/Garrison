@@ -1,4 +1,4 @@
-import type { QmOperation } from "@garrison/db";
+import type { QmOperation, QmStatus } from "@garrison/db";
 import type { LayoutChannel, ServerLayout } from "./discord";
 
 /**
@@ -172,3 +172,13 @@ export function planLines(plan: QmOperation[]) {
     }
   });
 }
+
+/** A build's state in plain words, with the badge tone it's shown in. */
+export const BUILD_STATUS: Record<QmStatus, { label: string; tone: string }> = {
+  pending: { label: "Not built", tone: "g-badge--intel" },
+  applied: { label: "Built", tone: "g-badge--go" },
+  cancelled: { label: "Discarded", tone: "" },
+  expired: { label: "Expired", tone: "" },
+  failed: { label: "Stopped partway", tone: "g-badge--alert" },
+  rolled_back: { label: "Undone", tone: "g-badge--caution" },
+};

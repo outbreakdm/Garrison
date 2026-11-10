@@ -1,8 +1,9 @@
 import { getOverview, listDashboardActions, listOpenQuarantines } from "@garrison/db";
 import type { Metadata } from "next";
-import { formatTime } from "@/components/format";
+import { formatTime, When } from "@/components/format";
 import { Outcome } from "@/components/Outcome";
-import { RequestsPanel } from "@/components/RequestsPanel";
+import { CardHead, PageHead } from "@/components/PageHead";
+import { RequestsHistory, RequestsPanel } from "@/components/RequestsPanel";
 import {
   ChannelSelect,
   FormFoot,
@@ -14,12 +15,13 @@ import {
 import { getDb } from "@/lib/db";
 import { guildOwnerId, listGuildRoles, listTextChannels } from "@/lib/discord";
 import { errorAt, latestOutcome } from "@/lib/outcome";
+import { PAGES } from "@/lib/pages";
 import { isDangerousRole } from "@/lib/permissions";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
 import { saveAntiRaid, saveVerification } from "../settings/actions";
 
-export const metadata: Metadata = { title: "Gatehouse" };
+export const metadata: Metadata = { title: PAGES.gatehouse.title };
 
 const KINDS = [
   "lockdown_start",
@@ -33,7 +35,7 @@ function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="list-row">
       <span className="muted">{label}</span>
-      <span className="mono">{value}</span>
+      <span className="list-row__value">{value}</span>
     </div>
   );
 }
@@ -78,27 +80,43 @@ export default async function GatehousePage({
     />
   );
   const isOwner = ownerId === session.userId;
+  /** A protection's state. Off is flagged: it's the server's choice, but worth seeing. */
+  const onOff = (on: boolean | undefined) => (
+    <span className={`g-badge ${on ? "g-badge--go" : "g-badge--caution"}`}>
+      {on ? "On" : "Off"}
+    </span>
+  );
   const roleName = (id: string | null | undefined) =>
     id ? `@${roles.find((r) => r.id === id)?.name ?? "deleted role"}` : "None";
 
   return (
     <>
-      <div className="page-head">
-        <div>
-          <h1>Security</h1>
-          <p>Lock the server, verify newcomers, and watch for raids and rogue admins.</p>
-        </div>
-      </div>
+      <PageHead
+        title={PAGES.gatehouse.title}
+        description="Lock the server in an emergency, and set the protections that run by themselves."
+      />
 
-      <RequestsPanel guildId={guild.id} kinds={KINDS} query={query} actions={actions} />
+      <RequestsPanel kinds={KINDS} query={query} actions={actions} />
       <SettingsNotice query={query} />
 
-      <div className="grid-cards">
-        <div className={`g-card card-col ${l ? "g-card--hud" : ""}`} id="lockdown">
-          <span className="g-label">Lockdown</span>
+      <section
+        className={`g-card card-col ${l ? "g-card--hud" : ""}`}
+        id="lockdown"
+        aria-labelledby="lockdown-title"
+      >
+        <CardHead
+          title={<span id="lockdown-title">Lockdown</span>}
+          help="Stops @everyone posting in every channel until it's lifted. Staff roles keep talking. Use it when the server is being raided."
+        >
+          {l ? (
+            <span className="g-badge g-badge--alert">Locked</span>
+          ) : (
+            <span className="g-badge">Not locked</span>
+          )}
+        </CardHead>
+        <div className="lockdown-body">
           {l ? (
             <>
-              <span className="g-badge g-badge--alert">Active</span>
               <Row label="Started" value={formatTime(l.startedAt)} />
               <Row
                 label="Lifts"
@@ -114,55 +132,57 @@ export default async function GatehousePage({
               </form>
             </>
           ) : (
-            <>
-              <span className="muted">
-                Not locked. Locking stops @everyone talking in every channel; staff roles keep
-                talking.
-              </span>
-              <details className="confirm">
-                <summary className="confirm__toggle g-btn g-btn--secondary">
-                  Lock the server…
-                </summary>
-                <form action={requestAction} className="card-col">
-                  <Hidden guildId={guild.id} kind="lockdown_start" at="lockdown" />
-                  <label className="g-field">
-                    <span>Lift automatically after</span>
-                    <select className="g-input" name="durationMinutes" defaultValue="60">
-                      <option value="0">Don't: lift it by hand</option>
-                      <option value="15">15 minutes</option>
-                      <option value="30">30 minutes</option>
-                      <option value="60">1 hour</option>
-                      <option value="120">2 hours</option>
-                      <option value="360">6 hours</option>
-                      <option value="1440">24 hours</option>
-                    </select>
-                  </label>
-                  <label className="check">
-                    <input type="checkbox" name="pauseInvites" defaultChecked />
-                    <span>Pause invites too</span>
-                  </label>
-                  <label className="g-field">
-                    <span>Reason (shown in the alert)</span>
-                    <input
-                      className="g-input"
-                      name="reason"
-                      maxLength={200}
-                      placeholder="Raid in progress"
-                    />
-                  </label>
-                  <button type="submit" className="g-btn g-btn--danger">
-                    Lock the server now
-                  </button>
-                </form>
-              </details>
-            </>
+            <details className="confirm">
+              <summary className="confirm__toggle g-btn g-btn--secondary">Lock the server…</summary>
+              <form action={requestAction} className="card-col">
+                <Hidden guildId={guild.id} kind="lockdown_start" at="lockdown" />
+                <label className="g-field">
+                  <span>Lift automatically after</span>
+                  <select className="g-input" name="durationMinutes" defaultValue="60">
+                    <option value="0">Don't: lift it by hand</option>
+                    <option value="15">15 minutes</option>
+                    <option value="30">30 minutes</option>
+                    <option value="60">1 hour</option>
+                    <option value="120">2 hours</option>
+                    <option value="360">6 hours</option>
+                    <option value="1440">24 hours</option>
+                  </select>
+                </label>
+                <label className="check">
+                  <input type="checkbox" name="pauseInvites" defaultChecked />
+                  <span>Pause invites too</span>
+                </label>
+                <label className="g-field">
+                  <span>Reason (shown in the alert)</span>
+                  <input
+                    className="g-input"
+                    name="reason"
+                    maxLength={200}
+                    placeholder="Raid in progress"
+                  />
+                </label>
+                <button type="submit" className="g-btn g-btn--danger">
+                  Lock the server now
+                </button>
+              </form>
+            </details>
           )}
-          {result("lockdown", ["lockdown_start", "lockdown_end"])}
         </div>
+        {result("lockdown", ["lockdown_start", "lockdown_end"])}
+      </section>
 
-        <div className="g-card card-col" id="anti-raid">
-          <span className="g-label">Anti-raid</span>
-          <Row label="Status" value={g?.antiRaidEnabled ? "Armed" : "Off"} />
+      <div className="section-head">
+        <h2>Always-on protection</h2>
+        <p>These run by themselves. Each change is kept in Settings history.</p>
+      </div>
+      <div className="grid-2">
+        <section className="g-card card-col" id="anti-raid" aria-labelledby="anti-raid-title">
+          <CardHead
+            title={<span id="anti-raid-title">Anti-raid</span>}
+            help="Watches how fast people join. Too many at once is treated as a raid."
+          >
+            {onOff(g?.antiRaidEnabled)}
+          </CardHead>
           <Row
             label="A raid is"
             value={g ? `${g.raidJoinCount} joins in ${g.raidWindowSeconds} s` : "—"}
@@ -294,12 +314,20 @@ export default async function GatehousePage({
               <FormFoot label="Save anti-raid" guildId={guild.id} />
             </form>
           </details>
-        </div>
+        </section>
 
-        <div className="g-card card-col" id="verification">
-          <span className="g-label">Verification</span>
-          <Row label="Status" value={g?.verifyRoleId ? "On" : "Off"} />
-          <Row label="Gives" value={roleName(g?.verifyRoleId)} />
+        <section className="g-card card-col" id="verification" aria-labelledby="verify-title">
+          <CardHead
+            title={<span id="verify-title">Verification</span>}
+            help="Newcomers press a Verify button to get a role, so accounts that join can't post right away."
+          >
+            {g?.verifyRoleId ? (
+              <span className="g-badge g-badge--go">On</span>
+            ) : (
+              <span className="g-badge">Off</span>
+            )}
+          </CardHead>
+          <Row label="Role it gives" value={roleName(g?.verifyRoleId)} />
           <Row
             label="Min account age"
             value={g?.verifyMinAccountAgeDays ? `${g.verifyMinAccountAgeDays} days` : "Any"}
@@ -373,10 +401,15 @@ export default async function GatehousePage({
               <FormFoot label="Save verification" guildId={guild.id} />
             </form>
           </details>
-        </div>
+        </section>
 
-        <div className="g-card card-col" id="anti-nuke">
-          <span className="g-label">Anti-nuke · owner only</span>
+        <section className="g-card card-col" id="anti-nuke" aria-labelledby="anti-nuke-title">
+          <CardHead
+            title={<span id="anti-nuke-title">Anti-nuke</span>}
+            help="Stops one admin or bot that starts mass-deleting channels and roles, or mass-banning, by taking its roles away. Only the server owner can change it."
+          >
+            {onOff(g?.antiNukeEnabled)}
+          </CardHead>
           {isOwner ? (
             <form action={requestAction} className="card-col" key={JSON.stringify(g)}>
               <Hidden guildId={guild.id} kind="anti_nuke" at="anti-nuke" />
@@ -428,7 +461,6 @@ export default async function GatehousePage({
             </form>
           ) : (
             <>
-              <Row label="Status" value={g?.antiNukeEnabled ? "Armed" : "Off"} />
               <Row
                 label="Triggers at"
                 value={
@@ -439,21 +471,28 @@ export default async function GatehousePage({
               />
               <Row label="Trusted users" value={String(g?.antiNukeTrustedIds.length ?? 0)} />
               <p className="g-help">
-                Only the server owner can change anti-nuke, so a compromised admin can't switch it
-                off first.
+                You aren't the owner, so this is read-only: a compromised admin can't switch it off
+                first.
               </p>
             </>
           )}
           {result("anti-nuke", ["anti_nuke"])}
-        </div>
+        </section>
 
-        <div className="g-card card-col" id="quarantines">
-          <span className="g-label">Quarantined by anti-nuke · {quarantines.length}</span>
+        <section className="g-card card-col" id="quarantines" aria-labelledby="quarantine-title">
+          <CardHead
+            title={<span id="quarantine-title">Quarantined by anti-nuke</span>}
+            help="Members whose roles were taken away. Restore them if it was a false alarm. Only the owner or a trusted user can."
+          >
+            {quarantines.length ? (
+              <span className="g-badge g-badge--alert">{quarantines.length}</span>
+            ) : null}
+          </CardHead>
           {quarantines.length ? (
             quarantines.map((q) => (
               <div className="list-row" key={q.id}>
                 <span>
-                  {q.userTag} <span className="mono">{formatTime(q.createdAt)}</span>
+                  {q.userTag} <When date={q.createdAt} mono />
                   <br />
                   <span className="muted">{q.reason}</span>
                 </span>
@@ -473,10 +512,11 @@ export default async function GatehousePage({
           ) : (
             <span className="muted">Nobody is quarantined.</span>
           )}
-          <p className="g-help">Only the owner or a trusted user can restore roles.</p>
           {result("quarantines", ["release_quarantine"])}
-        </div>
+        </section>
       </div>
+
+      <RequestsHistory kinds={KINDS} actions={actions} />
     </>
   );
 }

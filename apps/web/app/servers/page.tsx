@@ -3,6 +3,7 @@ import { listActiveGuilds } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { InviteDialog } from "@/components/InviteDialog";
+import { PageHead } from "@/components/PageHead";
 import { Topbar } from "@/components/Topbar";
 import { getDb } from "@/lib/db";
 import { env } from "@/lib/env";
@@ -57,16 +58,16 @@ export default async function ServersPage() {
       <Topbar username={session.username} theme={await currentTheme()} back="/servers" />
       <main className="shell">
         <div className="main">
-          <div className="page-head">
-            <div>
-              <span className="g-label">Your servers</span>
-              <h1>Pick a server</h1>
-              <p>Servers where you have Manage Server.</p>
-            </div>
-          </div>
+          <PageHead
+            title="Your servers"
+            description="Servers where you have Manage Server in Discord. Open one to run Garrison there."
+          />
 
-          <section className="card-col" aria-label="Servers with Garrison">
-            <span className="g-label">With Garrison · {installed.length}</span>
+          <section className="card-col" aria-labelledby="with-garrison">
+            <div className="section-head">
+              <h2 id="with-garrison">With Garrison</h2>
+              <p>{installed.length ? `${installed.length} to manage` : ""}</p>
+            </div>
             {installed.length ? (
               <div className="servers">
                 {installed.map((g) => (
@@ -85,8 +86,11 @@ export default async function ServersPage() {
           </section>
 
           {available.length ? (
-            <section className="card-col" aria-label="Add Garrison">
-              <span className="g-label">Add Garrison · {available.length}</span>
+            <section className="card-col" aria-labelledby="add-garrison">
+              <div className="section-head">
+                <h2 id="add-garrison">Add Garrison to another server</h2>
+                <p>{available.length} without it</p>
+              </div>
               <div className="servers">
                 {available.map((g) => (
                   <div key={g.id} className="server-row g-card">

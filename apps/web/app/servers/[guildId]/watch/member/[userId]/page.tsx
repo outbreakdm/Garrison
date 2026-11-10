@@ -2,13 +2,15 @@ import { getMemberRank, levelForXp, listCasesForTarget, listDashboardActions } f
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ActionBadge, formatDuration, formatTime, plainMentions } from "@/components/format";
+import { ActionBadge, formatDuration, formatTime, plainMentions, When } from "@/components/format";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { Outcome } from "@/components/Outcome";
-import { RequestsPanel } from "@/components/RequestsPanel";
+import { CardHead, PageHead } from "@/components/PageHead";
+import { RequestsHistory, RequestsPanel } from "@/components/RequestsPanel";
 import { getDb } from "@/lib/db";
 import { fetchMemberCard, listGuildRoles } from "@/lib/discord";
 import { errorAt, latestOutcome, payloadField } from "@/lib/outcome";
+import { PAGES } from "@/lib/pages";
 import { requireGuildAccess } from "@/lib/session";
 import { durationText } from "@/lib/settings-schema";
 import { requestAction } from "../../../requests";
@@ -17,6 +19,9 @@ export const metadata: Metadata = { title: "Member" };
 
 const TIMEOUTS = [60, 600, 3600, 21_600, 86_400, 604_800, 2_419_200];
 const UNDOABLE = new Set(["warn", "timeout", "ban"]);
+const KINDS = ["mod_action", "undo_case"];
+const joined = (d: Date) =>
+  new Intl.DateTimeFormat("en-US", { timeZone: "UTC", dateStyle: "medium" }).format(d);
 
 export default async function MemberPage({
   params,
@@ -53,6 +58,10 @@ export default async function MemberPage({
     match: (p) => payloadField(p, "userId") === userId,
   });
   const theirCases = new Set(cases.map((c) => String(c.caseNumber)));
+  /** Requests about this member only: other members' aren't this page's business. */
+  const aboutThem = (a: { payload: unknown }) =>
+    payloadField(a.payload, "userId") === userId ||
+    theirCases.has(payloadField(a.payload, "caseNumber") ?? "");
   const undone = latestOutcome(actions, {
     userId: session.userId,
     kinds: ["undo_case"],
@@ -84,37 +93,34 @@ export default async function MemberPage({
 
   return (
     <>
-      <div className="page-head">
-        <div className="member-head">
-          <MemberAvatar name={name} src={member?.avatar ?? null} size="lg" />
-          <div>
-            <h1>{name}</h1>
-            <p className="mono">
-              {member && member.username !== name ? `${member.username} · ` : ""}
-              {userId}
-              {member?.bot ? " · bot" : ""}
-            </p>
-          </div>
-        </div>
-        <Link className="g-btn g-btn--ghost" href={`/servers/${guild.id}/watch`}>
-          Back to Watch
+      <PageHead
+        back={{ href: `/servers/${guild.id}/watch`, label: PAGES.watch.title }}
+        title={
+          <span className="member-head">
+            <MemberAvatar name={name} src={member?.avatar ?? null} size="lg" />
+            <span>{name}</span>
+          </span>
+        }
+        description={
+          <span className="mono">
+            {member && member.username !== name ? `${member.username} · ` : ""}
+            {userId}
+            {member?.bot ? " · bot" : ""}
+          </span>
+        }
+      >
+        <Link className="g-btn g-btn--ghost" href={`/servers/${guild.id}/ledger?user=${userId}`}>
+          Their events in the log
         </Link>
-      </div>
+      </PageHead>
 
-      <RequestsPanel
-        guildId={guild.id}
-        kinds={["mod_action", "undo_case"]}
-        query={query}
-        actions={actions}
-      />
+      <RequestsPanel kinds={KINDS} query={query} actions={actions} match={aboutThem} />
 
       <div className="grid-stats">
-        <div className="g-card">
-          <span className="g-label">In this server</span>
+        <div className="g-card stat">
+          <span className="stat__label">In this server</span>
           <span className="g-stat stat-text">
-            {here && member?.joinedAt
-              ? `Since ${member.joinedAt.toISOString().slice(0, 10)}`
-              : "Not a member"}
+            {here && member?.joinedAt ? `Since ${joined(member.joinedAt)}` : "Not a member"}
           </span>
           {member?.timedOutUntil ? (
             <span className="tone-caution mono">
@@ -122,19 +128,19 @@ export default async function MemberPage({
             </span>
           ) : null}
         </div>
-        <div className="g-card">
-          <span className="g-label">Active warnings</span>
+        <div className="g-card stat">
+          <span className="stat__label">Active warnings</span>
           <span className={`g-stat ${warnings ? "tone-caution" : ""}`}>{warnings}</span>
           <span className="muted">{cases.length} cases in all</span>
         </div>
-        <div className="g-card">
-          <span className="g-label">Rank</span>
+        <div className="g-card stat">
+          <span className="stat__label">Level</span>
           <span className="g-stat stat-text">
             {rank && level ? `Level ${level.level}` : "No XP yet"}
           </span>
           {rank ? (
             <span className="muted mono">
-              #{rank.position} · {rank.xp.toLocaleString("en-US")} XP
+              #{rank.position} on the leaderboard · {rank.xp.toLocaleString("en-US")} XP
             </span>
           ) : null}
         </div>
@@ -142,7 +148,7 @@ export default async function MemberPage({
 
       {memberRoles.length ? (
         <div className="g-card card-col">
-          <span className="g-label">Roles</span>
+          <h2 className="card-title">Roles</h2>
           <div className="chip-row">
             {memberRoles.map((r) => (
               <span className="g-badge" key={r.id}>
@@ -157,19 +163,16 @@ export default async function MemberPage({
         <div className="g-card muted">This is you. Moderators can't act on themselves.</div>
       ) : (
         <section className="g-card card-col" id="moderate" aria-label="Moderate">
-          <div>
-            <div className="g-label">Moderate</div>
-            <p className="g-help">
-              Garrison acts in Discord as you, usually within seconds, and records a case. You need
-              the matching Discord permission, such as Kick Members to kick.
-            </p>
-          </div>
+          <CardHead
+            title={`Moderate ${name}`}
+            help="Garrison acts in Discord as you, usually within seconds, and records a case. You need the matching Discord permission, such as Kick Members to kick."
+          />
           <Outcome action={moderated} error={errorAt(query, "moderate")} />
           <div className="mod-grid">
             <form action={requestAction} className="mod-action">
               {hidden("warn")}
-              <h2>Warn</h2>
-              <p className="g-help">Counts toward the escalation ladder.</p>
+              <h3>Warn</h3>
+              <p className="g-help">Enough warnings lead to an automatic timeout or ban.</p>
               {reason("warn-reason")}
               <button type="submit" className="g-btn g-btn--secondary" disabled={!here}>
                 Warn {name}
@@ -177,7 +180,7 @@ export default async function MemberPage({
             </form>
             <form action={requestAction} className="mod-action">
               {hidden("timeout")}
-              <h2>Time out</h2>
+              <h3>Time out</h3>
               <p className="g-help">They can read, but not talk or join voice.</p>
               <label className="g-field" htmlFor="timeout-duration">
                 <span>For</span>
@@ -200,7 +203,7 @@ export default async function MemberPage({
               </button>
             </form>
             <div className="mod-action">
-              <h2>Kick</h2>
+              <h3>Kick</h3>
               <p className="g-help">Removes them. They can rejoin with an invite.</p>
               <details className="confirm">
                 <summary className="confirm__toggle g-btn g-btn--ghost">Kick…</summary>
@@ -214,7 +217,7 @@ export default async function MemberPage({
               </details>
             </div>
             <div className="mod-action">
-              <h2>Ban</h2>
+              <h3>Ban</h3>
               <p className="g-help">
                 Works whether or not they're in the server. Undo it from their cases.
               </p>
@@ -248,11 +251,8 @@ export default async function MemberPage({
       )}
 
       <div className="g-card table-card" id="cases">
-        <div className="table-card__head row-between">
-          <span className="g-label">Cases</span>
-          <Link className="g-btn g-btn--ghost" href={`/servers/${guild.id}/ledger?user=${userId}`}>
-            Their Ledger events
-          </Link>
+        <div className="table-card__head">
+          <h2>Their cases</h2>
         </div>
         {undone || errorAt(query, "cases") ? (
           <div className="table-card__head">
@@ -276,8 +276,10 @@ export default async function MemberPage({
                   <tr key={c.id} className={c.revokedAt ? "revoked" : undefined}>
                     <td className="mono">#{c.caseNumber}</td>
                     <td>
-                      <ActionBadge action={c.action} />{" "}
-                      <span className="mono">{formatDuration(c.durationSeconds)}</span>
+                      <span className="nowrap">
+                        <ActionBadge action={c.action} />{" "}
+                        <span className="mono">{formatDuration(c.durationSeconds)}</span>
+                      </span>
                     </td>
                     {/* React escapes this: a typed reason can't inject markup. */}
                     <td>
@@ -286,7 +288,6 @@ export default async function MemberPage({
                       ) : (
                         <span className="muted">No reason given</span>
                       )}
-                      {c.revokedAt ? <span className="muted"> · undone</span> : null}
                     </td>
                     <td className="muted">
                       {c.source === "manual"
@@ -295,11 +296,13 @@ export default async function MemberPage({
                           ? "Escalation rule"
                           : "Automod"}
                     </td>
-                    <td className="mono">
-                      {c.createdAt.toISOString().slice(0, 16).replace("T", " ")} UTC
+                    <td>
+                      <When date={c.createdAt} mono />
                     </td>
                     <td>
-                      {!c.revokedAt && UNDOABLE.has(c.action) ? (
+                      {c.revokedAt ? (
+                        <span className="g-badge">Undone</span>
+                      ) : UNDOABLE.has(c.action) ? (
                         <form action={requestAction}>
                           <input type="hidden" name="guildId" value={guild.id} />
                           <input type="hidden" name="page" value={page} />
@@ -321,6 +324,8 @@ export default async function MemberPage({
           <div className="table-card__head muted">No cases. A clean record.</div>
         )}
       </div>
+
+      <RequestsHistory kinds={KINDS} actions={actions} match={aboutThem} />
     </>
   );
 }

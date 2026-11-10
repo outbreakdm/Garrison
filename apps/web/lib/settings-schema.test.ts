@@ -184,3 +184,49 @@ describe("templatesChangeText", () => {
     expect(templatesChangeText(a, b)).toBe("Added Fireteam; edited Ranked (now Comp); removed Old");
   });
 });
+
+import { parseRewards } from "./settings-schema";
+
+describe("parseRewards", () => {
+  const form = (rows: [string, string][]) => {
+    const f = new FormData();
+    rows.forEach(([level, role], i) => {
+      f.set(`reward${i}_level`, level);
+      f.set(`reward${i}_role`, role);
+    });
+    return f;
+  };
+  const ROLE = "500000000000000001";
+
+  it("keeps rows with a level and a role", () => {
+    expect(parseRewards(form([["5", ROLE]]))).toEqual({
+      ok: true,
+      value: [{ level: 5, roleId: ROLE }],
+    });
+  });
+
+  it("drops a row whose role was cleared, which is how a reward is removed", () => {
+    expect(
+      parseRewards(
+        form([
+          ["5", ""],
+          ["10", ROLE],
+          ["", ""],
+        ]),
+      ),
+    ).toEqual({ ok: true, value: [{ level: 10, roleId: ROLE }] });
+  });
+
+  it("refuses a role without a level, a bad level, and two rewards at one level", () => {
+    expect(parseRewards(form([["", ROLE]]))).toEqual({ ok: false, error: "level" });
+    expect(parseRewards(form([["501", ROLE]]))).toEqual({ ok: false, error: "level" });
+    expect(
+      parseRewards(
+        form([
+          ["5", ROLE],
+          ["5", ROLE],
+        ]),
+      ),
+    ).toEqual({ ok: false, error: "duplicate" });
+  });
+});

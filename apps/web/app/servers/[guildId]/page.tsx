@@ -15,19 +15,22 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ActionBadge, formatTime, plainMentions } from "@/components/format";
+import { ActionBadge, formatTime, plainMentions, When } from "@/components/format";
 import { NeedsAttention, SetupChecklist } from "@/components/NeedsAttention";
 import { Outcome } from "@/components/Outcome";
+import { CardHead, PageHead } from "@/components/PageHead";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { SettingsNotice } from "@/components/settings";
 import { needsAttention, SHORT_RAID_WINDOW_MS, setupSteps, showSetup } from "@/lib/attention";
 import { getDb } from "@/lib/db";
 import { errorAt, latestOutcome } from "@/lib/outcome";
+import { PAGES } from "@/lib/pages";
+import { BUILD_STATUS } from "@/lib/qm-preview";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "./requests";
 import { hideSetup } from "./settings/actions";
 
-export const metadata: Metadata = { title: "Overview" };
+export const metadata: Metadata = { title: PAGES.overview.title };
 
 export default async function OverviewPage({
   params,
@@ -83,206 +86,282 @@ export default async function OverviewPage({
   });
   const clientId = process.env.DISCORD_CLIENT_ID;
   const fixUrl = clientId && /^\d+$/.test(clientId) ? inviteUrl(clientId, guild.id) : null;
-  const ago = (d: Date) => {
-    const m = Math.round((Date.now() - d.getTime()) / 60_000);
-    return m < 60
-      ? `${m} min ago`
-      : m < 2880
-        ? `${Math.round(m / 60)} h ago`
-        : `${Math.round(m / 1440)} d ago`;
-  };
-  const nextSignups = o.nextOp ? (signups.get(o.nextOp.id) ?? []) : [];
+  const next = o.nextOp;
+  const nextSignups = next ? (signups.get(next.id) ?? []) : [];
+  const seated = nextSignups.filter((x) => !x.bench);
   const g = o.gatehouse;
+  const base = `/servers/${guild.id}`;
+  const byStaff = o.modActions24h - o.automatic24h;
+  const failing = health?.checks.filter((c) => c.status !== "ok") ?? [];
+  /** A protection's state, as a badge. Off is a caution: it's the server's choice, but worth seeing. */
+  const armed = (on: boolean | undefined, yes = "On", no = "Off") => (
+    <span className={`g-badge ${on ? "g-badge--go" : "g-badge--caution"}`}>{on ? yes : no}</span>
+  );
 
   return (
     <>
-      <div className="page-head">
-        <div>
-          <h1>Server overview</h1>
-          <p>{guild.name}</p>
-        </div>
-        {build ? (
-          <div className="build-line">
-            <span className="mono">
-              v{build.version} · {ago(build.createdAt)} by Quartermaster ·{" "}
-              {build.status.replace("_", " ")}
-            </span>
-            {build.status === "applied" ? (
-              <a
-                className="g-btn g-btn--ghost"
-                href={`/servers/${guild.id}/quartermaster`}
-                title={`Review and undo v${build.version}`}
-              >
-                Undo
-              </a>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+      <PageHead
+        title={PAGES.overview.title}
+        description={`How ${guild.name} is doing right now.`}
+      />
       <SettingsNotice query={query} />
       <NeedsAttention guildId={guild.id} items={attention} />
       {facts && showSetup(facts, steps) ? (
         <SetupChecklist guildId={guild.id} steps={steps} hide={hideSetup} />
       ) : null}
-      <RequestsPanel guildId={guild.id} kinds={["run_health"]} query={query} actions={actions} />
+      <RequestsPanel kinds={["run_health"]} query={query} actions={actions} />
 
-      <div className="grid-stats">
-        <div className="g-card">
-          <div className="g-label">Active members · 7 d</div>
+      <section className="grid-stats" aria-label="Activity">
+        <div className="g-card stat">
+          <div className="stat__label">Active members</div>
           <div className="g-stat">{activity.activeMembers7d.toLocaleString("en-US")}</div>
-          <div className="g-help">Posted at least once</div>
+          <div className="g-help">Posted at least once in the last 7 days</div>
         </div>
-        <div className="g-card">
-          <div className="g-label">Messages today</div>
+        <div className="g-card stat">
+          <div className="stat__label">Messages today</div>
           <div className="g-stat">{activity.messagesToday.toLocaleString("en-US")}</div>
-          <div className="g-help">UTC day · counts only, never content</div>
+          <div className="g-help">Since midnight UTC. Counted, never read.</div>
         </div>
-        <div className="g-card">
-          <div className="g-label">Mod actions · 24 h</div>
+        <Link className="g-card stat stat--link" href={`${base}/watch#cases`}>
+          <div className="stat__label">Moderation, last 24 h</div>
           <div className="g-stat">{o.modActions24h}</div>
           <div className="g-help">
-            {o.automatic24h} automatic · {o.modActions24h - o.automatic24h} by staff
+            {o.modActions24h
+              ? `${byStaff} by staff · ${o.automatic24h} automatic`
+              : "No warnings, timeouts, kicks or bans"}
           </div>
-        </div>
-        <div className="g-card">
-          <div className="g-label">Command reply · p95</div>
+        </Link>
+        <div className="g-card stat">
+          <div className="stat__label">Bot reply time</div>
           <div className="g-stat">{latency ? `${latency.p95Ms} ms` : "—"}</div>
           <div className="g-help">
-            {latency ? `Target under 200 ms · ${latency.count} in 24 h` : "No commands in 24 h"}
+            {latency
+              ? `How fast 95% of commands were answered today. ${latency.p95Ms <= 200 ? "On target (under 200 ms)." : "Slower than the 200 ms target."}`
+              : "No commands in the last 24 h"}
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="grid-cards">
-        <div className="g-card g-card--hud card-col">
-          <div className="row-between">
-            <span className="g-label">Next op</span>
-          </div>
-          {o.nextOp ? (
-            <>
-              <div>
-                <div className="big">{o.nextOp.title}</div>
-                <div className="mono">{formatTime(o.nextOp.startsAt, o.nextOp.timezone)}</div>
-              </div>
-              {o.nextOp.slots.map((s) => {
-                const n = nextSignups.filter((x) => x.role === s.name && !x.bench).length;
-                return (
-                  <div className="row-between" key={s.name}>
-                    <span>{s.name}</span>
-                    <span className="mono">
-                      {n} / {s.count}
-                    </span>
+      <div className="home-grid">
+        <div className="card-col">
+          <section className="g-card card-col" aria-labelledby="home-raid">
+            <CardHead title={<span id="home-raid">Next raid</span>}>
+              <Link href={`${base}/rally`}>
+                {o.openGroups
+                  ? `All raids · ${o.openGroups} open ${o.openGroups === 1 ? "group" : "groups"}`
+                  : "All groups and raids"}
+              </Link>
+            </CardHead>
+            {next ? (
+              <>
+                <div>
+                  <div className="big">{next.title}</div>
+                  <div className="muted">
+                    {formatTime(next.startsAt, next.timezone)} · <When date={next.startsAt} />
                   </div>
-                );
-              })}
-              <div className="mono">
-                {nextSignups.filter((x) => !x.bench).length} / {capacity(o.nextOp.slots)} signed up
-              </div>
-            </>
-          ) : (
-            <div className="muted">
-              No raids scheduled.{" "}
-              <a href={`/servers/${guild.id}/rally?create=1#create-raid`}>Create one</a>
-            </div>
-          )}
-        </div>
-
-        <div className="g-card card-col">
-          <span className="g-label">Gatehouse</span>
-          <div className="row-between">
-            <span>Lockdown</span>
-            {o.activeLockdown ? (
-              <span className="g-badge g-badge--alert">Active</span>
+                </div>
+                <div className="fill-list">
+                  {next.slots.map((s) => {
+                    const n = seated.filter((x) => x.role === s.name).length;
+                    return (
+                      <div className="fill" key={s.name}>
+                        <span>{s.name || "Players"}</span>
+                        <meter
+                          className="fill__bar"
+                          min={0}
+                          max={s.count}
+                          value={Math.min(n, s.count)}
+                          aria-label={`${s.name || "Players"}: ${n} of ${s.count}`}
+                        />
+                        <span className={`mono ${n >= s.count ? "tone-go" : ""}`}>
+                          {n} / {s.count}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="row-between">
+                  <span className="muted">
+                    {seated.length} of {capacity(next.slots)} signed up
+                    {nextSignups.length > seated.length
+                      ? ` · ${nextSignups.length - seated.length} on the bench`
+                      : ""}
+                  </span>
+                  <Link className="g-btn g-btn--secondary" href={`${base}/rally#raid-${next.id}`}>
+                    Open raid
+                  </Link>
+                </div>
+              </>
             ) : (
-              <span className="g-badge g-badge--go">Off</span>
+              <div className="empty">
+                <span className="muted">No raids scheduled.</span>
+                <Link
+                  className="g-btn g-btn--secondary"
+                  href={`${base}/rally?create=1#create-raid`}
+                >
+                  Create a raid
+                </Link>
+              </div>
             )}
-          </div>
-          <div className="row-between">
-            <span>Anti-raid</span>
-            <span className={`g-badge ${g?.antiRaidEnabled ? "g-badge--go" : "g-badge--caution"}`}>
-              {g?.antiRaidEnabled ? "Armed" : "Off"}
-            </span>
-          </div>
-          <div className="row-between">
-            <span>Anti-nuke</span>
-            <span className={`g-badge ${g?.antiNukeEnabled ? "g-badge--go" : "g-badge--caution"}`}>
-              {g?.antiNukeEnabled ? "Armed" : "Off"}
-            </span>
-          </div>
-          <div className="row-between">
-            <span>Verification</span>
-            <span className={`g-badge ${g?.verifyRoleId ? "g-badge--go" : ""}`}>
-              {g?.verifyRoleId ? "On" : "Off"}
-            </span>
-          </div>
+          </section>
+
+          <section className="g-card card-col" aria-labelledby="home-cases">
+            <CardHead title={<span id="home-cases">Recent moderation</span>}>
+              <Link href={`${base}/watch#cases`}>All cases</Link>
+            </CardHead>
+            {cases.length ? (
+              <div>
+                {cases.map((c) => (
+                  <div className="list-row" key={c.id}>
+                    <span className="case-line">
+                      <ActionBadge action={c.action} />
+                      {c.targetId ? (
+                        <Link href={`${base}/watch/member/${c.targetId}`}>
+                          {c.targetTag ?? c.targetId}
+                        </Link>
+                      ) : (
+                        <span>{c.targetTag ?? "A channel"}</span>
+                      )}
+                      <span className="muted case-line__reason">
+                        {c.reason ? plainMentions(c.reason) : "No reason given"}
+                      </span>
+                    </span>
+                    <When date={c.createdAt} mono />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="muted">
+                No cases yet. Warnings, timeouts, kicks and bans show here.
+              </div>
+            )}
+          </section>
         </div>
 
-        <div className="g-card card-col">
-          <div className="row-between">
-            <span className="g-label">Recent cases · Watch</span>
-            <Link href={`/servers/${guild.id}/watch`}>View all</Link>
-          </div>
-          {cases.length ? (
-            cases.map((c) => (
-              <div className="list-row" key={c.id}>
+        <div className="card-col">
+          <section className="g-card card-col" aria-labelledby="home-security">
+            <CardHead title={<span id="home-security">Security</span>}>
+              <Link href={`${base}/gatehouse`}>Open Security</Link>
+            </CardHead>
+            <div>
+              <div className="list-row">
+                <span>Lockdown</span>
+                {o.activeLockdown ? (
+                  <span className="g-badge g-badge--alert">Locked</span>
+                ) : (
+                  <span className="g-badge">Not locked</span>
+                )}
+              </div>
+              <div className="list-row">
+                <span>Anti-raid</span>
+                {armed(g?.antiRaidEnabled)}
+              </div>
+              <div className="list-row">
+                <span>Anti-nuke</span>
+                {armed(g?.antiNukeEnabled)}
+              </div>
+              <div className="list-row">
+                <span>Verification</span>
+                {g?.verifyRoleId ? (
+                  <span className="g-badge g-badge--go">On</span>
+                ) : (
+                  <span className="g-badge">Off</span>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className="g-card card-col" id="health" aria-labelledby="home-health">
+            <CardHead
+              title={<span id="home-health">Health checks</span>}
+              help="Whether Garrison has the permissions and settings it needs here."
+            >
+              {health ? (
+                <span className="muted">
+                  Checked <When date={health.computedAt} />
+                </span>
+              ) : null}
+            </CardHead>
+            {health ? (
+              <>
+                {failing.map((c) => (
+                  <div className="health-row" key={c.text}>
+                    <span
+                      className={`g-badge ${c.status === "fix" ? "g-badge--alert" : "g-badge--caution"}`}
+                    >
+                      {c.status === "fix" ? "Fix" : "Check"}
+                    </span>
+                    <span>{plainMentions(c.text)}</span>
+                  </div>
+                ))}
+                <div className="health-row">
+                  <span className="g-badge g-badge--go">OK</span>
+                  <span>
+                    {failing.length
+                      ? `${health.checks.length - failing.length} other checks passed.`
+                      : `All ${health.checks.length} checks passed.`}
+                  </span>
+                </div>
+                {health.checks.length > failing.length ? (
+                  <details className="fold fold--plain">
+                    <summary className="fold__summary">
+                      <span>What passed</span>
+                    </summary>
+                    <div className="card-col fold__body">
+                      {health.checks
+                        .filter((c) => c.status === "ok")
+                        .map((c) => (
+                          <div className="health-row" key={c.text}>
+                            <span className="g-badge g-badge--go">OK</span>
+                            <span>{plainMentions(c.text)}</span>
+                          </div>
+                        ))}
+                    </div>
+                  </details>
+                ) : null}
+              </>
+            ) : (
+              <span className="muted">
+                Garrison checks this server every 30 minutes. You can run a check now.
+              </span>
+            )}
+            <div className="g-row">
+              {health && health.problems > 0 && fixUrl ? (
+                <a className="g-btn g-btn--primary" href={fixUrl}>
+                  Fix permissions
+                </a>
+              ) : null}
+              <form action={requestAction}>
+                <input type="hidden" name="guildId" value={guild.id} />
+                <input type="hidden" name="page" value="" />
+                <input type="hidden" name="kind" value="run_health" />
+                <input type="hidden" name="at" value="health" />
+                <button type="submit" className="g-btn g-btn--secondary">
+                  Check again now
+                </button>
+              </form>
+            </div>
+            <Outcome action={healthOutcome} error={errorAt(query, "health")} />
+          </section>
+
+          {build ? (
+            <section className="g-card card-col" aria-labelledby="home-build">
+              <CardHead title={<span id="home-build">Last server build</span>}>
+                <Link href={`${base}/quartermaster`}>Open Server builder</Link>
+              </CardHead>
+              <div className="row-between">
                 <span>
-                  <ActionBadge action={c.action} /> {c.targetTag ?? "channel"}
+                  <span className="mono">v{build.version}</span> {build.summary}
                 </span>
-                <span className="mono">#{c.caseNumber}</span>
-              </div>
-            ))
-          ) : (
-            <div className="muted">No cases yet.</div>
-          )}
-        </div>
-      </div>
-      <div className="grid-cards">
-        <div className="g-card card-col" id="health">
-          <div className="row-between">
-            <span className="g-label">Health checks</span>
-            {health ? <span className="mono">{ago(health.computedAt)}</span> : null}
-          </div>
-          {health ? (
-            health.checks.slice(0, 6).map((c) => (
-              <div className="health-row" key={c.text}>
-                <span
-                  className={`g-badge ${c.status === "ok" ? "g-badge--go" : c.status === "fix" ? "g-badge--alert" : "g-badge--caution"}`}
-                >
-                  {c.status === "ok" ? "OK" : c.status === "fix" ? "Fix" : "Check"}
+                <span className={`g-badge ${BUILD_STATUS[build.status].tone}`}>
+                  {BUILD_STATUS[build.status].label}
                 </span>
-                <span>{plainMentions(c.text)}</span>
               </div>
-            ))
-          ) : (
-            <span className="muted">
-              Garrison checks this server every 30 minutes. Run a check now below.
-            </span>
-          )}
-          <div className="g-row">
-            {health && health.problems > 0 && fixUrl ? (
-              <a className="g-btn g-btn--primary" href={fixUrl}>
-                Fix permissions
-              </a>
-            ) : null}
-            <form action={requestAction}>
-              <input type="hidden" name="guildId" value={guild.id} />
-              <input type="hidden" name="page" value="" />
-              <input type="hidden" name="kind" value="run_health" />
-              <input type="hidden" name="at" value="health" />
-              <button type="submit" className="g-btn g-btn--secondary">
-                Run health check
-              </button>
-            </form>
-          </div>
-          <Outcome action={healthOutcome} error={errorAt(query, "health")} />
-        </div>
-        <div className="g-card card-col">
-          <span className="g-label">Open groups</span>
-          <div className="g-stat">{o.openGroups}</div>
-          <div className="g-help">
-            Rally LFG posts · {o.quarantines24h} quarantined by anti-nuke in 24 h
-          </div>
-          <a href={`/servers/${guild.id}/rally`}>View all</a>
+              <span className="muted">
+                Asked by {build.requestedByTag} <When date={build.createdAt} />
+              </span>
+            </section>
+          ) : null}
         </div>
       </div>
     </>

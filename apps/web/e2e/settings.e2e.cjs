@@ -52,7 +52,7 @@ const check = (name, ok, detail = "") =>
   // 1. A normal save.
   await page.selectOption("#logChannelId", "300000000000000002");
   await page.uncheck('input[name="dmMembers"]');
-  await page.click("text=Save Watch settings");
+  await page.click("text=Save moderation settings");
   await page.waitForURL(/saved=watch/);
   check(
     "save Watch",
@@ -78,7 +78,7 @@ const check = (name, ok, detail = "") =>
     OTHER,
   );
   await page.uncheck('input[name="dmMembers"]');
-  await page.click("text=Save Watch settings");
+  await page.click("text=Save moderation settings");
   await page.waitForLoadState("networkidle");
   check(
     "forged guildId is refused",

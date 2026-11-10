@@ -9,10 +9,11 @@ import {
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Art } from "@/components/Art";
-import { ActionBadge, formatDuration, plainMentions } from "@/components/format";
+import { ActionBadge, formatDuration, plainMentions, When } from "@/components/format";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { Outcome } from "@/components/Outcome";
-import { RequestsPanel } from "@/components/RequestsPanel";
+import { CardHead, PageHead } from "@/components/PageHead";
+import { RequestsHistory, RequestsPanel } from "@/components/RequestsPanel";
 import {
   ChannelSelect,
   FormFoot,
@@ -25,6 +26,7 @@ import {
 import { getDb } from "@/lib/db";
 import { listTextChannels, searchMembers } from "@/lib/discord";
 import { errorAt, latestOutcome } from "@/lib/outcome";
+import { PAGES } from "@/lib/pages";
 import { requireGuildAccess } from "@/lib/session";
 import {
   durationText,
@@ -36,7 +38,9 @@ import {
 import { requestAction } from "../requests";
 import { saveLadder, saveWatch } from "../settings/actions";
 
-export const metadata: Metadata = { title: "Watch" };
+export const metadata: Metadata = { title: PAGES.watch.title };
+
+const KINDS = ["undo_case", "mod_action", "purge"];
 
 /** Cases Discord can reverse: a warning is withdrawn, a timeout lifted, a ban removed. */
 const UNDOABLE = new Set(["warn", "timeout", "ban"]);
@@ -76,33 +80,24 @@ export default async function WatchPage({
   const logChannel = channels.find((c) => c.id === w?.logChannelId);
   return (
     <>
-      <div className="page-head">
-        <div>
-          <h1>Watch</h1>
-          <p>Moderate members, set the escalation ladder, and review or undo every case.</p>
-        </div>
-        <a className="g-btn g-btn--secondary" href="?edit=settings#settings">
+      <PageHead
+        title={PAGES.watch.title}
+        description="Warn, time out, kick or ban members, and review or undo every case."
+      >
+        <a className="g-btn g-btn--ghost" href="?edit=settings#settings">
           <GearIcon />
-          Watch settings
+          Settings
         </a>
-      </div>
+      </PageHead>
 
-      <RequestsPanel
-        guildId={guild.id}
-        kinds={["undo_case", "mod_action", "purge"]}
-        query={query}
-        actions={actions}
-      />
+      <RequestsPanel kinds={KINDS} query={query} actions={actions} />
       <SettingsNotice query={query} />
 
       <section className="g-card card-col" id="moderate" aria-label="Moderate">
-        <div className="row-between">
-          <div>
-            <div className="g-label">Moderate a member</div>
-            <div className="g-help">
-              Find someone to warn, time out, kick or ban, and see their cases and rank.
-            </div>
-          </div>
+        <CardHead
+          title="Moderate a member"
+          help="Find someone to warn, time out, kick or ban. Their page shows their cases, roles and level."
+        >
           <search>
             <form className="row-between" method="get" action="#moderate">
               <label className="sr-only" htmlFor="member-search">
@@ -123,7 +118,7 @@ export default async function WatchPage({
               </button>
             </form>
           </search>
-        </div>
+        </CardHead>
         {memberQuery ? (
           found === null ? (
             <span className="notice" role="alert">
@@ -156,7 +151,7 @@ export default async function WatchPage({
           )
         ) : null}
         <details className="card-edit" open={query.clear === "1"}>
-          <summary className="g-btn g-btn--ghost">Clear messages…</summary>
+          <summary className="g-btn g-btn--secondary">Clear messages in a channel…</summary>
           <form action={requestAction} className="settings-form">
             <input type="hidden" name="guildId" value={guild.id} />
             <input type="hidden" name="page" value="watch" />
@@ -227,10 +222,246 @@ export default async function WatchPage({
         <Outcome action={yours(["purge"])} error={errorAt(query, "moderate")} />
       </section>
 
+      <div className="g-card table-card" id="cases">
+        <div className="table-card__head row-between">
+          <div>
+            <h2>{q ? `Cases matching “${q}”` : "Cases"}</h2>
+            <span className="g-help">
+              {q
+                ? `${cases.length} found`
+                : "The latest 50. Every warning, timeout, kick, ban and cleared channel is a case."}
+            </span>
+          </div>
+          <search>
+            <form className="row-between" method="get">
+              <label className="sr-only" htmlFor="case-search">
+                Search member or case number
+              </label>
+              <input
+                id="case-search"
+                className="g-input g-input--sm"
+                name="q"
+                type="search"
+                maxLength={64}
+                placeholder="Search member or case #"
+                defaultValue={q ?? ""}
+              />
+              {q ? (
+                <Link className="g-btn g-btn--ghost" href={`/servers/${guild.id}/watch`}>
+                  Clear
+                </Link>
+              ) : null}
+            </form>
+          </search>
+        </div>
+        {undone || errorAt(query, "cases") ? (
+          <div className="table-card__head">
+            <Outcome action={undone} error={errorAt(query, "cases")} />
+          </div>
+        ) : null}
+        <div className="table-wrap">
+          <table className="g-table">
+            <thead>
+              <tr>
+                {["Case", "Action", "Member", "Reason", "By", "When", ""].map((h) => (
+                  <th key={h || "actions"} scope="col">
+                    <span className="g-label">{h}</span>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {cases.map((c) => (
+                <tr key={c.id} className={c.revokedAt ? "revoked" : undefined}>
+                  <td className="mono">#{c.caseNumber}</td>
+                  <td>
+                    <span className="nowrap">
+                      <ActionBadge action={c.action} />{" "}
+                      <span className="mono">{formatDuration(c.durationSeconds)}</span>
+                    </span>
+                  </td>
+                  {/* React escapes all of this: user-typed reasons can't inject markup. */}
+                  <td>
+                    {c.targetId ? (
+                      <Link href={`/servers/${guild.id}/watch/member/${c.targetId}`}>
+                        {c.targetTag ?? c.targetId}
+                      </Link>
+                    ) : (
+                      (c.targetTag ?? "—")
+                    )}
+                  </td>
+                  <td>
+                    {c.reason ? (
+                      plainMentions(c.reason)
+                    ) : (
+                      <span className="muted">No reason given</span>
+                    )}
+                  </td>
+                  <td className="muted">
+                    {c.source === "manual"
+                      ? c.moderatorTag
+                      : c.source === "escalation"
+                        ? "Escalation rule"
+                        : "Automod"}
+                  </td>
+                  <td>
+                    <When date={c.createdAt} mono />
+                  </td>
+                  <td>
+                    {c.revokedAt ? (
+                      <span className="g-badge">Undone</span>
+                    ) : UNDOABLE.has(c.action) ? (
+                      <form action={requestAction}>
+                        <input type="hidden" name="guildId" value={guild.id} />
+                        <input type="hidden" name="page" value="watch" />
+                        <input type="hidden" name="kind" value="undo_case" />
+                        <input type="hidden" name="caseNumber" value={c.caseNumber} />
+                        <input type="hidden" name="at" value="cases" />
+                        <button
+                          type="submit"
+                          className="g-btn g-btn--ghost"
+                          title={UNDO_LABEL[c.action]}
+                        >
+                          Undo
+                        </button>
+                      </form>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {cases.length === 0 ? (
+            <div className="table-card__head muted">
+              <Art slot="empty" className="empty-art" decorative />
+              No cases yet.
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <section className="g-card card-col" id="ladder" aria-labelledby="ladder-title">
+        <CardHead
+          title={<span id="ladder-title">What warnings lead to</span>}
+          help="Garrison does this by itself when a member's active warnings reach a step. Undone warnings don't count."
+        />
+        {rules.length ? (
+          <div className="ladder">
+            {first > 1 ? (
+              <div className="ladder__step">
+                <span className="mono">
+                  {first === 2 ? "1 warning" : `1–${first - 1} warnings`}
+                </span>
+                <span className="big">Recorded</span>
+              </div>
+            ) : null}
+            {rules.map((r, i) => (
+              <div
+                key={r.id}
+                className={`ladder__step ${r.action === "ban" ? "ladder__step--alert" : ""}`}
+              >
+                <span className={`mono ${i === rules.length - 1 ? "tone-alert" : "tone-caution"}`}>
+                  {r.warnCount} warnings in {windowText(r.windowMinutes)}
+                </span>
+                <span className="big">
+                  {ACTION_LABEL[r.action]}
+                  {r.action === "timeout" && r.durationSeconds
+                    ? ` ${durationText(r.durationSeconds)}`
+                    : ""}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="muted">
+            No rules: warnings are recorded, but nothing happens automatically.
+          </p>
+        )}
+        <details className="card-edit" id="edit-ladder" open={isEditing(query, "edit-ladder")}>
+          <summary className="g-btn g-btn--secondary">
+            <GearIcon />
+            Change the steps
+          </summary>
+          <form
+            action={saveLadder}
+            className="card-col"
+            key={rules
+              .map((r) => `${r.warnCount}:${r.windowMinutes}:${r.action}:${r.durationSeconds}`)
+              .join("|")}
+          >
+            <input type="hidden" name="guildId" value={guild.id} />
+            <p className="g-help">
+              Up to {LADDER_MAX_STEPS} steps. Leave a row's warnings blank to remove it.
+            </p>
+            {Array.from({ length: LADDER_MAX_STEPS }, (_, i) => {
+              const r = rules[i];
+              return (
+                <fieldset key={r?.id ?? `new-${i}`} className="ladder-row">
+                  <legend className="sr-only">Step {i + 1}</legend>
+                  <label className="g-field">
+                    <span>Warnings</span>
+                    <input
+                      className="g-input"
+                      name={`step${i}_warns`}
+                      type="number"
+                      min={1}
+                      max={50}
+                      defaultValue={r?.warnCount ?? ""}
+                    />
+                  </label>
+                  <label className="g-field">
+                    <span>Within</span>
+                    <select
+                      className="g-input"
+                      name={`step${i}_window`}
+                      defaultValue={String(r?.windowMinutes ?? 1440)}
+                    >
+                      {LADDER_WINDOWS.map((m) => (
+                        <option key={m} value={m}>
+                          {windowText(m)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="g-field">
+                    <span>Then</span>
+                    <select
+                      className="g-input"
+                      name={`step${i}_action`}
+                      defaultValue={r?.action ?? ""}
+                    >
+                      <option value="">No step</option>
+                      <option value="timeout">Timeout</option>
+                      <option value="kick">Kick</option>
+                      <option value="ban">Ban</option>
+                    </select>
+                  </label>
+                  <label className="g-field">
+                    <span>Timeout for</span>
+                    <select
+                      className="g-input"
+                      name={`step${i}_duration`}
+                      defaultValue={String(r?.durationSeconds ?? 3600)}
+                    >
+                      {LADDER_DURATIONS.map((d) => (
+                        <option key={d} value={d}>
+                          {durationText(d)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </fieldset>
+              );
+            })}
+            <FormFoot label="Save steps" guildId={guild.id} />
+          </form>
+        </details>
+      </section>
+
       {/* Keyed by last update: after a save or undo the form re-mounts with the stored
           values, instead of keeping stale browser state that a later save would re-apply. */}
       <SettingsPanel
-        title="Watch settings"
+        title="Moderation settings"
         open={isEditing(query, "settings")}
         facts={[
           {
@@ -277,248 +508,11 @@ export default async function WatchPage({
               </span>
             </label>
           </div>
-          <FormFoot label="Save Watch settings" guildId={guild.id} />
+          <FormFoot label="Save moderation settings" guildId={guild.id} />
         </form>
       </SettingsPanel>
 
-      <div className="g-card card-col">
-        <div className="row-between">
-          <div>
-            <div className="g-label">Escalation ladder</div>
-            <div className="g-help">
-              Applied automatically when a member's active warnings reach a step. Undone warnings
-              don't count.
-            </div>
-          </div>
-          <a className="g-btn g-btn--ghost" href="?edit=edit-ladder#edit-ladder">
-            Edit ladder
-          </a>
-        </div>
-        {rules.length ? (
-          <div className="ladder">
-            {first > 1 ? (
-              <div className="ladder__step">
-                <span className="mono">
-                  {first === 2 ? "1 warning" : `1–${first - 1} warnings`}
-                </span>
-                <span className="big">Recorded</span>
-              </div>
-            ) : null}
-            {rules.map((r, i) => (
-              <div
-                key={r.id}
-                className={`ladder__step ${r.action === "ban" ? "ladder__step--alert" : ""}`}
-              >
-                <span className={`mono ${i === rules.length - 1 ? "tone-alert" : "tone-caution"}`}>
-                  {r.warnCount} warnings in {windowText(r.windowMinutes)}
-                </span>
-                <span className="big">
-                  {ACTION_LABEL[r.action]}
-                  {r.action === "timeout" && r.durationSeconds
-                    ? ` ${durationText(r.durationSeconds)}`
-                    : ""}
-                </span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="muted">
-            No rules: warnings are recorded, but nothing happens automatically.
-          </p>
-        )}
-      </div>
-
-      <details
-        className="g-card ladder-edit"
-        id="edit-ladder"
-        open={isEditing(query, "edit-ladder")}
-      >
-        <summary className="g-label">Edit ladder</summary>
-        <form
-          action={saveLadder}
-          className="card-col"
-          key={rules
-            .map((r) => `${r.warnCount}:${r.windowMinutes}:${r.action}:${r.durationSeconds}`)
-            .join("|")}
-        >
-          <input type="hidden" name="guildId" value={guild.id} />
-          <p className="g-help">
-            Up to {LADDER_MAX_STEPS} steps. Leave a row's warnings blank to remove it. Every change
-            is in Settings history and can be undone there.
-          </p>
-          {Array.from({ length: LADDER_MAX_STEPS }, (_, i) => {
-            const r = rules[i];
-            return (
-              <fieldset key={r?.id ?? `new-${i}`} className="ladder-row">
-                <legend className="sr-only">Step {i + 1}</legend>
-                <label className="g-field">
-                  <span>Warnings</span>
-                  <input
-                    className="g-input"
-                    name={`step${i}_warns`}
-                    type="number"
-                    min={1}
-                    max={50}
-                    defaultValue={r?.warnCount ?? ""}
-                  />
-                </label>
-                <label className="g-field">
-                  <span>Within</span>
-                  <select
-                    className="g-input"
-                    name={`step${i}_window`}
-                    defaultValue={String(r?.windowMinutes ?? 1440)}
-                  >
-                    {LADDER_WINDOWS.map((m) => (
-                      <option key={m} value={m}>
-                        {windowText(m)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="g-field">
-                  <span>Then</span>
-                  <select
-                    className="g-input"
-                    name={`step${i}_action`}
-                    defaultValue={r?.action ?? ""}
-                  >
-                    <option value="">No step</option>
-                    <option value="timeout">Timeout</option>
-                    <option value="kick">Kick</option>
-                    <option value="ban">Ban</option>
-                  </select>
-                </label>
-                <label className="g-field">
-                  <span>Timeout for</span>
-                  <select
-                    className="g-input"
-                    name={`step${i}_duration`}
-                    defaultValue={String(r?.durationSeconds ?? 3600)}
-                  >
-                    {LADDER_DURATIONS.map((d) => (
-                      <option key={d} value={d}>
-                        {durationText(d)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </fieldset>
-            );
-          })}
-          <button type="submit" className="g-btn g-btn--primary">
-            Save ladder
-          </button>
-        </form>
-      </details>
-
-      <div className="g-card table-card" id="cases">
-        <div className="table-card__head row-between">
-          <span className="g-label">{q ? `Cases matching “${q}”` : "Latest 50 cases"}</span>
-          <search>
-            <form className="row-between" method="get">
-              <label className="sr-only" htmlFor="case-search">
-                Search member or case number
-              </label>
-              <input
-                id="case-search"
-                className="g-input g-input--sm"
-                name="q"
-                type="search"
-                maxLength={64}
-                placeholder="Search member or case #"
-                defaultValue={q ?? ""}
-              />
-              {q ? (
-                <Link className="g-btn g-btn--ghost" href={`/servers/${guild.id}/watch`}>
-                  Clear
-                </Link>
-              ) : null}
-            </form>
-          </search>
-        </div>
-        {undone || errorAt(query, "cases") ? (
-          <div className="table-card__head">
-            <Outcome action={undone} error={errorAt(query, "cases")} />
-          </div>
-        ) : null}
-        <div className="table-wrap">
-          <table className="g-table">
-            <thead>
-              <tr>
-                {["Case", "Action", "Member", "Reason", "By", "When", ""].map((h) => (
-                  <th key={h || "actions"} scope="col">
-                    <span className="g-label">{h}</span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {cases.map((c) => (
-                <tr key={c.id} className={c.revokedAt ? "revoked" : undefined}>
-                  <td className="mono">#{c.caseNumber}</td>
-                  <td>
-                    <ActionBadge action={c.action} />{" "}
-                    <span className="mono">{formatDuration(c.durationSeconds)}</span>
-                  </td>
-                  {/* React escapes all of this: user-typed reasons can't inject markup. */}
-                  <td>
-                    {c.targetId ? (
-                      <Link href={`/servers/${guild.id}/watch/member/${c.targetId}`}>
-                        {c.targetTag ?? c.targetId}
-                      </Link>
-                    ) : (
-                      (c.targetTag ?? "—")
-                    )}
-                  </td>
-                  <td>
-                    {c.reason ? (
-                      plainMentions(c.reason)
-                    ) : (
-                      <span className="muted">No reason given</span>
-                    )}
-                    {c.revokedAt ? <span className="muted"> · undone</span> : null}
-                  </td>
-                  <td className="muted">
-                    {c.source === "manual"
-                      ? c.moderatorTag
-                      : c.source === "escalation"
-                        ? "Escalation rule"
-                        : "Automod"}
-                  </td>
-                  <td className="mono">
-                    {c.createdAt.toISOString().slice(0, 16).replace("T", " ")} UTC
-                  </td>
-                  <td>
-                    {!c.revokedAt && UNDOABLE.has(c.action) ? (
-                      <form action={requestAction}>
-                        <input type="hidden" name="guildId" value={guild.id} />
-                        <input type="hidden" name="page" value="watch" />
-                        <input type="hidden" name="kind" value="undo_case" />
-                        <input type="hidden" name="caseNumber" value={c.caseNumber} />
-                        <input type="hidden" name="at" value="cases" />
-                        <button
-                          type="submit"
-                          className="g-btn g-btn--ghost"
-                          title={UNDO_LABEL[c.action]}
-                        >
-                          Undo
-                        </button>
-                      </form>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {cases.length === 0 ? (
-            <div className="table-card__head muted">
-              <Art slot="empty" className="empty-art" decorative />
-              No cases yet.
-            </div>
-          ) : null}
-        </div>
-      </div>
+      <RequestsHistory kinds={KINDS} actions={actions} />
     </>
   );
 }

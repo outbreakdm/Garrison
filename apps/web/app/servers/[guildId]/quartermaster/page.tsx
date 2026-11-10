@@ -1,27 +1,22 @@
 import { listDashboardActions, listQmBuilds, type QmBuild } from "@garrison/db";
 import type { Metadata } from "next";
-import { formatTime } from "@/components/format";
+import { When } from "@/components/format";
 import { Outcome } from "@/components/Outcome";
-import { RequestsPanel } from "@/components/RequestsPanel";
+import { PageHead } from "@/components/PageHead";
+import { RequestsHistory, RequestsPanel } from "@/components/RequestsPanel";
 import { ServerPreview } from "@/components/ServerPreview";
 import { PLAN_TTL_MS } from "@/lib/attention";
 import { getDb } from "@/lib/db";
 import { getServerLayout } from "@/lib/discord";
 import { errorAt, latestOutcome, payloadField } from "@/lib/outcome";
-import { addedText, planLines, previewServer } from "@/lib/qm-preview";
+import { PAGES } from "@/lib/pages";
+import { addedText, BUILD_STATUS, planLines, previewServer } from "@/lib/qm-preview";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
 
-export const metadata: Metadata = { title: "Quartermaster" };
+export const metadata: Metadata = { title: PAGES.quartermaster.title };
 
-const STATUS: Record<QmBuild["status"], { label: string; tone: string }> = {
-  pending: { label: "Not built", tone: "g-badge--intel" },
-  applied: { label: "Built", tone: "g-badge--go" },
-  cancelled: { label: "Discarded", tone: "" },
-  expired: { label: "Expired", tone: "" },
-  failed: { label: "Stopped partway", tone: "g-badge--alert" },
-  rolled_back: { label: "Undone", tone: "g-badge--caution" },
-};
+const KINDS = ["qm_plan", "qm_apply", "qm_cancel", "undo_build"];
 
 const IDEAS = [
   {
@@ -89,15 +84,10 @@ export default async function QuartermasterPage({
 
   return (
     <>
-      <div className="page-head">
-        <div>
-          <h1>Quartermaster</h1>
-          <p>
-            Describe the channels and roles you want. See your server with the changes, then build
-            it in one click. Every build is versioned and can be undone.
-          </p>
-        </div>
-      </div>
+      <PageHead
+        title={PAGES.quartermaster.title}
+        description="Describe the channels and roles you want. Quartermaster shows your server with the changes, and builds them when you say so. Every build can be undone."
+      />
 
       <section
         className="g-card g-card--hud qm-compose"
@@ -145,12 +135,7 @@ export default async function QuartermasterPage({
         </form>
       </section>
 
-      <RequestsPanel
-        guildId={guild.id}
-        kinds={["qm_plan", "qm_apply", "qm_cancel", "undo_build"]}
-        query={query}
-        actions={actions}
-      />
+      <RequestsPanel kinds={KINDS} query={query} actions={actions} />
 
       {plan && preview ? (
         <section className="qm-plan" id="plan" aria-label={`Plan v${plan.version}`}>
@@ -218,24 +203,27 @@ export default async function QuartermasterPage({
         </section>
       )}
 
-      <section className="card-col" aria-label="Builds">
-        <div className="g-label">Builds</div>
+      <section className="card-col" aria-labelledby="builds-title">
+        <div className="section-head">
+          <h2 id="builds-title">Past builds</h2>
+          <p>{history.length ? "Newest first. Undo removes exactly what a build created." : ""}</p>
+        </div>
         {history.length === 0 ? (
           <div className="g-card muted">No builds yet. Your first plan shows up above.</div>
         ) : null}
         {history.map((b) => {
           // A plan nobody built in time reads as expired, whatever the row still says.
-          const st = STATUS[b.status === "pending" ? "expired" : b.status];
+          const st = BUILD_STATUS[b.status === "pending" ? "expired" : b.status];
           return (
             <div className="g-card card-col" id={`build-${b.version}`} key={b.id}>
               <div className="row-between">
-                <h2>
+                <h3 className="card-title">
                   <span className="mono muted">v{b.version}</span> {b.summary}
-                </h2>
+                </h3>
                 <span className={`g-badge ${st.tone}`}>{st.label}</span>
               </div>
               <p className="muted">
-                “{b.prompt}” · {b.requestedByTag} · {formatTime(b.createdAt)}
+                “{b.prompt}” · asked by {b.requestedByTag} <When date={b.createdAt} />
               </p>
               <pre className="diff">{planLines(b.plan).join("\n")}</pre>
               {b.error ? <span className="notice">{b.error}</span> : null}
@@ -265,6 +253,8 @@ export default async function QuartermasterPage({
           );
         })}
       </section>
+
+      <RequestsHistory kinds={KINDS} actions={actions} />
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { modules } from "@garrison/brand";
+import { PAGES, type PageKey } from "./pages";
 
 /**
  * What the dashboard search finds besides members and cases: every page and
@@ -7,92 +7,70 @@ import { modules } from "@garrison/brand";
  */
 export interface SearchEntry {
   title: string;
-  /** Where it lives, e.g. "Settings · Ranks". */
+  /** Where it lives, e.g. "Settings · Levels". */
   where: string;
   /** Path under /servers/:id. */
   path: string;
   keywords: string;
 }
 
-const page = (
-  path: string,
-  title: string,
-  plain: string | null,
-  keywords: string,
-): SearchEntry => ({
-  title,
-  where: plain ? `Page · ${plain}` : "Page",
-  path,
-  keywords,
-});
-/** Where each module's settings are edited: on that module's own page, already open. */
-const PANELS: Record<string, string> = {
-  watch: "/watch?edit=settings#settings",
-  "anti-raid": "/gatehouse?edit=anti-raid#anti-raid",
-  server: "/settings#server",
-  ranks: "/ranks?edit=settings#settings",
-  ledger: "/ledger?edit=settings#settings",
+/** A page, findable by its title, by Garrison's name for it, and by `keywords`. */
+const page = (key: PageKey, keywords: string): SearchEntry => {
+  const p = PAGES[key];
+  return {
+    title: p.title,
+    where: p.module ? `Page · ${p.module}` : "Page",
+    path: p.path,
+    keywords,
+  };
 };
-const setting = (panel: string, module: string, title: string, keywords: string): SearchEntry => ({
-  title,
-  where: `Settings · ${module}`,
-  path: PANELS[panel] ?? "/settings",
-  keywords,
-});
+/** Where each page's settings are edited: on that page, already open. */
+const PANELS = {
+  watch: { page: "watch", path: "/watch?edit=settings#settings" },
+  "anti-raid": { page: "gatehouse", path: "/gatehouse?edit=anti-raid#anti-raid" },
+  server: { page: "settings", path: "/settings#server" },
+  ranks: { page: "ranks", path: "/ranks?edit=settings#settings" },
+  ledger: { page: "ledger", path: "/ledger?edit=settings#settings" },
+} as const satisfies Record<string, { page: PageKey; path: string }>;
+const setting = (panel: keyof typeof PANELS, title: string, keywords: string): SearchEntry => {
+  const p = PAGES[PANELS[panel].page];
+  return {
+    title,
+    where: `Settings · ${p.title}`,
+    path: PANELS[panel].path,
+    // Garrison's own name for the page finds its settings too.
+    keywords: `${keywords} ${p.module ?? ""}`.trim(),
+  };
+};
 
 export const SEARCH_INDEX: SearchEntry[] = [
-  page("", "Overview", null, "home dashboard stats health activity"),
-  page(
-    "/watch",
-    modules.watch.name,
-    modules.watch.plain,
-    "cases warn timeout kick ban mod escalation",
-  ),
-  page(
-    "/gatehouse",
-    modules.gatehouse.name,
-    modules.gatehouse.plain,
-    "lockdown raid nuke verify quarantine",
-  ),
-  page(
-    "/ledger",
-    modules.ledger.name,
-    modules.ledger.plain,
-    "audit log events history joins leaves",
-  ),
-  page("/rally", modules.rally.name, "LFG and events", "lfg group raid ops roster signups"),
-  page(
-    "/barracks",
-    modules.barracks.name,
-    modules.barracks.plain,
-    "roster linked accounts games steam osrs wow",
-  ),
-  page("/ranks", modules.ranks.name, modules.ranks.plain, "xp level leaderboard rewards"),
-  page(
-    "/quartermaster",
-    modules.quartermaster.name,
-    modules.quartermaster.plain,
-    "ai build channels roles undo",
-  ),
-  page("/settings", "Settings", null, "configure history undo account theme sign out"),
-  page(
-    "/rally/templates",
-    "LFG templates",
-    "Rally",
-    "lfg wording game presets roles buttons customize",
-  ),
-  setting("watch", "Watch", "Log channel", "mod log cases channel"),
-  setting("watch", "Watch", "DM members when moderated", "direct message notify"),
-  setting("watch", "Watch", "How to appeal", "appeal text ban"),
-  setting("anti-raid", "Gatehouse", "Anti-raid", "join rate raid lockdown"),
-  setting("anti-raid", "Gatehouse", "Auto-unlock", "lockdown minutes"),
-  setting("anti-raid", "Gatehouse", "Flag new accounts", "account age days alt"),
-  setting("anti-raid", "Gatehouse", "Alert channel", "security alerts"),
-  setting("server", "Server", "Time zone", "timezone raid events schedule ops"),
-  setting("ranks", "Ranks", "Give XP for messages", "leveling on off enable"),
-  setting("ranks", "Ranks", "Level-up messages", "announce channel"),
-  setting("ledger", "Ledger", "Ledger channel", "logs channel events"),
-  setting("ledger", "Ledger", "Keep events for", "retention days prune"),
+  page("overview", "home dashboard stats health activity attention setup"),
+  page("watch", "cases warn timeout kick ban mod escalation ladder purge clear messages"),
+  page("gatehouse", "lockdown raid nuke verify verification quarantine anti-raid anti-nuke"),
+  page("ledger", "audit log logs events history joins leaves"),
+  page("rally", "lfg looking for group raid ops events roster signups bench"),
+  page("barracks", "roster linked accounts games members steam osrs wow battle.net"),
+  page("ranks", "xp level leveling leaderboard rewards ranks"),
+  page("quartermaster", "ai build builder channels roles plan undo"),
+  page("settings", "configure history undo account theme sign out time zone"),
+  {
+    title: "LFG templates",
+    where: `Page · ${PAGES.rally.title}`,
+    path: "/rally/templates",
+    keywords: "lfg wording game presets roles buttons customize rally",
+  },
+  setting("watch", "Log channel", "mod log cases channel"),
+  setting("watch", "DM members when moderated", "direct message notify"),
+  setting("watch", "How to appeal", "appeal text ban"),
+  setting("anti-raid", "Anti-raid", "join rate raid lockdown"),
+  setting("anti-raid", "Auto-unlock", "lockdown minutes"),
+  setting("anti-raid", "Flag new accounts", "account age days alt"),
+  setting("anti-raid", "Alert channel", "security alerts"),
+  setting("server", "Time zone", "timezone raid events schedule ops server"),
+  setting("ranks", "Give XP for messages", "leveling on off enable"),
+  setting("ranks", "Level-up messages", "announce channel"),
+  setting("ledger", "Event log channel", "logs channel events"),
+  setting("ledger", "Keep events for", "retention days prune"),
 ];
 
 /** Every word of the query must appear in the title, place or keywords. */

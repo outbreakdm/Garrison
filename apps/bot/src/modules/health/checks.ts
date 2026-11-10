@@ -123,7 +123,7 @@ export function runHealthChecks(h: HealthInput): Check[] {
     "log",
     h.logChannelId,
     h.logChannel,
-    "Cases aren't logged anywhere. Pick a log channel in the dashboard, under Watch.",
+    "Cases aren't logged anywhere. Pick a log channel in the dashboard, under Moderation.",
   );
   if (h.alertChannelId) channelCheck("alert", h.alertChannelId, h.alertChannel, "");
 

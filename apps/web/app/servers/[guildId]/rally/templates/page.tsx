@@ -12,12 +12,14 @@ import {
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
+import { CardHead, PageHead } from "@/components/PageHead";
 import { getDb } from "@/lib/db";
 import { listNotifiableRoles, listTextChannels } from "@/lib/discord";
+import { PAGES } from "@/lib/pages";
 import { requireGuildAccess } from "@/lib/session";
 import { addTemplate, removeTemplate, saveTemplate } from "./actions";
 
-export const metadata: Metadata = { title: "Rally templates" };
+export const metadata: Metadata = { title: "LFG templates" };
 
 const WORDING_FIELDS = [
   ["group", "What a group is called", "squad, party, fireteam, raid"],
@@ -96,18 +98,15 @@ export default async function RallyTemplatesPage({
 
   return (
     <>
-      <div className="page-head">
-        <div>
-          <h1>LFG templates</h1>
-          <p>
-            Make Rally fit each game: default roles, the words on every button and message, where it
-            can be posted. Players pick one with /lfg create template:.
-          </p>
-        </div>
-        <span className="mono">
-          {plan === "pro" ? "Pro" : "Free"} · {templates.length} of {limit.templates} templates
+      <PageHead
+        back={{ href: `/servers/${guild.id}/rally`, label: PAGES.rally.title }}
+        title="LFG templates"
+        description="A template makes posting a group for one game a single step: its roles, the words on every button and message, and where it can be posted. Players pick one with /lfg create."
+      >
+        <span className="g-badge">
+          {plan === "pro" ? "Pro" : "Free plan"} · {templates.length} of {limit.templates} used
         </span>
-      </div>
+      </PageHead>
       {flash?.ok ? (
         <div className="notice notice--ok" role="status">
           {flash.ok}
@@ -127,7 +126,10 @@ export default async function RallyTemplatesPage({
 
       <form action={addTemplate} className="g-card card-col">
         <input type="hidden" name="guildId" value={guild.id} />
-        <span className="g-label">Add a template</span>
+        <CardHead
+          title="Add a template"
+          help="Start from a preset and change anything: every word can be edited, so any game works."
+        />
         <div className="field-row">
           <label className="g-field">
             <span>Start from</span>
@@ -150,15 +152,17 @@ export default async function RallyTemplatesPage({
             />
           </label>
         </div>
-        <p className="g-help">
-          Presets are only a starting point: every word can be changed, so any game works.
-          {plan === "free"
-            ? ` Free servers get ${PLAN_LIMITS.free.templates} templates; Garrison Pro gets ${PLAN_LIMITS.pro.templates} and role notifications.`
-            : ""}
-        </p>
-        <button type="submit" className="g-btn g-btn--primary" disabled={full}>
-          {full ? `${limit.templates} of ${limit.templates} templates used` : "Add template"}
-        </button>
+        <div className="form-foot">
+          <button type="submit" className="g-btn g-btn--primary" disabled={full}>
+            {full ? `${limit.templates} of ${limit.templates} templates used` : "Add template"}
+          </button>
+          {plan === "free" ? (
+            <span className="g-help">
+              Free servers get {PLAN_LIMITS.free.templates} templates. Garrison Pro gets{" "}
+              {PLAN_LIMITS.pro.templates}, and can notify a role when a group is posted.
+            </span>
+          ) : null}
+        </div>
       </form>
 
       {templates.map((t) => (
@@ -169,7 +173,7 @@ export default async function RallyTemplatesPage({
               {t.game ? <span className="muted"> · {t.game}</span> : null}
               {t.isDefault ? <span className="g-badge g-badge--accent"> Default</span> : null}
             </span>
-            <span className="g-help">Edit</span>
+            <span className="g-btn g-btn--ghost">Edit</span>
           </summary>
           <div className="template__body">
             <form action={saveTemplate} className="card-col">

@@ -8,16 +8,19 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { When } from "@/components/format";
+import { CardHead, PageHead } from "@/components/PageHead";
 import { SettingsNotice } from "@/components/settings";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { getDb } from "@/lib/db";
 import { listGuildRoles, listTextChannels } from "@/lib/discord";
+import { PAGES } from "@/lib/pages";
 import { requireGuildAccess } from "@/lib/session";
 import { FIELD_LABELS, ladderText, templatesChangeText } from "@/lib/settings-schema";
 import { currentTheme } from "@/lib/theme";
 import { saveOps, undoChange } from "./actions";
 
-export const metadata: Metadata = { title: "Settings" };
+export const metadata: Metadata = { title: PAGES.settings.title };
 
 function describe(
   field: string,
@@ -101,15 +104,10 @@ export default async function SettingsPage({
 
   return (
     <>
-      <div className="page-head">
-        <div>
-          <h1>Settings</h1>
-          <p>
-            What applies to the whole server, your own account, and the record of every change. Each
-            module's settings are on its own page.
-          </p>
-        </div>
-      </div>
+      <PageHead
+        title={PAGES.settings.title}
+        description="What applies to the whole server, and the record of every settings change. Each page's own settings are on that page."
+      />
       <SettingsNotice query={query} />
 
       <div className="settings-layout">
@@ -118,7 +116,7 @@ export default async function SettingsPage({
               instead of keeping stale browser state that a later save would re-apply. */}
           <form action={saveOps} id="server" className="g-card card-col" key={`ops-${timezone}`}>
             <input type="hidden" name="guildId" value={guild.id} />
-            <span className="g-label">Server</span>
+            <h2 className="card-title">Whole server</h2>
             <label className="g-field" htmlFor="timezone">
               <span>Time zone</span>
               <input
@@ -130,7 +128,7 @@ export default async function SettingsPage({
                 placeholder="America/Chicago"
               />
               <span className="g-help">
-                Used when /raid create gets a date without a time zone.
+                Raid times are entered and shown in this time zone, unless a raid names another.
               </span>
             </label>
             <div className="form-foot">
@@ -141,7 +139,7 @@ export default async function SettingsPage({
           </form>
 
           <div className="g-card card-col" id="account">
-            <span className="g-label">Your account</span>
+            <h2 className="card-title">Your account</h2>
             <div className="list-row">
               <span>Signed in as</span>
               <span className="mono">{session.username}</span>
@@ -173,24 +171,27 @@ export default async function SettingsPage({
         </div>
 
         <nav className="g-card card-col" aria-label="Module settings">
-          <span className="g-label">Where the rest lives</span>
+          <CardHead
+            title="Settings on other pages"
+            help="Each opens on its page, ready to change."
+          />
           <div className="places">
             <Place
               href={`${base}/watch?edit=settings#settings`}
-              name="Watch"
+              name={`${PAGES.watch.title} settings`}
               value={`Log ${channel(w?.logChannelId, "off")} · DMs ${(w?.dmMembers ?? true) ? "on" : "off"}`}
             />
             <Place
               href={`${base}/watch?edit=edit-ladder#edit-ladder`}
-              name="Escalation ladder"
-              value="What happens as warnings add up"
+              name="What warnings lead to"
+              value="Automatic timeouts, kicks and bans"
             />
             <Place
               href={`${base}/gatehouse?edit=anti-raid#anti-raid`}
               name="Anti-raid"
               value={
                 g?.antiRaidEnabled
-                  ? `Armed · ${g.raidJoinCount} joins in ${g.raidWindowSeconds} s`
+                  ? `On · ${g.raidJoinCount} joins in ${g.raidWindowSeconds} s`
                   : "Off"
               }
             />
@@ -210,12 +211,12 @@ export default async function SettingsPage({
             />
             <Place
               href={`${base}/ledger?edit=settings#settings`}
-              name="Ledger"
+              name={`${PAGES.ledger.title} settings`}
               value={`${channel(ledger.channelId, "Dashboard only")} · kept ${ledger.retentionDays} days`}
             />
             <Place
               href={`${base}/ranks?edit=settings#settings`}
-              name="Ranks"
+              name="Level settings"
               value={`XP ${ranks.enabled ? "on" : "off"} · level-ups ${ANNOUNCE[ranks.announce] ?? ranks.announce}`}
             />
             <Place
@@ -234,8 +235,13 @@ export default async function SettingsPage({
 
       <div className="g-card table-card" id="history">
         <div className="table-card__head row-between">
-          <span className="g-label">History</span>
-          <span className="g-help">Garrison picks changes up within a minute.</span>
+          <div>
+            <h2>History</h2>
+            <span className="g-help">
+              Every settings change, who made it, and a way to undo it. Garrison picks changes up
+              within a minute.
+            </span>
+          </div>
         </div>
         <div className="table-wrap">
           <table className="g-table">
@@ -251,8 +257,8 @@ export default async function SettingsPage({
             <tbody>
               {history.map((h: SettingsChange) => (
                 <tr key={h.id} className={undone.has(h.id) ? "revoked" : undefined}>
-                  <td className="mono">
-                    {h.createdAt.toISOString().slice(0, 16).replace("T", " ")} UTC
+                  <td>
+                    <When date={h.createdAt} mono />
                   </td>
                   <td>{h.username}</td>
                   <td>

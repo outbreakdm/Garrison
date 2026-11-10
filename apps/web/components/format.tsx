@@ -1,4 +1,5 @@
 import type { CaseAction } from "@garrison/db";
+import { relativeTime } from "../lib/time";
 
 const TONE: Record<CaseAction, string> = {
   warn: "g-badge--caution",
@@ -38,4 +39,28 @@ export function plainMentions(text: string) {
     .replace(/<@&\d+>/g, "a role")
     .replace(/<#\d+>/g, "a channel")
     .replace(/<@!?\d+>/g, "a member");
+}
+
+/**
+ * A time said plainly ("3 h ago"), with the exact time on hover and for screen
+ * readers. `mono` sets it in the table face, for columns of times.
+ */
+export function When({
+  date,
+  zone = "UTC",
+  mono = false,
+}: {
+  date: Date;
+  zone?: string;
+  mono?: boolean;
+}) {
+  return (
+    <time
+      className={mono ? "mono when" : "when"}
+      dateTime={date.toISOString()}
+      title={formatTime(date, zone)}
+    >
+      {relativeTime(date)}
+    </time>
+  );
 }

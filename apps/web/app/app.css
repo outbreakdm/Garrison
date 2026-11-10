@@ -636,8 +636,8 @@ a.topbar__user:hover {
 /* Rally: roster and dashboard requests */
 .roster {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: var(--space-3);
 }
 .roster__col {
   display: flex;
@@ -663,13 +663,13 @@ a.topbar__user:hover {
 }
 .bench-row {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
   font-size: 14px;
 }
 .bench-row > span {
-  flex: 1 1 160px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .raid-foot {
   flex-wrap: wrap;
@@ -1985,4 +1985,511 @@ select[multiple].g-input option {
 }
 .outcome--alert {
   color: var(--alert);
+}
+
+/* ---------------------------------------------------------------------------
+   Layout pass: one name per page, real headings, one way in to each control.
+   --------------------------------------------------------------------------- */
+
+/* Menu: grouped by what the pages are for; the plain name leads. */
+.g-nav__section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.g-nav__item {
+  color: var(--text);
+}
+.g-nav__plain {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  opacity: 0.75;
+}
+@media (max-width: 720px) {
+  /* One scrolling row: the sections fall away and their items line up. */
+  .g-nav__section {
+    display: contents;
+  }
+}
+
+/* Top bar menus: the server switcher on the left, you on the right. */
+.switcher__name {
+  max-width: 22ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.switcher--end .switcher__menu {
+  left: auto;
+  right: 0;
+}
+.switcher__label {
+  padding: var(--space-2) var(--space-3) var(--space-1);
+}
+.switcher__menu form {
+  margin: 0;
+  display: flex;
+}
+.switcher__menu button {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.switcher__menu button:hover {
+  background: var(--surface-raised);
+}
+.switcher__menu a:focus-visible,
+.switcher__menu button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.switcher__menu a[aria-current="true"] {
+  font-weight: 600;
+}
+.switcher__more {
+  margin-top: var(--space-1);
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  color: var(--text-muted);
+}
+
+/* Page head: a way back on sub-pages, the title, and the page's actions. */
+.page-head__text {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+.page-head__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+.crumb {
+  display: inline-flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+  color: var(--text-muted);
+  font-size: 13px;
+  text-decoration: none;
+}
+.crumb:hover {
+  color: var(--text);
+}
+
+/* Cards and sections are titled with real headings, not small labels. */
+.card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+.card-head h2,
+.table-card__head h2,
+.section-head h2 {
+  font-size: 16px;
+  line-height: 24px;
+}
+.card-head .g-help {
+  margin: 2px 0 0;
+  max-width: 62ch;
+}
+.card-head__side {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-4);
+  margin-top: var(--space-2);
+}
+.section-head p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* Something folded away: one quiet row that opens. */
+.fold__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  color: var(--text-muted);
+  font-size: 14px;
+  list-style: none;
+  cursor: pointer;
+}
+.fold__summary::-webkit-details-marker {
+  display: none;
+}
+.fold__summary::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.15s var(--ease-out);
+}
+.fold[open] > .fold__summary::before {
+  transform: rotate(45deg);
+}
+.fold__summary > span:first-of-type {
+  flex: 1;
+}
+.fold__summary:hover {
+  color: var(--text);
+}
+.fold__summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.fold[open] > .fold__summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.when {
+  white-space: nowrap;
+}
+.requests td:first-child {
+  width: 1%;
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fold__summary::before {
+    transition: none;
+  }
+}
+
+/* Overview */
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stat__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+a.stat--link {
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.15s var(--ease-out);
+}
+a.stat--link:hover {
+  border-color: var(--text-muted);
+}
+.home-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+@media (max-width: 960px) {
+  .home-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.empty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+/* How full each role of a raid is: name, bar, count. */
+.fill-list {
+  display: grid;
+  grid-template-columns: auto minmax(60px, 1fr) auto;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+}
+.fill {
+  display: contents;
+}
+.fill__bar {
+  width: 100%;
+  height: 6px;
+  border: 0;
+  border-radius: 3px;
+  background: var(--line);
+  appearance: none;
+}
+.fill__bar::-webkit-meter-bar {
+  height: 6px;
+  border: 0;
+  border-radius: 3px;
+  background: var(--line);
+}
+.fill__bar::-webkit-meter-optimum-value {
+  border-radius: 3px;
+  background: var(--accent-strong);
+}
+.fill__bar::-moz-meter-bar {
+  border-radius: 3px;
+  background: var(--accent-strong);
+}
+.case-line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.case-line__reason {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fold.fold--plain > .fold__summary {
+  padding: 0;
+  font-size: 13px;
+}
+.fold.fold--plain[open] > .fold__summary {
+  border-bottom: 0;
+  margin-bottom: var(--space-3);
+}
+/* Room for the longest page name on one line. */
+@media (min-width: 721px) {
+  .shell .g-nav {
+    flex-basis: 244px;
+    width: 244px;
+  }
+}
+
+/* Tables: an undone case is quiet, not struck through; badges and lengths stay on one line. */
+.nowrap {
+  white-space: nowrap;
+}
+.g-table .revoked {
+  text-decoration: none;
+}
+.g-table .revoked .g-badge:not(:only-child) {
+  opacity: 0.6;
+}
+.table-card__head .g-help {
+  display: block;
+  margin-top: 2px;
+}
+
+/* A member's page */
+.page-head h1 .member-head {
+  display: inline-flex;
+}
+.card-title {
+  font-size: 16px;
+  line-height: 24px;
+}
+.mod-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 720px) {
+  .mod-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.mod-action h3 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+/* Security */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+@media (max-width: 960px) {
+  .grid-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.list-row__value {
+  text-align: right;
+}
+.lockdown-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 520px;
+}
+.lockdown-body > form,
+.lockdown-body > .confirm {
+  margin-top: var(--space-1);
+}
+.card-head > div:first-child {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+.card-head__side {
+  flex: none;
+}
+
+/* Event log */
+.filter-row__note {
+  flex: 1 1 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* Groups and raids */
+/* A form opened from the page's buttons: no empty card while it's closed. */
+.form-card:not([open]) {
+  display: none;
+}
+.form-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  list-style: none;
+  cursor: pointer;
+}
+.form-card__head::-webkit-details-marker {
+  display: none;
+}
+.form-card__head h2 {
+  font-size: 16px;
+  line-height: 24px;
+}
+.form-card[open] > .form-card__head {
+  margin-bottom: var(--space-3);
+}
+.raid-head {
+  align-items: flex-start;
+}
+.raid-head h3 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 600;
+}
+
+/* Levels */
+.ranks-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+@media (max-width: 1040px) {
+  .ranks-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.level {
+  display: grid;
+  grid-template-columns: 2ch minmax(40px, 80px);
+  gap: var(--space-2);
+  align-items: center;
+}
+.reward-row--head {
+  margin-bottom: calc(-1 * var(--space-1));
+}
+/* Raid cards: three roles side by side, the bench on one line, actions together at the foot. */
+.bench-row .g-input--sm {
+  flex: 0 1 132px;
+  min-width: 0;
+}
+.raid-foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  font-size: 14px;
+}
+.raid-foot__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+@media (max-width: 480px) {
+  .bench-row {
+    flex-wrap: wrap;
+  }
+}
+
+/* Phones */
+@media (max-width: 720px) {
+  /* One row for the bar: the mark, the server, you. Search gets its own row below. */
+  .topbar {
+    gap: var(--space-2) var(--space-3);
+    padding: var(--space-3) var(--space-4);
+  }
+  .topbar .g-logo__word {
+    display: none;
+  }
+  .topbar .switcher__name {
+    max-width: 14ch;
+  }
+  /* The menu scrolls sideways; the fading edge says there's more. */
+  .shell .g-nav {
+    padding-inline-end: var(--space-6);
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  }
+  /* Numbers two by two, not four tall cards. */
+  .grid-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2);
+  }
+  .grid-stats .g-card {
+    padding: var(--space-3);
+  }
+  .grid-stats .g-stat {
+    font-size: 22px;
+    line-height: 28px;
+  }
+  .page-head__actions {
+    width: 100%;
+  }
+  .card-head__side,
+  .card-head__side search,
+  .card-head__side form {
+    flex: 1 1 100%;
+  }
+  .card-head__side .g-input {
+    flex: 1;
+    min-width: 0;
+  }
+}
+@media (max-width: 720px) {
+  .table-card__head.row-between {
+    flex-wrap: wrap;
+  }
+  .table-card__head search,
+  .table-card__head search form {
+    flex: 1 1 100%;
+  }
+  .table-card__head search .g-input {
+    flex: 1;
+    max-width: none;
+  }
+}
+.card-head > div:first-child {
+  flex-basis: 240px;
 }

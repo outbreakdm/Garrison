@@ -12,12 +12,14 @@ import {
   memberNames,
 } from "@garrison/db";
 import type { Metadata } from "next";
-import { formatTime } from "@/components/format";
+import { formatTime, When } from "@/components/format";
 import { Outcome } from "@/components/Outcome";
-import { RequestsPanel } from "@/components/RequestsPanel";
+import { PageHead } from "@/components/PageHead";
+import { RequestsHistory, RequestsPanel } from "@/components/RequestsPanel";
 import { getDb } from "@/lib/db";
 import { listTextChannels } from "@/lib/discord";
 import { errorAt, latestOutcome, payloadField } from "@/lib/outcome";
+import { PAGES } from "@/lib/pages";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
 import { requestCallSignups, requestCreateRaid, requestMoveSignup } from "./actions";
@@ -38,7 +40,7 @@ const KINDS = [
 const GROUP_KINDS = ["lfg_join", "lfg_leave", "close_lfg"];
 const RAID_KINDS = ["raid_signup", "raid_withdraw", "move_signup", "call_signups", "cancel_raid"];
 
-export const metadata: Metadata = { title: "Rally" };
+export const metadata: Metadata = { title: PAGES.rally.title };
 
 /** Slot numbers 1..n, capped at 10 for the card. */
 const slotNumbers = (n: number) => Array.from({ length: Math.min(n, 10) }, (_, i) => i + 1);
@@ -86,33 +88,27 @@ export default async function RallyPage({
 
   return (
     <>
-      <div className="page-head">
-        <div>
-          <h1>Rally and Ops</h1>
-          <p>Post groups, schedule raids, and join or sign up without leaving the dashboard.</p>
-        </div>
-        <div className="row-between">
-          <a className="g-btn g-btn--secondary" href={`/servers/${guild.id}/rally/templates`}>
-            LFG templates
-          </a>
-          <a className="g-btn g-btn--secondary" href="?post=1#post-group">
-            Post a group
-          </a>
-          <a className="g-btn g-btn--primary" href="?create=1#create-raid">
-            Create raid
-          </a>
-        </div>
-      </div>
-      <RequestsPanel
-        guildId={guild.id}
-        kinds={KINDS}
-        query={query}
-        actions={allActions}
-        limit={8}
-      />
+      <PageHead
+        title={PAGES.rally.title}
+        description="Groups are quick pick-up squads members join right away. Raids are scheduled, with role signups and a bench."
+      >
+        <a className="g-btn g-btn--ghost" href={`/servers/${guild.id}/rally/templates`}>
+          LFG templates
+        </a>
+        <a className="g-btn g-btn--secondary" href="?post=1#post-group">
+          Post a group
+        </a>
+        <a className="g-btn g-btn--primary" href="?create=1#create-raid">
+          Create raid
+        </a>
+      </PageHead>
+      <RequestsPanel kinds={KINDS} query={query} actions={allActions} />
 
-      <details className="g-card raid-create" id="post-group" open={query.post === "1"}>
-        <summary className="g-label">Post a group</summary>
+      <details className="g-card raid-create form-card" id="post-group" open={query.post === "1"}>
+        <summary className="form-card__head">
+          <h2>Post a group</h2>
+          <span className="g-btn g-btn--ghost">Close</span>
+        </summary>
         <form action={requestAction} className="card-col create-raid">
           <input type="hidden" name="guildId" value={guild.id} />
           <input type="hidden" name="page" value="rally" />
@@ -217,8 +213,15 @@ export default async function RallyPage({
           </button>
         </form>
       </details>
-      <details className="g-card raid-create" id="create-raid" open={query.create === "1"}>
-        <summary className="g-label">Create raid</summary>
+      <details
+        className="g-card raid-create form-card"
+        id="create-raid"
+        open={query.create === "1"}
+      >
+        <summary className="form-card__head">
+          <h2>Create a raid</h2>
+          <span className="g-btn g-btn--ghost">Close</span>
+        </summary>
         <form action={requestCreateRaid} className="card-col create-raid">
           <input type="hidden" name="guildId" value={guild.id} />
           <div className="field-row">
@@ -276,8 +279,8 @@ export default async function RallyPage({
             <span>Post it again every week</span>
           </label>
           <p className="g-help">
-            Garrison posts it as you, with a signup card, in the time zone set in Settings. You must
-            be able to post in that channel yourself.
+            Garrison posts it as you, with a signup card. Times are in {timezone}, the server's time
+            zone (change it in Settings). You must be able to post in that channel yourself.
           </p>
           <button type="submit" className="g-btn g-btn--primary">
             Create raid
@@ -285,8 +288,11 @@ export default async function RallyPage({
         </form>
       </details>
       <div className="grid-cards">
-        <section aria-label="Open groups" className="card-col">
-          <div className="g-label">Open groups</div>
+        <section aria-labelledby="groups-title" className="card-col">
+          <div className="section-head">
+            <h2 id="groups-title">Open groups</h2>
+            <p>{posts.length ? `${posts.length} open` : ""}</p>
+          </div>
           {posts.length ? (
             posts.map((p, i) => {
               const members = postMembers[i] ?? [];
@@ -305,7 +311,11 @@ export default async function RallyPage({
                           : "Open"}
                     </span>
                   </div>
-                  <div className="g-lfg__meta">{p.note ?? formatTime(p.startsAt)}</div>
+                  <div className="g-lfg__meta">
+                    {p.note ? `${p.note} · ` : ""}
+                    {p.startsAt.getTime() <= Date.now() ? "Started " : "Starts "}
+                    <When date={p.startsAt} />
+                  </div>
                   <div
                     className="g-slots"
                     role="img"
@@ -380,11 +390,19 @@ export default async function RallyPage({
               );
             })
           ) : (
-            <div className="g-card muted">No open groups.</div>
+            <div className="g-card empty">
+              <span className="muted">No open groups right now.</span>
+              <a className="g-btn g-btn--secondary" href="?post=1#post-group">
+                Post a group
+              </a>
+            </div>
           )}
         </section>
-        <section aria-label="Upcoming raids" className="card-col">
-          <div className="g-label">Upcoming raids</div>
+        <section aria-labelledby="raids-title" className="card-col">
+          <div className="section-head">
+            <h2 id="raids-title">Upcoming raids</h2>
+            <p>{raids.length ? `${raids.length} scheduled` : ""}</p>
+          </div>
           {raids.length ? (
             raids.map((r, i) => {
               const signups = raidSignups[i] ?? [];
@@ -395,16 +413,18 @@ export default async function RallyPage({
                 n: g.count - seated.filter((x) => x.role === g.name).length,
               }));
               const open = missing.filter((m) => m.n > 0).map((m) => m.name);
-              const short = missing.filter((m) => m.n > 0).map((m) => `${m.n} ${m.name} short`);
+              const short = missing.filter((m) => m.n > 0).map((m) => `${m.n} ${m.name}`);
               const mine = signups.find((s) => s.userId === session.userId);
               return (
                 <div className="g-card g-card--hud card-col" id={`raid-${r.id}`} key={r.id}>
-                  <div>
-                    <div className="g-label">
-                      Ops · raid{r.repeatWeekly ? " · repeats weekly" : ""}
+                  <div className="row-between raid-head">
+                    <div>
+                      <h3>{r.title}</h3>
+                      <div className="muted">
+                        {formatTime(r.startsAt, r.timezone)} · <When date={r.startsAt} />
+                      </div>
                     </div>
-                    <h2>{r.title}</h2>
-                    <div className="mono">{formatTime(r.startsAt, r.timezone)}</div>
+                    {r.repeatWeekly ? <span className="g-badge">Repeats weekly</span> : null}
                   </div>
                   <div className="roster">
                     {r.slots.map((g) => {
@@ -526,43 +546,54 @@ export default async function RallyPage({
                     action={outcomeFor(RAID_KINDS, r.id)}
                     error={errorAt(query, `raid-${r.id}`)}
                   />
-                  <div className="row-between raid-foot">
-                    <span className="mono">
-                      {seated.length} / {capacity(r.slots)}
-                      {short.length ? ` · ${short.join(", ")}` : " · full"}
+                  <div className="raid-foot">
+                    <span className={short.length ? "muted" : "tone-go"}>
+                      {seated.length} of {capacity(r.slots)} signed up.{" "}
+                      {short.length ? `Still needs ${short.join(", ")}.` : "Every role is full."}
                     </span>
-                    <details className="confirm">
-                      <summary className="confirm__toggle g-btn g-btn--ghost">Cancel raid…</summary>
-                      <form action={requestAction}>
-                        <input type="hidden" name="guildId" value={guild.id} />
-                        <input type="hidden" name="page" value="rally" />
-                        <input type="hidden" name="kind" value="cancel_raid" />
-                        <input type="hidden" name="id" value={r.id} />
-                        <input type="hidden" name="at" value={`raid-${r.id}`} />
-                        <button type="submit" className="g-btn g-btn--danger">
-                          Yes, cancel {r.title}
-                        </button>
-                      </form>
-                    </details>
-                    {short.length ? (
-                      <form action={requestCallSignups}>
-                        <input type="hidden" name="guildId" value={guild.id} />
-                        <input type="hidden" name="eventId" value={r.id} />
-                        <input type="hidden" name="at" value={`raid-${r.id}`} />
-                        <button type="submit" className="g-btn g-btn--secondary">
-                          Post a call for signups
-                        </button>
-                      </form>
-                    ) : null}
+                    <div className="raid-foot__actions">
+                      {short.length ? (
+                        <form action={requestCallSignups}>
+                          <input type="hidden" name="guildId" value={guild.id} />
+                          <input type="hidden" name="eventId" value={r.id} />
+                          <input type="hidden" name="at" value={`raid-${r.id}`} />
+                          <button type="submit" className="g-btn g-btn--secondary">
+                            Post a call for signups
+                          </button>
+                        </form>
+                      ) : null}
+                      <details className="confirm">
+                        <summary className="confirm__toggle g-btn g-btn--ghost">
+                          Cancel raid…
+                        </summary>
+                        <form action={requestAction}>
+                          <input type="hidden" name="guildId" value={guild.id} />
+                          <input type="hidden" name="page" value="rally" />
+                          <input type="hidden" name="kind" value="cancel_raid" />
+                          <input type="hidden" name="id" value={r.id} />
+                          <input type="hidden" name="at" value={`raid-${r.id}`} />
+                          <button type="submit" className="g-btn g-btn--danger">
+                            Yes, cancel {r.title}
+                          </button>
+                        </form>
+                      </details>
+                    </div>
                   </div>
                 </div>
               );
             })
           ) : (
-            <div className="g-card muted">No raids scheduled.</div>
+            <div className="g-card empty">
+              <span className="muted">No raids scheduled.</span>
+              <a className="g-btn g-btn--secondary" href="?create=1#create-raid">
+                Create a raid
+              </a>
+            </div>
           )}
         </section>
       </div>
+
+      <RequestsHistory kinds={KINDS} actions={allActions} />
     </>
   );
 }

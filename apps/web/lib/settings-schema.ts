@@ -71,13 +71,16 @@ export function parseStaffRoles(form: FormData) {
 
 export const REWARD_ROWS = 10;
 
-/** Level rewards: rows reward{i}_level / reward{i}_role. Blank rows are dropped. */
+/**
+ * Level rewards: rows reward{i}_level / reward{i}_role. A row with no role is
+ * dropped, whatever its level says: that's how a reward is removed.
+ */
 export function parseRewards(form: FormData) {
   const out: { level: number; roleId: string }[] = [];
   for (let i = 0; i < REWARD_ROWS; i++) {
     const level = String(form.get(`reward${i}_level`) ?? "").trim();
     const roleId = String(form.get(`reward${i}_role`) ?? "").trim();
-    if (!level && !roleId) continue;
+    if (!roleId) continue;
     const n = Number(level);
     if (!Number.isInteger(n) || n < 1 || n > 500) return { ok: false as const, error: "level" };
     if (!/^\d{17,20}$/.test(roleId)) return { ok: false as const, error: "role" };
