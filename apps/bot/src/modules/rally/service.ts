@@ -16,6 +16,7 @@ import {
   PermissionFlagsBits,
 } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
+import { cardEdit } from "../../lib/card.js";
 import { lfgCard, safeText } from "./card.js";
 import { voiceChannelName } from "./parse.js";
 import { postWording } from "./templates.js";
@@ -35,7 +36,10 @@ export async function refreshCard(
     const channel = guild.channels.cache.get(post.channelId);
     if (!channel?.isTextBased()) return;
     const message = await channel.messages.fetch(post.messageId);
-    await message.edit(lfgCard(post, members ?? (await listActiveMembers(ctx.db, post.id))));
+    // Posts from before the switch to V2 stay embeds until they close.
+    await message.edit(
+      cardEdit(message, lfgCard(post, members ?? (await listActiveMembers(ctx.db, post.id)))),
+    );
   } catch (error) {
     ctx.logger.debug("Could not refresh an LFG card", { postId: post.id, error });
   }

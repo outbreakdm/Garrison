@@ -9,6 +9,7 @@ import {
 } from "@garrison/db";
 import type { Client, Guild } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
+import { cardEdit, cardMessage } from "../../lib/card.js";
 import { safeText } from "../../lib/text.js";
 import { opsCard, shortages } from "./card.js";
 
@@ -23,7 +24,10 @@ export async function refreshOpsCard(
     const channel = guild.channels.cache.get(event.channelId);
     if (!channel?.isTextBased()) return;
     const message = await channel.messages.fetch(event.messageId);
-    await message.edit(opsCard(event, signups ?? (await listSignups(ctx.db, event.id))));
+    // Raids posted before the switch to V2 stay embeds until they end.
+    await message.edit(
+      cardEdit(message, opsCard(event, signups ?? (await listSignups(ctx.db, event.id)))),
+    );
   } catch (error) {
     ctx.logger.debug("Could not refresh an Ops card", { eventId: event.id, error });
   }
@@ -81,7 +85,7 @@ export async function sweepOps(ctx: BotContext, client: Client<true>) {
     const channel = guild?.channels.cache.get(event.channelId);
     if (!channel?.isSendable()) continue;
     try {
-      const message = await channel.send(opsCard(event, []));
+      const message = await channel.send(cardMessage(opsCard(event, [])));
       await setOpsMessage(ctx.db, event.id, message.id);
     } catch (error) {
       ctx.logger.warn("Could not post next week's raid", { eventId: event.id, error });

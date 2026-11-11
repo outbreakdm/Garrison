@@ -2,9 +2,9 @@ import { getActiveLockdown } from "@garrison/db";
 import { PermissionFlagsBits } from "discord.js";
 import { ephemeral, guildCommand } from "../../../commands/builders.js";
 import type { Command } from "../../../commands/types.js";
+import { cardMessage, cardReply } from "../../../lib/card.js";
 import { formatDuration, parseDuration } from "../../../lib/duration.js";
-import { brandEmbed } from "../../../lib/embeds.js";
-import { lockdownEndedEmbed, lockdownRef, lockdownStartedEmbed } from "../embeds.js";
+import { lockdownEndedCard, lockdownStartedCard, noLockdownCard } from "../embeds.js";
 import { lockGuild, unlockGuild } from "../service.js";
 
 const MAX_LOCKDOWN_SECONDS = 7 * 86_400;
@@ -43,13 +43,13 @@ export const lockdown: Command = {
 
     if (sub === "status") {
       const active = await getActiveLockdown(ctx.db, interaction.guild.id);
-      const embed = active
-        ? lockdownStartedEmbed(active, {
+      const card = active
+        ? lockdownStartedCard(active, {
             channels: new Set(active.snapshot.map((s) => s.channelId)).size,
             failed: 0,
           })
-        : brandEmbed({ tone: "go", title: "No lockdown active", module: "gatehouse" });
-      await interaction.reply({ embeds: [embed], ...ephemeral });
+        : noLockdownCard();
+      await interaction.reply(cardReply(card));
       return;
     }
 
@@ -57,9 +57,7 @@ export const lockdown: Command = {
       await interaction.deferReply(ephemeral);
       const result = await unlockGuild(ctx, interaction.guild, actor);
       await interaction.editReply(
-        result.ok
-          ? { embeds: [lockdownEndedEmbed(result.lockdown, result)] }
-          : { content: result.error },
+        result.ok ? cardMessage(lockdownEndedCard(result.lockdown, result)) : result.error,
       );
       return;
     }
@@ -91,9 +89,7 @@ export const lockdown: Command = {
       await interaction.editReply(result.error);
       return;
     }
-    await interaction.editReply({
-      content: `Locked. Lift it with /lockdown end. Ref: ${lockdownRef(result.lockdown)}`,
-      embeds: [lockdownStartedEmbed(result.lockdown, result)],
-    });
+    // The card already says how to lift it and carries the reference.
+    await interaction.editReply(cardMessage(lockdownStartedCard(result.lockdown, result)));
   },
 };

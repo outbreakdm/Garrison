@@ -20,6 +20,7 @@ import {
 import { type Client, type Guild, type GuildMember, PermissionFlagsBits } from "discord.js";
 import { z } from "zod";
 import type { BotContext } from "../../commands/types.js";
+import { cardMessage } from "../../lib/card.js";
 import { safeText } from "../../lib/text.js";
 import { restoreQuarantine } from "../gatehouse/anti-nuke.js";
 import { verifyPanel } from "../gatehouse/embeds.js";
@@ -133,7 +134,7 @@ async function doCreateRaid(ctx: BotContext, guild: Guild, member: GuildMember, 
     repeatWeekly: p.data.repeatWeekly,
   });
   if (!event) return fail("Garrison couldn't schedule that. Try again.");
-  const sent = await channel.send(opsCard(event, [])).catch(() => null);
+  const sent = await channel.send(cardMessage(opsCard(event, []))).catch(() => null);
   if (!sent) return fail("The raid is saved, but posting the card failed.");
   await setOpsMessage(ctx.db, event.id, sent.id);
   return { ok: true, message: `Posted ${p.data.title} in #${channel.name}.` };

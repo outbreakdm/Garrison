@@ -15,7 +15,7 @@ import type {
   VoiceState,
 } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
-import { brandEmbed } from "../../lib/embeds.js";
+import { cardMessage } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { safeText } from "../../lib/text.js";
 import { type Change, describeAudit, type LedgerDraft, TYPE_LABELS } from "./describe.js";
@@ -49,25 +49,28 @@ export async function record(ctx: BotContext, guild: Guild, draft: LedgerDraft) 
     if (!settings.channelId) return;
     const channel = guild.channels.cache.get(settings.channelId);
     if (!channel?.isSendable()) return;
+    // A log stream: compact cards. What happened, then who and where on one line.
     const who = [
       draft.actorId ? `By <@${draft.actorId}>` : null,
-      draft.targetId ? `Target <@${draft.targetId}>` : null,
-      draft.channelId ? `In <#${draft.channelId}>` : null,
+      draft.targetId ? `to <@${draft.targetId}>` : null,
+      draft.channelId ? `in <#${draft.channelId}>` : null,
     ].filter(Boolean);
-    const reason =
-      typeof draft.data.reason === "string" ? `\nReason: ${safeText(draft.data.reason)}` : "";
-    await channel.send({
-      embeds: [
-        brandEmbed({
-          tone: toneFor(draft.type),
-          title: TYPE_LABELS[draft.type] ?? draft.type,
-          description: `${safeText(draft.summary)}${who.length ? `\n${who.join(" · ")}` : ""}${reason}`,
-          module: "ledger",
-          ref: `#${event.id}`,
-          timestamp: event.createdAt,
-        }),
-      ],
-    });
+    const reason = typeof draft.data.reason === "string" ? safeText(draft.data.reason) : null;
+    await channel.send(
+      cardMessage({
+        tone: toneFor(draft.type),
+        title: TYPE_LABELS[draft.type] ?? draft.type,
+        lead: safeText(draft.summary),
+        blocks: [
+          ...(who.length ? [{ text: who.join(" ") }] : []),
+          ...(reason ? [{ text: `**Reason:** ${reason}` }] : []),
+        ],
+        module: "ledger",
+        ref: `#${event.id}`,
+        at: event.createdAt,
+        compact: true,
+      }),
+    );
   } catch (error) {
     ctx.logger.warn("Ledger record failed", { guildId: guild.id, type: draft.type, error });
   }

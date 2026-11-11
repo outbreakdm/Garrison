@@ -20,7 +20,7 @@ import {
 } from "discord.js";
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { ButtonHandler, Command, ModalHandler } from "../../commands/types.js";
-import { brandEmbed } from "../../lib/embeds.js";
+import { cardEdit, cardReply, ts } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { safeText } from "../../lib/text.js";
 import { parseSlots } from "../rally/parse.js";
@@ -114,7 +114,7 @@ export const raid: Command = {
       const events = await listUpcomingOps(ctx.db, guild.id);
       if (!events.length) {
         await interaction.reply({
-          content: "No raids scheduled. Create one with /raid create.",
+          content: "No raids scheduled. Create one with `/raid create`.",
           ...ephemeral,
         });
         return;
@@ -123,18 +123,16 @@ export const raid: Command = {
         const link = e.messageId
           ? `https://discord.com/channels/${guild.id}/${e.channelId}/${e.messageId}`
           : `<#${e.channelId}>`;
-        return `[${safeText(e.title)}](${link}) · <t:${Math.floor(e.startsAt.getTime() / 1000)}:F>${e.repeatWeekly ? " · weekly" : ""}`;
+        return `- [${safeText(e.title)}](${link}) · ${ts(e.startsAt, "F")}${e.repeatWeekly ? " · weekly" : ""}`;
       });
-      await interaction.reply({
-        embeds: [
-          brandEmbed({
-            title: `${events.length} upcoming`,
-            description: lines.join("\n"),
-            module: "ops",
-          }),
-        ],
-        ...ephemeral,
-      });
+      await interaction.reply(
+        cardReply({
+          title: `${events.length} upcoming ${events.length === 1 ? "raid" : "raids"}`,
+          blocks: [{ text: lines.join("\n") }],
+          module: "ops",
+          ref: events.length > 15 ? "first 15" : undefined,
+        }),
+      );
       return;
     }
 
@@ -184,7 +182,10 @@ export const raid: Command = {
       await interaction.reply({ content: "I couldn't schedule that. Try again.", ...ephemeral });
       return;
     }
-    const response = await interaction.reply({ ...opsCard(event, []), withResponse: true });
+    const response = await interaction.reply({
+      ...cardReply(opsCard(event, []), { ephemeral: false }),
+      withResponse: true,
+    });
     const sent = response.resource?.message;
     if (sent) await setOpsMessage(ctx.db, event.id, sent.id);
   },
@@ -233,7 +234,12 @@ export const opsButtons: ButtonHandler = {
         return;
       }
       const cancelled = await cancelOpsEvent(ctx.db, event.id);
-      await interaction.update(opsCard(cancelled ?? event, await listSignups(ctx.db, event.id)));
+      await interaction.update(
+        cardEdit(
+          interaction.message,
+          opsCard(cancelled ?? event, await listSignups(ctx.db, event.id)),
+        ),
+      );
       return;
     }
 
@@ -247,7 +253,9 @@ export const opsButtons: ButtonHandler = {
         });
         return;
       }
-      await interaction.update(opsCard(result.event, result.signups));
+      await interaction.update(
+        cardEdit(interaction.message, opsCard(result.event, result.signups)),
+      );
       if (result.promoted)
         await announcePromotion(interaction.guild, result.event, result.promoted);
     }

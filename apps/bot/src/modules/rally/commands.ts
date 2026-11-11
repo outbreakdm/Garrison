@@ -16,7 +16,7 @@ import {
 import { type Guild, PermissionFlagsBits, type SendableChannels } from "discord.js";
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { BotContext, ButtonHandler, Command } from "../../commands/types.js";
-import { brandEmbed } from "../../lib/embeds.js";
+import { cardEdit, cardReply } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { lfgCard, RALLY_PREFIX, safeText } from "./card.js";
 import { LIFETIME_AFTER_START_MS, matchSlot, parseSlots, parseStart } from "./parse.js";
@@ -90,7 +90,7 @@ export const lfg: Command = {
       const posts = await listOpenLfg(ctx.db, guild.id);
       if (!posts.length) {
         await interaction.reply({
-          content: "No open groups. Post one with /lfg create.",
+          content: "No open groups. Post one with `/lfg create`.",
           ...ephemeral,
         });
         return;
@@ -101,19 +101,17 @@ export const lfg: Command = {
           const link = p.messageId
             ? `https://discord.com/channels/${guild.id}/${p.channelId}/${p.messageId}`
             : `<#${p.channelId}>`;
-          return `[${safeText(p.title)}](${link}) · ${filled}/${capacity(p.slots)} · <@${p.hostId}>`;
+          return `- [${safeText(p.title)}](${link}) · **${filled}/${capacity(p.slots)}** · <@${p.hostId}>`;
         }),
       );
-      await interaction.reply({
-        embeds: [
-          brandEmbed({
-            title: `${posts.length} open ${posts.length === 1 ? "group" : "groups"}`,
-            description: lines.join("\n"),
-            module: "rally",
-          }),
-        ],
-        ...ephemeral,
-      });
+      await interaction.reply(
+        cardReply({
+          title: `${posts.length} open ${posts.length === 1 ? "group" : "groups"}`,
+          blocks: [{ text: lines.join("\n") }],
+          module: "rally",
+          ref: posts.length > 15 ? "first 15" : undefined,
+        }),
+      );
       return;
     }
 
@@ -196,13 +194,16 @@ export const lfg: Command = {
     });
     if (!post) {
       await interaction.reply({
-        content: "You already have an open group. Close it with /lfg close first.",
+        content: "You already have an open group. Close it with `/lfg close` first.",
         ...ephemeral,
       });
       return;
     }
     const members = await listActiveMembers(ctx.db, post.id);
-    const message = await interaction.reply({ ...lfgCard(post, members), withResponse: true });
+    const message = await interaction.reply({
+      ...cardReply(lfgCard(post, members), { ephemeral: false }),
+      withResponse: true,
+    });
     const sent = message.resource?.message;
     if (sent) await setLfgMessage(ctx.db, post.id, sent.id);
     if (template?.notifyRoleId && sent)
@@ -279,7 +280,12 @@ export const rallyButtons: ButtonHandler = {
         return;
       }
       const closed = await closeLfg(ctx.db, post.id);
-      await interaction.update(lfgCard(closed ?? post, await listActiveMembers(ctx.db, post.id)));
+      await interaction.update(
+        cardEdit(
+          interaction.message,
+          lfgCard(closed ?? post, await listActiveMembers(ctx.db, post.id)),
+        ),
+      );
       return;
     }
 
@@ -291,7 +297,7 @@ export const rallyButtons: ButtonHandler = {
         await interaction.reply({ content: msg, ...ephemeral });
         return;
       }
-      await interaction.update(lfgCard(result.post, result.members));
+      await interaction.update(cardEdit(interaction.message, lfgCard(result.post, result.members)));
       await syncVoiceAccess(interaction.guild, result.post, userId, false);
       return;
     }
@@ -312,7 +318,7 @@ export const rallyButtons: ButtonHandler = {
         await interaction.reply({ content: msg, ...ephemeral });
         return;
       }
-      await interaction.update(lfgCard(result.post, result.members));
+      await interaction.update(cardEdit(interaction.message, lfgCard(result.post, result.members)));
       await syncVoiceAccess(interaction.guild, result.post, userId, true);
       if (result.becameFull)
         await announceFullSquad(ctx, interaction.guild, result.post, result.members);

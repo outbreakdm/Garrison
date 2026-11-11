@@ -1,8 +1,9 @@
 import { getCase } from "@garrison/db";
 import { PermissionFlagsBits } from "discord.js";
 import type { Command } from "../../../commands/types.js";
+import { cardReply } from "../../../lib/card.js";
 import { canUndo } from "../copy.js";
-import { caseEmbed, undoRow } from "../embeds.js";
+import { caseCard, undoButton } from "../embeds.js";
 import { ephemeral, watchCommand } from "./shared.js";
 
 export const caseCommand: Command = {
@@ -25,10 +26,10 @@ export const caseCommand: Command = {
       });
       return;
     }
-    await interaction.reply({
-      embeds: [caseEmbed(c)],
-      components: canUndo(c.action) && !c.revokedAt ? [undoRow(c)] : [],
-      ...ephemeral,
-    });
+    await interaction.reply(
+      cardReply(
+        caseCard(c, { button: canUndo(c.action) && !c.revokedAt ? undoButton(c) : undefined }),
+      ),
+    );
   },
 };

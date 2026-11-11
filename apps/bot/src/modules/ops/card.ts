@@ -1,12 +1,11 @@
+import type { EmbedTone } from "@garrison/brand";
 import { capacity, type OpsEvent, type OpsSignup } from "@garrison/db";
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
-import { brandEmbed } from "../../lib/embeds.js";
+import { ButtonBuilder, ButtonStyle } from "discord.js";
+import { type Card, capped, ts } from "../../lib/card.js";
 import { safeText } from "../../lib/text.js";
 
 export const OPS_PREFIX = "ops";
 const SHOWN_PER_ROLE = 10;
-
-const ts = (d: Date, style: "F" | "R") => `<t:${Math.floor(d.getTime() / 1000)}:${style}>`;
 
 /** "2 Tank short, 1 Healer short", or null when every role is filled. */
 export function shortages(event: OpsEvent, signups: OpsSignup[]) {
@@ -21,26 +20,32 @@ export function shortages(event: OpsEvent, signups: OpsSignup[]) {
 
 const who = (s: OpsSignup) => (s.spec ? `<@${s.userId}> · ${safeText(s.spec)}` : `<@${s.userId}>`);
 
-function capped(lines: string[], more: (n: number) => string) {
-  return lines.length > SHOWN_PER_ROLE
-    ? [...lines.slice(0, SHOWN_PER_ROLE), more(lines.length - SHOWN_PER_ROLE)]
-    : lines;
-}
-
-export function opsCard(event: OpsEvent, signups: OpsSignup[]) {
+/**
+ * The raid card: when, who hosts, then one block per role (who's in, how many seats
+ * are open) with its Sign up button beside it. A full role still signs you up: to the bench.
+ */
+export function opsCard(event: OpsEvent, signups: OpsSignup[]): Card {
   const seated = signups.filter((s) => !s.bench);
   const bench = signups.filter((s) => s.bench);
   const total = capacity(event.slots);
   const short = shortages(event, signups);
   const scheduled = event.status === "scheduled";
+  const openSeats = event.slots.reduce(
+    (sum, g) => sum + Math.max(0, g.count - seated.filter((s) => s.role === g.name).length),
+    0,
+  );
 
-  const badge =
+  const status =
     event.status === "cancelled"
       ? "Cancelled"
       : event.status === "done"
         ? "Done"
-        : (short ?? "Ready");
-  const tone =
+        : openSeats === 0
+          ? "Ready"
+          : openSeats === 1
+            ? "1 left"
+            : `${openSeats} open`;
+  const tone: EmbedTone =
     event.status === "cancelled"
       ? "caution"
       : event.status === "done"
@@ -49,62 +54,59 @@ export function opsCard(event: OpsEvent, signups: OpsSignup[]) {
           ? "caution"
           : "go";
 
-  const lines = [`${ts(event.startsAt, "F")} · ${ts(event.startsAt, "R")}`];
-  const extras = [`Host <@${event.hostId}>`];
-  if (event.repeatWeekly) extras.push("repeats weekly");
-  if (scheduled) extras.push("reminders 24 h and 30 min before");
-  lines.push(extras.join(" · "));
-  if (event.note) lines.push(safeText(event.note));
+  const details = [`Host <@${event.hostId}>`];
+  if (event.repeatWeekly) details.push("repeats weekly");
+  if (scheduled) details.push("reminders 24 h and 30 min before");
 
-  const fields = event.slots.map((g) => {
+  const blocks: Card["blocks"] = [
+    {
+      text: [details.join(" · "), event.note ? safeText(event.note) : null]
+        .filter(Boolean)
+        .join("\n"),
+    },
+    "divider",
+  ];
+  event.slots.forEach((g, i) => {
     const inRole = seated.filter((s) => s.role === g.name);
     const open = Math.max(0, g.count - inRole.length);
-    const rows = capped(inRole.map(who), (n) => `+${n} more`);
-    if (open) rows.push(open > 3 ? `Open × ${open}` : Array(open).fill("Open").join("\n"));
-    return {
-      name: `${safeText(g.name)} · ${inRole.length}/${g.count}`,
-      value: rows.join("\n"),
-      inline: true,
-    };
-  });
-  if (bench.length) {
-    fields.push({
-      name: `Bench · ${bench.length}`,
-      value: capped(
-        bench.map((s) => `${who(s)} (${safeText(s.role)})`),
-        (n) => `+${n} more`,
-      ).join("\n"),
-      inline: true,
+    const lines = [...capped(inRole.map(who), SHOWN_PER_ROLE), ...(open ? [`${open} open`] : [])];
+    blocks.push({
+      text: `**${safeText(g.name)}** ${inRole.length}/${g.count}\n${lines.join("\n")}`,
+      button: scheduled
+        ? new ButtonBuilder()
+            .setCustomId(`${OPS_PREFIX}:join:${event.id}:${i}`)
+            .setLabel(`Sign up as ${g.name}`.slice(0, 80))
+            .setStyle(open ? ButtonStyle.Primary : ButtonStyle.Secondary)
+        : undefined,
     });
-  }
+  });
+  if (bench.length)
+    blocks.push({
+      text: `**Bench** ${bench.length}\n${capped(
+        bench.map((s) => `${who(s)} (${safeText(s.role)})`),
+        SHOWN_PER_ROLE,
+      ).join("\n")}`,
+    });
 
-  const embed = brandEmbed({
+  return {
     tone,
-    title: `${safeText(event.title)} · ${badge}`,
-    description: lines.join("\n"),
-    fields,
+    title: safeText(event.title),
+    status,
+    lead: `${ts(event.startsAt, "F")} · ${ts(event.startsAt, "R")}`,
+    blocks,
+    actions: scheduled
+      ? [
+          new ButtonBuilder()
+            .setCustomId(`${OPS_PREFIX}:withdraw:${event.id}`)
+            .setLabel("Withdraw")
+            .setStyle(ButtonStyle.Secondary),
+          new ButtonBuilder()
+            .setCustomId(`${OPS_PREFIX}:cancel:${event.id}`)
+            .setLabel("Cancel raid")
+            .setStyle(ButtonStyle.Danger),
+        ]
+      : undefined,
     module: "ops",
     ref: `${seated.length}/${total}`,
-  });
-  if (!scheduled) return { embeds: [embed], components: [] };
-
-  const join = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    event.slots.map((g, i) =>
-      new ButtonBuilder()
-        .setCustomId(`${OPS_PREFIX}:join:${event.id}:${i}`)
-        .setLabel(`Sign up as ${g.name}`)
-        .setStyle(i === 0 ? ButtonStyle.Primary : ButtonStyle.Secondary),
-    ),
-  );
-  const manage = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`${OPS_PREFIX}:withdraw:${event.id}`)
-      .setLabel("Withdraw")
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId(`${OPS_PREFIX}:cancel:${event.id}`)
-      .setLabel("Cancel raid")
-      .setStyle(ButtonStyle.Danger),
-  );
-  return { embeds: [embed], components: [join, manage] };
+  };
 }

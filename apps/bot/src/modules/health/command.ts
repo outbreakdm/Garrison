@@ -1,6 +1,5 @@
 import { getGatehouseSettings, getWatchSettings, saveHealthSnapshot } from "@garrison/db";
 import {
-  ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   type Guild,
@@ -9,7 +8,7 @@ import {
 } from "discord.js";
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { BotContext, Command } from "../../commands/types.js";
-import { brandEmbed } from "../../lib/embeds.js";
+import { type Card, cardMessage } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import {
   ALL_REQUIRED,
@@ -19,8 +18,37 @@ import {
   runHealthChecks,
 } from "./checks.js";
 
-/** One emoji per line, as a status marker only. */
-const MARK: Record<Check["status"], string> = { ok: "✅", warn: "⚠️", fix: "⛔" };
+/** Checks grouped by what they ask of you: fix now, worth a look, passed. */
+export function healthCard(checks: Check[], fixButton: ButtonBuilder | null): Card {
+  const list = (items: Check[]) => items.map((c) => `- ${c.text}`).join("\n");
+  const fix = checks.filter((c) => c.status === "fix");
+  const warn = checks.filter((c) => c.status === "warn");
+  const ok = checks.filter((c) => c.status === "ok");
+  const problems = fix.length + warn.length;
+  const blocks: Card["blocks"] = [];
+  if (fix.length)
+    blocks.push({ text: `**Fix now**\n${list(fix)}`, button: fixButton ?? undefined });
+  if (warn.length)
+    blocks.push({
+      text: `**Worth a look**\n${list(warn)}`,
+      button: !fix.length && fixButton ? fixButton : undefined,
+    });
+  if (ok.length) {
+    if (problems) blocks.push("divider");
+    blocks.push({ text: `**Passed**\n${list(ok)}` });
+  }
+  return {
+    tone: fix.length ? "alert" : problems ? "caution" : "go",
+    title: problems
+      ? `${problems} ${problems === 1 ? "thing needs" : "things need"} attention`
+      : "All checks passed",
+    lead: problems ? `${ok.length} of ${checks.length} checks passed` : undefined,
+    blocks,
+    actions: fixButton && !problems ? [fixButton] : undefined,
+    module: "gatehouse",
+    ref: "health",
+  };
+}
 
 function channelAccess(guild: Guild, me: GuildMember, id: string | null): ChannelAccess | null {
   if (!id) return null;
@@ -75,33 +103,18 @@ export const health: Command = {
     await interaction.deferReply(ephemeral);
     const checks = await healthFor(ctx, interaction.guild);
     await saveHealthSnapshot(ctx.db, interaction.guild.id, checks).catch(() => {});
-    const problems = checks.filter((c) => c.status !== "ok").length;
     const me = interaction.guild.members.me;
     const needsReinvite =
       !!me &&
       ((me.permissions.bitfield & ALL_REQUIRED) !== ALL_REQUIRED ||
         me.permissions.has(PermissionFlagsBits.Administrator));
-
-    const embed = brandEmbed({
-      tone: checks.some((c) => c.status === "fix") ? "alert" : problems ? "caution" : "go",
-      title: problems
-        ? `${problems} ${problems === 1 ? "thing needs" : "things need"} attention`
-        : "All checks passed",
-      description: checks.map((c) => `${MARK[c.status]} ${c.text}`).join("\n"),
-      module: "gatehouse",
-      ref: "health",
-    });
-    const components = needsReinvite
-      ? [
-          new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder()
-              .setStyle(ButtonStyle.Link)
-              .setLabel("Fix permissions")
-              .setURL(fixPermissionsUrl(interaction.client.user.id, interaction.guild.id)),
-          ),
-        ]
-      : [];
-    await interaction.editReply({ embeds: [embed], components });
+    const fixButton = needsReinvite
+      ? new ButtonBuilder()
+          .setStyle(ButtonStyle.Link)
+          .setLabel("Fix permissions")
+          .setURL(fixPermissionsUrl(interaction.client.user.id, interaction.guild.id))
+      : null;
+    await interaction.editReply(cardMessage(healthCard(checks, fixButton)));
   },
 };
 

@@ -8,7 +8,7 @@ import {
 } from "@garrison/db";
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { Command } from "../../commands/types.js";
-import { brandEmbed } from "../../lib/embeds.js";
+import { capped, cardReply } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { safeText } from "../../lib/text.js";
 import { describeLink, providerLabel } from "./format.js";
@@ -102,18 +102,19 @@ export const link: Command = {
 
     if (sub === "mine") {
       const links = await listLinks(ctx.db, user.id);
-      await interaction.reply({
-        embeds: [
-          brandEmbed({
-            title: "Your linked accounts",
-            description: links.length
-              ? links.map(describeLink).join("\n")
-              : "Nothing linked yet. Try /link osrs or /link accounts.",
-            module: "barracks",
-          }),
-        ],
-        ...ephemeral,
-      });
+      await interaction.reply(
+        cardReply({
+          title: "Your linked accounts",
+          lead: links.length
+            ? undefined
+            : "Nothing linked yet. Try `/link accounts` or `/link osrs`.",
+          blocks: links.length
+            ? [{ text: links.map((l) => `- ${describeLink(l)}`).join("\n") }]
+            : [],
+          module: "barracks",
+          ref: links.length ? `${links.length} linked` : undefined,
+        }),
+      );
       return;
     }
 
@@ -151,7 +152,7 @@ export const link: Command = {
     });
     await setRosterShare(ctx.db, interaction.guild.id, user.id, user.username, true);
     await interaction.editReply(
-      `Linked ${safeText(result.name)}: total ${result.stats.totalLevel}, combat ${result.stats.combatLevel}. It shows as claimed, because OSRS has no way to prove an account is yours. It's visible in this server's roster; hide it with /link share visible:false.`,
+      `Linked ${safeText(result.name)}: total ${result.stats.totalLevel}, combat ${result.stats.combatLevel}. It shows as claimed, because OSRS has no way to prove an account is yours. It's visible in this server's roster; hide it with \`/link share visible:false\`.`,
     );
   },
 };
@@ -206,18 +207,28 @@ export const roster: Command = {
     const lines = members
       .slice(0, ROSTER_LIMIT)
       .flatMap((m) => m.links.map((l) => `<@${m.userId}> · ${describeLink(l)}`));
-    await interaction.reply({
-      embeds: [
-        brandEmbed({
+    await interaction.reply(
+      cardReply(
+        {
           tone: "intel",
           title: provider ? `Roster · ${providerLabel(provider)}` : "Roster",
-          description: lines.length
-            ? lines.slice(0, 40).join("\n")
+          lead: lines.length
+            ? undefined
             : "Nobody has shared accounts here yet. Link yours with /link.",
+          blocks: lines.length
+            ? [
+                {
+                  text: capped(lines, 40)
+                    .map((l) => `- ${l}`)
+                    .join("\n"),
+                },
+              ]
+            : [],
           module: "barracks",
           ref: `${members.length} ${members.length === 1 ? "member" : "members"}`,
-        }),
-      ],
-    });
+        },
+        { ephemeral: false },
+      ),
+    );
   },
 };

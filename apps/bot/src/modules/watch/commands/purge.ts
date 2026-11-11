@@ -1,6 +1,7 @@
 import { PermissionFlagsBits } from "discord.js";
 import type { Command } from "../../../commands/types.js";
-import { confirmationEmbedForPurge } from "../embeds.js";
+import { cardMessage } from "../../../lib/card.js";
+import { purgeCard } from "../embeds.js";
 import { purgeMessages } from "../purge.js";
 import { ephemeral, REASON_MAX, watchCommand } from "./shared.js";
 
@@ -51,14 +52,8 @@ export const purge: Command = {
     const created = result.case;
     const count = result.deleted;
 
-    await interaction.editReply({
-      embeds: [
-        confirmationEmbedForPurge(created, {
-          requested: amount,
-          deleted: count,
-          channelId: channel.id,
-        }),
-      ],
-    });
+    await interaction.editReply(
+      cardMessage(purgeCard(created, { requested: amount, deleted: count, channelId: channel.id })),
+    );
   },
 };

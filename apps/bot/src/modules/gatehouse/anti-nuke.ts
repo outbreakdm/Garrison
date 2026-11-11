@@ -7,7 +7,6 @@ import {
   type Quarantine,
 } from "@garrison/db";
 import {
-  ActionRowBuilder,
   AuditLogEvent,
   ButtonBuilder,
   ButtonStyle,
@@ -17,8 +16,9 @@ import {
   PermissionFlagsBits,
 } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
-import { brandEmbed } from "../../lib/embeds.js";
+import type { Card } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
+import { safeText } from "../../lib/text.js";
 import {
   ActionRateTracker,
   canOverrideAntiNuke,
@@ -128,10 +128,11 @@ async function quarantineActor(ctx: BotContext, guild: Guild, userId: string, re
       await sendAlert(
         ctx,
         guild,
-        alertEmbed(
-          `Anti-nuke triggered by <@${userId}>`,
+        alertCard(
+          "Anti-nuke triggered",
           reason,
           "They already left the server, so there was nothing to remove.",
+          { userId },
         ),
       );
       return;
@@ -144,8 +145,8 @@ async function quarantineActor(ctx: BotContext, guild: Guild, userId: string, re
         await sendAlert(
           ctx,
           guild,
-          alertEmbed(
-            `Anti-nuke couldn't stop ${member.user.username}`,
+          alertCard(
+            `Anti-nuke couldn't stop ${safeText(member.user.username)}`,
             reason,
             "That bot's role sits above mine, so I can't kick it. Remove it in Server Settings → Integrations, then drag Garrison to the top of the role list.",
           ),
@@ -164,10 +165,10 @@ async function quarantineActor(ctx: BotContext, guild: Guild, userId: string, re
       await sendAlert(
         ctx,
         guild,
-        alertEmbed(
-          `Kicked the bot ${member.user.username}`,
+        alertCard(
+          `Kicked the bot ${safeText(member.user.username)}`,
           reason,
-          "Bots that trip anti-nuke are kicked. Re-invite it only if you trust it, and add it with /security trusted_add.",
+          "Bots that trip anti-nuke are kicked. Re-invite it only if you trust it, and add it with `/security trusted_add`.",
         ),
       );
       return;
@@ -197,8 +198,10 @@ async function quarantineActor(ctx: BotContext, guild: Guild, userId: string, re
     await sendAlert(
       ctx,
       guild,
-      alertEmbed(`Quarantined ${member.user.username}`, reason, detail, quarantine),
-      removable.length ? [restoreRow(quarantine)] : [],
+      alertCard(`Quarantined ${safeText(member.user.username)}`, reason, detail, {
+        quarantine,
+        restorable: removable.length > 0,
+      }),
     );
   } catch (error) {
     ctx.logger.error("Quarantine failed", { guildId: guild.id, userId, error });
@@ -207,25 +210,32 @@ async function quarantineActor(ctx: BotContext, guild: Guild, userId: string, re
   }
 }
 
-function alertEmbed(title: string, reason: string, detail: string, q?: Quarantine) {
-  return brandEmbed({
+/** An anti-nuke alert: what Garrison did, why, and (after a quarantine) Restore roles beside it. */
+export function alertCard(
+  title: string,
+  reason: string,
+  detail: string,
+  opts: { quarantine?: Quarantine; restorable?: boolean; userId?: string } = {},
+): Card {
+  const q = opts.quarantine;
+  return {
     tone: "alert",
     title,
-    description: detail,
-    fields: [{ name: "Why", value: reason }],
+    status: reason,
+    lead: opts.userId ? `<@${opts.userId}>` : undefined,
+    blocks: [{ text: detail, button: q && opts.restorable ? restoreButton(q) : undefined }],
     module: "gatehouse",
     ref: q ? `quarantine ${q.id.slice(0, 6)}` : undefined,
-  });
+  };
 }
 
-export function restoreRow(q: Pick<Quarantine, "id">, disabled = false) {
-  return new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`${RESTORE_PREFIX}:${q.id}`)
-      .setLabel(disabled ? "Roles restored" : "Restore roles")
-      .setStyle(ButtonStyle.Secondary)
-      .setDisabled(disabled),
-  );
+export const restoreButtonId = (q: Pick<Quarantine, "id">) => `${RESTORE_PREFIX}:${q.id}`;
+
+export function restoreButton(q: Pick<Quarantine, "id">) {
+  return new ButtonBuilder()
+    .setCustomId(restoreButtonId(q))
+    .setLabel("Restore roles")
+    .setStyle(ButtonStyle.Secondary);
 }
 
 export type RestoreResult =

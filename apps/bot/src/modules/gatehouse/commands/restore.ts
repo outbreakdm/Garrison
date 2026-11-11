@@ -1,6 +1,7 @@
 import { ephemeral } from "../../../commands/builders.js";
 import type { ButtonHandler } from "../../../commands/types.js";
-import { RESTORE_PREFIX, restoreQuarantine, restoreRow } from "../anti-nuke.js";
+import { patchButton } from "../../../lib/card.js";
+import { RESTORE_PREFIX, restoreButtonId, restoreQuarantine } from "../anti-nuke.js";
 
 const UUID = /^[0-9a-f-]{36}$/;
 
@@ -16,8 +17,14 @@ export const restoreButton: ButtonHandler = {
       await interaction.editReply(result.error);
       return;
     }
+    // Only the button changes, in whichever format the alert was posted.
     await interaction.message
-      .edit({ components: [restoreRow(result.quarantine, true)] })
+      .edit(
+        patchButton(interaction.message, restoreButtonId(result.quarantine), {
+          label: "Roles restored",
+          disabled: true,
+        }),
+      )
       .catch(() => {});
     await interaction.editReply(
       `Restored ${result.restored} ${result.restored === 1 ? "role" : "roles"} to <@${result.quarantine.userId}>.`,

@@ -1,8 +1,8 @@
 import type { EmbedTone } from "@garrison/brand";
 import type { ModCase } from "@garrison/db";
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, type EmbedBuilder } from "discord.js";
+import { ButtonBuilder, ButtonStyle } from "discord.js";
+import { type Card, type CardFact, ts } from "../../lib/card.js";
 import { formatDuration } from "../../lib/duration.js";
-import { brandEmbed } from "../../lib/embeds.js";
 import { safeText } from "../../lib/text.js";
 import {
   actionNoun,
@@ -20,10 +20,9 @@ const toneFor = (c: ModCase): EmbedTone => {
   return c.action === "kick" || c.action === "ban" ? "alert" : "caution";
 };
 
-const ts = (date: Date, style: "R" | "f" = "R") =>
-  `<t:${Math.floor(date.getTime() / 1000)}:${style}>`;
-
 export const caseRef = (c: Pick<ModCase, "caseNumber">) => `case #${c.caseNumber}`;
+
+const reasonOf = (c: Pick<ModCase, "reason">) => (c.reason ? safeText(c.reason) : NO_REASON);
 
 function moderatorLabel(c: ModCase) {
   if (c.source === "escalation") return "Escalation rule";
@@ -31,107 +30,99 @@ function moderatorLabel(c: ModCase) {
   return `<@${c.moderatorId}>`;
 }
 
-function caseFields(c: ModCase) {
-  const fields: { name: string; value: string; inline?: boolean }[] = [];
-  if (c.targetId)
-    fields.push({ name: "Member", value: `<@${c.targetId}> · \`${c.targetId}\``, inline: true });
-  fields.push({ name: "By", value: moderatorLabel(c), inline: true });
-  if (c.durationSeconds) {
-    fields.push({ name: "Duration", value: formatDuration(c.durationSeconds), inline: true });
-  }
+/** The Undo button for a case; disabled once it's undone. */
+export function undoButton(c: Pick<ModCase, "caseNumber">, disabled = false) {
+  return new ButtonBuilder()
+    .setCustomId(`${UNDO_PREFIX}:${c.caseNumber}`)
+    .setLabel(disabled ? "Undone" : "Undo")
+    .setStyle(ButtonStyle.Secondary)
+    .setDisabled(disabled);
+}
+
+/** Full record of a case, for the log channel, `/case` and after an undo. */
+export function caseCard(c: ModCase, opts: { button?: ButtonBuilder } = {}): Card {
+  const facts: CardFact[] = [];
+  if (c.targetId) facts.push({ label: "Member", value: `<@${c.targetId}> · \`${c.targetId}\`` });
+  facts.push({ label: "By", value: moderatorLabel(c) });
+  if (c.durationSeconds) facts.push({ label: "Length", value: formatDuration(c.durationSeconds) });
   if (c.action === "purge") {
     const d = c.details as { channelId?: string; deleted?: number };
-    fields.push({ name: "Deleted", value: `${d.deleted ?? 0} in <#${d.channelId}>`, inline: true });
+    facts.push({ label: "Deleted", value: `${d.deleted ?? 0} in <#${d.channelId}>` });
   }
-  fields.push({ name: "Reason", value: c.reason ? safeText(c.reason) : NO_REASON });
-  if (c.revokedAt) {
-    fields.push({ name: "Undone", value: `by <@${c.revokedById}> ${ts(c.revokedAt)}` });
-  }
-  return fields;
-}
-
-/** Full record of a case, for the log channel and `/case`. */
-export function caseEmbed(c: ModCase): EmbedBuilder {
-  const title = `${actionNoun(c.action)}${c.revokedAt ? " (undone)" : ""}${c.targetTag ? ` · ${c.targetTag}` : ""}`;
-  return brandEmbed({
+  return {
     tone: toneFor(c),
-    title,
-    fields: caseFields(c),
+    title: `${actionNoun(c.action)}${c.targetTag ? ` · ${safeText(c.targetTag)}` : ""}`,
+    status: c.revokedAt ? "Undone" : undefined,
+    lead: c.revokedAt ? `by <@${c.revokedById}> ${ts(c.revokedAt)}` : undefined,
+    blocks: [{ text: `**Reason:** ${reasonOf(c)}`, button: opts.button }],
+    facts,
     module: "watch",
     ref: caseRef(c),
-    timestamp: c.createdAt,
-  });
+    at: c.createdAt,
+  };
 }
 
-/** Reply to the moderator: what happened, plus undo. */
-export function confirmationEmbed(
+/** Reply to the moderator: what happened, with Undo beside the reason. */
+export function confirmationCard(
   c: ModCase,
-  opts: { dmSent: boolean | null; escalated?: ModCase | null },
-): EmbedBuilder {
+  opts: { dmSent: boolean | null; escalated?: ModCase | null; undo?: boolean },
+): Card {
   const action = c.action as MemberAction;
-  const lines = [`**Reason:** ${c.reason ? safeText(c.reason) : NO_REASON}`];
-  if (opts.dmSent === false) lines.push("I couldn't DM them: their DMs are closed.");
+  const blocks: Card["blocks"] = [
+    { text: `**Reason:** ${reasonOf(c)}`, button: opts.undo ? undoButton(c) : undefined },
+  ];
+  if (opts.dmSent === false) blocks.push({ text: "I couldn't DM them: their DMs are closed." });
   if (opts.escalated) {
     const e = opts.escalated;
     const forDuration = e.durationSeconds ? ` for ${formatDuration(e.durationSeconds)}` : "";
-    lines.push(
-      `That reached an escalation rule (${e.reason}), so I applied a ${actionNoun(e.action).toLowerCase()}${forDuration}. See ${caseRef(e)}.`,
-    );
+    blocks.push({
+      text: `That reached an escalation rule (${e.reason}), so I also applied a ${actionNoun(e.action).toLowerCase()}${forDuration}. See ${caseRef(e)}.`,
+    });
   }
-  return brandEmbed({
+  return {
     tone: toneFor(c),
-    title: confirmationTitle(action, c.targetTag ?? "member", c.durationSeconds),
-    description: lines.join("\n"),
+    title: confirmationTitle(action, safeText(c.targetTag ?? "member"), c.durationSeconds),
+    blocks,
     module: "watch",
     ref: caseRef(c),
-  });
+  };
 }
 
-export function dmEmbed(opts: {
+/** The DM a member gets: neutral and factual. What happened, why, and how to appeal. */
+export function dmCard(opts: {
   action: MemberAction;
   guildName: string;
   reason: string | null;
   durationSeconds?: number | null;
   appealText?: string | null;
-}): EmbedBuilder {
-  return brandEmbed({
+}): Card {
+  return {
     tone: opts.action === "kick" || opts.action === "ban" ? "alert" : "caution",
-    title: dmTitle(opts.action, opts.guildName, opts.durationSeconds),
-    fields: [
-      { name: "Reason", value: opts.reason ? safeText(opts.reason) : NO_REASON },
-      { name: "How to appeal", value: opts.appealText || DEFAULT_APPEAL_TEXT },
+    title: dmTitle(opts.action, safeText(opts.guildName), opts.durationSeconds),
+    blocks: [
+      { text: `**Reason:** ${opts.reason ? safeText(opts.reason) : NO_REASON}` },
+      { text: `**To appeal:** ${opts.appealText || DEFAULT_APPEAL_TEXT}` },
     ],
     module: "watch",
-  });
+  };
 }
 
-export function undoRow(c: Pick<ModCase, "caseNumber">, disabled = false) {
-  return new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`${UNDO_PREFIX}:${c.caseNumber}`)
-      .setLabel(disabled ? "Undone" : "Undo")
-      .setStyle(ButtonStyle.Secondary)
-      .setDisabled(disabled),
-  );
-}
-
-export function confirmationEmbedForPurge(
+export function purgeCard(
   c: ModCase,
   opts: { requested: number; deleted: number; channelId: string },
-): EmbedBuilder {
+): Card {
   const noun = opts.deleted === 1 ? "message" : "messages";
-  const lines: string[] = [];
-  if (opts.deleted < opts.requested) {
-    lines.push(
-      "I skip pinned messages and anything older than 14 days, which Discord can't bulk-delete.",
-    );
-  }
-  if (c.targetTag) lines.push(`Only messages from ${c.targetTag}.`);
-  return brandEmbed({
+  const blocks: Card["blocks"] = [];
+  if (opts.deleted < opts.requested)
+    blocks.push({
+      text: "I skip pinned messages and anything older than 14 days, which Discord can't bulk-delete.",
+    });
+  return {
     tone: "caution",
     title: `Deleted ${opts.deleted} ${noun}`,
-    description: [`In <#${opts.channelId}>.`, ...lines].join(" "),
+    lead: `In <#${opts.channelId}>${c.targetTag ? `, only from ${safeText(c.targetTag)}` : ""}`,
+    blocks,
     module: "watch",
     ref: caseRef(c),
-  });
+  };
 }

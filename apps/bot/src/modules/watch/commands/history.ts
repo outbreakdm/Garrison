@@ -1,8 +1,8 @@
 import { listCasesForTarget } from "@garrison/db";
 import { PermissionFlagsBits } from "discord.js";
 import type { Command } from "../../../commands/types.js";
+import { cardReply, ts } from "../../../lib/card.js";
 import { formatDuration } from "../../../lib/duration.js";
-import { brandEmbed } from "../../../lib/embeds.js";
 import { safeText } from "../../../lib/text.js";
 import { actionNoun, NO_REASON } from "../copy.js";
 import { ephemeral, watchCommand } from "./shared.js";
@@ -27,28 +27,27 @@ export const history: Command = {
       });
       return;
     }
+    // One case per line: the action leads, then the reason, then when. Undone cases are struck through.
     const lines = cases.map((c) => {
-      const parts = [
-        `\`#${c.caseNumber}\``,
+      const what = [
         actionNoun(c.action),
         c.durationSeconds ? formatDuration(c.durationSeconds) : null,
-        c.reason ? safeText(c.reason) : NO_REASON,
-        `<t:${Math.floor(c.createdAt.getTime() / 1000)}:R>`,
-      ].filter(Boolean);
-      const line = parts.join(" · ");
-      return c.revokedAt ? `~~${line}~~ (undone)` : line;
+      ]
+        .filter(Boolean)
+        .join(" ");
+      const line = `\`#${c.caseNumber}\` **${what}** · ${c.reason ? safeText(c.reason) : NO_REASON} · ${ts(c.createdAt)}`;
+      return c.revokedAt ? `~~${line}~~ undone` : line;
     });
-    await interaction.reply({
-      embeds: [
-        brandEmbed({
-          tone: "intel",
-          title: `History for ${user.username}`,
-          description: lines.join("\n"),
-          module: "watch",
-          ref: cases.length === LIMIT ? `latest ${LIMIT}` : `${cases.length} cases`,
-        }),
-      ],
-      ...ephemeral,
-    });
+    const active = cases.filter((c) => !c.revokedAt).length;
+    await interaction.reply(
+      cardReply({
+        tone: "intel",
+        title: `History for ${safeText(user.username)}`,
+        lead: `${active} active of ${cases.length} ${cases.length === 1 ? "case" : "cases"}`,
+        blocks: [{ text: lines.join("\n") }],
+        module: "watch",
+        ref: cases.length === LIMIT ? `latest ${LIMIT}` : undefined,
+      }),
+    );
   },
 };

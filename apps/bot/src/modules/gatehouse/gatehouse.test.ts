@@ -99,19 +99,18 @@ describe("Gatehouse copy", () => {
   };
 
   it("reports how long a lockdown lasted", async () => {
-    const { lockdownEndedEmbed } = await import("./embeds.js");
-    const json = lockdownEndedEmbed(lockdown, { restored: 12, failed: 0 }).toJSON();
-    expect(json.title).toBe("Lockdown lifted after 4 min");
-    expect(json.description).toContain("Invites are open again.");
-    expect(json.footer?.text).toBe("Gatehouse · lockdown 3f2a9c");
+    const { lockdownEndedCard } = await import("./embeds.js");
+    const { cardMessage, cardTexts } = await import("../../lib/card.js");
+    const card = lockdownEndedCard(lockdown, { restored: 12, failed: 0 });
+    expect(card.title).toBe("Lockdown lifted after 4 min");
+    const text = cardTexts(cardMessage(card)).join("\n");
+    expect(text).toContain("Invites are open again.");
+    expect(text).toContain("-# Gatehouse · lockdown 3f2a9c");
   });
 
   it("flags new accounts the way the dashboard shows them", async () => {
-    const { newAccountFlagEmbed } = await import("./embeds.js");
-    const json = newAccountFlagEmbed(
-      { id: "1", username: "kel", createdAt: new Date() },
-      2,
-    ).toJSON();
-    expect(json.title).toBe("Flagged a 2-day-old account on join");
+    const { newAccountFlagCard } = await import("./embeds.js");
+    const card = newAccountFlagCard({ id: "1", username: "kel", createdAt: new Date() }, 2);
+    expect(card.title).toBe("Flagged a 2-day-old account on join");
   });
 });

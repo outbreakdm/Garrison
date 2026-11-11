@@ -1,11 +1,12 @@
 import type { ModCase } from "@garrison/db";
 import { describe, expect, it } from "vitest";
+import { type Card, cardMessage, cardTexts } from "../lib/card.js";
 import {
-  caseEmbed,
-  confirmationEmbed,
-  confirmationEmbedForPurge,
-  dmEmbed,
-  undoRow,
+  caseCard,
+  confirmationCard,
+  dmCard,
+  purgeCard,
+  undoButton,
 } from "../modules/watch/embeds.js";
 import { commands } from "./index.js";
 
@@ -69,18 +70,28 @@ const baseCase: ModCase = {
   createdAt: new Date("2026-11-06T14:02:00Z"),
 };
 
-describe("Watch embeds", () => {
-  it("footers carry the module and case ID, never 'Powered by'", () => {
-    const json = caseEmbed(baseCase).toJSON();
-    expect(json.footer?.text).toBe("Watch · case #1042");
-    expect(json.title).toBe("Timeout · kel");
-    expect(json.color).toBe(0xffb547);
+describe("Watch cards", () => {
+  const texts = (card: Card) => cardTexts(cardMessage(card)).join("\n");
+
+  it("footers carry the module, case ID and time, never 'Powered by'", () => {
+    const card = caseCard(baseCase);
+    expect(card.module).toBe("watch");
+    expect(card.ref).toBe("case #1042");
+    expect(card.title).toBe("Timeout · kel");
+    expect(card.tone).toBe("caution");
+    expect(texts(card)).toMatch(/-# Watch · case #1042 · <t:\d+:f>/);
   });
 
   it("confirms with what happened and flags closed DMs", () => {
-    const json = confirmationEmbed(baseCase, { dmSent: false }).toJSON();
-    expect(json.title).toBe("Timeout applied to kel for 1 h");
-    expect(json.description).toContain("their DMs are closed");
+    const card = confirmationCard(baseCase, { dmSent: false });
+    expect(card.title).toBe("Timeout applied to kel for 1 h");
+    expect(texts(card)).toContain("their DMs are closed");
+  });
+
+  it("puts Undo beside the reason when the action can be undone", () => {
+    const out = cardTexts(cardMessage(confirmationCard(baseCase, { dmSent: true, undo: true })));
+    const reason = out.findIndex((s) => s.startsWith("**Reason:**"));
+    expect(out[reason + 1]).toBe("[Undo]");
   });
 
   it("mentions an escalation when a warning triggers one", () => {
@@ -91,36 +102,34 @@ describe("Watch embeds", () => {
       source: "escalation" as const,
       reason: "3 warnings in 24 h",
     };
-    const json = confirmationEmbed(warn, { dmSent: true, escalated }).toJSON();
-    expect(json.description).toContain("3 warnings in 24 h");
-    expect(json.description).toContain("timeout for 1 h. See case #1043");
+    const text = texts(confirmationCard(warn, { dmSent: true, escalated }));
+    expect(text).toContain("3 warnings in 24 h");
+    expect(text).toContain("timeout for 1 h. See case #1043");
   });
 
   it("marks undone cases in green", () => {
-    const json = caseEmbed({ ...baseCase, revokedAt: new Date(), revokedById: "7" }).toJSON();
-    expect(json.color).toBe(0x2bd99f);
-    expect(json.title).toContain("(undone)");
+    const card = caseCard({ ...baseCase, revokedAt: new Date(), revokedById: "7" });
+    expect(card.tone).toBe("go");
+    expect(card.status).toBe("Undone");
   });
 
   it("writes neutral DMs with an appeal line", () => {
-    const json = dmEmbed({ action: "ban", guildName: "Scapewatch", reason: null }).toJSON();
-    expect(json.title).toBe("You were banned from Scapewatch");
-    expect(json.fields?.map((f) => f.name)).toEqual(["Reason", "How to appeal"]);
+    const card = dmCard({ action: "ban", guildName: "Scapewatch", reason: null });
+    expect(card.title).toBe("You were banned from Scapewatch");
+    expect(texts(card)).toContain("**To appeal:**");
   });
 
   it("explains a short purge", () => {
     const purge = { ...baseCase, action: "purge" as const, targetId: null, targetTag: null };
-    const json = confirmationEmbedForPurge(purge, {
-      requested: 50,
-      deleted: 1,
-      channelId: "9",
-    }).toJSON();
-    expect(json.title).toBe("Deleted 1 message");
-    expect(json.description).toContain("older than 14 days");
+    const card = purgeCard(purge, { requested: 50, deleted: 1, channelId: "9" });
+    expect(card.title).toBe("Deleted 1 message");
+    expect(texts(card)).toContain("older than 14 days");
   });
 
   it("builds an undo button keyed by case number", () => {
-    const button = undoRow(baseCase).toJSON().components[0];
-    expect(button).toMatchObject({ custom_id: "watch:undo:1042", label: "Undo" });
+    expect(undoButton(baseCase).toJSON()).toMatchObject({
+      custom_id: "watch:undo:1042",
+      label: "Undo",
+    });
   });
 });

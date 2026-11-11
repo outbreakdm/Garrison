@@ -5,10 +5,10 @@ import {
   type QmBuild,
   transitionQmBuild,
 } from "@garrison/db";
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } from "discord.js";
+import { ButtonBuilder, ButtonStyle, PermissionFlagsBits } from "discord.js";
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { ButtonHandler, Command } from "../../commands/types.js";
-import { brandEmbed } from "../../lib/embeds.js";
+import { type Card, cardEdit, cardMessage, cardReply, ts } from "../../lib/card.js";
 import { safeText } from "../../lib/text.js";
 import { describePlan, type ServerSnapshot } from "./plan.js";
 import { applyBuild, PLAN_TTL_MS, planBuild, REQUEST_MAX, undoBuild } from "./service.js";
@@ -17,27 +17,32 @@ export const QM_PREFIX = "qm";
 const UUID = /^[0-9a-f-]{36}$/;
 const NOT_SET_UP = "Quartermaster isn't set up on this Garrison: the bot has no Claude API key.";
 
-const row = (...buttons: ButtonBuilder[]) =>
-  new ActionRowBuilder<ButtonBuilder>().addComponents(buttons);
 const button = (id: string, label: string, style: ButtonStyle) =>
   new ButtonBuilder().setCustomId(id).setLabel(label).setStyle(style);
 
-function planEmbed(build: QmBuild, server: ServerSnapshot, notes: string) {
+/** The plan to review: the summary, every change as a diff, what was left out, and Apply. */
+export function planCard(build: QmBuild, server: ServerSnapshot, notes: string): Card {
   const lines = describePlan(build.plan, server).map((l) => safeText(l));
-  const expires = Math.floor((build.createdAt.getTime() + PLAN_TTL_MS) / 1000);
-  return brandEmbed({
+  const expires = new Date(build.createdAt.getTime() + PLAN_TTL_MS);
+  return {
     tone: "intel",
-    title: `Plan v${build.version}: ${safeText(build.summary)}`,
-    description: [
-      `\`\`\`diff\n${lines.join("\n").replaceAll("```", "'''")}\n\`\`\``,
-      notes ? `**Left out:** ${safeText(notes)}` : null,
-      `New roles get no permissions. Nothing existing is changed. Expires <t:${expires}:R>.`,
-    ]
-      .filter(Boolean)
-      .join("\n"),
+    title: `Plan v${build.version}`,
+    status: `${build.plan.length} ${build.plan.length === 1 ? "change" : "changes"}`,
+    lead: safeText(build.summary),
+    blocks: [
+      { text: `\`\`\`diff\n${lines.join("\n").replaceAll("```", "'''")}\n\`\`\`` },
+      ...(notes ? [{ text: `**Left out:** ${safeText(notes)}` }] : []),
+      {
+        text: `-# New roles get no permissions. Nothing that exists is changed. Expires ${ts(expires)}.`,
+      },
+    ],
+    actions: [
+      button(`${QM_PREFIX}:apply:${build.id}`, `Apply v${build.version}`, ButtonStyle.Primary),
+      button(`${QM_PREFIX}:cancel:${build.id}`, "Discard", ButtonStyle.Secondary),
+    ],
     module: "quartermaster",
-    ref: `plan v${build.version} · ${build.plan.length} changes`,
-  });
+    ref: `plan v${build.version}`,
+  };
 }
 
 export const qm: Command = {
@@ -82,18 +87,17 @@ export const qm: Command = {
       const builds = await listQmBuilds(ctx.db, guild.id, 10);
       const lines = builds.map(
         (b) =>
-          `\`v${b.version}\` ${safeText(b.summary)} · ${b.status.replace("_", " ")} · ${b.created.length} created · <@${b.requestedById}> <t:${Math.floor(b.createdAt.getTime() / 1000)}:R>`,
+          `\`v${b.version}\` **${safeText(b.summary)}** · ${b.status.replace("_", " ")} · ${b.created.length} created · <@${b.requestedById}> ${ts(b.createdAt)}`,
       );
-      await interaction.reply({
-        embeds: [
-          brandEmbed({
-            title: "Quartermaster builds",
-            description: lines.join("\n") || "No builds yet.",
-            module: "quartermaster",
-          }),
-        ],
-        ...ephemeral,
-      });
+      await interaction.reply(
+        cardReply({
+          title: "Quartermaster builds",
+          lead: lines.length ? undefined : "No builds yet. Describe one with `/qm build`.",
+          blocks: lines.length ? [{ text: lines.join("\n") }] : [],
+          module: "quartermaster",
+          ref: lines.length ? `latest ${lines.length}` : undefined,
+        }),
+      );
       return;
     }
 
@@ -112,15 +116,25 @@ export const qm: Command = {
       }
       const channels = build.created.filter((c) => c.kind !== "role").length;
       const roles = build.created.filter((c) => c.kind === "role").length;
-      await interaction.reply({
-        content: `Undo v${build.version}? This deletes the ${channels} channels and categories and ${roles} roles it created, including any messages posted in those channels since. Nothing else is touched.`,
-        components: [
-          row(
-            button(`${QM_PREFIX}:undo:${build.id}`, `Undo v${build.version}`, ButtonStyle.Danger),
-          ),
-        ],
-        ...ephemeral,
-      });
+      await interaction.reply(
+        cardReply({
+          tone: "caution",
+          title: `Undo v${build.version}?`,
+          lead: safeText(build.summary),
+          blocks: [
+            {
+              text: `This deletes the ${channels} channels and categories and ${roles} roles it created, including any messages posted in those channels since. Nothing else is touched.`,
+              button: button(
+                `${QM_PREFIX}:undo:${build.id}`,
+                `Undo v${build.version}`,
+                ButtonStyle.Danger,
+              ),
+            },
+          ],
+          module: "quartermaster",
+          ref: `v${build.version}`,
+        }),
+      );
       return;
     }
 
@@ -141,19 +155,9 @@ export const qm: Command = {
       await interaction.editReply(outcome.error);
       return;
     }
-    await interaction.editReply({
-      embeds: [planEmbed(outcome.build, outcome.server, outcome.notes)],
-      components: [
-        row(
-          button(
-            `${QM_PREFIX}:apply:${outcome.build.id}`,
-            `Apply v${outcome.build.version}`,
-            ButtonStyle.Primary,
-          ),
-          button(`${QM_PREFIX}:cancel:${outcome.build.id}`, "Cancel", ButtonStyle.Secondary),
-        ),
-      ],
-    });
+    await interaction.editReply(
+      cardMessage(planCard(outcome.build, outcome.server, outcome.notes)),
+    );
   },
 };
 
@@ -175,13 +179,16 @@ export const qmButtons: ButtonHandler = {
 
     if (action === "cancel") {
       const done = await transitionQmBuild(ctx.db, build.id, "pending", "cancelled");
-      await interaction.update({
-        content: done
-          ? `Cancelled plan v${build.version}. Nothing was changed.`
-          : "That plan isn't pending any more.",
-        embeds: [],
-        components: [],
-      });
+      // The plan message may be an old embed; whichever format it has, it becomes the outcome.
+      await interaction.update(
+        cardEdit(interaction.message, {
+          tone: done ? "intel" : "caution",
+          title: done ? `Plan v${build.version} cancelled` : `Plan v${build.version}`,
+          lead: done ? "Nothing was changed." : "That plan isn't pending any more.",
+          module: "quartermaster",
+          ref: `v${build.version}`,
+        }),
+      );
       return;
     }
 
@@ -196,39 +203,47 @@ export const qmButtons: ButtonHandler = {
       await interaction.deferUpdate();
       const result = await applyBuild(ctx, interaction.guild, build);
       if (!result.ok) {
-        await interaction.editReply({ content: result.error, embeds: [], components: [] });
-        return;
-      }
-      const lines = result.created.map((c) =>
-        c.kind === "role"
-          ? `@${safeText(c.name)}`
-          : c.kind === "category"
-            ? safeText(c.name)
-            : `<#${c.id}>`,
-      );
-      await interaction.editReply({
-        content: "",
-        embeds: [
-          brandEmbed({
-            tone: result.failed ? "caution" : "go",
-            title: result.failed
-              ? `v${build.version} stopped partway`
-              : `Applied v${build.version}: ${result.created.length} changes`,
-            description: [result.failed, lines.join(" · ")].filter(Boolean).join("\n"),
+        await interaction.editReply(
+          cardEdit(interaction.message, {
+            tone: "alert",
+            title: `Couldn't apply v${build.version}`,
+            lead: result.error,
             module: "quartermaster",
             ref: `v${build.version}`,
           }),
-        ],
-        components: [
-          row(
-            button(
-              `${QM_PREFIX}:undo:${build.id}`,
-              `Undo v${build.version}`,
-              ButtonStyle.Secondary,
-            ),
-          ),
-        ],
-      });
+        );
+        return;
+      }
+      const created = result.created.map((c) =>
+        c.kind === "role"
+          ? `@${safeText(c.name)}`
+          : c.kind === "category"
+            ? `**${safeText(c.name)}**`
+            : `<#${c.id}>`,
+      );
+      await interaction.editReply(
+        cardEdit(interaction.message, {
+          tone: result.failed ? "caution" : "go",
+          title: result.failed
+            ? `v${build.version} stopped partway`
+            : `Applied v${build.version}: ${result.created.length} ${result.created.length === 1 ? "change" : "changes"}`,
+          lead: safeText(build.summary),
+          blocks: [
+            ...(result.failed ? [{ text: result.failed }] : []),
+            ...(created.length ? [{ text: created.join(" · ") }] : []),
+            {
+              text: "-# Undo removes exactly what this build created, and nothing else.",
+              button: button(
+                `${QM_PREFIX}:undo:${build.id}`,
+                `Undo v${build.version}`,
+                ButtonStyle.Secondary,
+              ),
+            },
+          ],
+          module: "quartermaster",
+          ref: `v${build.version}`,
+        }),
+      );
       return;
     }
 

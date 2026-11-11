@@ -1,8 +1,8 @@
 import { searchLedger, updateLedgerSettings } from "@garrison/db";
 import { ChannelType, PermissionFlagsBits } from "discord.js";
-import { ephemeral, guildCommand } from "../../commands/builders.js";
+import { guildCommand } from "../../commands/builders.js";
 import type { Command } from "../../commands/types.js";
-import { brandEmbed } from "../../lib/embeds.js";
+import { cardReply, ts } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { safeText } from "../../lib/text.js";
 import { TYPE_LABELS } from "./describe.js";
@@ -51,23 +51,21 @@ export const logs: Command = {
     if (interaction.options.getSubcommand() === "search") {
       const user = interaction.options.getUser("user", true);
       const events = await searchLedger(ctx.db, { guildId: guild.id, userId: user.id, limit: 15 });
+      // One event per line: what happened in bold, the detail, then when.
       const lines = events.map((e) => {
-        const when = `<t:${Math.floor(e.createdAt.getTime() / 1000)}:R>`;
-        const role = e.actorId === user.id ? "did" : "to them";
-        return `\`#${e.id}\` ${TYPE_LABELS[e.type] ?? e.type} · ${safeText(e.summary)} · ${role} · ${when}`;
+        const role = e.actorId === user.id ? "by them" : "to them";
+        return `\`#${e.id}\` **${TYPE_LABELS[e.type] ?? e.type}** · ${safeText(e.summary)} · ${role} · ${ts(e.createdAt)}`;
       });
-      await interaction.reply({
-        embeds: [
-          brandEmbed({
-            tone: "intel",
-            title: `Ledger for ${safeText(user.username)}`,
-            description: lines.length ? lines.join("\n") : "No events.",
-            module: "ledger",
-            ref: `latest ${events.length}`,
-          }),
-        ],
-        ...ephemeral,
-      });
+      await interaction.reply(
+        cardReply({
+          tone: "intel",
+          title: `Ledger for ${safeText(user.username)}`,
+          lead: lines.length ? undefined : "No events in the log for this member.",
+          blocks: lines.length ? [{ text: lines.join("\n") }] : [],
+          module: "ledger",
+          ref: lines.length ? `latest ${events.length}` : undefined,
+        }),
+      );
       return;
     }
 
@@ -82,22 +80,17 @@ export const logs: Command = {
       ? await updateLedgerSettings(ctx.db, guild.id, patch)
       : await cachedLedgerSettings(ctx, guild.id);
     invalidateLedgerSettings(guild.id);
-    await interaction.reply({
-      embeds: [
-        brandEmbed({
-          title: Object.keys(patch).length ? "Saved. Ledger settings updated" : "Ledger settings",
-          fields: [
-            {
-              name: "Posting to",
-              value: s.channelId ? `<#${s.channelId}>` : "Dashboard only",
-              inline: true,
-            },
-            { name: "Kept for", value: `${s.retentionDays} days`, inline: true },
-          ],
-          module: "ledger",
-        }),
-      ],
-      ...ephemeral,
-    });
+    const saved = Object.keys(patch).length > 0;
+    await interaction.reply(
+      cardReply({
+        tone: saved ? "go" : "volt",
+        title: saved ? "Ledger settings saved" : "Ledger settings",
+        facts: [
+          { label: "Posting to", value: s.channelId ? `<#${s.channelId}>` : "Dashboard only" },
+          { label: "Kept for", value: `${s.retentionDays} days` },
+        ],
+        module: "ledger",
+      }),
+    );
   },
 };

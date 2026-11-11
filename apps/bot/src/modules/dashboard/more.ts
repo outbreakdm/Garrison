@@ -15,6 +15,7 @@ import {
 import { type Guild, type GuildMember, PermissionFlagsBits } from "discord.js";
 import { z } from "zod";
 import type { BotContext } from "../../commands/types.js";
+import { cardMessage } from "../../lib/card.js";
 import { formatDuration, MAX_TIMEOUT_SECONDS } from "../../lib/duration.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { announcePromotion, refreshOpsCard } from "../ops/service.js";
@@ -216,7 +217,7 @@ export async function doCreateLfg(
   });
   if (!post) return fail("You already have an open group. Close it first.");
   const sent = await channel
-    .send(lfgCard(post, await listActiveMembers(ctx.db, post.id)))
+    .send(cardMessage(lfgCard(post, await listActiveMembers(ctx.db, post.id))))
     .catch(() => null);
   if (!sent) return fail("The group is saved, but posting its card failed.");
   await setLfgMessage(ctx.db, post.id, sent.id);

@@ -1,5 +1,6 @@
 import type { LfgMember, LfgPost } from "@garrison/db";
 import { describe, expect, it } from "vitest";
+import type { Card, CardBlock } from "../../lib/card.js";
 import { lfgCard, safeText } from "./card.js";
 
 describe("safeText", () => {
@@ -45,17 +46,23 @@ const member = (userId: string, slotName: string): LfgMember => ({
 });
 
 describe("lfgCard", () => {
-  it("shows slots by role and disables full roles", () => {
+  const groups = (card: Card) => (card.blocks ?? []).filter((b): b is CardBlock => b !== "divider");
+  const buttonOf = (b: CardBlock) =>
+    b.button ? (b.button.toJSON() as { label: string; disabled?: boolean }) : null;
+
+  it("shows each role with who's in and open seats, its Join button beside it", () => {
     const card = lfgCard(post, [member("taz", "Tank"), member("ryn", "DPS")]);
-    const json = card.embeds[0]?.toJSON();
-    expect(json?.title).toBe("Mythic+ 12 · Ara-Kara · Open");
-    expect(json?.fields?.map((f) => f.name)).toEqual(["Tank · 1/1", "Healer · 0/1", "DPS · 1/3"]);
-    expect(json?.footer?.text).toBe("Rally · 2/5");
-    const joins = card.components[0]?.toJSON().components as {
-      label: string;
-      disabled?: boolean;
-    }[];
-    expect(joins.map((b) => [b.label, b.disabled ?? false])).toEqual([
+    expect(card.title).toBe("Mythic+ 12 · Ara-Kara");
+    expect(card.status).toBe("3 open");
+    expect(card.ref).toBe("2/5");
+    expect(card.module).toBe("rally");
+    const blocks = groups(card);
+    expect(blocks.map((b) => b.text)).toEqual([
+      "**Tank** 1/1\n<@taz>",
+      "**Healer** 0/1\n1 open",
+      "**DPS** 1/3\n<@ryn> · 2 open",
+    ]);
+    expect(blocks.map((b) => [buttonOf(b)?.label, buttonOf(b)?.disabled ?? false])).toEqual([
       ["Join as Tank", true],
       ["Join as Healer", false],
       ["Join as DPS", false],
@@ -66,10 +73,12 @@ describe("lfgCard", () => {
     const four = ["taz", "a", "b", "c"].map((u, i) =>
       member(u, ["Tank", "Healer", "DPS", "DPS"][i] ?? "DPS"),
     );
-    expect(lfgCard(post, four).embeds[0]?.toJSON().title).toContain("1 left");
+    expect(lfgCard(post, four).status).toBe("1 left");
     const full = lfgCard({ ...post, status: "full" }, [...four, member("d", "DPS")]);
-    expect(full.embeds[0]?.toJSON().title).toContain("Full");
-    expect(lfgCard({ ...post, status: "closed" }, four).components).toEqual([]);
+    expect(full.status).toBe("Full");
+    const closed = lfgCard({ ...post, status: "closed" }, four);
+    expect(closed.actions).toBeUndefined();
+    expect(groups(closed).some((b) => buttonOf(b))).toBe(false);
   });
 
   it("speaks the template's wording, and keeps it plain", () => {
@@ -89,12 +98,13 @@ describe("lfgCard", () => {
       },
     };
     const card = lfgCard(fireteam, [member("taz", "")]);
-    const json = card.embeds[0]?.toJSON();
-    expect(json?.fields?.[0]?.name).toBe("Fireteam · 1/6");
-    expect(json?.description).toContain("Power: 1810");
-    const labels = card.components.flatMap((row) =>
-      (row.toJSON().components as { label: string }[]).map((b) => b.label),
-    );
+    const [group] = groups(card);
+    expect(group?.text).toBe("**Fireteam** 1/6\n<@taz> · 5 open");
+    expect(card.lead).toContain("Power: 1810");
+    const labels = [
+      ...groups(card).map((b) => buttonOf(b)?.label),
+      ...(card.actions ?? []).map((b) => (b.toJSON() as { label: string }).label),
+    ];
     expect(labels).toEqual(["Join fireteam", "Bail", "Disband"]);
   });
 });

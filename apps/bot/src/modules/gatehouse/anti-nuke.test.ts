@@ -10,6 +10,7 @@ import {
 } from "discord.js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { BotContext } from "../../commands/types.js";
+import { cardTexts } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { createLogger } from "../../lib/logger.js";
 import { handleAuditLogEntry, recordModeratorAction, restoreQuarantine } from "./anti-nuke.js";
@@ -103,8 +104,14 @@ function fakeGuild(id: string, opts: { bot?: boolean } = {}) {
           "alerts",
           {
             isSendable: () => true,
-            send: async (m: { embeds: { data: { title?: string } }[]; components: unknown[] }) =>
-              alerts.push({ title: m.embeds[0]?.data.title, components: m.components.length }),
+            // The alert's heading and how many buttons it carries.
+            send: async (m: { components: { toJSON(): unknown }[] }) => {
+              const texts = cardTexts(m);
+              alerts.push({
+                title: texts[0]?.split("\n")[0]?.replace(/^### /, ""),
+                components: texts.filter((x) => x.startsWith("[")).length,
+              });
+            },
           },
         ],
       ]),

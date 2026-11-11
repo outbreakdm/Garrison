@@ -1,5 +1,6 @@
 import type { OpsEvent, OpsSignup } from "@garrison/db";
 import { describe, expect, it } from "vitest";
+import type { Card } from "../../lib/card.js";
 import { opsCard, shortages } from "./card.js";
 
 const event: OpsEvent = {
@@ -40,28 +41,45 @@ describe("opsCard", () => {
     s("seraphine", "Healer", "Priest"),
     s("dorn", "Healer", "Warrior", true),
   ];
+  const texts = (card: Card) =>
+    (card.blocks ?? []).flatMap((b) => (b === "divider" ? [] : [b.text]));
 
-  it("shows the shortage badge, role caps with specs, and the bench", () => {
-    const json = opsCard(event, signups).embeds[0]?.toJSON();
-    expect(json?.title).toBe("Molten Core · 2 Tank short");
-    expect(json?.fields?.map((f) => f.name)).toEqual(["Tank · 2/4", "Healer · 1/1", "Bench · 1"]);
-    expect(json?.fields?.[0]?.value).toBe("<@brannoc> · Prot\n<@vhaltar> · Bear\nOpen\nOpen");
-    expect(json?.fields?.[2]?.value).toBe("<@dorn> · Warrior (Healer)");
-    expect(json?.description).toContain("repeats weekly · reminders 24 h and 30 min before");
-    expect(json?.footer?.text).toBe("Ops · 3/5");
+  it("shows the shortage, role caps with specs, open seats and the bench", () => {
+    const card = opsCard(event, signups);
+    expect(card.title).toBe("Molten Core");
+    expect(card.status).toBe("2 open");
+    const blocks = texts(card);
+    expect(blocks[0]).toContain("repeats weekly · reminders 24 h and 30 min before");
+    expect(blocks[1]).toBe("**Tank** 2/4\n<@brannoc> · Prot\n<@vhaltar> · Bear\n2 open");
+    expect(blocks[2]).toBe("**Healer** 1/1\n<@seraphine> · Priest");
+    expect(blocks[3]).toBe("**Bench** 1\n<@dorn> · Warrior (Healer)");
+    expect(card.ref).toBe("3/5");
+    expect(card.module).toBe("ops");
+  });
+
+  it("puts Sign up beside each role, and keeps it on a full role for the bench", () => {
+    const blocks = (opsCard(event, signups).blocks ?? []).filter((b) => b !== "divider");
+    const tank = blocks[1];
+    const healer = blocks[2];
+    expect(tank?.button?.toJSON()).toMatchObject({ label: "Sign up as Tank" });
+    expect(healer?.button?.toJSON()).toMatchObject({
+      label: "Sign up as Healer",
+    });
+    const healerButton = healer?.button?.toJSON() as { disabled?: boolean } | undefined;
+    expect(healerButton?.disabled).not.toBe(true);
   });
 
   it("reads Ready when every role is filled, and drops buttons once cancelled", () => {
     const full = [...signups, s("a", "Tank", null), s("b", "Tank", null)];
     expect(shortages(event, full)).toBeNull();
-    expect(opsCard(event, full).embeds[0]?.toJSON().title).toBe("Molten Core · Ready");
+    expect(opsCard(event, full).status).toBe("Ready");
     const cancelled = opsCard({ ...event, status: "cancelled" }, full);
-    expect(cancelled.embeds[0]?.toJSON().title).toBe("Molten Core · Cancelled");
-    expect(cancelled.components).toEqual([]);
+    expect(cancelled.status).toBe("Cancelled");
+    expect(cancelled.actions).toBeUndefined();
+    expect(cancelled.blocks?.some((b) => b !== "divider" && b.button)).toBe(false);
   });
 
   it("escapes user text in specs", () => {
-    const json = opsCard(event, [s("x", "Tank", "**Prot**")]).embeds[0]?.toJSON();
-    expect(json?.fields?.[0]?.value).toContain("\\*\\*Prot\\*\\*");
+    expect(texts(opsCard(event, [s("x", "Tank", "**Prot**")]))[1]).toContain("\\*\\*Prot\\*\\*");
   });
 });

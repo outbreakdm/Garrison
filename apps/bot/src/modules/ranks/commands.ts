@@ -9,7 +9,7 @@ import {
 import { ChannelType, PermissionFlagsBits } from "discord.js";
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { Command } from "../../commands/types.js";
-import { brandEmbed } from "../../lib/embeds.js";
+import { cardReply } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { safeText } from "../../lib/text.js";
 import { progressBar, rewardProblem, rewardProblemText } from "./rules.js";
@@ -26,7 +26,7 @@ function rateLimited(userId: string) {
   return false;
 }
 
-const OFF = "Ranks are off in this server. A moderator can turn them on with /ranks settings.";
+const OFF = "Ranks are off in this server. A moderator can turn them on with `/ranks settings`.";
 
 export const rank: Command = {
   data: guildCommand("rank", "Show your level and XP, or someone else's.", null)
@@ -48,20 +48,25 @@ export const rank: Command = {
       return;
     }
     const { intoLevel, needed } = levelForXp(r.xp);
-    await interaction.reply({
-      embeds: [
-        brandEmbed({
-          title: `${safeText(user.username)} · level ${r.level}`,
-          description: `\`${progressBar(intoLevel, needed)}\` ${intoLevel} / ${needed} XP to level ${r.level + 1}`,
-          fields: [
-            { name: "Rank", value: `#${r.position}`, inline: true },
-            { name: "Total XP", value: r.xp.toLocaleString("en-US"), inline: true },
-            { name: "Messages", value: r.messages.toLocaleString("en-US"), inline: true },
+    await interaction.reply(
+      cardReply(
+        {
+          title: safeText(user.username),
+          status: `Level ${r.level}`,
+          lead: `#${r.position} in the server`,
+          blocks: [
+            {
+              text: `\`${progressBar(intoLevel, needed)}\` ${intoLevel} / ${needed} XP to level ${r.level + 1}`,
+            },
+            {
+              text: `**Total XP:** ${r.xp.toLocaleString("en-US")} · **Messages:** ${r.messages.toLocaleString("en-US")}`,
+            },
           ],
           module: "ranks",
-        }),
-      ],
-    });
+        },
+        { ephemeral: false },
+      ),
+    );
   },
 };
 
@@ -83,18 +88,20 @@ export const leaderboard: Command = {
     }
     const lines = top.map(
       (m, i) =>
-        `\`#${String(i + 1).padStart(2)}\` <@${m.userId}> · level ${m.level} · ${m.xp.toLocaleString("en-US")} XP`,
+        `${i + 1}. <@${m.userId}> · **level ${m.level}** · ${m.xp.toLocaleString("en-US")} XP`,
     );
-    await interaction.reply({
-      embeds: [
-        brandEmbed({
+    await interaction.reply(
+      cardReply(
+        {
           title: "Leaderboard",
-          description: lines.join("\n"),
+          lead: "Most XP in the server",
+          blocks: [{ text: lines.join("\n") }],
           module: "ranks",
           ref: "top 10",
-        }),
-      ],
-    });
+        },
+        { ephemeral: false },
+      ),
+    );
   },
 };
 
@@ -190,19 +197,18 @@ export const ranks: Command = {
           : s.announce === "channel"
             ? `<#${s.announceChannelId}>`
             : "Where they leveled up";
-      await interaction.reply({
-        embeds: [
-          brandEmbed({
-            title: Object.keys(patch).length ? "Saved. Ranks settings updated" : "Ranks settings",
-            fields: [
-              { name: "Ranks", value: s.enabled ? "On" : "Off", inline: true },
-              { name: "Level-ups", value: where, inline: true },
-            ],
-            module: "ranks",
-          }),
-        ],
-        ...ephemeral,
-      });
+      const saved = Object.keys(patch).length > 0;
+      await interaction.reply(
+        cardReply({
+          tone: saved ? "go" : "volt",
+          title: saved ? "Ranks settings saved" : "Ranks settings",
+          facts: [
+            { label: "Ranks", value: s.enabled ? "On" : "Off" },
+            { label: "Level-ups", value: where },
+          ],
+          module: "ranks",
+        }),
+      );
       return;
     }
 
@@ -241,7 +247,7 @@ export const ranks: Command = {
     await interaction.reply({
       content: rewards.length
         ? rewards.map((r) => `Level ${r.level}: <@&${r.roleId}>`).join("\n")
-        : "No level rewards. Add one with /ranks reward.",
+        : "No level rewards. Add one with `/ranks reward`.",
       ...ephemeral,
     });
   },

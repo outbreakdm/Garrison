@@ -1,10 +1,10 @@
 import { getWatchSettings, updateWatchSettings, type WatchSettingsPatch } from "@garrison/db";
 import { ChannelType, PermissionFlagsBits } from "discord.js";
 import type { Command } from "../../../commands/types.js";
-import { brandEmbed } from "../../../lib/embeds.js";
+import { cardReply } from "../../../lib/card.js";
 import { ensureGuild } from "../../../lib/guild-registry.js";
 import { DEFAULT_APPEAL_TEXT } from "../copy.js";
-import { ephemeral, watchCommand } from "./shared.js";
+import { watchCommand } from "./shared.js";
 
 export const moderation: Command = {
   data: watchCommand(
@@ -45,26 +45,24 @@ export const moderation: Command = {
       ? await updateWatchSettings(ctx.db, interaction.guild.id, patch)
       : await getWatchSettings(ctx.db, interaction.guild.id);
 
-    await interaction.reply({
-      embeds: [
-        brandEmbed({
-          title: changed ? "Saved. Watch settings updated" : "Watch settings",
-          fields: [
-            {
-              name: "Log channel",
-              value: settings.logChannelId ? `<#${settings.logChannelId}>` : "Off",
-              inline: true,
-            },
-            { name: "DM members", value: settings.dmMembers ? "On" : "Off", inline: true },
-            {
-              name: "Appeal text",
-              value: settings.appealText ?? `Default: ${DEFAULT_APPEAL_TEXT}`,
-            },
-          ],
-          module: "watch",
-        }),
-      ],
-      ...ephemeral,
-    });
+    await interaction.reply(
+      cardReply({
+        tone: changed ? "go" : "volt",
+        title: changed ? "Watch settings saved" : "Watch settings",
+        facts: [
+          {
+            label: "Log channel",
+            value: settings.logChannelId ? `<#${settings.logChannelId}>` : "Off",
+          },
+          { label: "DM members", value: settings.dmMembers ? "On" : "Off" },
+        ],
+        blocks: [
+          {
+            text: `**Appeal text**\n${settings.appealText ?? `${DEFAULT_APPEAL_TEXT} (the default)`}`,
+          },
+        ],
+        module: "watch",
+      }),
+    );
   },
 };

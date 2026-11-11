@@ -6,8 +6,9 @@ import {
 import { ChannelType, PermissionFlagsBits } from "discord.js";
 import { ephemeral, guildCommand } from "../../../commands/builders.js";
 import type { Command } from "../../../commands/types.js";
+import { cardReply } from "../../../lib/card.js";
 import { ensureGuild } from "../../../lib/guild-registry.js";
-import { settingsEmbed } from "../embeds.js";
+import { settingsCard } from "../embeds.js";
 import { invalidateGatehouseSettings } from "../service.js";
 
 const MAX_STAFF_ROLES = 10;
@@ -193,6 +194,6 @@ export const security: Command = {
       ? await updateGatehouseSettings(ctx.db, interaction.guild.id, patch)
       : current;
     if (changed) invalidateGatehouseSettings(interaction.guild.id);
-    await interaction.reply({ embeds: [settingsEmbed(settings, changed)], ...ephemeral });
+    await interaction.reply(cardReply(settingsCard(settings, changed)));
   },
 };

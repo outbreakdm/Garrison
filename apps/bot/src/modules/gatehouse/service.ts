@@ -11,23 +11,21 @@ import {
   startLockdown,
 } from "@garrison/db";
 import {
-  type ActionRowBuilder,
-  type ButtonBuilder,
   ChannelType,
   type Client,
-  type EmbedBuilder,
   type Guild,
   type GuildMember,
   PermissionFlagsBits,
   Routes,
 } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
+import { type Card, cardMessage } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import {
-  lockdownEndedEmbed,
-  lockdownStartedEmbed,
-  newAccountFlagEmbed,
-  raidAlertEmbed,
+  lockdownEndedCard,
+  lockdownStartedCard,
+  newAccountFlagCard,
+  raidAlertCard,
 } from "./embeds.js";
 import {
   accountAgeDays,
@@ -71,19 +69,14 @@ export function invalidateGatehouseSettings(guildId: string) {
 // --- Alerts ----------------------------------------------------------------
 
 /** Post to the Gatehouse alert channel, falling back to the Watch log channel. */
-export async function sendAlert(
-  ctx: BotContext,
-  guild: Guild,
-  embed: EmbedBuilder,
-  components: ActionRowBuilder<ButtonBuilder>[] = [],
-) {
+export async function sendAlert(ctx: BotContext, guild: Guild, card: Card) {
   const settings = await cachedGatehouseSettings(ctx, guild.id);
   const channelId =
     settings.alertChannelId ?? (await getWatchSettings(ctx.db, guild.id)).logChannelId;
   if (!channelId) return;
   try {
     const channel = guild.channels.cache.get(channelId) ?? (await guild.channels.fetch(channelId));
-    if (channel?.isSendable()) await channel.send({ embeds: [embed], components });
+    if (channel?.isSendable()) await channel.send(cardMessage(card));
   } catch (error) {
     ctx.logger.warn("Could not post a Gatehouse alert", { guildId: guild.id, channelId, error });
   }
@@ -204,7 +197,7 @@ export async function lockGuild(
 
   const saved: Lockdown = { ...lockdown, snapshot, invitesPaused };
   ctx.logger.info("Lockdown started", { guildId: guild.id, source: req.source, channels, failed });
-  await sendAlert(ctx, guild, lockdownStartedEmbed(saved, { channels, failed, raid: req.raid }));
+  await sendAlert(ctx, guild, lockdownStartedCard(saved, { channels, failed, raid: req.raid }));
   return { ok: true, lockdown: saved, channels, failed };
 }
 
@@ -241,7 +234,7 @@ export async function unlockGuild(
     failed,
   });
   const result = { restored: changes.length - failed, failed };
-  await sendAlert(ctx, guild, lockdownEndedEmbed(ended, result));
+  await sendAlert(ctx, guild, lockdownEndedCard(ended, result));
   return { ok: true, lockdown: ended, ...result };
 }
 
@@ -290,9 +283,9 @@ export async function handleMemberJoin(ctx: BotContext, member: GuildMember) {
           raid,
         });
         if (!result.ok)
-          await sendAlert(ctx, guild, raidAlertEmbed(joins, settings.raidWindowSeconds));
+          await sendAlert(ctx, guild, raidAlertCard(joins, settings.raidWindowSeconds));
       } else {
-        await sendAlert(ctx, guild, raidAlertEmbed(joins, settings.raidWindowSeconds));
+        await sendAlert(ctx, guild, raidAlertCard(joins, settings.raidWindowSeconds));
       }
       return;
     }
@@ -305,7 +298,7 @@ export async function handleMemberJoin(ctx: BotContext, member: GuildMember) {
       await sendAlert(
         ctx,
         guild,
-        newAccountFlagEmbed(
+        newAccountFlagCard(
           { id: member.id, username: member.user.username, createdAt: member.user.createdAt },
           days,
         ),

@@ -93,13 +93,14 @@ describe("copy", () => {
 
 describe("reasons are user text", () => {
   it("can't smuggle a disguised link into a member's DM", async () => {
-    const { dmEmbed } = await import("./embeds.js");
-    const json = dmEmbed({
+    const { dmCard } = await import("./embeds.js");
+    const card = dmCard({
       action: "warn",
       guildName: "S",
       reason: "[Appeal here](https://evil.example)",
-    }).toJSON();
+    });
     // An escaped "[" stops Discord rendering a masked link; the raw URL stays visible.
-    expect(json.fields?.[0]?.value?.startsWith("\\[Appeal here]")).toBe(true);
+    const first = card.blocks?.[0];
+    expect(first !== "divider" && first?.text.startsWith("**Reason:** \\[Appeal here]")).toBe(true);
   });
 });
