@@ -11,10 +11,10 @@ then update the Status section before stopping.
 | Phase | What | State |
 |---|---|---|
 | 1 | Nothing is Discord-only for managers | **Done**, deployed from branch `dashboard-first` |
-| 2 | Dashboard as home: what needs attention, setup checklist, instant feedback | Not started |
+| 2 | Dashboard as home: what needs attention, setup checklist, instant feedback | **Started**: Needs attention is on the overview (step 1). Checklist, feedback and Rally on `RequestsPanel` remain |
 | 3 | Slim the bot: settings commands become link replies, `/dashboard`, link buttons | Not started |
 | 4 | Member pages: people without Manage Server use the site too | Not started, needs an owner decision (below) |
-| 5 | Landing page and README copy say "dashboard first" | Not started |
+| 5 | Landing page and README copy say "dashboard first" | **Started**: the landing page was rebuilt around the dashboard. README still describes slash commands first |
 
 Open decisions for the owner:
 

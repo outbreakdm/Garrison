@@ -1,4 +1,5 @@
 import { Logo } from "./Logo";
+import { MemberAvatar } from "./MemberAvatar";
 import { SearchBox } from "./SearchBox";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -20,7 +21,9 @@ export function Topbar({ username, theme, back, guild, guilds = [] }: TopbarProp
       {guild ? (
         // A details menu: switching servers needs no JavaScript.
         <details className="switcher">
-          <summary className="g-btn g-btn--secondary">{guild.name}</summary>
+          <summary className="g-btn g-btn--secondary">
+            <span className="switcher__name">{guild.name}</span>
+          </summary>
           <div className="switcher__menu" role="menu">
             {guilds.map((g) => (
               <a
@@ -41,8 +44,9 @@ export function Topbar({ username, theme, back, guild, guilds = [] }: TopbarProp
       <span className="topbar__spacer" />
       {guild ? <SearchBox guildId={guild.id} /> : null}
       <ThemeToggle back={back} theme={theme} />
-      <a className="topbar__user" href="/account">
-        {username}
+      <a className="topbar__user" href="/account" title="Your game accounts">
+        <MemberAvatar name={username} src={null} />
+        <span className="topbar__name">{username}</span>
       </a>
       {/* POST + Origin check + SameSite cookie: logout can't be triggered cross-site. */}
       <form method="post" action="/auth/logout">

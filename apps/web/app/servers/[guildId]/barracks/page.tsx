@@ -1,22 +1,18 @@
-import { type LinkProvider, linkProviders } from "@garrison/brand";
 import { getRoster } from "@garrison/db";
 import type { Metadata } from "next";
+import { Art } from "@/components/Art";
+import { GameMark, linkDetail, providerLabel } from "@/components/GameMark";
+import { MemberAvatar } from "@/components/MemberAvatar";
 import { getDb } from "@/lib/db";
 import { requireGuildAccess } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Barracks" };
 
-function detail(d: Record<string, unknown>) {
-  if (typeof d.totalLevel === "number") return `total ${d.totalLevel} · combat ${d.combatLevel}`;
-  if (typeof d.level === "number")
-    return [d.level, d.className, d.realm].filter(Boolean).join(" · ");
-  return "";
-}
-
 export default async function BarracksPage({ params }: { params: Promise<{ guildId: string }> }) {
   const { guildId } = await params;
   const { guild } = await requireGuildAccess(guildId);
   const roster = await getRoster(await getDb(), guild.id);
+  const accounts = roster.reduce((n, m) => n + m.links.length, 0);
   return (
     <>
       <div className="page-head">
@@ -27,44 +23,60 @@ export default async function BarracksPage({ params }: { params: Promise<{ guild
             through Discord or Battle.net; claimed ones weren't.
           </p>
         </div>
+        {roster.length ? (
+          <span className="mono">
+            {roster.length} {roster.length === 1 ? "member" : "members"} · {accounts}{" "}
+            {accounts === 1 ? "account" : "accounts"}
+          </span>
+        ) : null}
       </div>
-      <div className="g-card table-card">
-        <div className="table-wrap">
-          <table className="g-table">
-            <thead>
-              <tr>
-                {["Member", "Game", "Account", "Details", ""].map((h) => (
-                  <th key={h || "status"} scope="col">
-                    <span className="g-label">{h}</span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {roster.flatMap((m) =>
-                m.links.map((l) => (
-                  <tr key={l.id}>
-                    <td>{m.username || <span className="mono">{m.userId}</span>}</td>
-                    <td>{linkProviders[l.provider as LinkProvider]?.label ?? l.provider}</td>
-                    <td>{l.displayName}</td>
-                    <td className="mono">{detail(l.details)}</td>
-                    <td>
+      {roster.length ? (
+        <ul className="roster-cards">
+          {roster.map((m) => {
+            const name = m.username || `Member ${m.userId.slice(-4)}`;
+            return (
+              <li className="g-card roster-card" key={m.userId}>
+                <div className="roster-card__head">
+                  <MemberAvatar name={name} src={null} />
+                  <strong>{name}</strong>
+                  <span className="mono">{m.links.length}</span>
+                </div>
+                <ul className="game-list">
+                  {m.links.map((l) => (
+                    <li className="game-row" key={l.id}>
+                      <GameMark provider={l.provider} small />
+                      <span className="game-row__name">
+                        <strong>{l.displayName}</strong>
+                        <span>
+                          {[providerLabel(l.provider), linkDetail(l.details)]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      </span>
                       <span
                         className={`g-badge ${l.verified ? "g-badge--go" : "g-badge--caution"}`}
                       >
-                        {l.verified ? "verified" : "claimed"}
+                        {l.verified ? "Verified" : "Claimed"}
                       </span>
-                    </td>
-                  </tr>
-                )),
-              )}
-            </tbody>
-          </table>
-          {roster.length === 0 ? (
-            <div className="table-card__head muted">Nobody has shared accounts here yet.</div>
-          ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <div className="g-card picker__empty">
+          <Art slot="empty" className="empty-art" decorative />
+          <div>
+            <h2 className="card-title">Nobody has shared accounts here yet</h2>
+            <p>
+              Members run /link in this server to share the game accounts on their Account page.
+              They can stop sharing at any time.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

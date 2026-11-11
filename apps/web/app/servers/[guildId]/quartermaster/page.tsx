@@ -203,7 +203,7 @@ export default async function QuartermasterPage({
       )}
 
       <section className="card-col" aria-label="Builds">
-        <div className="g-label">Builds</div>
+        <h2 className="block-title">Builds</h2>
         {history.length === 0 ? (
           <div className="g-card muted">No builds yet. Your first plan shows up above.</div>
         ) : null}

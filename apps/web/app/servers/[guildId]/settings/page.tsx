@@ -118,7 +118,7 @@ export default async function SettingsPage({
               instead of keeping stale browser state that a later save would re-apply. */}
           <form action={saveOps} id="server" className="g-card card-col" key={`ops-${timezone}`}>
             <input type="hidden" name="guildId" value={guild.id} />
-            <span className="g-label">Server</span>
+            <h2 className="card-title">Server</h2>
             <label className="g-field" htmlFor="timezone">
               <span>Time zone</span>
               <input
@@ -141,7 +141,7 @@ export default async function SettingsPage({
           </form>
 
           <div className="g-card card-col" id="account">
-            <span className="g-label">Your account</span>
+            <h2 className="card-title">Your account</h2>
             <div className="list-row">
               <span>Signed in as</span>
               <span className="mono">{session.username}</span>
@@ -173,7 +173,7 @@ export default async function SettingsPage({
         </div>
 
         <nav className="g-card card-col" aria-label="Module settings">
-          <span className="g-label">Where the rest lives</span>
+          <h2 className="card-title">Where the rest lives</h2>
           <div className="places">
             <Place
               href={`${base}/watch?edit=settings#settings`}
@@ -234,7 +234,7 @@ export default async function SettingsPage({
 
       <div className="g-card table-card" id="history">
         <div className="table-card__head row-between">
-          <span className="g-label">History</span>
+          <h2 className="card-title">History</h2>
           <span className="g-help">Garrison picks changes up within a minute.</span>
         </div>
         <div className="table-wrap">

@@ -14,6 +14,7 @@ import { RequestsPanel } from "@/components/RequestsPanel";
 import {
   ChannelSelect,
   FormFoot,
+  FormPanel,
   GearIcon,
   isEditing,
   SettingsNotice,
@@ -91,7 +92,7 @@ export default async function WatchPage({
       <section className="g-card card-col" id="moderate" aria-label="Moderate">
         <div className="row-between">
           <div>
-            <div className="g-label">Moderate a member</div>
+            <h2 className="card-title">Moderate a member</h2>
             <div className="g-help">
               Find someone to warn, time out, kick or ban, and see their cases and rank.
             </div>
@@ -126,7 +127,11 @@ export default async function WatchPage({
             <ul className="member-list">
               {found.map((m) => (
                 <li key={m.id}>
-                  <Link className="member-row" href={`/servers/${guild.id}/watch/member/${m.id}`}>
+                  <Link
+                    className="member-row"
+                    href={`/servers/${guild.id}/watch/member/${m.id}`}
+                    transitionTypes={["nav"]}
+                  >
                     <MemberAvatar name={m.name} src={m.avatar} />
                     <span className="member-row__name">
                       {m.name}
@@ -272,10 +277,115 @@ export default async function WatchPage({
         </form>
       </SettingsPanel>
 
+      <div className="g-card table-card">
+        <div className="table-card__head row-between">
+          <h2 className="card-title">{q ? `Cases matching “${q}”` : "Latest 50 cases"}</h2>
+          <search>
+            <form className="row-between" method="get">
+              <label className="sr-only" htmlFor="case-search">
+                Search member or case number
+              </label>
+              <input
+                id="case-search"
+                className="g-input g-input--sm"
+                name="q"
+                type="search"
+                maxLength={64}
+                placeholder="Search member or case #"
+                defaultValue={q ?? ""}
+              />
+              {q ? (
+                <Link className="g-btn g-btn--ghost" href={`/servers/${guild.id}/watch`}>
+                  Clear
+                </Link>
+              ) : null}
+            </form>
+          </search>
+        </div>
+        <div className="table-wrap">
+          <table className="g-table">
+            <thead>
+              <tr>
+                {["Case", "Action", "Member", "Reason", "By", "When", ""].map((h) => (
+                  <th key={h || "actions"} scope="col">
+                    <span className="g-label">{h}</span>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {cases.map((c) => (
+                <tr key={c.id} className={c.revokedAt ? "revoked" : undefined}>
+                  <td className="mono">#{c.caseNumber}</td>
+                  <td>
+                    <ActionBadge action={c.action} />{" "}
+                    <span className="mono">{formatDuration(c.durationSeconds)}</span>
+                  </td>
+                  {/* React escapes all of this: user-typed reasons can't inject markup. */}
+                  <td>
+                    {c.targetId ? (
+                      <Link
+                        href={`/servers/${guild.id}/watch/member/${c.targetId}`}
+                        transitionTypes={["nav"]}
+                      >
+                        {c.targetTag ?? c.targetId}
+                      </Link>
+                    ) : (
+                      (c.targetTag ?? "—")
+                    )}
+                  </td>
+                  <td>
+                    {c.reason ? (
+                      plainMentions(c.reason)
+                    ) : (
+                      <span className="muted">No reason given</span>
+                    )}
+                    {c.revokedAt ? <span className="muted"> · undone</span> : null}
+                  </td>
+                  <td className="muted">
+                    {c.source === "manual"
+                      ? c.moderatorTag
+                      : c.source === "escalation"
+                        ? "Escalation rule"
+                        : "Automod"}
+                  </td>
+                  <td className="mono">
+                    {c.createdAt.toISOString().slice(0, 16).replace("T", " ")} UTC
+                  </td>
+                  <td>
+                    {!c.revokedAt && UNDOABLE.has(c.action) ? (
+                      <form action={requestAction}>
+                        <input type="hidden" name="guildId" value={guild.id} />
+                        <input type="hidden" name="page" value="watch" />
+                        <input type="hidden" name="kind" value="undo_case" />
+                        <input type="hidden" name="caseNumber" value={c.caseNumber} />
+                        <button
+                          type="submit"
+                          className="g-btn g-btn--ghost"
+                          title={UNDO_LABEL[c.action]}
+                        >
+                          Undo
+                        </button>
+                      </form>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {cases.length === 0 ? (
+            <div className="table-card__head muted">
+              <Art slot="empty" className="empty-art" decorative />
+              No cases yet.
+            </div>
+          ) : null}
+        </div>
+      </div>
+
       <div className="g-card card-col">
         <div className="row-between">
           <div>
-            <div className="g-label">Escalation ladder</div>
+            <h2 className="card-title">Escalation ladder</h2>
             <div className="g-help">
               Applied automatically when a member's active warnings reach a step. Undone warnings
               don't count.
@@ -319,12 +429,12 @@ export default async function WatchPage({
         )}
       </div>
 
-      <details
-        className="g-card ladder-edit"
+      <FormPanel
         id="edit-ladder"
+        title="Edit ladder"
+        hint="Change the steps, how many warnings each needs, and what happens."
         open={isEditing(query, "edit-ladder")}
       >
-        <summary className="g-label">Edit ladder</summary>
         <form
           action={saveLadder}
           className="card-col"
@@ -401,109 +511,7 @@ export default async function WatchPage({
             Save ladder
           </button>
         </form>
-      </details>
-
-      <div className="g-card table-card">
-        <div className="table-card__head row-between">
-          <span className="g-label">{q ? `Cases matching “${q}”` : "Latest 50 cases"}</span>
-          <search>
-            <form className="row-between" method="get">
-              <label className="sr-only" htmlFor="case-search">
-                Search member or case number
-              </label>
-              <input
-                id="case-search"
-                className="g-input g-input--sm"
-                name="q"
-                type="search"
-                maxLength={64}
-                placeholder="Search member or case #"
-                defaultValue={q ?? ""}
-              />
-              {q ? (
-                <Link className="g-btn g-btn--ghost" href={`/servers/${guild.id}/watch`}>
-                  Clear
-                </Link>
-              ) : null}
-            </form>
-          </search>
-        </div>
-        <div className="table-wrap">
-          <table className="g-table">
-            <thead>
-              <tr>
-                {["Case", "Action", "Member", "Reason", "By", "When", ""].map((h) => (
-                  <th key={h || "actions"} scope="col">
-                    <span className="g-label">{h}</span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {cases.map((c) => (
-                <tr key={c.id} className={c.revokedAt ? "revoked" : undefined}>
-                  <td className="mono">#{c.caseNumber}</td>
-                  <td>
-                    <ActionBadge action={c.action} />{" "}
-                    <span className="mono">{formatDuration(c.durationSeconds)}</span>
-                  </td>
-                  {/* React escapes all of this: user-typed reasons can't inject markup. */}
-                  <td>
-                    {c.targetId ? (
-                      <Link href={`/servers/${guild.id}/watch/member/${c.targetId}`}>
-                        {c.targetTag ?? c.targetId}
-                      </Link>
-                    ) : (
-                      (c.targetTag ?? "—")
-                    )}
-                  </td>
-                  <td>
-                    {c.reason ? (
-                      plainMentions(c.reason)
-                    ) : (
-                      <span className="muted">No reason given</span>
-                    )}
-                    {c.revokedAt ? <span className="muted"> · undone</span> : null}
-                  </td>
-                  <td className="muted">
-                    {c.source === "manual"
-                      ? c.moderatorTag
-                      : c.source === "escalation"
-                        ? "Escalation rule"
-                        : "Automod"}
-                  </td>
-                  <td className="mono">
-                    {c.createdAt.toISOString().slice(0, 16).replace("T", " ")} UTC
-                  </td>
-                  <td>
-                    {!c.revokedAt && UNDOABLE.has(c.action) ? (
-                      <form action={requestAction}>
-                        <input type="hidden" name="guildId" value={guild.id} />
-                        <input type="hidden" name="page" value="watch" />
-                        <input type="hidden" name="kind" value="undo_case" />
-                        <input type="hidden" name="caseNumber" value={c.caseNumber} />
-                        <button
-                          type="submit"
-                          className="g-btn g-btn--ghost"
-                          title={UNDO_LABEL[c.action]}
-                        >
-                          Undo
-                        </button>
-                      </form>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {cases.length === 0 ? (
-            <div className="table-card__head muted">
-              <Art slot="empty" className="empty-art" decorative />
-              No cases yet.
-            </div>
-          ) : null}
-        </div>
-      </div>
+      </FormPanel>
     </>
   );
 }

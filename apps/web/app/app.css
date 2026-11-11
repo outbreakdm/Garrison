@@ -273,69 +273,6 @@ textarea.g-input {
   top: 0;
   z-index: 2;
 }
-.landing__nav {
-  display: flex;
-  gap: var(--space-4);
-  font-size: 14px;
-}
-.landing__nav a {
-  color: var(--text-muted);
-  text-decoration: none;
-}
-.landing__nav a:hover {
-  color: var(--text);
-}
-/* The faint 24px grid lives behind marketing heroes only, never the dashboard. */
-.hero {
-  position: relative;
-  isolation: isolate;
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-  gap: var(--space-12);
-  align-items: center;
-  padding: var(--space-12) var(--space-6);
-  max-width: 1200px;
-  margin: 0 auto;
-}
-/* The grid sits on its own layer, so the fade affects only the grid, never the content. */
-.hero::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-image:
-    linear-gradient(var(--line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--line) 1px, transparent 1px);
-  background-size: 24px 24px;
-  mask-image: radial-gradient(ellipse at 30% 40%, #000 25%, transparent 70%);
-}
-.hero__copy {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-.hero__title {
-  font-size: clamp(40px, 6vw, 64px);
-  line-height: 1.02;
-  letter-spacing: 0.01em;
-}
-.hero__lede {
-  margin: 0;
-  font-size: 18px;
-  line-height: 28px;
-  color: var(--text-muted);
-  max-width: 52ch;
-}
-.hero__demo {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-.hero__demo .g-lfg,
-.hero__demo .g-embed {
-  max-width: none;
-}
 .landing__main {
   max-width: 1200px;
   margin: 0 auto;
@@ -344,84 +281,14 @@ textarea.g-input {
   flex-direction: column;
   gap: var(--space-12);
 }
-.pillars {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: var(--space-4);
-}
-.pillars p,
-.module-grid p,
-.pricing p {
-  margin: 0;
-}
 .section-head {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
 }
-.section-title {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 28px;
-  line-height: 34px;
-}
-.module-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: var(--space-4);
-}
-.security {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-6);
-}
-.checklist {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: var(--space-3);
-}
-.checklist li {
-  position: relative;
-  padding-left: var(--space-6);
-}
-.checklist li::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 8px;
-  width: 8px;
-  height: 8px;
-  background: var(--accent-strong);
-}
-.pricing {
-  padding: var(--space-6);
-  max-width: 720px;
-}
-.landing__foot {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-4);
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-6);
-  border-top: 1px solid var(--line);
-  max-width: 1200px;
-  margin: 0 auto;
-}
 @media (max-width: 860px) {
-  .hero {
-    grid-template-columns: 1fr;
-    gap: var(--space-8);
-    padding: var(--space-8) var(--space-4);
-  }
   .landing__main {
     padding: 0 var(--space-4) var(--space-8);
-  }
-  .landing__nav {
-    display: none;
   }
 }
 a.topbar__user {
@@ -521,16 +388,6 @@ a.topbar__user:hover {
 }
 .uptime-bar--down {
   background: var(--alert);
-}
-.live-number {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  color: var(--text-muted);
-  text-decoration: none;
-}
-.live-number strong {
-  color: var(--go);
-  font-weight: 500;
 }
 
 /* Search */
@@ -1170,7 +1027,7 @@ select[multiple].g-input option {
 @keyframes reveal {
   from {
     opacity: 0;
-    transform: translateY(-4px);
+    transform: translateY(calc(-0.5 * var(--m-rise)));
   }
 }
 .settings-form {
@@ -1302,14 +1159,6 @@ select[multiple].g-input option {
     flex: 1;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  *,
-  ::before,
-  ::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
-}
 
 /* Cards keep their own height: one opening its form must not stretch its neighbours. */
 .grid-cards {
@@ -1333,54 +1182,6 @@ select[multiple].g-input option {
   height: auto;
   /* The pieces are painted on the dark background colour, in both themes. */
   background: #0b0d10;
-}
-/* Hero: the scene sits behind the example messages and dissolves toward the headline. */
-.hero__art {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: right center;
-  background: none;
-  mask-image:
-    linear-gradient(90deg, transparent 18%, #000 72%), linear-gradient(#000 65%, transparent);
-  mask-composite: intersect;
-}
-.hero__art--light,
-[data-theme="light"] .hero__art--dark {
-  display: none;
-}
-[data-theme="light"] .hero__art--light {
-  display: block;
-}
-.module-art {
-  width: calc(100% + 2 * var(--space-4));
-  max-width: none;
-  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) 0;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-  border-bottom: 1px solid var(--line);
-  border-radius: var(--radius-md) var(--radius-md) 0 0;
-}
-.security--art {
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
-  gap: var(--space-4) var(--space-8);
-  align-items: start;
-}
-.security--art > :not(.security__art) {
-  grid-column: 1;
-}
-.security__art {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  width: 100%;
-  height: 100%;
-  min-height: 240px;
-  object-fit: cover;
-  border: 1px solid var(--line);
 }
 .card-banner {
   width: calc(100% + 2 * var(--space-4));
@@ -1407,22 +1208,6 @@ select[multiple].g-input option {
   height: 120px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-}
-@media (max-width: 860px) {
-  /* One column: the scene would sit behind the headline, so it goes faint instead. */
-  .hero__art {
-    opacity: 0.35;
-    mask-image: linear-gradient(#000 40%, transparent);
-  }
-  .security--art {
-    grid-template-columns: 1fr;
-  }
-  .security__art {
-    grid-column: 1;
-    grid-row: auto;
-    aspect-ratio: 4 / 3;
-    height: auto;
-  }
 }
 
 /* --- Members and moderation --------------------------------------------------- */
@@ -1897,4 +1682,1451 @@ select[multiple].g-input option {
   .sp-cat > summary::before {
     transition: none;
   }
+}
+
+/* --- Uplift -------------------------------------------------------------------
+   Same world (dark HUD, volt accent, chamfers), more presence: cards carry real
+   headings instead of caption labels, one depth system, a readout band for the
+   numbers, and panels shaped for the people who play, not only for staff. */
+:root,
+[data-theme="dark"] {
+  --card-shadow: inset 0 1px 0 rgb(255 255 255 / 0.035), 0 1px 2px rgb(0 0 0 / 0.4);
+  --card-shadow-lift: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 14px 32px -12px rgb(0 0 0 / 0.75);
+  --plate: color-mix(in srgb, var(--surface-raised) 70%, var(--surface));
+}
+[data-theme="light"] {
+  --card-shadow: 0 1px 2px rgb(17 21 26 / 0.05), 0 2px 10px -4px rgb(17 21 26 / 0.08);
+  --card-shadow-lift: 0 2px 4px rgb(17 21 26 / 0.06), 0 16px 32px -14px rgb(17 21 26 / 0.22);
+  --plate: var(--surface-raised);
+}
+.g-card {
+  box-shadow: var(--card-shadow);
+}
+.g-card .g-card {
+  box-shadow: none;
+}
+.invite-dialog {
+  box-shadow: var(--shadow-overlay);
+}
+
+/* Headings: the page title, a block of the page, and the title of one card. */
+h1 {
+  font-size: 36px;
+  line-height: 40px;
+}
+.block-title,
+.card-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text);
+  text-wrap: balance;
+}
+.block-title {
+  font-size: 22px;
+  line-height: 28px;
+}
+.card-title {
+  font-size: 18px;
+  line-height: 24px;
+}
+.block-title .count,
+.card-title .count {
+  margin-left: var(--space-2);
+  color: var(--text-muted);
+  font: 400 14px / 1 var(--font-mono);
+  letter-spacing: 0;
+}
+.table-card__head .card-title {
+  font-size: 16px;
+  line-height: 22px;
+}
+.card-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  align-items: baseline;
+  justify-content: space-between;
+}
+.card-head p,
+.card-sub {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.page-head {
+  padding-bottom: var(--space-6);
+}
+.page-head p {
+  margin-top: var(--space-2);
+}
+
+/* Top bar: the signed-in person as a plate, not loose text. */
+.topbar__user {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px var(--space-2) 4px 4px;
+  border-radius: var(--radius-md);
+}
+a.topbar__user:hover {
+  background: var(--surface-raised);
+}
+.topbar__user .avatar {
+  width: 26px;
+  height: 26px;
+  font-size: 13px;
+}
+.switcher > summary {
+  max-width: 260px;
+}
+.switcher__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Phones: one row of controls (mark, server, theme, you, sign out), search below it. */
+@media (max-width: 520px) {
+  .topbar {
+    padding: var(--space-2) var(--space-4);
+    gap: 4px;
+  }
+  .topbar__name,
+  .topbar:has(.switcher) .g-logo__word {
+    display: none;
+  }
+  .topbar .switcher > summary {
+    max-width: 128px;
+    padding-right: var(--space-3);
+    padding-left: var(--space-3);
+  }
+  .topbar form > .g-btn--ghost {
+    padding-right: var(--space-2);
+    padding-left: var(--space-2);
+  }
+  .topbar .searchbox {
+    margin-top: 2px;
+  }
+}
+.g-badge {
+  flex: none;
+  white-space: nowrap;
+}
+.page-head > .row-between {
+  flex-wrap: wrap;
+}
+
+/* Readout: the numbers of a page in one instrument strip, cells split by hairlines. */
+.readout {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  padding: 0;
+  overflow: hidden;
+  background: var(--line);
+}
+.readout--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.readout__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: var(--space-4) var(--space-4) 18px;
+  background: var(--surface);
+}
+.readout__value {
+  font: 500 32px / 36px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.readout__value--text {
+  font: 600 22px / 36px var(--font-display);
+  letter-spacing: 0.01em;
+}
+.readout__value.tone-go {
+  color: var(--go);
+}
+.readout__value.tone-caution {
+  color: var(--caution);
+}
+.readout__value.tone-alert {
+  color: var(--alert);
+}
+.readout__value .unit {
+  margin-left: 4px;
+  color: var(--text-muted);
+  font-size: 15px;
+  letter-spacing: 0;
+}
+.readout .g-help {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 900px) {
+  .readout,
+  .readout--3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .readout--3 > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Needs attention: what to do first, each line a link to the page that fixes it. */
+.attention {
+  padding: 0;
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--caution) 45%, var(--line));
+}
+.attention__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: color-mix(in srgb, var(--caution) 7%, var(--surface));
+}
+.attention__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.attention__item {
+  --tone: var(--caution);
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--line);
+  color: var(--text);
+  font-size: 14px;
+  text-decoration: none;
+  transition: background-color 0.15s var(--ease-out);
+}
+.attention__item::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  background: var(--tone);
+}
+.attention__item--alert {
+  --tone: var(--alert);
+}
+.attention__item:hover,
+.attention__item:focus-visible {
+  background: var(--surface-raised);
+  color: var(--text);
+}
+.attention__item:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.attention__text {
+  display: grid;
+  gap: 2px;
+}
+.attention__text strong {
+  font-weight: 600;
+}
+.attention__text span {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.attention__go {
+  color: var(--text-muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.attention__item:hover .attention__go {
+  color: var(--accent-strong);
+}
+@media (max-width: 520px) {
+  .attention__go {
+    display: none;
+  }
+  .attention__item {
+    grid-template-columns: 8px minmax(0, 1fr);
+  }
+}
+
+/* Cue: a chevron that leans forward on hover. */
+.cue {
+  display: inline-block;
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin: 0 3px 1px 6px;
+  border-top: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 0.2s var(--ease-out);
+}
+a:hover .cue {
+  transform: translateX(3px) rotate(45deg);
+}
+
+/* Disclosure forms (post a group, create a raid) use the settings panel row. */
+.panel__hint {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+.panel__title--lg {
+  font: 600 16px / 22px var(--font-display);
+  letter-spacing: 0.01em;
+}
+@media (max-width: 520px) {
+  .panel__hint {
+    order: 3;
+    flex-basis: 100%;
+  }
+}
+
+/* --- Server picker ------------------------------------------------------------- */
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: var(--space-12) var(--space-6) 64px;
+}
+.picker__head h1 {
+  font-size: clamp(36px, 5vw, 52px);
+  line-height: 1.02;
+}
+.picker__head p {
+  max-width: 56ch;
+  margin: var(--space-3) 0 0;
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 24px;
+}
+.server-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.server-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  height: 100%;
+  min-height: 176px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
+  color: var(--text);
+  text-decoration: none;
+  transition:
+    border-color 0.2s var(--ease-out),
+    box-shadow 0.25s var(--ease-out),
+    transform 0.25s var(--ease-out);
+}
+a.server-tile:hover,
+a.server-tile:focus-visible {
+  border-color: var(--accent-strong);
+  box-shadow: var(--card-shadow-lift);
+  color: var(--text);
+  transform: translateY(calc(-1 * var(--m-lift)));
+}
+a.server-tile:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+/* The HUD corner marks the servers Garrison already guards. */
+a.server-tile::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 14px;
+  height: 14px;
+  border-top: 2px solid var(--accent-strong);
+  border-left: 2px solid var(--accent-strong);
+  border-top-left-radius: var(--radius-md);
+}
+.server-tile__top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.server-tile__id {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.server-tile__name {
+  min-width: 0;
+  overflow: hidden;
+  font: 600 20px / 26px var(--font-display);
+  letter-spacing: 0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.server-tile__state {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.server-tile__state::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  background: var(--go);
+}
+.server-tile__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+  font-weight: 600;
+}
+a.server-tile .server-tile__foot {
+  color: var(--accent-strong);
+}
+.server-tile--add {
+  border-style: dashed;
+  background: transparent;
+  box-shadow: none;
+}
+.server-tile--add .server-tile__state::before {
+  background: var(--text-muted);
+}
+.server-tile--add .server-tile__foot {
+  border-top-style: dashed;
+}
+.guild-icon--lg {
+  width: 52px;
+  height: 52px;
+  border-radius: 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+  clip-path: polygon(
+    10px 0,
+    100% 0,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    0 100%,
+    0 10px
+  );
+}
+.guild-icon--text.guild-icon--lg {
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface-raised));
+  color: var(--accent-strong);
+}
+.server-tile--add .guild-icon--text.guild-icon--lg {
+  background: var(--surface-raised);
+  color: var(--text-muted);
+}
+.picker__empty {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: center;
+  padding: var(--space-6);
+}
+.picker__empty .empty-art {
+  width: 96px;
+  height: 96px;
+}
+.picker__empty p {
+  margin: var(--space-1) 0 0;
+  color: var(--text-muted);
+}
+.picker__foot {
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--line);
+  color: var(--text-muted);
+  font-size: 14px;
+}
+@media (max-width: 720px) {
+  .picker {
+    gap: var(--space-8);
+    padding: var(--space-8) var(--space-4) var(--space-12);
+  }
+  .server-tile {
+    min-height: 0;
+  }
+}
+.landing__main {
+  gap: 88px;
+}
+@media (max-width: 860px) {
+  .landing__main {
+    gap: var(--space-12);
+  }
+}
+
+/* --- Rally: groups and raids, read like the cards players know from Discord ------ */
+.rally-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .rally-board {
+    grid-template-columns: 1fr;
+  }
+}
+.lfg {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.lfg__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.lfg__meta {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font: 400 13px / 18px var(--font-mono);
+}
+.seats {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.seat-row {
+  display: grid;
+  grid-template-columns: minmax(64px, auto) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+.seat-row > .g-label {
+  padding-top: 6px;
+}
+.seat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.seat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-height: 28px;
+  padding: 3px 10px 3px 4px;
+  border: 1px solid color-mix(in srgb, var(--accent-strong) 60%, var(--line));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  color: var(--text);
+  font-size: 13px;
+  line-height: 20px;
+}
+.seat__mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: 700 11px / 1 var(--font-display);
+}
+.seat__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.seat--open {
+  padding-left: 10px;
+  border: 1px dashed var(--line);
+  background: none;
+  color: var(--text-muted);
+}
+.seat--you {
+  border-color: var(--accent-strong);
+  font-weight: 600;
+}
+.lfg__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+.lfg__actions > .act-row {
+  flex: 1 1 240px;
+  flex-wrap: nowrap;
+}
+.lfg__actions .act-row .g-input {
+  flex: 0 1 180px;
+  width: auto;
+  min-width: 0;
+}
+.you-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 14px;
+}
+.you-line::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  background: var(--go);
+}
+.raid-card__when {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-top: var(--space-1);
+}
+.roster__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.roster__slot--you {
+  outline: 1px solid var(--accent-strong);
+  outline-offset: -1px;
+}
+.raid-signup {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--plate);
+}
+
+/* --- Ranks: a leaderboard players want to be on ------------------------------- */
+.board {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.board__row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1.3fr) minmax(0, 1.2fr) 88px 80px;
+  gap: var(--space-3);
+  align-items: center;
+  padding: 10px var(--space-4);
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+}
+.board__row--head {
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-top: 0;
+  background: var(--surface-sunken);
+}
+.board__row--head > :nth-child(n + 4),
+.board__xp,
+.board__msgs {
+  text-align: right;
+}
+.board__rank {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  color: var(--text-muted);
+  font: 600 14px / 1 var(--font-display);
+}
+.board__row--top .board__rank {
+  border-color: var(--accent-strong);
+  color: var(--accent-strong);
+}
+.board__row--first .board__rank {
+  border: 0;
+  background: var(--accent);
+  color: var(--accent-ink);
+  clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 0 100%);
+}
+.board__who {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font-weight: 600;
+}
+.board__who > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board__level {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: center;
+}
+.board__lv {
+  font: 600 14px / 1 var(--font-display);
+  letter-spacing: 0.02em;
+}
+.board__xp,
+.board__msgs {
+  color: var(--text-muted);
+  font: 400 13px / 18px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.board__xp {
+  color: var(--text);
+}
+/* Progress to the next level: a real <progress>, drawn in the HUD style. */
+.xpbar {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 6px;
+  border: 0;
+  border-radius: 0;
+  background: var(--surface-raised);
+  overflow: hidden;
+}
+.xpbar::-webkit-progress-bar {
+  background: var(--surface-raised);
+}
+.xpbar::-webkit-progress-value {
+  background: var(--accent-strong);
+}
+.xpbar::-moz-progress-bar {
+  background: var(--accent-strong);
+}
+.xpbar--go::-webkit-progress-value {
+  background: var(--go);
+}
+.xpbar--go::-moz-progress-bar {
+  background: var(--go);
+}
+.board__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-8) var(--space-4);
+  border-top: 1px solid var(--line);
+  color: var(--text-muted);
+  text-align: center;
+}
+.ranks-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+.reward-rows {
+  display: grid;
+  gap: var(--space-2);
+}
+@media (max-width: 1100px) {
+  .ranks-layout {
+    grid-template-columns: 1fr;
+  }
+  .reward-rows {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .board__row {
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    row-gap: 6px;
+    padding: var(--space-3);
+  }
+  .board__row--head {
+    display: none;
+  }
+  .board__rank {
+    width: 28px;
+    height: 28px;
+  }
+  .board__level {
+    grid-column: 2 / -1;
+    grid-row: 2;
+  }
+  .board__msgs {
+    display: none;
+  }
+}
+
+/* --- Accounts and roster: a player's linked games ------------------------------ */
+.accounts-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+@media (max-width: 960px) {
+  .accounts-layout {
+    grid-template-columns: 1fr;
+  }
+}
+.game-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.game-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--line);
+}
+.game-row form {
+  margin: 0;
+}
+.game-mark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  background: var(--surface-raised);
+  color: var(--text);
+  font: 700 14px / 1 var(--font-display);
+  letter-spacing: 0.04em;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+}
+.game-mark--sm {
+  width: 30px;
+  height: 30px;
+  font-size: 11px;
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+}
+.game-row__name {
+  display: grid;
+  min-width: 0;
+}
+.game-row__name strong {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.game-row__name span {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.empty-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-4);
+  border-top: 1px solid var(--line);
+  color: var(--text-muted);
+}
+.empty-block p {
+  margin: 0;
+}
+.link-option {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+.link-option p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 21px;
+}
+.link-option .g-btn {
+  align-self: flex-start;
+}
+.link-option .g-field {
+  max-width: 200px;
+}
+.link-option__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 600;
+}
+.card-pad {
+  padding: var(--space-4);
+}
+@media (max-width: 520px) {
+  .game-row {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+  }
+  .game-row > form {
+    grid-column: 2 / -1;
+    justify-self: start;
+  }
+  .game-row > form .g-btn {
+    margin-left: calc(-1 * var(--space-4));
+  }
+}
+.roster-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.roster-card {
+  padding: 0;
+  overflow: hidden;
+}
+.roster-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+.roster-card__head strong {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font: 600 16px / 22px var(--font-display);
+  letter-spacing: 0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.roster-card .game-row {
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  padding: 10px var(--space-4);
+}
+.roster-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.chip[aria-current="true"] {
+  border-color: var(--accent-strong);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* Overview: what needs you, the readout, then the op and the gate. */
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+@media (min-width: 1101px) {
+  .overview-grid > .span-2 {
+    grid-column: span 2;
+  }
+}
+@media (max-width: 1100px) {
+  .overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 720px) {
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.op-bar {
+  display: grid;
+  grid-template-columns: minmax(56px, auto) minmax(0, 1fr) 52px;
+  gap: var(--space-3);
+  align-items: center;
+  font-size: 14px;
+}
+.op-bar .mono {
+  text-align: right;
+}
+.op-bar .xpbar {
+  height: 4px;
+}
+.status-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.status-line:last-child {
+  border-bottom: 0;
+}
+
+/* --- Motion -------------------------------------------------------------------
+   Motion explains state and keeps your place. HUD brackets lock on to what you
+   are editing; the menu pip and the server name travel with you; a pressed
+   button shows it is transmitting; new seats, notices and plan additions arrive.
+   Distances are tokens, so reduced motion zeroes the movement and keeps the
+   fades and colour changes that carry meaning. */
+:root {
+  --m-rise: 10px;
+  --m-lift: 2px;
+  --m-lock: 7px;
+  --m-blur: 4px;
+  --m-pop: 0.86;
+  --m-settle: 0.97;
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-snap: cubic-bezier(0.2, 0.9, 0.1, 1);
+  interpolate-size: allow-keywords;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --m-rise: 0px;
+    --m-lift: 0px;
+    --m-lock: 0px;
+    --m-blur: 0px;
+    --m-pop: 1;
+    --m-settle: 1;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(var(--m-pop));
+  }
+}
+@keyframes ping {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--tone, var(--accent)) 70%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 8px transparent;
+  }
+}
+
+/* Lock-on: the HUD brackets slide in from outside and snap to the corners. They
+   mark what you are editing (an open panel) and what matters most on a page. */
+@keyframes lock-tl {
+  from {
+    opacity: 0;
+    translate: calc(-1 * var(--m-lock)) calc(-1 * var(--m-lock));
+  }
+}
+@keyframes lock-br {
+  from {
+    opacity: 0;
+    translate: var(--m-lock) var(--m-lock);
+  }
+}
+.g-card--hud::before,
+a.server-tile::after {
+  animation: lock-tl 0.5s var(--ease-snap) 0.08s both;
+}
+.g-card--hud::after {
+  animation: lock-br 0.5s var(--ease-snap) 0.08s both;
+}
+.panel[open]::before {
+  animation: lock-tl 0.36s var(--ease-snap) both;
+}
+.panel[open]::after {
+  animation: lock-br 0.36s var(--ease-snap) both;
+}
+
+/* Folding panels open and close by height, so the page below moves instead of jumping. */
+.panel::details-content,
+.card-edit::details-content,
+.confirm::details-content,
+.template::details-content,
+.sp-cat::details-content {
+  block-size: 0;
+  overflow-y: clip;
+  transition:
+    block-size 0.32s var(--ease-out),
+    content-visibility 0.32s allow-discrete;
+}
+.panel[open]::details-content,
+.card-edit[open]::details-content,
+.confirm[open]::details-content,
+.template[open]::details-content,
+.sp-cat[open]::details-content {
+  block-size: auto;
+}
+
+/* The server switcher drops from its button; the chevron turns with it. */
+@keyframes drop {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-0.5 * var(--m-rise))) scale(var(--m-settle));
+  }
+}
+.switcher > summary::after {
+  transition: transform 0.2s var(--ease-out);
+}
+.switcher[open] > summary::after {
+  transform: rotate(225deg) translateY(-2px);
+}
+.switcher__menu {
+  transform-origin: top left;
+}
+.switcher[open] .switcher__menu {
+  animation: drop 0.18s var(--ease-out);
+}
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--m-rise)) scale(var(--m-settle));
+  }
+}
+.invite-dialog[open] {
+  animation: dialog-in 0.3s var(--ease-out);
+}
+.invite-dialog[open]::backdrop {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* Outcomes land where you are looking: the notice drops in and its square pings. */
+@keyframes notice-in {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-0.6 * var(--m-rise)));
+  }
+}
+.notice {
+  animation: notice-in 0.36s var(--ease-out) both;
+}
+.notice::before {
+  animation: ping 1.1s ease-out 0.25s 2;
+}
+.attention__item--alert::before {
+  animation: ping 1.1s ease-out 0.3s 3;
+}
+.g-badge {
+  transition:
+    color 0.3s var(--ease-out),
+    border-color 0.3s var(--ease-out),
+    background-color 0.3s var(--ease-out);
+}
+
+/* Transmitting: the pressed button carries a scanning line and can't be pressed
+   twice until the page answers (components/PendingForms.tsx sets aria-busy). */
+@keyframes transmit {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes blink {
+  from {
+    opacity: 0.3;
+  }
+}
+form[data-pending] [aria-busy="true"] {
+  position: relative;
+  overflow: hidden;
+  cursor: progress;
+  pointer-events: none;
+}
+form[data-pending] [aria-busy="true"]::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: currentColor;
+  animation: transmit 0.9s var(--ease-in-out) infinite;
+}
+
+/* Arrivals: a player who joins, a raid signup, a new request row. On a live
+   refresh only what changed is new, so only that animates. */
+.seat,
+.roster__slot {
+  animation: pop-in 0.28s var(--ease-snap) both;
+}
+.g-table tbody tr {
+  animation: fade-in 0.3s var(--ease-out) both;
+}
+
+/* Gauges sweep in from the left: XP to the next level, seats filled, uptime by day. */
+@keyframes gauge {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+}
+.board .xpbar,
+.op-bar .xpbar,
+.uptime-bars {
+  animation: gauge 0.8s var(--ease-out) 0.15s both;
+}
+.board__row:nth-child(3) .xpbar,
+.op-bar:nth-of-type(2) .xpbar {
+  animation-delay: 0.2s;
+}
+.board__row:nth-child(4) .xpbar,
+.op-bar:nth-of-type(3) .xpbar {
+  animation-delay: 0.25s;
+}
+.board__row:nth-child(5) .xpbar,
+.op-bar:nth-of-type(4) .xpbar {
+  animation-delay: 0.3s;
+}
+.board__row:nth-child(n + 6) .xpbar,
+.op-bar:nth-of-type(n + 5) .xpbar {
+  animation-delay: 0.35s;
+}
+/* First place catches the light once. */
+@keyframes glint {
+  to {
+    transform: translateX(130%);
+  }
+}
+.board__row--first .board__rank {
+  position: relative;
+  overflow: hidden;
+}
+.board__row--first .board__rank::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 25%, rgb(255 255 255 / 0.6) 50%, transparent 75%);
+  transform: translateX(-130%);
+  animation: glint 0.9s var(--ease-in-out) 0.8s both;
+}
+
+/* Quartermaster: what a plan adds materialises in the server, and folds away on "Now". */
+@keyframes wipe {
+  from {
+    background-size: 0% 100%;
+  }
+}
+.sp-row.is-new {
+  background: linear-gradient(
+      color-mix(in srgb, var(--accent) 12%, transparent),
+      color-mix(in srgb, var(--accent) 6%, transparent)
+    )
+    no-repeat;
+  background-size: 100% 100%;
+  animation: wipe 0.7s var(--ease-out) 0.25s both;
+}
+.sp .is-new {
+  transition:
+    opacity 0.22s var(--ease-out),
+    translate 0.3s var(--ease-out),
+    display 0.3s allow-discrete;
+}
+.sp:has(input[value="before"]:checked) .is-new {
+  opacity: 0;
+  translate: calc(-1 * var(--m-rise)) 0;
+}
+@starting-style {
+  .sp:has(input[value="after"]:checked) .is-new {
+    opacity: 0;
+    translate: calc(-1 * var(--m-rise)) 0;
+  }
+}
+
+/* --- Navigation ----------------------------------------------------------------
+   Links tagged "nav" swap the page under a still top bar and menu: the old page
+   leaves fast, the new one rises in. The menu pip and a server's name travel to
+   their new place. Full page loads crossfade. */
+@view-transition {
+  navigation: auto;
+}
+.topbar {
+  view-transition-name: topbar;
+}
+.shell > .g-nav {
+  view-transition-name: server-nav;
+}
+@media (max-width: 720px) {
+  /* Named for transitions, the bar becomes a layer: keep its menu above the page. */
+  .topbar {
+    position: relative;
+    z-index: 10;
+  }
+}
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+.g-nav__item[aria-current="page"]::before {
+  content: none;
+}
+/* The pip sits in the menu's gutter, so labels never move when the page changes
+   (a moving label would show twice while the old and new menus crossfade). */
+.g-nav__item {
+  position: relative;
+}
+.g-nav__pip {
+  position: absolute;
+  top: 50%;
+  left: -7px;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  background: var(--accent-strong);
+}
+@media (max-width: 720px) {
+  .g-nav__pip {
+    top: auto;
+    bottom: -4px;
+    left: 50%;
+    width: 14px;
+    height: 3px;
+    margin: 0 0 0 -7px;
+  }
+}
+.page-title {
+  width: fit-content;
+  max-width: 100%;
+}
+.server-tile__name {
+  justify-self: start;
+  max-width: 100%;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.22s;
+}
+@keyframes vt-out {
+  to {
+    opacity: 0;
+    transform: translateY(calc(-0.4 * var(--m-rise)));
+  }
+}
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--m-rise));
+    filter: blur(calc(0.5 * var(--m-blur)));
+  }
+}
+::view-transition-old(.page-out) {
+  animation: vt-out 0.14s var(--ease-out) both;
+}
+::view-transition-new(.page-in) {
+  animation: vt-in 0.34s var(--ease-out) 0.06s both;
+}
+::view-transition-group(.morph) {
+  animation-duration: 0.44s;
+  animation-timing-function: var(--ease-out);
+}
+@keyframes via-blur {
+  35% {
+    filter: blur(calc(0.6 * var(--m-blur)));
+  }
+}
+::view-transition-image-pair(.morph) {
+  animation-name: via-blur;
+}
+::view-transition-group(.pip) {
+  animation-duration: 0.34s;
+  animation-timing-function: var(--ease-snap);
+}
+
+/* Reduced motion: no travel, no sweeps or glints; fades, colour and state stay. */
+@media (prefers-reduced-motion: reduce) {
+  .panel::details-content,
+  .card-edit::details-content,
+  .confirm::details-content,
+  .template::details-content,
+  .sp-cat::details-content {
+    transition-duration: 0s;
+  }
+  .board .xpbar,
+  .op-bar .xpbar,
+  .uptime-bars,
+  .sp-row.is-new {
+    animation-name: fade-in;
+  }
+  .board__row--first .board__rank::after {
+    display: none;
+  }
+  form[data-pending] [aria-busy="true"]::after {
+    animation: blink 0.8s ease-in-out infinite alternate;
+  }
+  ::view-transition-group(*) {
+    animation-duration: 0s;
+  }
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 0.12s;
+  }
+}
+
+/* --- Layout pass ---------------------------------------------------------------
+   Security leads with the lockdown (the page's emergency control), then pairs the
+   tall anti-raid settings with verification and anti-nuke stacked beside it, so no
+   card leaves a void under a short neighbour. Form buttons size to their label. */
+.gate-layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.gate-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+.gate-stack {
+  gap: var(--space-4);
+}
+.gate-lockdown .confirm > form,
+.gate-lockdown form {
+  max-width: 560px;
+}
+@media (max-width: 960px) {
+  .gate-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.card-col > button.g-btn,
+.card-col > a.g-btn,
+.card-col > .g-btn--primary {
+  align-self: flex-start;
+}
+
+/* The chamfered primary button clips anything drawn outside it, outlines included,
+   so its keyboard focus ring sits inside the shape. */
+.g-btn--primary:focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: -5px;
 }

@@ -3,8 +3,9 @@ import "@garrison/brand/css/components.css";
 import "./app.css";
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Saira_Semi_Condensed } from "next/font/google";
-import type { ReactNode } from "react";
+import { type ReactNode, Suspense } from "react";
 import { artSrc } from "@/components/Art";
+import { PendingForms } from "@/components/PendingForms";
 import { siteUrl } from "@/lib/hosts";
 import { currentTheme } from "@/lib/theme";
 
@@ -47,7 +48,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       data-theme={theme}
       className={`${inter.variable} ${mono.variable} ${saira.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        {children}
+        <Suspense fallback={null}>
+          <PendingForms />
+        </Suspense>
+      </body>
     </html>
   );
 }

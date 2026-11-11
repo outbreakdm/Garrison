@@ -47,7 +47,7 @@ export default async function SearchPage({
         <div className="grid-cards">
           {places.length ? (
             <section className="g-card card-col" aria-label="Settings and pages">
-              <span className="g-label">Settings and pages</span>
+              <h2 className="card-title">Settings and pages</h2>
               {places.map((p) => (
                 <Link key={`${p.path}-${p.title}`} className="search-hit" href={`${base}${p.path}`}>
                   <span>{p.title}</span>
@@ -58,7 +58,7 @@ export default async function SearchPage({
           ) : null}
           {members.length ? (
             <section className="g-card card-col" aria-label="Members">
-              <span className="g-label">Members</span>
+              <h2 className="card-title">Members</h2>
               {members.map((m) => (
                 <Link
                   key={m.userId}
@@ -76,7 +76,7 @@ export default async function SearchPage({
           ) : null}
           {cases.length ? (
             <section className="g-card card-col" aria-label="Cases">
-              <span className="g-label">Cases</span>
+              <h2 className="card-title">Cases</h2>
               {cases.map((c) => (
                 <Link key={c.id} className="search-hit" href={`${base}/watch?q=%23${c.caseNumber}`}>
                   <span>

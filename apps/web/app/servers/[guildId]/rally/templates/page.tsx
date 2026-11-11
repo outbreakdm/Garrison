@@ -127,7 +127,7 @@ export default async function RallyTemplatesPage({
 
       <form action={addTemplate} className="g-card card-col">
         <input type="hidden" name="guildId" value={guild.id} />
-        <span className="g-label">Add a template</span>
+        <h2 className="card-title">Add a template</h2>
         <div className="field-row">
           <label className="g-field">
             <span>Start from</span>

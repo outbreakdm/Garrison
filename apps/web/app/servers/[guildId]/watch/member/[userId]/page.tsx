@@ -87,10 +87,10 @@ export default async function MemberPage({
 
       <RequestsPanel guildId={guild.id} kinds={["mod_action", "undo_case"]} query={query} />
 
-      <div className="grid-stats">
-        <div className="g-card">
+      <section className="g-card readout readout--3" aria-label="Member">
+        <div className="readout__cell">
           <span className="g-label">In this server</span>
-          <span className="g-stat stat-text">
+          <span className="readout__value readout__value--text">
             {here && member?.joinedAt
               ? `Since ${member.joinedAt.toISOString().slice(0, 10)}`
               : "Not a member"}
@@ -101,27 +101,27 @@ export default async function MemberPage({
             </span>
           ) : null}
         </div>
-        <div className="g-card">
+        <div className="readout__cell">
           <span className="g-label">Active warnings</span>
-          <span className={`g-stat ${warnings ? "tone-caution" : ""}`}>{warnings}</span>
-          <span className="muted">{cases.length} cases in all</span>
+          <span className={`readout__value ${warnings ? "tone-caution" : ""}`}>{warnings}</span>
+          <span className="g-help">{cases.length} cases in all</span>
         </div>
-        <div className="g-card">
+        <div className="readout__cell">
           <span className="g-label">Rank</span>
-          <span className="g-stat stat-text">
+          <span className="readout__value readout__value--text">
             {rank && level ? `Level ${level.level}` : "No XP yet"}
           </span>
           {rank ? (
-            <span className="muted mono">
+            <span className="g-help mono">
               #{rank.position} · {rank.xp.toLocaleString("en-US")} XP
             </span>
           ) : null}
         </div>
-      </div>
+      </section>
 
       {memberRoles.length ? (
         <div className="g-card card-col">
-          <span className="g-label">Roles</span>
+          <h2 className="card-title">Roles</h2>
           <div className="chip-row">
             {memberRoles.map((r) => (
               <span className="g-badge" key={r.id}>
@@ -137,7 +137,7 @@ export default async function MemberPage({
       ) : (
         <section className="g-card card-col" aria-label="Moderate">
           <div>
-            <div className="g-label">Moderate</div>
+            <h2 className="card-title">Moderate</h2>
             <p className="g-help">
               Garrison acts in Discord as you, usually within seconds, and records a case. You need
               the matching Discord permission, such as Kick Members to kick.
@@ -227,7 +227,7 @@ export default async function MemberPage({
 
       <div className="g-card table-card">
         <div className="table-card__head row-between">
-          <span className="g-label">Cases</span>
+          <h2 className="card-title">Cases</h2>
           <Link className="g-btn g-btn--ghost" href={`/servers/${guild.id}/ledger?user=${userId}`}>
             Their Ledger events
           </Link>

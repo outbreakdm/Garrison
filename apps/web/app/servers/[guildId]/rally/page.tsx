@@ -14,6 +14,7 @@ import {
 import type { Metadata } from "next";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { formatTime } from "@/components/format";
+import { FormPanel } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { listTextChannels } from "@/lib/discord";
 import { ACTION_KIND, ACTION_STATUS } from "@/lib/rally-schema";
@@ -44,9 +45,6 @@ const ERRORS: Record<string, string> = {
 
 export const metadata: Metadata = { title: "Rally" };
 
-/** Slot numbers 1..n, capped at 10 for the card. */
-const slotNumbers = (n: number) => Array.from({ length: Math.min(n, 10) }, (_, i) => i + 1);
-
 export default async function RallyPage({
   params,
   searchParams,
@@ -74,11 +72,10 @@ export default async function RallyPage({
     Promise.all(posts.map((p) => listActiveMembers(db, p.id))),
     Promise.all(raids.map((r) => listSignups(db, r.id))),
   ]);
-  const names = await memberNames(
-    db,
-    guild.id,
-    raidSignups.flat().map((s) => s.userId),
-  );
+  const names = await memberNames(db, guild.id, [
+    ...raidSignups.flat().map((s) => s.userId),
+    ...postMembers.flat().map((m) => m.userId),
+  ]);
   const nameOf = (id: string) => names.get(id) ?? `Member ${id.slice(-4)}`;
   // Only what was asked from this page: moderation and builds show on their own pages.
   const recent = allActions.filter((a) => a.kind in QUEUED).slice(0, 8);
@@ -117,8 +114,12 @@ export default async function RallyPage({
         </div>
       ) : null}
 
-      <details className="g-card raid-create" id="post-group" open={query.post === "1"}>
-        <summary className="g-label">Post a group</summary>
+      <FormPanel
+        id="post-group"
+        title="Post a group"
+        hint="Goes up in Discord as you, with Join buttons."
+        open={query.post === "1"}
+      >
         <form action={requestAction} className="card-col create-raid">
           <input type="hidden" name="guildId" value={guild.id} />
           <input type="hidden" name="page" value="rally" />
@@ -222,9 +223,13 @@ export default async function RallyPage({
             Post group
           </button>
         </form>
-      </details>
-      <details className="g-card raid-create" id="create-raid" open={query.create === "1"}>
-        <summary className="g-label">Create raid</summary>
+      </FormPanel>
+      <FormPanel
+        id="create-raid"
+        title="Create raid"
+        hint={`A signup card with role caps and a bench, in ${timezone}.`}
+        open={query.create === "1"}
+      >
         <form action={requestCreateRaid} className="card-col create-raid">
           <input type="hidden" name="guildId" value={guild.id} />
           <div className="field-row">
@@ -289,18 +294,31 @@ export default async function RallyPage({
             Create raid
           </button>
         </form>
-      </details>
-      <div className="grid-cards">
-        <section aria-label="Open groups" className="card-col">
-          <div className="g-label">Open groups</div>
+      </FormPanel>
+      <div className="rally-board">
+        <section aria-labelledby="open-groups" className="block">
+          <h2 className="block-title" id="open-groups">
+            Open groups <span className="count">{posts.length}</span>
+          </h2>
           {posts.length ? (
             posts.map((p, i) => {
               const members = postMembers[i] ?? [];
               const total = capacity(p.slots);
+              const mineHere = members.find((m) => m.userId === session.userId);
+              const roleGroups = p.slots.length > 1 || Boolean(p.slots[0]?.name);
+              const openRoles = p.slots.filter(
+                (s) => members.filter((m) => m.slotName === s.name).length < s.count,
+              );
               return (
-                <div className="g-lfg g-lfg--wide" key={p.id}>
-                  <div className="g-lfg__head">
-                    <span className="g-lfg__title">{p.title}</span>
+                <article className="g-card lfg" key={p.id} aria-label={p.title}>
+                  <div className="lfg__head">
+                    <div>
+                      <h3 className="card-title">{p.title}</h3>
+                      <div className="lfg__meta">
+                        {p.note ? `${p.note} · ` : ""}
+                        {formatTime(p.startsAt)}
+                      </div>
+                    </div>
                     <span
                       className={`g-badge ${p.status === "full" ? "g-badge--go" : "g-badge--accent"}`}
                     >
@@ -308,31 +326,55 @@ export default async function RallyPage({
                         ? "Full"
                         : total - members.length === 1
                           ? "1 left"
-                          : "Open"}
+                          : `${total - members.length} open`}
                     </span>
                   </div>
-                  <div className="g-lfg__meta">{p.note ?? formatTime(p.startsAt)}</div>
-                  <div
-                    className="g-slots"
-                    role="img"
-                    aria-label={`${members.length} of ${total} slots filled`}
-                  >
-                    {slotNumbers(total).map((n) => (
-                      <span
-                        key={n}
-                        className={`g-slot ${n <= members.length ? "g-slot--filled" : ""}`}
-                      >
-                        {n}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="row-between lfg-actions">
-                    {members.some((m) => m.userId === session.userId) ? (
-                      <form action={requestAction}>
+                  <ul className="seats" aria-label={`${members.length} of ${total} seats taken`}>
+                    {p.slots.map((s) => {
+                      const inRole = roleGroups
+                        ? members.filter((m) => m.slotName === s.name)
+                        : members;
+                      const open = Math.max(0, s.count - inRole.length);
+                      return (
+                        <li className="seat-row" key={s.name || "seats"}>
+                          <span className="g-label">{s.name || "Squad"}</span>
+                          <span className="seat-chips">
+                            {inRole.slice(0, 10).map((m) => (
+                              <span
+                                className={`seat ${m.userId === session.userId ? "seat--you" : ""}`}
+                                key={m.userId}
+                              >
+                                <span className="seat__mark" aria-hidden="true">
+                                  {(
+                                    nameOf(m.userId).match(/[\p{L}\p{N}]/u)?.[0] ?? "?"
+                                  ).toUpperCase()}
+                                </span>
+                                <span className="seat__name">
+                                  {m.userId === session.userId ? "You" : nameOf(m.userId)}
+                                </span>
+                              </span>
+                            ))}
+                            {open ? (
+                              <span className="seat seat--open">
+                                {open === 1 ? "1 open" : `${open} open`}
+                              </span>
+                            ) : null}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <div className="lfg__actions">
+                    {mineHere ? (
+                      <form action={requestAction} className="act-row">
                         <input type="hidden" name="guildId" value={guild.id} />
                         <input type="hidden" name="page" value="rally" />
                         <input type="hidden" name="kind" value="lfg_leave" />
                         <input type="hidden" name="id" value={p.id} />
+                        <span className="you-line">
+                          You're in
+                          {roleGroups && mineHere.slotName ? ` as ${mineHere.slotName}` : ""}
+                        </span>
                         <button type="submit" className="g-btn g-btn--secondary">
                           Leave
                         </button>
@@ -343,11 +385,12 @@ export default async function RallyPage({
                         <input type="hidden" name="page" value="rally" />
                         <input type="hidden" name="kind" value="lfg_join" />
                         <input type="hidden" name="id" value={p.id} />
-                        {p.slots.length > 1 || p.slots[0]?.name ? (
+                        {roleGroups ? (
                           <select
                             className="g-input g-input--sm"
                             name="role"
                             aria-label={`Role in ${p.title}`}
+                            defaultValue={openRoles[0]?.name}
                           >
                             {p.slots.map((g) => (
                               <option key={g.name} value={g.name}>
@@ -358,12 +401,12 @@ export default async function RallyPage({
                         ) : (
                           <input type="hidden" name="role" value="" />
                         )}
-                        <button type="submit" className="g-btn g-btn--secondary">
+                        <button type="submit" className="g-btn g-btn--primary">
                           Join
                         </button>
                       </form>
                     ) : (
-                      <span />
+                      <span className="muted">This group is full.</span>
                     )}
                     <form action={requestAction}>
                       <input type="hidden" name="guildId" value={guild.id} />
@@ -375,15 +418,22 @@ export default async function RallyPage({
                       </button>
                     </form>
                   </div>
-                </div>
+                </article>
               );
             })
           ) : (
-            <div className="g-card muted">No open groups.</div>
+            <div className="g-card empty-block">
+              <p>No open groups right now.</p>
+              <a className="g-btn g-btn--secondary" href="?post=1#post-group">
+                Post a group
+              </a>
+            </div>
           )}
         </section>
-        <section aria-label="Upcoming raids" className="card-col">
-          <div className="g-label">Upcoming raids</div>
+        <section aria-labelledby="upcoming-raids" className="block">
+          <h2 className="block-title" id="upcoming-raids">
+            Upcoming raids <span className="count">{raids.length}</span>
+          </h2>
           {raids.length ? (
             raids.map((r, i) => {
               const signups = raidSignups[i] ?? [];
@@ -397,13 +447,23 @@ export default async function RallyPage({
               const short = missing.filter((m) => m.n > 0).map((m) => `${m.n} ${m.name} short`);
               const mine = signups.find((s) => s.userId === session.userId);
               return (
-                <div className="g-card g-card--hud card-col" key={r.id}>
-                  <div>
-                    <div className="g-label">
-                      Ops · raid{r.repeatWeekly ? " · repeats weekly" : ""}
+                <article className="g-card g-card--hud card-col" key={r.id} aria-label={r.title}>
+                  <div className="lfg__head">
+                    <div>
+                      <h3 className="card-title">{r.title}</h3>
+                      <div className="raid-card__when">
+                        <span className="mono">{formatTime(r.startsAt, r.timezone)}</span>
+                        {r.repeatWeekly ? <span className="g-badge">Weekly</span> : null}
+                      </div>
+                      {r.note ? <p className="card-sub">{r.note}</p> : null}
                     </div>
-                    <h2>{r.title}</h2>
-                    <div className="mono">{formatTime(r.startsAt, r.timezone)}</div>
+                    <span
+                      className={`g-badge ${short.length ? "g-badge--caution" : "g-badge--go"}`}
+                    >
+                      {short.length
+                        ? `${missing.reduce((t, m) => t + Math.max(0, m.n), 0)} short`
+                        : "Ready"}
+                    </span>
                   </div>
                   <div className="roster">
                     {r.slots.map((g) => {
@@ -412,15 +472,18 @@ export default async function RallyPage({
                         inRole.length >= g.count ? "tone-go" : inRole.length ? "tone-caution" : "";
                       return (
                         <div className="roster__col" key={g.name}>
-                          <div className="row-between">
+                          <div className="roster__head">
                             <span className="g-label">{g.name}</span>
                             <span className={`mono ${tone}`}>
                               {inRole.length} / {g.count}
                             </span>
                           </div>
                           {inRole.slice(0, 6).map((x) => (
-                            <div className="roster__slot" key={x.userId}>
-                              <span>{nameOf(x.userId)}</span>
+                            <div
+                              className={`roster__slot ${x.userId === session.userId ? "roster__slot--you" : ""}`}
+                              key={x.userId}
+                            >
+                              <span>{x.userId === session.userId ? "You" : nameOf(x.userId)}</span>
                               {x.spec ? <span className="mono">{x.spec}</span> : null}
                             </div>
                           ))}
@@ -471,12 +534,12 @@ export default async function RallyPage({
                     </div>
                   ) : null}
                   {mine ? (
-                    <form action={requestAction} className="act-row">
+                    <form action={requestAction} className="act-row raid-signup">
                       <input type="hidden" name="guildId" value={guild.id} />
                       <input type="hidden" name="page" value="rally" />
                       <input type="hidden" name="kind" value="raid_withdraw" />
                       <input type="hidden" name="eventId" value={r.id} />
-                      <span>
+                      <span className="you-line">
                         You're {mine.bench ? "on the bench" : "signed up"}{" "}
                         <span className="mono">
                           {mine.role}
@@ -488,12 +551,12 @@ export default async function RallyPage({
                       </button>
                     </form>
                   ) : (
-                    <form action={requestAction} className="act-row">
+                    <form action={requestAction} className="act-row raid-signup">
                       <input type="hidden" name="guildId" value={guild.id} />
                       <input type="hidden" name="page" value="rally" />
                       <input type="hidden" name="kind" value="raid_signup" />
                       <input type="hidden" name="eventId" value={r.id} />
-                      <span className="g-label">Sign up</span>
+                      <span className="g-label">Sign up as</span>
                       <select
                         className="g-input g-input--sm"
                         name="role"
@@ -513,15 +576,15 @@ export default async function RallyPage({
                         placeholder="Class or spec"
                         aria-label="Class or spec, optional"
                       />
-                      <button type="submit" className="g-btn g-btn--secondary">
+                      <button type="submit" className="g-btn g-btn--primary">
                         Sign up
                       </button>
                     </form>
                   )}
                   <div className="row-between raid-foot">
                     <span className="mono">
-                      {seated.length} / {capacity(r.slots)}
-                      {short.length ? ` · ${short.join(", ")}` : " · full"}
+                      {seated.length} / {capacity(r.slots)} signed up
+                      {bench.length ? ` · ${bench.length} on the bench` : ""}
                     </span>
                     <details className="confirm">
                       <summary className="confirm__toggle g-btn g-btn--ghost">Cancel raid…</summary>
@@ -545,11 +608,16 @@ export default async function RallyPage({
                       </form>
                     ) : null}
                   </div>
-                </div>
+                </article>
               );
             })
           ) : (
-            <div className="g-card muted">No raids scheduled.</div>
+            <div className="g-card empty-block">
+              <p>No raids scheduled.</p>
+              <a className="g-btn g-btn--secondary" href="?create=1#create-raid">
+                Create a raid
+              </a>
+            </div>
           )}
         </section>
       </div>
@@ -557,7 +625,7 @@ export default async function RallyPage({
       {recent.length ? (
         <div className="g-card table-card">
           <div className="table-card__head row-between">
-            <span className="g-label">Recent requests</span>
+            <h2 className="card-title">Recent requests</h2>
             <span className="g-help">Garrison does these in Discord, usually within seconds.</span>
           </div>
           <div className="table-wrap">

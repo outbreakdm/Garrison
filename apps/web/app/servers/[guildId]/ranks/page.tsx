@@ -1,6 +1,7 @@
 import { getLeaderboard, getRanksSettings, levelForXp, listRankRewards } from "@garrison/db";
 import type { Metadata } from "next";
 import { Art } from "@/components/Art";
+import { MemberAvatar } from "@/components/MemberAvatar";
 import {
   ChannelSelect,
   FormFoot,
@@ -118,45 +119,65 @@ export default async function RanksPage({
         </form>
       </SettingsPanel>
 
-      <div className="grid-cards">
-        <div className="g-card table-card">
-          <div className="table-wrap">
-            <table className="g-table">
-              <thead>
-                <tr>
-                  {["Rank", "Member", "Level", "XP", "Messages"].map((h) => (
-                    <th key={h} scope="col">
-                      <span className="g-label">{h}</span>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {top.map((m, i) => (
-                  <tr key={m.userId}>
-                    <td className="mono">#{i + 1}</td>
-                    <td>{m.username || <span className="mono">{m.userId}</span>}</td>
-                    <td>
-                      {m.level}{" "}
-                      <span className="mono">
-                        · {Math.floor((levelForXp(m.xp).intoLevel / levelForXp(m.xp).needed) * 100)}
-                        %
-                      </span>
-                    </td>
-                    <td className="mono">{m.xp.toLocaleString("en-US")}</td>
-                    <td className="mono">{m.messages.toLocaleString("en-US")}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {top.length === 0 ? (
-              <div className="table-card__head muted">
-                <Art slot="empty" className="empty-art" decorative />
-                Nobody has XP yet.
-              </div>
-            ) : null}
+      <div className="ranks-layout">
+        <section className="g-card table-card" aria-labelledby="board-title">
+          <div className="table-card__head card-head">
+            <h2 className="card-title" id="board-title">
+              Most XP
+            </h2>
+            <span className="g-help">Members check theirs with /rank in Discord.</span>
           </div>
-        </div>
+          {top.length ? (
+            <ol className="board">
+              <li className="board__row board__row--head" aria-hidden="true">
+                <span className="g-label">Rank</span>
+                <span className="g-label">Member</span>
+                <span className="g-label">Level</span>
+                <span className="g-label">XP</span>
+                <span className="g-label">Messages</span>
+              </li>
+              {top.map((m, i) => {
+                const lv = levelForXp(m.xp);
+                const name = m.username || `Member ${m.userId.slice(-4)}`;
+                return (
+                  <li
+                    key={m.userId}
+                    className={`board__row ${i < 3 ? "board__row--top" : ""} ${i === 0 ? "board__row--first" : ""}`}
+                  >
+                    <span className="board__rank" title={`Rank ${i + 1}`}>
+                      {i + 1}
+                    </span>
+                    <span className="board__who">
+                      <MemberAvatar name={name} src={null} />
+                      <span>{name}</span>
+                    </span>
+                    <span className="board__level">
+                      <span className="board__lv">Lv {m.level}</span>
+                      <progress
+                        className="xpbar"
+                        value={lv.intoLevel}
+                        max={lv.needed}
+                        aria-label={`${Math.floor((lv.intoLevel / lv.needed) * 100)}% of the way to level ${m.level + 1}`}
+                      />
+                    </span>
+                    <span className="board__xp">{m.xp.toLocaleString("en-US")} XP</span>
+                    <span className="board__msgs">{m.messages.toLocaleString("en-US")}</span>
+                  </li>
+                );
+              })}
+            </ol>
+          ) : (
+            <div className="board__empty">
+              <Art slot="empty" className="empty-art" decorative />
+              <p>
+                Nobody has XP yet.
+                {settings.enabled
+                  ? " Members earn it by chatting."
+                  : " Turn Ranks on in Ranks settings and members start earning it."}
+              </p>
+            </div>
+          )}
+        </section>
         <form
           action={saveRewards}
           id="rewards"
@@ -164,44 +185,46 @@ export default async function RanksPage({
           key={JSON.stringify(rewards)}
         >
           <input type="hidden" name="guildId" value={guild.id} />
-          <span className="g-label">Level rewards</span>
+          <h2 className="card-title">Level rewards</h2>
           <p className="g-help">
             Members get the role when they reach the level, and keep it. Roles with admin or
             moderation powers aren't offered. Garrison's role must sit above these roles.
           </p>
-          {Array.from({ length: REWARD_ROWS }, (_, i) => {
-            const r = rewards[i];
-            return (
-              <div className="reward-row" key={r ? `lvl-${r.level}` : `new-${i}`}>
-                <input
-                  className="g-input"
-                  name={`reward${i}_level`}
-                  type="number"
-                  min={1}
-                  max={500}
-                  placeholder="Level"
-                  aria-label={`Reward ${i + 1} level`}
-                  defaultValue={r?.level ?? ""}
-                />
-                <select
-                  className="g-input"
-                  name={`reward${i}_role`}
-                  aria-label={`Reward ${i + 1} role`}
-                  defaultValue={r?.roleId ?? ""}
-                >
-                  <option value="">No reward</option>
-                  {r?.roleId && !grantable.some((g) => g.id === r.roleId) ? (
-                    <option value={r.roleId}>@{roleName.get(r.roleId) ?? "deleted role"}</option>
-                  ) : null}
-                  {grantable.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      @{g.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            );
-          })}
+          <div className="reward-rows">
+            {Array.from({ length: REWARD_ROWS }, (_, i) => {
+              const r = rewards[i];
+              return (
+                <div className="reward-row" key={r ? `lvl-${r.level}` : `new-${i}`}>
+                  <input
+                    className="g-input"
+                    name={`reward${i}_level`}
+                    type="number"
+                    min={1}
+                    max={500}
+                    placeholder="Level"
+                    aria-label={`Reward ${i + 1} level`}
+                    defaultValue={r?.level ?? ""}
+                  />
+                  <select
+                    className="g-input"
+                    name={`reward${i}_role`}
+                    aria-label={`Reward ${i + 1} role`}
+                    defaultValue={r?.roleId ?? ""}
+                  >
+                    <option value="">No reward</option>
+                    {r?.roleId && !grantable.some((g) => g.id === r.roleId) ? (
+                      <option value={r.roleId}>@{roleName.get(r.roleId) ?? "deleted role"}</option>
+                    ) : null}
+                    {grantable.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        @{g.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })}
+          </div>
           <button type="submit" className="g-btn g-btn--primary">
             Save rewards
           </button>

@@ -22,7 +22,6 @@ export default async function StatusPage() {
       </header>
       <main className="landing__main status">
         <div className="section-head">
-          <span className="g-label">Status</span>
           <h1>
             {m
               ? m.online
@@ -39,29 +38,49 @@ export default async function StatusPage() {
         </div>
         {m ? (
           <>
-            <div className="grid-stats">
-              <div className={`g-card ${m.online ? "g-card--hud" : ""}`}>
-                <div className="g-label">Now</div>
-                <div className="g-stat">{m.online ? "Online" : "Down"}</div>
+            <section className="g-card readout readout--3" aria-label="Now">
+              <div className="readout__cell">
+                <span className="g-label">Now</span>
+                <span
+                  className={`readout__value readout__value--text ${m.online ? "tone-go" : "tone-alert"}`}
+                >
+                  {m.online ? "Online" : "Down"}
+                </span>
               </div>
-              <div className="g-card">
-                <div className="g-label">Uptime · 30 d</div>
-                <div className="g-stat">
-                  {m.uptimePct === null ? "—" : `${m.uptimePct.toFixed(2)}%`}
-                </div>
+              <div className="readout__cell">
+                <span className="g-label">Uptime · 30 d</span>
+                <span className="readout__value">
+                  {m.uptimePct === null ? (
+                    "—"
+                  ) : (
+                    <>
+                      {m.uptimePct.toFixed(2)}
+                      <span className="unit">%</span>
+                    </>
+                  )}
+                </span>
               </div>
-              <div className="g-card">
-                <div className="g-label">Command reply · p95 · 24 h</div>
-                <div className="g-stat">{m.latency ? `${m.latency.p95Ms} ms` : "—"}</div>
-                <div className="g-help">
+              <div className="readout__cell">
+                <span className="g-label">Command reply · p95 · 24 h</span>
+                <span className="readout__value">
+                  {m.latency ? (
+                    <>
+                      {m.latency.p95Ms}
+                      <span className="unit">ms</span>
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </span>
+                <span className="g-help">
                   {m.latency
                     ? `${m.latency.count.toLocaleString("en-US")} commands · target under 200 ms`
                     : "No commands yet"}
-                </div>
+                </span>
               </div>
-            </div>
+            </section>
             <div className="g-card card-col">
-              <span className="g-label">Last 30 days</span>
+              <h2 className="card-title">Last 30 days</h2>
               <div
                 className="uptime-bars"
                 role="img"

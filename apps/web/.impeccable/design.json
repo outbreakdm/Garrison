@@ -1,0 +1,1611 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-11T14:23:03.092Z",
+  "title": "Design System: Garrison",
+  "extensions": {
+    "worlds": {
+      "dashboard": {
+        "routes": [
+          "/servers",
+          "/servers/[guildId]/**",
+          "/account",
+          "/login",
+          "/status",
+          "404 (not-found)"
+        ],
+        "sources": [
+          "packages/brand/css/tokens.css",
+          "packages/brand/css/components.css (g- prefix)",
+          "apps/web/app/app.css",
+          "apps/web/app/layout.tsx (next/font: Saira Semi Condensed, Inter, JetBrains Mono)"
+        ],
+        "themes": [
+          "dark (default)",
+          "light"
+        ]
+      },
+      "landing": {
+        "routes": [
+          "/"
+        ],
+        "scope": ".lp root element",
+        "sources": [
+          "apps/web/app/landing.css",
+          "apps/web/app/page.tsx (next/font: Gabarito, Geist, Geist Mono)"
+        ],
+        "themes": [
+          "dark (default)",
+          "light"
+        ],
+        "sharedFromDashboard": [
+          "--ease-out",
+          "--ease-in-out",
+          "--ease-snap",
+          "--m-* motion distances",
+          "dashboard tokens and g- components inside .lp-win product windows",
+          "the shield mark (--accent-strong stroke)"
+        ]
+      }
+    },
+    "shapes": {
+      "chamfer": {
+        "value": "8px",
+        "token": "--chamfer",
+        "purpose": "45-degree cut: top-right corner of the dashboard primary button; top-left and bottom-right of identity plates (server icon 10px at 52px size, Quartermaster server icon 8px, game mark 8px, small game mark 6px); top-right of first place on the leaderboard at 7px."
+      },
+      "hudBracket": {
+        "value": "12px L-shapes, 2px stroke, offset -1px, top-left and bottom-right, var(--accent-strong)",
+        "purpose": "Open settings panels and the object a page exists for; guarded server tiles take a single 14px top-left bracket."
+      },
+      "statusPip": {
+        "value": "6px square (8px in attention rows)",
+        "purpose": "Badges, notices, nav pip, server state, Quartermaster rules. Never a circle in the dashboard."
+      },
+      "declaredUnused": [
+        "--radius-lg: 8px (packages/brand tokens.css)"
+      ]
+    },
+    "derivedSurfaces": [
+      {
+        "name": "surface-sunken",
+        "value": "color-mix(in srgb, var(--surface) 55%, var(--bg))",
+        "purpose": "Table heads, leaderboard header row."
+      },
+      {
+        "name": "plate",
+        "value": "color-mix(in srgb, var(--surface-raised) 70%, var(--surface)) dark; var(--surface-raised) light",
+        "purpose": "Player cards."
+      },
+      {
+        "name": "notice-tint",
+        "value": "border color-mix(in srgb, var(--tone) 55%, var(--line)); background color-mix(in srgb, var(--tone) 9%, var(--surface))",
+        "purpose": "Notices in both themes."
+      },
+      {
+        "name": "accent-tint",
+        "value": "color-mix(in srgb, var(--accent) 8%, var(--surface)) with border color-mix(in srgb, var(--accent-strong) 60%, var(--line))",
+        "purpose": "Filled seats in Rally."
+      }
+    ],
+    "art": {
+      "source": "apps/web/art/slots.json; files in apps/web/public/art; a slot with no file renders nothing",
+      "landingSet": {
+        "slots": [
+          "lp-hero",
+          "lp-icon-overview",
+          "lp-icon-watch",
+          "lp-icon-gatehouse",
+          "lp-icon-rally",
+          "lp-icon-quartermaster",
+          "lp-icon-ledger",
+          "lp-icon-ranks",
+          "lp-icon-barracks",
+          "lp-cta",
+          "og"
+        ],
+        "style": "Premium 3D product renders: satin graphite and thick smoked glass, bevelled, on an ink stage. Exactly one small volt-lime light per piece (emitted, never paint or ambient). Indigo #6f6cf8 rim light; ambient light indigo or cool blue. Nothing military, no text.",
+        "display": "lp-hero and lp-cta dark theme only, hidden in light and on phones; icons transparent, shown at 64px and 44px."
+      },
+      "dashboardSet": {
+        "slots": [
+          "login",
+          "not-found",
+          "empty"
+        ],
+        "style": "Night outpost matte paintings: dark concrete and gunmetal, chamfered panels, fog, cold blue-black palette, volt lime only as emitted light. Painted on #0b0d10, kept dark in both themes.",
+        "display": "Sign-in card banner, 404 banner, empty-state emblem at 96–120px."
+      },
+      "retired": [
+        "hero",
+        "hero-light",
+        "security",
+        "module-watch",
+        "module-gatehouse",
+        "module-ledger",
+        "module-rally",
+        "module-ops",
+        "module-barracks",
+        "module-ranks",
+        "module-quartermaster"
+      ]
+    },
+    "colorMeta": {
+      "volt": {
+        "role": "primary",
+        "world": "shared",
+        "theme": "both",
+        "displayName": "Volt Lime",
+        "source": "--accent (both themes); --lp-accent; --accent-strong in dark",
+        "canonical": "#d4ff3a",
+        "oklch": "oklch(93.8% 0.211 121.8)",
+        "tonalRamp": [
+          "oklch(15.0% 0.211 121.8)",
+          "oklch(26.0% 0.211 121.8)",
+          "oklch(38.0% 0.211 121.8)",
+          "oklch(49.0% 0.211 121.8)",
+          "oklch(61.0% 0.211 121.8)",
+          "oklch(72.0% 0.211 121.8)",
+          "oklch(84.0% 0.211 121.8)",
+          "oklch(95.0% 0.211 121.8)"
+        ]
+      },
+      "volt-ink": {
+        "role": "primary",
+        "world": "shared",
+        "theme": "both",
+        "displayName": "Volt Ink",
+        "source": "--accent-ink; --lp-accent-ink",
+        "canonical": "#0b0d10",
+        "oklch": "oklch(15.8% 0.007 258.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.007 258.4)",
+          "oklch(26.0% 0.007 258.4)",
+          "oklch(38.0% 0.007 258.4)",
+          "oklch(49.0% 0.007 258.4)",
+          "oklch(61.0% 0.007 258.4)",
+          "oklch(72.0% 0.007 258.4)",
+          "oklch(84.0% 0.007 258.4)",
+          "oklch(95.0% 0.007 258.4)"
+        ]
+      },
+      "olive": {
+        "role": "primary",
+        "world": "shared",
+        "theme": "light",
+        "displayName": "Signal Olive",
+        "source": "--accent-strong (light); --lp-accent-text (light)",
+        "canonical": "#4d6b00",
+        "oklch": "oklch(48.6% 0.124 126.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.124 126.4)",
+          "oklch(26.0% 0.124 126.4)",
+          "oklch(38.0% 0.124 126.4)",
+          "oklch(49.0% 0.124 126.4)",
+          "oklch(61.0% 0.124 126.4)",
+          "oklch(72.0% 0.124 126.4)",
+          "oklch(84.0% 0.124 126.4)",
+          "oklch(95.0% 0.124 126.4)"
+        ]
+      },
+      "dash-bg": {
+        "role": "neutral",
+        "world": "dashboard",
+        "theme": "dark",
+        "displayName": "Night Ground",
+        "source": "--bg",
+        "canonical": "#0b0d10",
+        "oklch": "oklch(15.8% 0.007 258.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.007 258.4)",
+          "oklch(26.0% 0.007 258.4)",
+          "oklch(38.0% 0.007 258.4)",
+          "oklch(49.0% 0.007 258.4)",
+          "oklch(61.0% 0.007 258.4)",
+          "oklch(72.0% 0.007 258.4)",
+          "oklch(84.0% 0.007 258.4)",
+          "oklch(95.0% 0.007 258.4)"
+        ]
+      },
+      "dash-surface": {
+        "role": "neutral",
+        "world": "dashboard",
+        "theme": "dark",
+        "displayName": "Hull Plate",
+        "source": "--surface",
+        "canonical": "#12161b",
+        "oklch": "oklch(19.8% 0.012 254.1)",
+        "tonalRamp": [
+          "oklch(15.0% 0.012 254.1)",
+          "oklch(26.0% 0.012 254.1)",
+          "oklch(38.0% 0.012 254.1)",
+          "oklch(49.0% 0.012 254.1)",
+          "oklch(61.0% 0.012 254.1)",
+          "oklch(72.0% 0.012 254.1)",
+          "oklch(84.0% 0.012 254.1)",
+          "oklch(95.0% 0.012 254.1)"
+        ]
+      },
+      "dash-surface-raised": {
+        "role": "neutral",
+        "world": "dashboard",
+        "theme": "dark",
+        "displayName": "Raised Plate",
+        "source": "--surface-raised",
+        "canonical": "#1a2028",
+        "oklch": "oklch(24.1% 0.018 255.7)",
+        "tonalRamp": [
+          "oklch(15.0% 0.018 255.7)",
+          "oklch(26.0% 0.018 255.7)",
+          "oklch(38.0% 0.018 255.7)",
+          "oklch(49.0% 0.018 255.7)",
+          "oklch(61.0% 0.018 255.7)",
+          "oklch(72.0% 0.018 255.7)",
+          "oklch(84.0% 0.018 255.7)",
+          "oklch(95.0% 0.018 255.7)"
+        ]
+      },
+      "dash-line": {
+        "role": "neutral",
+        "world": "dashboard",
+        "theme": "dark",
+        "displayName": "Slate Hairline",
+        "source": "--line",
+        "canonical": "#2a323d",
+        "oklch": "oklch(31.4% 0.023 256.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.023 256.4)",
+          "oklch(26.0% 0.023 256.4)",
+          "oklch(38.0% 0.023 256.4)",
+          "oklch(49.0% 0.023 256.4)",
+          "oklch(61.0% 0.023 256.4)",
+          "oklch(72.0% 0.023 256.4)",
+          "oklch(84.0% 0.023 256.4)",
+          "oklch(95.0% 0.023 256.4)"
+        ]
+      },
+      "dash-text": {
+        "role": "neutral",
+        "world": "dashboard",
+        "theme": "dark",
+        "displayName": "Cold White",
+        "source": "--text",
+        "canonical": "#e8ecf1",
+        "oklch": "oklch(94.1% 0.008 253.9)",
+        "tonalRamp": [
+          "oklch(15.0% 0.008 253.9)",
+          "oklch(26.0% 0.008 253.9)",
+          "oklch(38.0% 0.008 253.9)",
+          "oklch(49.0% 0.008 253.9)",
+          "oklch(61.0% 0.008 253.9)",
+          "oklch(72.0% 0.008 253.9)",
+          "oklch(84.0% 0.008 253.9)",
+          "oklch(95.0% 0.008 253.9)"
+        ]
+      },
+      "dash-text-muted": {
+        "role": "neutral",
+        "world": "dashboard",
+        "theme": "dark",
+        "displayName": "Fog Grey",
+        "source": "--text-muted",
+        "canonical": "#8c96a3",
+        "oklch": "oklch(66.9% 0.022 255.0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.022 255.0)",
+          "oklch(26.0% 0.022 255.0)",
+          "oklch(38.0% 0.022 255.0)",
+          "oklch(49.0% 0.022 255.0)",
+          "oklch(61.0% 0.022 255.0)",
+          "oklch(72.0% 0.022 255.0)",
+          "oklch(84.0% 0.022 255.0)",
+          "oklch(95.0% 0.022 255.0)"
+        ]
+      },
+      "go": {
+        "role": "secondary",
+        "world": "dashboard",
+        "theme": "dark",
+        "displayName": "Go Green",
+        "source": "--go",
+        "canonical": "#2bd99f",
+        "oklch": "oklch(78.8% 0.158 164.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.158 164.4)",
+          "oklch(26.0% 0.158 164.4)",
+          "oklch(38.0% 0.158 164.4)",
+          "oklch(49.0% 0.158 164.4)",
+          "oklch(61.0% 0.158 164.4)",
+          "oklch(72.0% 0.158 164.4)",
+          "oklch(84.0% 0.158 164.4)",
+          "oklch(95.0% 0.158 164.4)"
+        ]
+      },
+      "caution": {
+        "role": "secondary",
+        "world": "dashboard",
+        "theme": "dark",
+        "displayName": "Caution Amber",
+        "source": "--caution",
+        "canonical": "#ffb547",
+        "oklch": "oklch(82.4% 0.149 73.3)",
+        "tonalRamp": [
+          "oklch(15.0% 0.149 73.3)",
+          "oklch(26.0% 0.149 73.3)",
+          "oklch(38.0% 0.149 73.3)",
+          "oklch(49.0% 0.149 73.3)",
+          "oklch(61.0% 0.149 73.3)",
+          "oklch(72.0% 0.149 73.3)",
+          "oklch(84.0% 0.149 73.3)",
+          "oklch(95.0% 0.149 73.3)"
+        ]
+      },
+      "alert": {
+        "role": "secondary",
+        "world": "dashboard",
+        "theme": "dark",
+        "displayName": "Alert Red",
+        "source": "--alert",
+        "canonical": "#ff5c5c",
+        "oklch": "oklch(69.1% 0.199 23.9)",
+        "tonalRamp": [
+          "oklch(15.0% 0.199 23.9)",
+          "oklch(26.0% 0.199 23.9)",
+          "oklch(38.0% 0.199 23.9)",
+          "oklch(49.0% 0.199 23.9)",
+          "oklch(61.0% 0.199 23.9)",
+          "oklch(72.0% 0.199 23.9)",
+          "oklch(84.0% 0.199 23.9)",
+          "oklch(95.0% 0.199 23.9)"
+        ]
+      },
+      "intel": {
+        "role": "secondary",
+        "world": "dashboard",
+        "theme": "dark",
+        "displayName": "Intel Blue",
+        "source": "--intel",
+        "canonical": "#5ab0ff",
+        "oklch": "oklch(73.8% 0.142 248.6)",
+        "tonalRamp": [
+          "oklch(15.0% 0.142 248.6)",
+          "oklch(26.0% 0.142 248.6)",
+          "oklch(38.0% 0.142 248.6)",
+          "oklch(49.0% 0.142 248.6)",
+          "oklch(61.0% 0.142 248.6)",
+          "oklch(72.0% 0.142 248.6)",
+          "oklch(84.0% 0.142 248.6)",
+          "oklch(95.0% 0.142 248.6)"
+        ]
+      },
+      "dash-bg-light": {
+        "role": "neutral",
+        "world": "dashboard",
+        "theme": "light",
+        "displayName": "Day Ground",
+        "source": "--bg under [data-theme=\"light\"]",
+        "canonical": "#f4f6f8",
+        "oklch": "oklch(97.2% 0.003 247.9)",
+        "tonalRamp": [
+          "oklch(15.0% 0.003 247.9)",
+          "oklch(26.0% 0.003 247.9)",
+          "oklch(38.0% 0.003 247.9)",
+          "oklch(49.0% 0.003 247.9)",
+          "oklch(61.0% 0.003 247.9)",
+          "oklch(72.0% 0.003 247.9)",
+          "oklch(84.0% 0.003 247.9)",
+          "oklch(95.0% 0.003 247.9)"
+        ]
+      },
+      "dash-surface-light": {
+        "role": "neutral",
+        "world": "dashboard",
+        "theme": "light",
+        "displayName": "Day Plate",
+        "source": "--surface under [data-theme=\"light\"]",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.000 0)",
+          "oklch(26.0% 0.000 0)",
+          "oklch(38.0% 0.000 0)",
+          "oklch(49.0% 0.000 0)",
+          "oklch(61.0% 0.000 0)",
+          "oklch(72.0% 0.000 0)",
+          "oklch(84.0% 0.000 0)",
+          "oklch(95.0% 0.000 0)"
+        ]
+      },
+      "dash-surface-raised-light": {
+        "role": "neutral",
+        "world": "dashboard",
+        "theme": "light",
+        "displayName": "Day Raised Plate",
+        "source": "--surface-raised under [data-theme=\"light\"]",
+        "canonical": "#edf0f3",
+        "oklch": "oklch(95.4% 0.005 247.9)",
+        "tonalRamp": [
+          "oklch(15.0% 0.005 247.9)",
+          "oklch(26.0% 0.005 247.9)",
+          "oklch(38.0% 0.005 247.9)",
+          "oklch(49.0% 0.005 247.9)",
+          "oklch(61.0% 0.005 247.9)",
+          "oklch(72.0% 0.005 247.9)",
+          "oklch(84.0% 0.005 247.9)",
+          "oklch(95.0% 0.005 247.9)"
+        ]
+      },
+      "dash-line-light": {
+        "role": "neutral",
+        "world": "dashboard",
+        "theme": "light",
+        "displayName": "Day Hairline",
+        "source": "--line under [data-theme=\"light\"]",
+        "canonical": "#d5dbe2",
+        "oklch": "oklch(88.9% 0.012 252.1)",
+        "tonalRamp": [
+          "oklch(15.0% 0.012 252.1)",
+          "oklch(26.0% 0.012 252.1)",
+          "oklch(38.0% 0.012 252.1)",
+          "oklch(49.0% 0.012 252.1)",
+          "oklch(61.0% 0.012 252.1)",
+          "oklch(72.0% 0.012 252.1)",
+          "oklch(84.0% 0.012 252.1)",
+          "oklch(95.0% 0.012 252.1)"
+        ]
+      },
+      "dash-text-light": {
+        "role": "neutral",
+        "world": "dashboard",
+        "theme": "light",
+        "displayName": "Ink Text",
+        "source": "--text under [data-theme=\"light\"]",
+        "canonical": "#11151a",
+        "oklch": "oklch(19.4% 0.012 254.1)",
+        "tonalRamp": [
+          "oklch(15.0% 0.012 254.1)",
+          "oklch(26.0% 0.012 254.1)",
+          "oklch(38.0% 0.012 254.1)",
+          "oklch(49.0% 0.012 254.1)",
+          "oklch(61.0% 0.012 254.1)",
+          "oklch(72.0% 0.012 254.1)",
+          "oklch(84.0% 0.012 254.1)",
+          "oklch(95.0% 0.012 254.1)"
+        ]
+      },
+      "dash-text-muted-light": {
+        "role": "neutral",
+        "world": "dashboard",
+        "theme": "light",
+        "displayName": "Slate Text",
+        "source": "--text-muted under [data-theme=\"light\"]",
+        "canonical": "#5a6472",
+        "oklch": "oklch(50.0% 0.026 256.8)",
+        "tonalRamp": [
+          "oklch(15.0% 0.026 256.8)",
+          "oklch(26.0% 0.026 256.8)",
+          "oklch(38.0% 0.026 256.8)",
+          "oklch(49.0% 0.026 256.8)",
+          "oklch(61.0% 0.026 256.8)",
+          "oklch(72.0% 0.026 256.8)",
+          "oklch(84.0% 0.026 256.8)",
+          "oklch(95.0% 0.026 256.8)"
+        ]
+      },
+      "go-light": {
+        "role": "secondary",
+        "world": "dashboard",
+        "theme": "light",
+        "displayName": "Go Green (light theme)",
+        "source": "--go under [data-theme=\"light\"]",
+        "canonical": "#0b7a57",
+        "oklch": "oklch(51.4% 0.106 164.3)",
+        "tonalRamp": [
+          "oklch(15.0% 0.106 164.3)",
+          "oklch(26.0% 0.106 164.3)",
+          "oklch(38.0% 0.106 164.3)",
+          "oklch(49.0% 0.106 164.3)",
+          "oklch(61.0% 0.106 164.3)",
+          "oklch(72.0% 0.106 164.3)",
+          "oklch(84.0% 0.106 164.3)",
+          "oklch(95.0% 0.106 164.3)"
+        ]
+      },
+      "caution-light": {
+        "role": "secondary",
+        "world": "dashboard",
+        "theme": "light",
+        "displayName": "Caution Amber (light theme)",
+        "source": "--caution under [data-theme=\"light\"]",
+        "canonical": "#9a5b00",
+        "oklch": "oklch(53.1% 0.119 65.1)",
+        "tonalRamp": [
+          "oklch(15.0% 0.119 65.1)",
+          "oklch(26.0% 0.119 65.1)",
+          "oklch(38.0% 0.119 65.1)",
+          "oklch(49.0% 0.119 65.1)",
+          "oklch(61.0% 0.119 65.1)",
+          "oklch(72.0% 0.119 65.1)",
+          "oklch(84.0% 0.119 65.1)",
+          "oklch(95.0% 0.119 65.1)"
+        ]
+      },
+      "alert-light": {
+        "role": "secondary",
+        "world": "dashboard",
+        "theme": "light",
+        "displayName": "Alert Red (light theme)",
+        "source": "--alert under [data-theme=\"light\"]",
+        "canonical": "#c62828",
+        "oklch": "oklch(53.9% 0.194 26.7)",
+        "tonalRamp": [
+          "oklch(15.0% 0.194 26.7)",
+          "oklch(26.0% 0.194 26.7)",
+          "oklch(38.0% 0.194 26.7)",
+          "oklch(49.0% 0.194 26.7)",
+          "oklch(61.0% 0.194 26.7)",
+          "oklch(72.0% 0.194 26.7)",
+          "oklch(84.0% 0.194 26.7)",
+          "oklch(95.0% 0.194 26.7)"
+        ]
+      },
+      "intel-light": {
+        "role": "secondary",
+        "world": "dashboard",
+        "theme": "light",
+        "displayName": "Intel Blue (light theme)",
+        "source": "--intel under [data-theme=\"light\"]",
+        "canonical": "#1f6fc5",
+        "oklch": "oklch(54.1% 0.153 254.0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.153 254.0)",
+          "oklch(26.0% 0.153 254.0)",
+          "oklch(38.0% 0.153 254.0)",
+          "oklch(49.0% 0.153 254.0)",
+          "oklch(61.0% 0.153 254.0)",
+          "oklch(72.0% 0.153 254.0)",
+          "oklch(84.0% 0.153 254.0)",
+          "oklch(95.0% 0.153 254.0)"
+        ]
+      },
+      "lp-ink": {
+        "role": "neutral",
+        "world": "landing",
+        "theme": "dark",
+        "displayName": "Stage Ink",
+        "source": "--lp-bg",
+        "canonical": "#07080c",
+        "oklch": "oklch(13.5% 0.009 272.5)",
+        "tonalRamp": [
+          "oklch(15.0% 0.009 272.5)",
+          "oklch(26.0% 0.009 272.5)",
+          "oklch(38.0% 0.009 272.5)",
+          "oklch(49.0% 0.009 272.5)",
+          "oklch(61.0% 0.009 272.5)",
+          "oklch(72.0% 0.009 272.5)",
+          "oklch(84.0% 0.009 272.5)",
+          "oklch(95.0% 0.009 272.5)"
+        ]
+      },
+      "lp-surface": {
+        "role": "neutral",
+        "world": "landing",
+        "theme": "dark",
+        "displayName": "Graphite",
+        "source": "--lp-surface",
+        "canonical": "#10131a",
+        "oklch": "oklch(18.7% 0.015 266.8)",
+        "tonalRamp": [
+          "oklch(15.0% 0.015 266.8)",
+          "oklch(26.0% 0.015 266.8)",
+          "oklch(38.0% 0.015 266.8)",
+          "oklch(49.0% 0.015 266.8)",
+          "oklch(61.0% 0.015 266.8)",
+          "oklch(72.0% 0.015 266.8)",
+          "oklch(84.0% 0.015 266.8)",
+          "oklch(95.0% 0.015 266.8)"
+        ]
+      },
+      "lp-surface-2": {
+        "role": "neutral",
+        "world": "landing",
+        "theme": "dark",
+        "displayName": "Lifted Graphite",
+        "source": "--lp-surface-2",
+        "canonical": "#161a23",
+        "oklch": "oklch(21.8% 0.019 266.1)",
+        "tonalRamp": [
+          "oklch(15.0% 0.019 266.1)",
+          "oklch(26.0% 0.019 266.1)",
+          "oklch(38.0% 0.019 266.1)",
+          "oklch(49.0% 0.019 266.1)",
+          "oklch(61.0% 0.019 266.1)",
+          "oklch(72.0% 0.019 266.1)",
+          "oklch(84.0% 0.019 266.1)",
+          "oklch(95.0% 0.019 266.1)"
+        ]
+      },
+      "lp-hairline": {
+        "role": "neutral",
+        "world": "landing",
+        "theme": "dark",
+        "displayName": "Glass Hairline",
+        "source": "--lp-line",
+        "canonical": "rgb(255 255 255 / 0.08)",
+        "note": "Translucent: a hairline or glow over its ground, so no tonal ramp."
+      },
+      "lp-hairline-strong": {
+        "role": "neutral",
+        "world": "landing",
+        "theme": "dark",
+        "displayName": "Glass Hairline, Strong",
+        "source": "--lp-line-strong",
+        "canonical": "rgb(255 255 255 / 0.15)",
+        "note": "Translucent: a hairline or glow over its ground, so no tonal ramp."
+      },
+      "lp-text": {
+        "role": "neutral",
+        "world": "landing",
+        "theme": "dark",
+        "displayName": "Paper White",
+        "source": "--lp-text",
+        "canonical": "#f3f5f9",
+        "oklch": "oklch(97.0% 0.006 264.5)",
+        "tonalRamp": [
+          "oklch(15.0% 0.006 264.5)",
+          "oklch(26.0% 0.006 264.5)",
+          "oklch(38.0% 0.006 264.5)",
+          "oklch(49.0% 0.006 264.5)",
+          "oklch(61.0% 0.006 264.5)",
+          "oklch(72.0% 0.006 264.5)",
+          "oklch(84.0% 0.006 264.5)",
+          "oklch(95.0% 0.006 264.5)"
+        ]
+      },
+      "lp-muted": {
+        "role": "neutral",
+        "world": "landing",
+        "theme": "dark",
+        "displayName": "Mist",
+        "source": "--lp-muted",
+        "canonical": "#a3abba",
+        "oklch": "oklch(74.0% 0.023 263.2)",
+        "tonalRamp": [
+          "oklch(15.0% 0.023 263.2)",
+          "oklch(26.0% 0.023 263.2)",
+          "oklch(38.0% 0.023 263.2)",
+          "oklch(49.0% 0.023 263.2)",
+          "oklch(61.0% 0.023 263.2)",
+          "oklch(72.0% 0.023 263.2)",
+          "oklch(84.0% 0.023 263.2)",
+          "oklch(95.0% 0.023 263.2)"
+        ]
+      },
+      "lp-faint": {
+        "role": "neutral",
+        "world": "landing",
+        "theme": "dark",
+        "displayName": "Dim Mist",
+        "source": "--lp-faint",
+        "canonical": "#7c8596",
+        "oklch": "oklch(58.1% 0.028 263.2)",
+        "tonalRamp": [
+          "oklch(15.0% 0.028 263.2)",
+          "oklch(26.0% 0.028 263.2)",
+          "oklch(38.0% 0.028 263.2)",
+          "oklch(49.0% 0.028 263.2)",
+          "oklch(61.0% 0.028 263.2)",
+          "oklch(72.0% 0.028 263.2)",
+          "oklch(84.0% 0.028 263.2)",
+          "oklch(95.0% 0.028 263.2)"
+        ]
+      },
+      "lp-volt-hover": {
+        "role": "primary",
+        "world": "landing",
+        "theme": "dark",
+        "displayName": "Volt Flash",
+        "source": "literal in .lp a.lp-btn--primary:hover",
+        "canonical": "#e2ff70",
+        "oklch": "oklch(95.1% 0.171 119.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.171 119.4)",
+          "oklch(26.0% 0.171 119.4)",
+          "oklch(38.0% 0.171 119.4)",
+          "oklch(49.0% 0.171 119.4)",
+          "oklch(61.0% 0.171 119.4)",
+          "oklch(72.0% 0.171 119.4)",
+          "oklch(84.0% 0.171 119.4)",
+          "oklch(95.0% 0.171 119.4)"
+        ]
+      },
+      "lp-indigo": {
+        "role": "tertiary",
+        "world": "landing",
+        "theme": "dark",
+        "displayName": "Ambient Indigo",
+        "source": "--lp-indigo (declared; reaches the page through the glow values and the art prompts)",
+        "canonical": "#6f6cf8",
+        "oklch": "oklch(60.9% 0.203 279.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.203 279.4)",
+          "oklch(26.0% 0.203 279.4)",
+          "oklch(38.0% 0.203 279.4)",
+          "oklch(49.0% 0.203 279.4)",
+          "oklch(61.0% 0.203 279.4)",
+          "oklch(72.0% 0.203 279.4)",
+          "oklch(84.0% 0.203 279.4)",
+          "oklch(95.0% 0.203 279.4)"
+        ]
+      },
+      "lp-glow-indigo": {
+        "role": "tertiary",
+        "world": "landing",
+        "theme": "dark",
+        "displayName": "Indigo Haze",
+        "source": "--lp-glow-a",
+        "canonical": "rgb(111 108 248 / 0.32)",
+        "note": "Translucent: a hairline or glow over its ground, so no tonal ramp."
+      },
+      "lp-glow-blue": {
+        "role": "tertiary",
+        "world": "landing",
+        "theme": "dark",
+        "displayName": "Blue Haze",
+        "source": "--lp-glow-b",
+        "canonical": "rgb(88 140 255 / 0.12)",
+        "note": "Translucent: a hairline or glow over its ground, so no tonal ramp."
+      },
+      "lp-ink-light": {
+        "role": "neutral",
+        "world": "landing",
+        "theme": "light",
+        "displayName": "Stage Paper",
+        "source": "--lp-bg under [data-theme=\"light\"]",
+        "canonical": "#f6f7fa",
+        "oklch": "oklch(97.6% 0.004 271.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.004 271.4)",
+          "oklch(26.0% 0.004 271.4)",
+          "oklch(38.0% 0.004 271.4)",
+          "oklch(49.0% 0.004 271.4)",
+          "oklch(61.0% 0.004 271.4)",
+          "oklch(72.0% 0.004 271.4)",
+          "oklch(84.0% 0.004 271.4)",
+          "oklch(95.0% 0.004 271.4)"
+        ]
+      },
+      "lp-surface-light": {
+        "role": "neutral",
+        "world": "landing",
+        "theme": "light",
+        "displayName": "Paper Card",
+        "source": "--lp-surface under [data-theme=\"light\"]",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.000 0)",
+          "oklch(26.0% 0.000 0)",
+          "oklch(38.0% 0.000 0)",
+          "oklch(49.0% 0.000 0)",
+          "oklch(61.0% 0.000 0)",
+          "oklch(72.0% 0.000 0)",
+          "oklch(84.0% 0.000 0)",
+          "oklch(95.0% 0.000 0)"
+        ]
+      },
+      "lp-surface-2-light": {
+        "role": "neutral",
+        "world": "landing",
+        "theme": "light",
+        "displayName": "Lifted Paper",
+        "source": "--lp-surface-2 under [data-theme=\"light\"]",
+        "canonical": "#f2f4f8",
+        "oklch": "oklch(96.7% 0.006 264.5)",
+        "tonalRamp": [
+          "oklch(15.0% 0.006 264.5)",
+          "oklch(26.0% 0.006 264.5)",
+          "oklch(38.0% 0.006 264.5)",
+          "oklch(49.0% 0.006 264.5)",
+          "oklch(61.0% 0.006 264.5)",
+          "oklch(72.0% 0.006 264.5)",
+          "oklch(84.0% 0.006 264.5)",
+          "oklch(95.0% 0.006 264.5)"
+        ]
+      },
+      "lp-hairline-light": {
+        "role": "neutral",
+        "world": "landing",
+        "theme": "light",
+        "displayName": "Glass Hairline (light theme)",
+        "source": "--lp-line under [data-theme=\"light\"]",
+        "canonical": "rgb(15 18 30 / 0.09)",
+        "note": "Translucent: a hairline or glow over its ground, so no tonal ramp."
+      },
+      "lp-hairline-strong-light": {
+        "role": "neutral",
+        "world": "landing",
+        "theme": "light",
+        "displayName": "Glass Hairline, Strong (light theme)",
+        "source": "--lp-line-strong under [data-theme=\"light\"]",
+        "canonical": "rgb(15 18 30 / 0.16)",
+        "note": "Translucent: a hairline or glow over its ground, so no tonal ramp."
+      },
+      "lp-text-light": {
+        "role": "neutral",
+        "world": "landing",
+        "theme": "light",
+        "displayName": "Stage Ink Text",
+        "source": "--lp-text under [data-theme=\"light\"]",
+        "canonical": "#0c0f16",
+        "oklch": "oklch(16.9% 0.016 266.7)",
+        "tonalRamp": [
+          "oklch(15.0% 0.016 266.7)",
+          "oklch(26.0% 0.016 266.7)",
+          "oklch(38.0% 0.016 266.7)",
+          "oklch(49.0% 0.016 266.7)",
+          "oklch(61.0% 0.016 266.7)",
+          "oklch(72.0% 0.016 266.7)",
+          "oklch(84.0% 0.016 266.7)",
+          "oklch(95.0% 0.016 266.7)"
+        ]
+      },
+      "lp-muted-light": {
+        "role": "neutral",
+        "world": "landing",
+        "theme": "light",
+        "displayName": "Mist (light theme)",
+        "source": "--lp-muted under [data-theme=\"light\"]",
+        "canonical": "#4b5364",
+        "oklch": "oklch(44.2% 0.030 265.3)",
+        "tonalRamp": [
+          "oklch(15.0% 0.030 265.3)",
+          "oklch(26.0% 0.030 265.3)",
+          "oklch(38.0% 0.030 265.3)",
+          "oklch(49.0% 0.030 265.3)",
+          "oklch(61.0% 0.030 265.3)",
+          "oklch(72.0% 0.030 265.3)",
+          "oklch(84.0% 0.030 265.3)",
+          "oklch(95.0% 0.030 265.3)"
+        ]
+      },
+      "lp-faint-light": {
+        "role": "neutral",
+        "world": "landing",
+        "theme": "light",
+        "displayName": "Dim Mist (light theme)",
+        "source": "--lp-faint under [data-theme=\"light\"]",
+        "canonical": "#646c7c",
+        "oklch": "oklch(56.8% 0.027 264.3)",
+        "tonalRamp": [
+          "oklch(15.0% 0.027 264.3)",
+          "oklch(26.0% 0.027 264.3)",
+          "oklch(38.0% 0.027 264.3)",
+          "oklch(49.0% 0.027 264.3)",
+          "oklch(61.0% 0.027 264.3)",
+          "oklch(72.0% 0.027 264.3)",
+          "oklch(84.0% 0.027 264.3)",
+          "oklch(95.0% 0.027 264.3)"
+        ]
+      },
+      "lp-indigo-light": {
+        "role": "tertiary",
+        "world": "landing",
+        "theme": "light",
+        "displayName": "Ambient Indigo (light theme)",
+        "source": "--lp-indigo (declared; reaches the page through the glow values and the art prompts)",
+        "canonical": "#5452e6",
+        "oklch": "oklch(53.3% 0.217 276.7)",
+        "tonalRamp": [
+          "oklch(15.0% 0.217 276.7)",
+          "oklch(26.0% 0.217 276.7)",
+          "oklch(38.0% 0.217 276.7)",
+          "oklch(49.0% 0.217 276.7)",
+          "oklch(61.0% 0.217 276.7)",
+          "oklch(72.0% 0.217 276.7)",
+          "oklch(84.0% 0.217 276.7)",
+          "oklch(95.0% 0.217 276.7)"
+        ]
+      },
+      "lp-glow-indigo-light": {
+        "role": "tertiary",
+        "world": "landing",
+        "theme": "light",
+        "displayName": "Indigo Haze (light theme)",
+        "source": "--lp-glow-a under [data-theme=\"light\"]",
+        "canonical": "rgb(84 82 230 / 0.16)",
+        "note": "Translucent: a hairline or glow over its ground, so no tonal ramp."
+      },
+      "lp-glow-blue-light": {
+        "role": "tertiary",
+        "world": "landing",
+        "theme": "light",
+        "displayName": "Blue Haze (light theme)",
+        "source": "--lp-glow-b under [data-theme=\"light\"]",
+        "canonical": "rgb(84 82 230 / 0.08)",
+        "note": "Translucent: a hairline or glow over its ground, so no tonal ramp."
+      },
+      "discord-bg": {
+        "role": "neutral",
+        "world": "landing (Discord mocks)",
+        "theme": "dark",
+        "displayName": "Discord Chat",
+        "source": "--dc-bg",
+        "canonical": "#313338",
+        "oklch": "oklch(32.1% 0.009 268.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.009 268.4)",
+          "oklch(26.0% 0.009 268.4)",
+          "oklch(38.0% 0.009 268.4)",
+          "oklch(49.0% 0.009 268.4)",
+          "oklch(61.0% 0.009 268.4)",
+          "oklch(72.0% 0.009 268.4)",
+          "oklch(84.0% 0.009 268.4)",
+          "oklch(95.0% 0.009 268.4)"
+        ]
+      },
+      "discord-embed": {
+        "role": "neutral",
+        "world": "landing (Discord mocks)",
+        "theme": "dark",
+        "displayName": "Discord Embed",
+        "source": "--dc-embed",
+        "canonical": "#2b2d31",
+        "oklch": "oklch(29.7% 0.008 264.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.008 264.4)",
+          "oklch(26.0% 0.008 264.4)",
+          "oklch(38.0% 0.008 264.4)",
+          "oklch(49.0% 0.008 264.4)",
+          "oklch(61.0% 0.008 264.4)",
+          "oklch(72.0% 0.008 264.4)",
+          "oklch(84.0% 0.008 264.4)",
+          "oklch(95.0% 0.008 264.4)"
+        ]
+      },
+      "discord-text": {
+        "role": "neutral",
+        "world": "landing (Discord mocks)",
+        "theme": "dark",
+        "displayName": "Discord Text",
+        "source": "--dc-text",
+        "canonical": "#dbdee1",
+        "oklch": "oklch(89.9% 0.005 247.9)",
+        "tonalRamp": [
+          "oklch(15.0% 0.005 247.9)",
+          "oklch(26.0% 0.005 247.9)",
+          "oklch(38.0% 0.005 247.9)",
+          "oklch(49.0% 0.005 247.9)",
+          "oklch(61.0% 0.005 247.9)",
+          "oklch(72.0% 0.005 247.9)",
+          "oklch(84.0% 0.005 247.9)",
+          "oklch(95.0% 0.005 247.9)"
+        ]
+      },
+      "discord-muted": {
+        "role": "neutral",
+        "world": "landing (Discord mocks)",
+        "theme": "dark",
+        "displayName": "Discord Muted",
+        "source": "--dc-muted",
+        "canonical": "#949ba4",
+        "oklch": "oklch(68.7% 0.015 254.6)",
+        "tonalRamp": [
+          "oklch(15.0% 0.015 254.6)",
+          "oklch(26.0% 0.015 254.6)",
+          "oklch(38.0% 0.015 254.6)",
+          "oklch(49.0% 0.015 254.6)",
+          "oklch(61.0% 0.015 254.6)",
+          "oklch(72.0% 0.015 254.6)",
+          "oklch(84.0% 0.015 254.6)",
+          "oklch(95.0% 0.015 254.6)"
+        ]
+      },
+      "discord-line": {
+        "role": "neutral",
+        "world": "landing (Discord mocks)",
+        "theme": "dark",
+        "displayName": "Discord Divider",
+        "source": "--dc-line",
+        "canonical": "rgb(255 255 255 / 0.06)",
+        "note": "Translucent: a hairline or glow over its ground, so no tonal ramp."
+      },
+      "discord-blurple": {
+        "role": "neutral",
+        "world": "landing (Discord mocks)",
+        "theme": "dark",
+        "displayName": "Discord Blurple",
+        "source": "literal in .lp-dc__app",
+        "canonical": "#5865f2",
+        "oklch": "oklch(57.7% 0.209 273.9)",
+        "tonalRamp": [
+          "oklch(15.0% 0.209 273.9)",
+          "oklch(26.0% 0.209 273.9)",
+          "oklch(38.0% 0.209 273.9)",
+          "oklch(49.0% 0.209 273.9)",
+          "oklch(61.0% 0.209 273.9)",
+          "oklch(72.0% 0.209 273.9)",
+          "oklch(84.0% 0.209 273.9)",
+          "oklch(95.0% 0.209 273.9)"
+        ]
+      },
+      "discord-bg-light": {
+        "role": "neutral",
+        "world": "landing (Discord mocks)",
+        "theme": "light",
+        "displayName": "Discord Chat (light theme)",
+        "source": "--dc-bg under [data-theme=\"light\"]",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.000 0)",
+          "oklch(26.0% 0.000 0)",
+          "oklch(38.0% 0.000 0)",
+          "oklch(49.0% 0.000 0)",
+          "oklch(61.0% 0.000 0)",
+          "oklch(72.0% 0.000 0)",
+          "oklch(84.0% 0.000 0)",
+          "oklch(95.0% 0.000 0)"
+        ]
+      },
+      "discord-embed-light": {
+        "role": "neutral",
+        "world": "landing (Discord mocks)",
+        "theme": "light",
+        "displayName": "Discord Embed (light theme)",
+        "source": "--dc-embed under [data-theme=\"light\"]",
+        "canonical": "#f2f3f5",
+        "oklch": "oklch(96.4% 0.003 264.5)",
+        "tonalRamp": [
+          "oklch(15.0% 0.003 264.5)",
+          "oklch(26.0% 0.003 264.5)",
+          "oklch(38.0% 0.003 264.5)",
+          "oklch(49.0% 0.003 264.5)",
+          "oklch(61.0% 0.003 264.5)",
+          "oklch(72.0% 0.003 264.5)",
+          "oklch(84.0% 0.003 264.5)",
+          "oklch(95.0% 0.003 264.5)"
+        ]
+      },
+      "discord-text-light": {
+        "role": "neutral",
+        "world": "landing (Discord mocks)",
+        "theme": "light",
+        "displayName": "Discord Text (light theme)",
+        "source": "--dc-text under [data-theme=\"light\"]",
+        "canonical": "#313338",
+        "oklch": "oklch(32.1% 0.009 268.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.009 268.4)",
+          "oklch(26.0% 0.009 268.4)",
+          "oklch(38.0% 0.009 268.4)",
+          "oklch(49.0% 0.009 268.4)",
+          "oklch(61.0% 0.009 268.4)",
+          "oklch(72.0% 0.009 268.4)",
+          "oklch(84.0% 0.009 268.4)",
+          "oklch(95.0% 0.009 268.4)"
+        ]
+      },
+      "discord-muted-light": {
+        "role": "neutral",
+        "world": "landing (Discord mocks)",
+        "theme": "light",
+        "displayName": "Discord Muted (light theme)",
+        "source": "--dc-muted under [data-theme=\"light\"]",
+        "canonical": "#5c5e66",
+        "oklch": "oklch(48.3% 0.013 274.7)",
+        "tonalRamp": [
+          "oklch(15.0% 0.013 274.7)",
+          "oklch(26.0% 0.013 274.7)",
+          "oklch(38.0% 0.013 274.7)",
+          "oklch(49.0% 0.013 274.7)",
+          "oklch(61.0% 0.013 274.7)",
+          "oklch(72.0% 0.013 274.7)",
+          "oklch(84.0% 0.013 274.7)",
+          "oklch(95.0% 0.013 274.7)"
+        ]
+      },
+      "discord-line-light": {
+        "role": "neutral",
+        "world": "landing (Discord mocks)",
+        "theme": "light",
+        "displayName": "Discord Divider (light theme)",
+        "source": "--dc-line under [data-theme=\"light\"]",
+        "canonical": "rgb(0 0 0 / 0.06)",
+        "note": "Translucent: a hairline or glow over its ground, so no tonal ramp."
+      }
+    },
+    "typographyMeta": {
+      "dash-display": {
+        "displayName": "Dashboard Display",
+        "world": "dashboard",
+        "purpose": "The page title (h1), one per page, balanced wrap."
+      },
+      "dash-display-picker": {
+        "displayName": "Picker Display",
+        "world": "dashboard",
+        "purpose": "The server picker's title only."
+      },
+      "dash-headline": {
+        "displayName": "Block Title",
+        "world": "dashboard",
+        "purpose": "A block of a page (.block-title), with an optional mono count."
+      },
+      "dash-title": {
+        "displayName": "Card Title",
+        "world": "dashboard",
+        "purpose": "The title of one card (.card-title); 16px/22px in a table card head."
+      },
+      "dash-label": {
+        "displayName": "HUD Caption",
+        "world": "dashboard",
+        "purpose": "Uppercase caption over a number, field, seat row or nav group; badges. Never above a heading.",
+        "textTransform": "uppercase"
+      },
+      "dash-body": {
+        "displayName": "Body",
+        "world": "dashboard",
+        "purpose": "Page text; page intros cap at 68ch."
+      },
+      "dash-body-sm": {
+        "displayName": "UI Text",
+        "world": "dashboard",
+        "purpose": "Fields, nav items, tables, card subtitles."
+      },
+      "dash-button": {
+        "displayName": "Button",
+        "world": "dashboard",
+        "purpose": "Every dashboard button; labels never wrap."
+      },
+      "dash-data": {
+        "displayName": "Readout Value",
+        "world": "dashboard",
+        "purpose": "The 32px numbers of the readout strip; tabular figures."
+      },
+      "dash-mono": {
+        "displayName": "Data",
+        "world": "dashboard",
+        "purpose": "Timestamps, IDs, metadata, numeric inputs; tabular figures."
+      },
+      "lp-display": {
+        "displayName": "Landing Display",
+        "world": "landing",
+        "purpose": "The centred hero headline only."
+      },
+      "lp-headline": {
+        "displayName": "Section Headline",
+        "world": "landing",
+        "purpose": "Section headings (.lp-h2)."
+      },
+      "lp-title": {
+        "displayName": "Feature Title",
+        "world": "landing",
+        "purpose": "Feature-row headings."
+      },
+      "lp-title-sm": {
+        "displayName": "Small Title",
+        "world": "landing",
+        "purpose": "Step headings and card headings."
+      },
+      "lp-lede": {
+        "displayName": "Lede",
+        "world": "landing",
+        "purpose": "The paragraph under the hero and section headings."
+      },
+      "lp-body": {
+        "displayName": "Landing Body",
+        "world": "landing",
+        "purpose": "Default landing text (inherits line-height 1.6)."
+      },
+      "lp-button": {
+        "displayName": "Pill Label",
+        "world": "landing",
+        "purpose": "Pill button labels (14px on the small pill)."
+      },
+      "lp-nav": {
+        "displayName": "Nav Link",
+        "world": "landing",
+        "purpose": "Landing nav links and Sign in."
+      },
+      "lp-mono": {
+        "displayName": "Live Numbers",
+        "world": "landing",
+        "purpose": "The live chip and step numbers (Geist Mono 500 13px for steps)."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card-rest",
+        "world": "dashboard",
+        "value": "inset 0 1px 0 rgb(255 255 255 / 0.035), 0 1px 2px rgb(0 0 0 / 0.4)",
+        "valueLight": "0 1px 2px rgb(17 21 26 / 0.05), 0 2px 10px -4px rgb(17 21 26 / 0.08)",
+        "token": "--card-shadow",
+        "purpose": "Every dashboard card at rest; nested cards drop it."
+      },
+      {
+        "name": "card-lift",
+        "world": "dashboard",
+        "value": "inset 0 1px 0 rgb(255 255 255 / 0.05), 0 14px 32px -12px rgb(0 0 0 / 0.75)",
+        "valueLight": "0 2px 4px rgb(17 21 26 / 0.06), 0 16px 32px -14px rgb(17 21 26 / 0.22)",
+        "token": "--card-shadow-lift",
+        "purpose": "A server tile on hover or focus, with a --m-lift rise."
+      },
+      {
+        "name": "overlay",
+        "world": "dashboard",
+        "value": "0 8px 24px rgba(0,0,0,0.5)",
+        "valueLight": "0 8px 24px rgba(17,21,26,0.12)",
+        "token": "--shadow-overlay",
+        "purpose": "The server switcher menu and the invite dialog."
+      },
+      {
+        "name": "stage-window",
+        "world": "landing",
+        "value": "0 1px 0 rgb(255 255 255 / 0.05) inset, 0 40px 80px -40px rgb(0 0 0 / 0.9), 0 12px 28px -18px rgb(0 0 0 / 0.7)",
+        "valueLight": "0 1px 0 rgb(255 255 255 / 0.7) inset, 0 40px 80px -44px rgb(17 21 40 / 0.35), 0 10px 24px -16px rgb(17 21 40 / 0.18)",
+        "token": "--lp-shadow",
+        "purpose": "Landing product windows, Discord windows and the price card."
+      },
+      {
+        "name": "volt-glow",
+        "world": "landing",
+        "value": "0 0 0 1px rgb(0 0 0 / 0.05) inset, 0 8px 24px -10px rgb(212 255 58 / 0.55)",
+        "valueHover": "0 0 0 1px rgb(0 0 0 / 0.05) inset, 0 10px 30px -8px rgb(212 255 58 / 0.7)",
+        "purpose": "The landing primary pill only."
+      },
+      {
+        "name": "live-halo",
+        "world": "landing",
+        "value": "0 0 0 3px rgb(43 217 159 / 0.2)",
+        "purpose": "The live chip's go-green dot."
+      },
+      {
+        "name": "stage-glow",
+        "world": "landing",
+        "value": "radial-gradient(60% 50% at 50% 62%, var(--lp-glow-a), transparent 70%), radial-gradient(40% 30% at 70% 78%, var(--lp-glow-b), transparent 70%)",
+        "purpose": "Ambient indigo and blue light behind the hero (variants under the closing band and atop the price card)."
+      },
+      {
+        "name": "frosted-nav",
+        "world": "landing",
+        "value": "backdrop-filter: blur(14px) saturate(150%); background: color-mix(in srgb, var(--lp-bg) 78%, transparent)",
+        "purpose": "The sticky landing nav."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "token": "--ease-out",
+        "purpose": "Default curve for state changes, reveals and page entries; shared by both worlds."
+      },
+      {
+        "name": "ease-in-out",
+        "value": "cubic-bezier(0.65, 0, 0.35, 1)",
+        "token": "--ease-in-out",
+        "purpose": "Scanning line on a pending button, the first-place glint, the landing press scan."
+      },
+      {
+        "name": "ease-snap",
+        "value": "cubic-bezier(0.2, 0.9, 0.1, 1)",
+        "token": "--ease-snap",
+        "purpose": "Bracket lock-on, seat pop-in, the nav pip slide, Done badge pop."
+      },
+      {
+        "name": "m-rise",
+        "value": "10px",
+        "reduced": "0px",
+        "token": "--m-rise",
+        "purpose": "Base travel for reveals, notices, dialogs and page entry (scaled per use)."
+      },
+      {
+        "name": "m-lift",
+        "value": "2px",
+        "reduced": "0px",
+        "token": "--m-lift",
+        "purpose": "Hover rise of a server tile."
+      },
+      {
+        "name": "m-lock",
+        "value": "7px",
+        "reduced": "0px",
+        "token": "--m-lock",
+        "purpose": "How far outside the corners HUD brackets start before locking on."
+      },
+      {
+        "name": "m-blur",
+        "value": "4px",
+        "reduced": "0px",
+        "token": "--m-blur",
+        "purpose": "Blur on page entry, morphs and the landing window rise."
+      },
+      {
+        "name": "m-pop",
+        "value": "0.86",
+        "reduced": "1",
+        "token": "--m-pop",
+        "purpose": "Starting scale of pop-in arrivals (seats, roster slots, Done badge)."
+      },
+      {
+        "name": "m-settle",
+        "value": "0.97",
+        "reduced": "1",
+        "token": "--m-settle",
+        "purpose": "Starting scale of the switcher menu and the invite dialog."
+      },
+      {
+        "name": "state-change",
+        "value": "0.15s var(--ease-out)",
+        "purpose": "Colour, border and background transitions on buttons, fields, nav items and rows (0.12s on table rows)."
+      },
+      {
+        "name": "panel-fold",
+        "value": "0.32s var(--ease-out)",
+        "purpose": "Disclosure panels open and close by height (::details-content); 0s under reduced motion."
+      },
+      {
+        "name": "lock-on",
+        "value": "0.36s to 0.5s var(--ease-snap)",
+        "purpose": "HUD brackets on an opened panel (0.36s) or a bracketed card (0.5s, 0.08s delay)."
+      },
+      {
+        "name": "page-swap",
+        "value": "out 0.14s, in 0.34s after 0.06s, morph 0.44s",
+        "purpose": "View transitions between dashboard pages; root crossfade 0.22s on full loads."
+      },
+      {
+        "name": "landing-focal",
+        "value": "windows rise 0.9s from 0.25s; press at 1.95s; Queued to Done at 2.85s; Discord message at 2.6s",
+        "purpose": "The landing hero sequence; final state is the default markup."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "dash-phone",
+        "value": "520px",
+        "world": "dashboard",
+        "purpose": "Top bar becomes one row; place rows and attention links compact."
+      },
+      {
+        "name": "dash-ranks",
+        "value": "640px",
+        "world": "dashboard",
+        "purpose": "Leaderboard rows restack."
+      },
+      {
+        "name": "dash-nav-row",
+        "value": "720px",
+        "world": "dashboard",
+        "purpose": "At or below: side nav becomes a scrolling row, shell padding 16px; above (721px): sticky top bar and nav."
+      },
+      {
+        "name": "dash-narrow",
+        "value": "860px",
+        "world": "dashboard",
+        "purpose": "Rally template body stacks; /status shell padding."
+      },
+      {
+        "name": "dash-readout",
+        "value": "900px",
+        "world": "dashboard",
+        "purpose": "Readout strip folds to two columns."
+      },
+      {
+        "name": "dash-settings",
+        "value": "960px",
+        "world": "dashboard",
+        "purpose": "Settings, security and accounts layouts go single column."
+      },
+      {
+        "name": "dash-wide",
+        "value": "1100px",
+        "world": "dashboard",
+        "purpose": "Overview 3 to 2 columns; rally board and ranks stack."
+      },
+      {
+        "name": "lp-phone",
+        "value": "600px",
+        "world": "landing",
+        "purpose": "Actions stack, art hidden, shots trimmed to their proof, 16px gutters."
+      },
+      {
+        "name": "lp-tablet",
+        "value": "900px",
+        "world": "landing",
+        "purpose": "Feature and trust rows stack; nav links hide."
+      },
+      {
+        "name": "lp-stage",
+        "value": "1100px",
+        "world": "landing",
+        "purpose": "Overlapping Discord windows drop below their product window."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Dashboard Primary Button",
+      "kind": "button",
+      "world": "dashboard",
+      "refersTo": "dash-button-primary",
+      "description": "The one primary action of a dashboard form: volt fill with the chamfer cut from the top-right corner. Its focus ring is drawn inside the shape (2px ink, offset -5px), because the chamfer clips anything outside it.",
+      "html": "<button class=\"ds-dash-btn-primary\">Save changes</button>",
+      "css": ".ds-dash-btn-primary { display: inline-flex; align-items: center; gap: 8px; font: 600 14px/20px var(--font-sans, Inter, system-ui, sans-serif); padding: 8px 16px; border: 1px solid transparent; border-radius: 0; background: var(--accent, #d4ff3a); color: var(--accent-ink, #0b0d10); clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%); white-space: nowrap; cursor: pointer; transition: filter 0.15s cubic-bezier(0.16, 1, 0.3, 1), transform 0.1s cubic-bezier(0.16, 1, 0.3, 1); } .ds-dash-btn-primary:hover { filter: brightness(1.06); } .ds-dash-btn-primary:active { transform: translateY(1px); } .ds-dash-btn-primary:focus-visible { outline: 2px solid var(--focus, #d4ff3a); outline-offset: 2px; }"
+    },
+    {
+      "name": "Dashboard Text Field",
+      "kind": "input",
+      "world": "dashboard",
+      "refersTo": "dash-input",
+      "description": "A labelled field: Raised Plate fill, slate hairline, 4px radius; the border lifts on hover and takes the focus colour on focus.",
+      "html": "<label class=\"ds-dash-field\"><span>Lift automatically after</span><input class=\"ds-dash-input\" value=\"15 minutes\"></label>",
+      "css": ".ds-dash-field { display: flex; flex-direction: column; gap: 6px; font: 400 14px/20px var(--font-sans, Inter, system-ui, sans-serif); color: var(--text, #e8ecf1); } .ds-dash-input { background: var(--surface-raised, #1a2028); border: 1px solid var(--line, #2a323d); border-radius: 4px; color: var(--text, #e8ecf1); font: 400 14px/20px var(--font-sans, Inter, system-ui, sans-serif); padding: 8px 12px; transition: border-color 0.15s cubic-bezier(0.16, 1, 0.3, 1); } .ds-dash-input:hover { border-color: var(--text-muted, #8c96a3); } .ds-dash-input:focus-visible { border-color: var(--focus, #d4ff3a); outline: 2px solid var(--focus, #d4ff3a); outline-offset: 2px; }"
+    },
+    {
+      "name": "Dashboard Side Nav",
+      "kind": "nav",
+      "world": "dashboard",
+      "refersTo": "dash-nav-item",
+      "description": "The server menu: uppercase group captions, module names with their plain labels, and a square volt pip in the gutter for the current page.",
+      "html": "<nav class=\"ds-dash-nav\"><a class=\"ds-dash-nav__item\" href=\"#\">Overview</a><div class=\"ds-dash-nav__group\">Guard</div><a class=\"ds-dash-nav__item\" href=\"#\" aria-current=\"page\"><span class=\"ds-dash-nav__pip\"></span><span class=\"ds-dash-nav__name\">Watch</span><span class=\"ds-dash-nav__plain\">Moderation</span></a><a class=\"ds-dash-nav__item\" href=\"#\"><span class=\"ds-dash-nav__name\">Gatehouse</span><span class=\"ds-dash-nav__plain\">Security</span></a></nav>",
+      "css": ".ds-dash-nav { display: flex; flex-direction: column; gap: 2px; width: 220px; background: var(--surface, #12161b); border: 1px solid var(--line, #2a323d); border-radius: 4px; padding: 8px; } .ds-dash-nav__group { padding: 12px 8px 4px; font: 600 11px/16px var(--font-display, \"Saira Semi Condensed\", \"Arial Narrow\", sans-serif); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted, #8c96a3); } .ds-dash-nav__item { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; border-radius: 4px; color: var(--text-muted, #8c96a3); font: 400 14px/20px var(--font-sans, Inter, system-ui, sans-serif); text-decoration: none; transition: background-color 0.15s cubic-bezier(0.16, 1, 0.3, 1), color 0.15s cubic-bezier(0.16, 1, 0.3, 1); } .ds-dash-nav__item:hover { background: var(--surface-raised, #1a2028); color: var(--text, #e8ecf1); } .ds-dash-nav__item[aria-current=\"page\"] { background: var(--surface-raised, #1a2028); color: var(--text, #e8ecf1); font-weight: 600; } .ds-dash-nav__item:focus-visible { outline: 2px solid var(--focus, #d4ff3a); outline-offset: 2px; } .ds-dash-nav__pip { position: absolute; top: 50%; left: -7px; width: 6px; height: 6px; margin-top: -3px; background: var(--accent-strong, #d4ff3a); } .ds-dash-nav__name { flex: 1; } .ds-dash-nav__plain { font-size: 12px; font-weight: 400; color: var(--text-muted, #8c96a3); }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "world": "dashboard",
+      "refersTo": "dash-badge",
+      "description": "A state tag: uppercase Saira caption, 1px border in the state colour, 2px radius, square pip. Tone only ever reports state.",
+      "html": "<span class=\"ds-dash-badge ds-dash-badge--go\">Done</span> <span class=\"ds-dash-badge ds-dash-badge--alert\">Active</span> <span class=\"ds-dash-badge\">Queued</span>",
+      "css": ".ds-dash-badge { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border: 1px solid currentColor; border-radius: 2px; color: var(--text-muted, #8c96a3); font: 600 11px/16px var(--font-display, \"Saira Semi Condensed\", \"Arial Narrow\", sans-serif); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; transition: color 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1); } .ds-dash-badge::before { content: \"\"; width: 6px; height: 6px; background: currentColor; } .ds-dash-badge--go { color: var(--go, #2bd99f); } .ds-dash-badge--alert { color: var(--alert, #ff5c5c); }"
+    },
+    {
+      "name": "HUD Card",
+      "kind": "card",
+      "world": "dashboard",
+      "refersTo": "dash-card-hud",
+      "description": "The card a page exists for, or the one being edited: square corners, Hull Plate, and volt corner brackets that lock on from outside.",
+      "html": "<section class=\"ds-dash-hud\"><h3 class=\"ds-dash-hud__title\">Lockdown</h3><p class=\"ds-dash-hud__sub\">Not locked. Locking stops @everyone talking in every channel; staff roles keep talking.</p></section>",
+      "css": ".ds-dash-hud { position: relative; max-width: 360px; background: var(--surface, #12161b); border: 1px solid var(--line, #2a323d); border-radius: 0; padding: 16px; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.035), 0 1px 2px rgb(0 0 0 / 0.4); color: var(--text, #e8ecf1); } .ds-dash-hud::before, .ds-dash-hud::after { content: \"\"; position: absolute; width: 12px; height: 12px; border: 0 solid var(--accent-strong, #d4ff3a); } .ds-dash-hud::before { top: -1px; left: -1px; border-top-width: 2px; border-left-width: 2px; animation: ds-lock-tl 0.5s cubic-bezier(0.2, 0.9, 0.1, 1) 0.08s both; } .ds-dash-hud::after { bottom: -1px; right: -1px; border-bottom-width: 2px; border-right-width: 2px; animation: ds-lock-br 0.5s cubic-bezier(0.2, 0.9, 0.1, 1) 0.08s both; } @keyframes ds-lock-tl { from { opacity: 0; translate: -7px -7px; } } @keyframes ds-lock-br { from { opacity: 0; translate: 7px 7px; } } .ds-dash-hud__title { margin: 0 0 8px; font: 600 18px/24px var(--font-display, \"Saira Semi Condensed\", \"Arial Narrow\", sans-serif); letter-spacing: 0.01em; } .ds-dash-hud__sub { margin: 0; color: var(--text-muted, #8c96a3); font: 400 14px/20px var(--font-sans, Inter, system-ui, sans-serif); } @media (prefers-reduced-motion: reduce) { .ds-dash-hud::before, .ds-dash-hud::after { animation-name: none; } }"
+    },
+    {
+      "name": "Readout Strip",
+      "kind": "custom",
+      "world": "dashboard",
+      "refersTo": "dash-readout-cell",
+      "description": "A page's numbers in one instrument strip: cells split by 1px hairline gaps, caption over a 32px mono value with a muted unit.",
+      "html": "<div class=\"ds-dash-readout\"><div class=\"ds-dash-readout__cell\"><span class=\"ds-dash-readout__label\">Now</span><span class=\"ds-dash-readout__value ds-dash-readout__value--text\">Online</span></div><div class=\"ds-dash-readout__cell\"><span class=\"ds-dash-readout__label\">Uptime · 30 d</span><span class=\"ds-dash-readout__value\">99.98<span class=\"ds-dash-readout__unit\">%</span></span></div><div class=\"ds-dash-readout__cell\"><span class=\"ds-dash-readout__label\">Command reply · p95</span><span class=\"ds-dash-readout__value\">142<span class=\"ds-dash-readout__unit\">ms</span></span></div></div>",
+      "css": ".ds-dash-readout { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; overflow: hidden; background: var(--line, #2a323d); border: 1px solid var(--line, #2a323d); border-radius: 4px; } .ds-dash-readout__cell { display: flex; flex-direction: column; gap: 6px; padding: 16px 16px 18px; background: var(--surface, #12161b); } .ds-dash-readout__label { font: 600 11px/16px var(--font-display, \"Saira Semi Condensed\", \"Arial Narrow\", sans-serif); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted, #8c96a3); } .ds-dash-readout__value { font: 500 32px/36px var(--font-mono, \"JetBrains Mono\", ui-monospace, monospace); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--text, #e8ecf1); } .ds-dash-readout__value--text { font: 600 22px/36px var(--font-display, \"Saira Semi Condensed\", \"Arial Narrow\", sans-serif); letter-spacing: 0.01em; color: var(--go, #2bd99f); } .ds-dash-readout__unit { margin-left: 4px; font-size: 15px; letter-spacing: 0; color: var(--text-muted, #8c96a3); }"
+    },
+    {
+      "name": "Landing Primary Pill",
+      "kind": "button",
+      "world": "landing",
+      "refersTo": "lp-button-primary",
+      "description": "The landing page's one action colour: a 48px volt pill with a volt glow, brightening on hover. Add to Discord always comes first.",
+      "html": "<a class=\"ds-lp-btn-primary\" href=\"#\">Add to Discord</a>",
+      "css": ".ds-lp-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 24px; border: 1px solid transparent; border-radius: 999px; background: var(--lp-accent, #d4ff3a); color: var(--lp-accent-ink, #0b0d10); font: 600 15px/1 var(--lp-sans, Geist, system-ui, sans-serif); text-decoration: none; white-space: nowrap; box-shadow: 0 0 0 1px rgb(0 0 0 / 0.05) inset, 0 8px 24px -10px rgb(212 255 58 / 0.55); transition: background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.12s cubic-bezier(0.16, 1, 0.3, 1); } .ds-lp-btn-primary:hover { background: #e2ff70; box-shadow: 0 0 0 1px rgb(0 0 0 / 0.05) inset, 0 10px 30px -8px rgb(212 255 58 / 0.7); } .ds-lp-btn-primary:active { transform: translateY(1px); } .ds-lp-btn-primary:focus-visible { outline: 2px solid var(--lp-accent-text, #d4ff3a); outline-offset: 3px; }"
+    },
+    {
+      "name": "Landing Ghost Pill",
+      "kind": "button",
+      "world": "landing",
+      "refersTo": "lp-button-ghost",
+      "description": "The second action on the landing page: a strong glass hairline over translucent graphite, warming on hover.",
+      "html": "<a class=\"ds-lp-btn-ghost\" href=\"#\">Open the dashboard</a>",
+      "css": ".ds-lp-btn-ghost { display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 24px; border: 1px solid var(--lp-line-strong, rgb(255 255 255 / 0.15)); border-radius: 999px; background: color-mix(in srgb, var(--lp-surface, #10131a) 70%, transparent); color: var(--lp-text, #f3f5f9); font: 600 15px/1 var(--lp-sans, Geist, system-ui, sans-serif); text-decoration: none; white-space: nowrap; transition: background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.12s cubic-bezier(0.16, 1, 0.3, 1); } .ds-lp-btn-ghost:hover { border-color: var(--lp-faint, #7c8596); background: var(--lp-surface-2, #161a23); } .ds-lp-btn-ghost:active { transform: translateY(1px); } .ds-lp-btn-ghost:focus-visible { outline: 2px solid var(--lp-accent-text, #d4ff3a); outline-offset: 3px; }"
+    },
+    {
+      "name": "Product Window",
+      "kind": "card",
+      "world": "landing",
+      "refersTo": "lp-window",
+      "description": "A browser-like frame around real dashboard markup on the landing page, labelled as an example. Inside, the dashboard world applies.",
+      "html": "<figure class=\"ds-lp-win\"><div class=\"ds-lp-win__bar\"><span class=\"ds-lp-win__dots\"><i></i><i></i><i></i></span><span class=\"ds-lp-win__url\">Security</span><span class=\"ds-lp-win__tag\">Example server</span></div><div class=\"ds-lp-win__body\">Dashboard components render here.</div></figure>",
+      "css": ".ds-lp-win { margin: 0; max-width: 560px; overflow: hidden; border: 1px solid var(--lp-line-strong, rgb(255 255 255 / 0.15)); border-radius: 14px; background: var(--bg, #0b0d10); color: var(--text, #e8ecf1); font-family: var(--font-sans, Inter, system-ui, sans-serif); box-shadow: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 40px 80px -40px rgb(0 0 0 / 0.9), 0 12px 28px -18px rgb(0 0 0 / 0.7); } .ds-lp-win__bar { display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 14px; border-bottom: 1px solid var(--line, #2a323d); background: var(--surface, #12161b); } .ds-lp-win__dots { display: inline-flex; gap: 6px; } .ds-lp-win__dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--line, #2a323d); } .ds-lp-win__url { flex: 1; min-width: 0; overflow: hidden; color: var(--text-muted, #8c96a3); font: 400 12px/1 var(--font-mono, \"JetBrains Mono\", ui-monospace, monospace); text-overflow: ellipsis; white-space: nowrap; } .ds-lp-win__tag { flex: none; padding: 3px 8px; border: 1px solid var(--line, #2a323d); border-radius: 999px; color: var(--text-muted, #8c96a3); font: 500 11px/1 var(--font-sans, Inter, system-ui, sans-serif); } .ds-lp-win__body { padding: 24px; font-size: 14px; color: var(--text-muted, #8c96a3); }"
+    },
+    {
+      "name": "Discord Message Mock",
+      "kind": "custom",
+      "world": "landing",
+      "refersTo": "discord-embed",
+      "description": "Garrison's message drawn in Discord's own layout and colours, with the 4px coloured embed bar Discord itself draws.",
+      "html": "<figure class=\"ds-dc\"><div class=\"ds-dc__bar\"><span class=\"ds-dc__hash\">#</span>mod-log</div><div class=\"ds-dc__msg\"><span class=\"ds-dc__avatar\"></span><div><div class=\"ds-dc__author\">Garrison <span class=\"ds-dc__app\">App</span><span class=\"ds-dc__time\">Today at 21:04</span></div><div class=\"ds-dc__embed\"><div class=\"ds-dc__title\">Server locked</div><div>Posting is off in 23 channels.</div><div>Invites are paused.</div><div class=\"ds-dc__foot\">Gatehouse · lockdown</div></div></div></div></figure>",
+      "css": ".ds-dc { margin: 0; max-width: 420px; overflow: hidden; border: 1px solid var(--lp-line-strong, rgb(255 255 255 / 0.15)); border-radius: 14px; background: var(--dc-bg, #313338); color: var(--dc-text, #dbdee1); font-family: var(--lp-sans, Geist, system-ui, sans-serif); box-shadow: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 40px 80px -40px rgb(0 0 0 / 0.9), 0 12px 28px -18px rgb(0 0 0 / 0.7); } .ds-dc__bar { display: flex; align-items: center; gap: 6px; height: 44px; padding: 0 16px; border-bottom: 1px solid var(--dc-line, rgb(255 255 255 / 0.06)); font-size: 15px; font-weight: 600; } .ds-dc__hash { color: var(--dc-muted, #949ba4); font-size: 20px; font-weight: 400; } .ds-dc__msg { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 14px; padding: 16px; } .ds-dc__avatar { width: 40px; height: 40px; border-radius: 50%; background: #0b0d10; } .ds-dc__author { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 15px; font-weight: 600; } .ds-dc__app { padding: 1px 5px; border-radius: 4px; background: #5865f2; color: #fff; font-size: 10px; font-weight: 600; text-transform: uppercase; } .ds-dc__time { color: var(--dc-muted, #949ba4); font-size: 12px; font-weight: 400; } .ds-dc__embed { display: grid; gap: 4px; padding: 12px 16px 14px; border-left: 4px solid #ff5c5c; border-radius: 4px; background: var(--dc-embed, #2b2d31); font-size: 14px; line-height: 1.45; } .ds-dc__title { margin-bottom: 4px; font-size: 15px; font-weight: 600; } .ds-dc__foot { margin-top: 8px; color: var(--dc-muted, #949ba4); font-size: 12px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Signal Lamp",
+    "overview": "Garrison is two dark rooms with one lamp lit in each. The dashboard is the night-watch console where a server is run: a dense, dark HUD of hairline-split plates, where volt lime marks the one thing that acts, the page you are on, and what you are editing. The landing page is the same console carried onto a studio stage: an ink floor, rounded glass-and-graphite surfaces, soft indigo air, and volt lime on the one button that adds Garrison to Discord. The lamp is the shared idea; everything around it differs on purpose.\n\nThe dashboard world is incumbent and governs almost every route. It is an instrument, not a brochure: tonal plates over a night ground, 1px slate hairlines, small radii, a chamfered primary button, HUD corner brackets that lock on to what you are editing or what a page exists for, and four status colours that only ever report state. Saira Semi Condensed speaks headings and captions, Inter carries the interface, JetBrains Mono carries every number. Motion explains state and keeps your place; its distances are tokens that reduced motion sets to zero while fades and colour changes stay.\n\nThe landing world is new and scoped to one route. It plays the category-standard Discord-bot page straight, at product-page craft: centred display headline, pill actions, hairline-bordered rounded surfaces with soft deep shadows, and real product shots. It refuses the HUD costume (chamfers, corner brackets, uppercase captions) in its own chrome, but its product windows render the dashboard's real components and tokens on purpose, and its Discord mocks use Discord's own colours and embed anatomy.",
+    "keyCharacteristics": [
+      "Dark-first in both worlds, with a full light theme in both (cookie-driven `data-theme` on `<html>`).",
+      "One accent, volt lime, used as a signal, never as decoration; olive replaces it for text and strokes on light grounds.",
+      "Dashboard: square-cornered HUD plates, chamfers, corner brackets, square status pips, three typefaces with fixed jobs.",
+      "Landing: ink stage, rounded surfaces, pills, indigo and blue only as ambient light, Gabarito/Geist/Geist Mono.",
+      "Product shots on the landing page are the dashboard itself, framed and labelled as an example.",
+      "Strict CSP: classes only, no inline style attributes, fonts self-hosted through next/font."
+    ],
+    "rules": [
+      {
+        "name": "The Two Worlds Rule",
+        "body": "Pick the world from the route before writing a line of CSS: `/` is the landing world, every other route is the dashboard world. A dashboard page never borrows a landing token, face, radius or glow, and the landing page never borrows the HUD costume outside a `.lp-win` product shot.",
+        "section": "overview"
+      },
+      {
+        "name": "The Signal Lamp Rule",
+        "body": "Volt lime is light, not paint. It marks the action, the current place, what is on, and what you are editing. On the landing page it appears on the primary pill button, focus and selection, and the shield mark, and nowhere else in the page's own chrome.",
+        "section": "colors"
+      },
+      {
+        "name": "The Status Is State Rule",
+        "body": "Go, caution, alert and intel report a state and nothing else: never a category colour, a section accent or a flourish. Bot embeds in Discord follow the same rule.",
+        "section": "colors"
+      },
+      {
+        "name": "The Indigo Is Air Rule",
+        "body": "On the landing page, indigo and blue exist only as ambient light (radial glows and the art's rim light). No indigo text, border, button, icon or fill.",
+        "section": "colors"
+      },
+      {
+        "name": "The Three Voices Rule",
+        "body": "In the dashboard, Saira is for headings and captions, Inter for everything you read or operate, JetBrains Mono for everything counted, timed or identified. A number in Inter is a bug.",
+        "section": "typography"
+      },
+      {
+        "name": "The Caption Sits Over a Value Rule",
+        "body": "The uppercase label captions a number, a field, a seat row or a nav group. It never sits above a heading.",
+        "section": "typography"
+      },
+      {
+        "name": "The No Crossing Faces Rule",
+        "body": "Gabarito, Geist and Geist Mono load only on `/` and style only `.lp` chrome. Saira, Inter and JetBrains Mono appear on the landing page only inside product windows, where they are part of the shot.",
+        "section": "typography"
+      },
+      {
+        "name": "The Own Height Rule",
+        "body": "In the dashboard, cards keep their own height: grids align to the start, and a short card never stretches to match a tall neighbour.",
+        "section": "layout"
+      },
+      {
+        "name": "The Plates Not Shadows Rule",
+        "body": "In the dashboard a surface reads as raised because it is a lighter plate with a hairline, not because it casts a shadow. Only overlays and a hovered server tile get a visible shadow.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Bracket Means Focus Rule",
+        "body": "HUD corner brackets (12px, 2px stroke, top-left and bottom-right, in volt/olive) mark what you are editing (an open settings panel) and the object a page exists for (an active lockdown, the next op, the Quartermaster prompt, a scheduled raid, the sign-in card). A server tile Garrison already guards takes a single top-left bracket. Brackets lock on with motion; they never decorate a card at random.",
+        "section": "shapes"
+      },
+      {
+        "name": "The Discord Bar Rule",
+        "body": "The 4px coloured left bar belongs to Discord's embed anatomy and appears only where Garrison draws a Discord message (the landing mocks and the brand package's embed preview). No card, notice or list row gets a side stripe.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "**Do** decide the world from the route first: `/` is the landing world under `.lp`; every other route, including `/status`, `/login`, `/account` and the 404 page, is the dashboard world.",
+      "**Do** build dashboard UI from the `g-` components and the `packages/brand` tokens, with layout classes in `app/app.css`; never an inline style attribute (the CSP blocks them).",
+      "**Do** keep one primary action per form or section: a chamfered volt button in the dashboard, a volt pill on the landing page.",
+      "**Do** use HUD brackets only for what is being edited and the object a page exists for.",
+      "**Do** report state with the status colours plus a square pip, and tint notices with their tone (about 9% into the surface, border about 55% into the hairline) so they read in both themes.",
+      "**Do** set every number, time and identifier in the mono face with tabular figures.",
+      "**Do** express motion distances with the `--m-*` tokens so reduced motion can zero them while fades remain.",
+      "**Do** build landing product shots from the dashboard's real classes inside a `.lp-win` frame, labelled as an example.",
+      "**Do** mirror Discord exactly in message mocks: Discord's colours, avatar, App tag and the 4px embed bar.",
+      "**Do** give every landing art piece exactly one small volt light, with indigo or cool-blue ambient light, and keep every layout complete when a slot has no file.",
+      "**Do** check both themes; on light grounds, volt text and strokes become olive."
+    ],
+    "donts": [
+      "**Don't** use Gabarito, Geist, pill buttons, 14–28px radii, indigo glows or the stage shadow on any dashboard route.",
+      "**Don't** use chamfers, HUD brackets, uppercase Saira captions or square status pips in the landing page's own chrome; they belong only inside product windows (the shield mark keeps its own cut corners).",
+      "**Don't** use go, caution, alert or intel as decoration, category colour or brand flourish.",
+      "**Don't** put volt lime on landing text, borders, icons or surfaces beyond the primary pill, focus, selection and the shield mark.",
+      "**Don't** use indigo or blue for landing text, borders, buttons or fills; they are ambient light only.",
+      "**Don't** give a card, notice or list row a coloured side stripe; the 4px left bar exists only in Discord embed mocks.",
+      "**Don't** put an uppercase label above a heading.",
+      "**Don't** hard-code a motion distance or add travel that reduced motion cannot zero.",
+      "**Don't** paint volt as ambient light or surface colour in art, put text in art, or bring military subjects into the landing set.",
+      "**Don't** confuse `.landing` (the `/status` shell in `app/app.css`, dashboard world) with `.lp` (the landing world).",
+      "**Don't** set body or meta text below 4.5:1; Dim Mist sits just above it on every landing ground, so nothing quieter belongs in body or meta copy."
+    ]
+  }
+}

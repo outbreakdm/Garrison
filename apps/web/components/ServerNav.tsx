@@ -3,7 +3,7 @@
 import { modules } from "@garrison/brand";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef, ViewTransition } from "react";
 
 const ITEMS = [
   { group: null, href: "", name: "Overview", plain: null },
@@ -26,9 +26,10 @@ export function ServerNav({ guildId }: { guildId: string }) {
   const pathname = usePathname();
   const base = `/servers/${guildId}`;
   const nav = useRef<HTMLElement>(null);
-  // On phones the menu is one scrolling row: keep the current page in view.
+  // On phones the menu is one scrolling row: keep the current page in view. A layout
+  // effect, so the row is scrolled before a page transition takes its picture.
   // biome-ignore lint/correctness/useExhaustiveDependencies: re-run when the page changes
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = nav.current;
     const current = el?.querySelector<HTMLElement>('[aria-current="page"]');
     if (!el || !current || el.scrollWidth <= el.clientWidth) return;
@@ -40,19 +41,27 @@ export function ServerNav({ guildId }: { guildId: string }) {
     <nav className="g-nav" aria-label="Server" ref={nav}>
       {ITEMS.map((item) => {
         const href = `${base}${item.href}`;
+        // Sub-pages (Rally templates) keep their module lit.
+        const current = pathname === href || Boolean(item.href && pathname.startsWith(`${href}/`));
         return (
           <div key={item.name}>
             {item.group ? <div className="g-nav__group g-label">{item.group}</div> : null}
             <Link
               className="g-nav__item"
               href={href}
-              // Sub-pages (Rally templates) keep their module lit.
-              aria-current={
-                pathname === href || (item.href && pathname.startsWith(`${href}/`))
-                  ? "page"
-                  : undefined
-              }
+              transitionTypes={["nav"]}
+              aria-current={current ? "page" : undefined}
             >
+              {current ? (
+                // One pip, so moving pages slides it from the old item to the new one.
+                <ViewTransition
+                  name="nav-pip"
+                  share={{ nav: "pip", default: "none" }}
+                  default="none"
+                >
+                  <span className="g-nav__pip" aria-hidden="true" />
+                </ViewTransition>
+              ) : null}
               <span className="g-nav__name">{item.name}</span>
               {item.plain ? <span className="g-nav__plain">{item.plain}</span> : null}
             </Link>

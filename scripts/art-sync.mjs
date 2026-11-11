@@ -87,7 +87,12 @@ writeFileSync(path.join(web, "lib/art.generated.json"), `${JSON.stringify(out, n
 
 // --- PROMPTS.md: every prompt assembled and ready to paste.
 const full = (s) =>
-  [s.styleOverride ?? spec.style, s.prompt, s.emblem ? spec.emblem : null]
+  [
+    s.styleOverride ?? spec.style,
+    s.prompt,
+    s.emblem ? spec.emblem : null,
+    s.icon ? spec.icon : null,
+  ]
     .filter(Boolean)
     .join("\n\n");
 const md = [
@@ -104,9 +109,11 @@ const md = [
   "",
   "A slot with no file shows nothing, so pieces can arrive one at a time. Replacing a file and running `pnpm art` again swaps the picture everywhere it's used.",
   "",
-  "Generate the hero first and reuse it as a style reference for the rest, so the set looks like one world.",
+  "There are two sets. The landing page set (`lp-…`) is glossy 3D objects on an ink stage; generate `lp-hero` first and use it as the style reference for the rest of that set. The dashboard set (sign-in, empty states, 404) is the night outpost; reuse `login` as its reference. Pieces marked transparent need a PNG with a transparent background: export PNG, run `pnpm art:optimize`, and the WebP keeps the transparency.",
   "",
-  "## Negative prompt (all pieces)",
+  "Some pieces have their own negative prompt, shown under the prompt. Use it instead of the shared one.",
+  "",
+  "## Negative prompt (dashboard set)",
   "",
   "```",
   spec.negative,
@@ -130,6 +137,7 @@ const md = [
     full(s),
     "```",
     "",
+    ...(s.negative ? ["Negative prompt for this piece:", "", "```", s.negative, "```", ""] : []),
   ]),
 ].join("\n");
 writeFileSync(path.join(web, "art/PROMPTS.md"), md);

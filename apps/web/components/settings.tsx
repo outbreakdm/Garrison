@@ -124,6 +124,36 @@ export function SettingsPanel({
   );
 }
 
+/**
+ * A form that folds into one row until it's needed (post a group, create a raid,
+ * edit the ladder): the same row and brackets as a settings panel, with a hint
+ * instead of current values.
+ */
+export function FormPanel({
+  id,
+  title,
+  hint,
+  open,
+  children,
+}: {
+  id: string;
+  title: string;
+  hint: string;
+  open: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <details className="g-card panel" id={id} open={open}>
+      <summary className="panel__summary">
+        <span className="panel__title panel__title--lg">{title}</span>
+        <span className="panel__hint">{hint}</span>
+        <span className="panel__cue" aria-hidden="true" />
+      </summary>
+      <div className="panel__body">{children}</div>
+    </details>
+  );
+}
+
 /** The foot of every settings form: the save button, and where the change is recorded. */
 export function FormFoot({ label, guildId }: { label: string; guildId: string }) {
   return (

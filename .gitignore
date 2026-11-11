@@ -16,3 +16,5 @@ next-env.d.ts
 .dev.vars
 .dev.vars.*
 cloudflare-env.d.ts
+# Design review captures (large screenshots, regenerated per review)
+**/.impeccable/review/

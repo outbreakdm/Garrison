@@ -40,7 +40,7 @@ export async function RequestsPanel({
     <section id="requests" className="g-card table-card" aria-label="Requests">
       {working ? <AutoRefresh /> : null}
       <div className="table-card__head row-between">
-        <span className="g-label">Requests</span>
+        <h2 className="card-title">Requests</h2>
         <span className="g-help">Garrison does these in Discord, usually within seconds.</span>
       </div>
       {queued && !error ? (

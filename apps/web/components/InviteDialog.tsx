@@ -26,8 +26,7 @@ export function InviteDialog({ guildName, href }: { guildName: string; href: str
         aria-label={`Add Garrison to ${guildName}`}
       >
         <div className="card-col">
-          <span className="g-label">Add Garrison</span>
-          <h2>{guildName}</h2>
+          <h2 className="block-title">Add Garrison to {guildName}</h2>
           <p className="muted">
             Discord opens with this server already picked. Garrison asks only for the permissions it
             uses (moderation, roles, channels, logs), never Administrator.

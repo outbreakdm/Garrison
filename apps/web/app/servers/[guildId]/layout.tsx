@@ -1,5 +1,6 @@
 import { listActiveGuilds } from "@garrison/db";
 import type { ReactNode } from "react";
+import { PageTransition } from "@/components/PageTransition";
 import { ServerNav } from "@/components/ServerNav";
 import { Topbar } from "@/components/Topbar";
 import { getDb } from "@/lib/db";
@@ -31,7 +32,9 @@ export default async function ServerLayout({
       />
       <div className="shell">
         <ServerNav guildId={guild.id} />
-        <main className="main">{children}</main>
+        <main className="main">
+          <PageTransition>{children}</PageTransition>
+        </main>
       </div>
     </>
   );
