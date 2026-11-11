@@ -82,9 +82,8 @@ export function toV2(payload: unknown, opts: { edit?: boolean } = {}): any {
 
   const components: Json[] = [];
   if (content) components.push(text(content));
-  embeds.forEach((e, i) =>
-    components.push(embedToContainer(e, i === embeds.length - 1 ? rows : [])),
-  );
+  for (const [i, e] of embeds.entries())
+    components.push(embedToContainer(e, i === embeds.length - 1 ? rows : []));
   if (!embeds.length) components.push(...rows);
 
   const { content: _c, embeds: _e, ...rest } = p;
