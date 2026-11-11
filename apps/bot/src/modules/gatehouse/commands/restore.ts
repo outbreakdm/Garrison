@@ -1,6 +1,7 @@
 import { ephemeral } from "../../../commands/builders.js";
 import type { ButtonHandler } from "../../../commands/types.js";
 import { done, failed } from "../../../lib/embeds.js";
+import { withRows } from "../../../lib/v2.js";
 import { RESTORE_PREFIX, restoreQuarantine, restoreRow } from "../anti-nuke.js";
 
 const UUID = /^[0-9a-f-]{36}$/;
@@ -18,7 +19,7 @@ export const restoreButton: ButtonHandler = {
       return;
     }
     await interaction.message
-      .edit({ components: [restoreRow(result.quarantine, true)] })
+      .edit(withRows(interaction.message, [restoreRow(result.quarantine, true)]))
       .catch(() => {});
     await interaction.editReply(
       done(

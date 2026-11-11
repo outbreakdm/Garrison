@@ -18,6 +18,7 @@ import {
 } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
+import { toV2 } from "../../lib/v2.js";
 import { recordModeratorAction } from "../gatehouse/anti-nuke.js";
 import { canUndo, escalationReason, hierarchyError, type MemberAction, NO_REASON } from "./copy.js";
 import { caseEmbed, dmEmbed } from "./embeds.js";
@@ -103,17 +104,19 @@ export type MemberActionResult =
 async function sendDm(req: MemberActionRequest, settings: WatchSettings): Promise<boolean | null> {
   if (!settings.dmMembers || !req.member) return null;
   try {
-    await req.target.send({
-      embeds: [
-        dmEmbed({
-          action: req.action,
-          guildName: req.guild.name,
-          reason: req.reason,
-          durationSeconds: req.durationSeconds ?? null,
-          appealText: settings.appealText,
-        }),
-      ],
-    });
+    await req.target.send(
+      toV2({
+        embeds: [
+          dmEmbed({
+            action: req.action,
+            guildName: req.guild.name,
+            reason: req.reason,
+            durationSeconds: req.durationSeconds ?? null,
+            appealText: settings.appealText,
+          }),
+        ],
+      }),
+    );
     return true;
   } catch {
     return false;
@@ -155,7 +158,7 @@ export async function postCaseLog(
     const channel =
       guild.channels.cache.get(settings.logChannelId) ??
       (await guild.channels.fetch(settings.logChannelId));
-    if (channel?.isSendable()) await channel.send({ embeds: [caseEmbed(c)] });
+    if (channel?.isSendable()) await channel.send(toV2({ embeds: [caseEmbed(c)] }));
   } catch (error) {
     ctx.logger.warn("Could not post to the Watch log channel", {
       guildId: guild.id,

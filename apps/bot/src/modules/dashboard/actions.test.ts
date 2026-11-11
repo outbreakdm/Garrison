@@ -161,10 +161,12 @@ describe("dashboard actions, run by the bot", () => {
     expect(row).toMatchObject({ status: "done" });
     const last = sent.at(-1)?.body;
     expect(last?.allowedMentions).toEqual({ parse: [] });
-    const embed = JSON.parse(JSON.stringify(last?.embeds))[0];
-    expect(embed.title).toBe("Molten Core still needs players");
-    expect(embed.description).toMatch(/Needs 2 Tank, 3 Healer, 5 DPS\./);
-    expect(embed.color).toBeUndefined();
+    // One card, no colour: a heading and the text.
+    const [card] = JSON.parse(JSON.stringify(last?.components));
+    expect(card.type).toBe(17);
+    expect(card.accent_color).toBeUndefined();
+    expect(card.components[0].content).toBe("### Molten Core still needs players");
+    expect(card.components[1].content).toMatch(/Needs 2 Tank, 3 Healer, 5 DPS\./);
   });
 
   it("moves a benched player onto a role with room, and not onto a full one", async () => {

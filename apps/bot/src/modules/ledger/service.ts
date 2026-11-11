@@ -17,6 +17,7 @@ import type { BotContext } from "../../commands/types.js";
 import { brandEmbed } from "../../lib/embeds.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { safeText } from "../../lib/text.js";
+import { toV2 } from "../../lib/v2.js";
 import { type Change, describeAudit, type LedgerDraft, TYPE_LABELS } from "./describe.js";
 
 const SETTINGS_TTL_MS = 60_000;
@@ -48,18 +49,20 @@ export async function record(ctx: BotContext, guild: Guild, draft: LedgerDraft) 
     ].filter(Boolean);
     const reason =
       typeof draft.data.reason === "string" ? `\n**Reason:** ${safeText(draft.data.reason)}` : "";
-    await channel.send({
-      embeds: [
-        // A log line is a record, whatever it records: no colour.
-        brandEmbed({
-          title: TYPE_LABELS[draft.type] ?? draft.type,
-          description: `${safeText(draft.summary)}${who.length ? `\n${who.join(" · ")}` : ""}${reason}`,
-          module: "ledger",
-          ref: `#${event.id}`,
-          timestamp: event.createdAt,
-        }),
-      ],
-    });
+    await channel.send(
+      toV2({
+        embeds: [
+          // A log line is a record, whatever it records: no colour.
+          brandEmbed({
+            title: TYPE_LABELS[draft.type] ?? draft.type,
+            description: `${safeText(draft.summary)}${who.length ? `\n${who.join(" · ")}` : ""}${reason}`,
+            module: "ledger",
+            ref: `#${event.id}`,
+            timestamp: event.createdAt,
+          }),
+        ],
+      }),
+    );
   } catch (error) {
     ctx.logger.warn("Ledger record failed", { guildId: guild.id, type: draft.type, error });
   }

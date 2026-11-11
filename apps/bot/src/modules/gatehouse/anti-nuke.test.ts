@@ -103,8 +103,16 @@ function fakeGuild(id: string, opts: { bot?: boolean } = {}) {
           "alerts",
           {
             isSendable: () => true,
-            send: async (m: { embeds: { data: { title?: string } }[]; components: unknown[] }) =>
-              alerts.push({ title: m.embeds[0]?.data.title, components: m.components.length }),
+            // Sent in the layout components: one card, its heading first, its buttons last.
+            send: async (m: {
+              components: { components: { type: number; content?: string }[] }[];
+            }) => {
+              const card = m.components[0]?.components ?? [];
+              alerts.push({
+                title: card[0]?.content?.replace(/^### /, ""),
+                components: card.filter((c) => c.type === 1).length,
+              });
+            },
           },
         ],
       ]),

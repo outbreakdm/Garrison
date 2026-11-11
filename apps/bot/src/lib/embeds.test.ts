@@ -60,7 +60,7 @@ describe("every reply goes through the helper", () => {
     const MENTIONS_ONLY =
       /^(pings|`<@&\$\{role\.id\}>`|userIds\.map\(\(id\) => `<@\$\{id\}>`\)\.join\(" "\)|"")$/;
     const offenders = files
-      .filter((f) => f.path !== "lib/embeds.ts")
+      .filter((f) => f.path !== "lib/embeds.ts" && f.path !== "lib/v2.ts")
       .filter((f) => !f.path.startsWith("modules/quartermaster/planner"))
       .flatMap((f) =>
         [...f.text.matchAll(/\bcontent:\s*([^\n]*?),?\n/g)]

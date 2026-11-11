@@ -227,6 +227,14 @@ preview.
   A message that pings someone puts only the mentions outside the embed (a
   mention inside one doesn't notify) and its words in a no-colour embed. A test
   fails if an embed sets its own colour or any words go out as plain text.
+- **Every message uses Discord's layout components ("Components V2")**, not
+  classic embeds: a card with a heading, its text and its buttons inside. Code
+  still builds messages with `brandEmbed` and button rows; `apps/bot/src/lib/v2.ts`
+  converts them as they go out (the embed's colour becomes the card's accent, so
+  the three kinds still hold). Interaction replies are converted in
+  `interactions.ts`; any new `channel.send` or `message.edit` must wrap its
+  payload in `toV2(...)` (`{ edit: true }` for edits). To change only a card's
+  buttons, use `withRows`: in this layout the buttons are inside the card.
 - **Checks before pushing**: `pnpm -r exec tsc --noEmit`, `pnpm test`,
   `pnpm exec biome check apps packages` (warnings about
   `noDescendingSpecificity` are known).

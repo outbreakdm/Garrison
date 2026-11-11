@@ -23,6 +23,7 @@ import {
 } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
+import { toV2 } from "../../lib/v2.js";
 import {
   lockdownEndedEmbed,
   lockdownStartedEmbed,
@@ -83,7 +84,7 @@ export async function sendAlert(
   if (!channelId) return;
   try {
     const channel = guild.channels.cache.get(channelId) ?? (await guild.channels.fetch(channelId));
-    if (channel?.isSendable()) await channel.send({ embeds: [embed], components });
+    if (channel?.isSendable()) await channel.send(toV2({ embeds: [embed], components }));
   } catch (error) {
     ctx.logger.warn("Could not post a Gatehouse alert", { guildId: guild.id, channelId, error });
   }

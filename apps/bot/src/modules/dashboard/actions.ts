@@ -22,6 +22,7 @@ import { z } from "zod";
 import type { BotContext } from "../../commands/types.js";
 import { brandEmbed } from "../../lib/embeds.js";
 import { safeText } from "../../lib/text.js";
+import { toV2 } from "../../lib/v2.js";
 import { restoreQuarantine } from "../gatehouse/anti-nuke.js";
 import { verifyPanel } from "../gatehouse/embeds.js";
 import { invalidateGatehouseSettings, lockGuild, unlockGuild } from "../gatehouse/service.js";
@@ -134,7 +135,7 @@ async function doCreateRaid(ctx: BotContext, guild: Guild, member: GuildMember, 
     repeatWeekly: p.data.repeatWeekly,
   });
   if (!event) return fail("Garrison couldn't schedule that. Try again.");
-  const sent = await channel.send(opsCard(event, [])).catch(() => null);
+  const sent = await channel.send(toV2(opsCard(event, []))).catch(() => null);
   if (!sent) return fail("The raid is saved, but posting the card failed.");
   await setOpsMessage(ctx.db, event.id, sent.id);
   return { ok: true, message: `Posted ${p.data.title} in #${channel.name}.` };
@@ -172,17 +173,19 @@ async function doCallSignups(ctx: BotContext, guild: Guild, raw: unknown) {
     ? `\n[Sign up on the raid's card](https://discord.com/channels/${guild.id}/${event.channelId}/${event.messageId})`
     : "";
   const sent = await channel
-    .send({
-      embeds: [
-        brandEmbed({
-          title: `${safeText(event.title)} still needs players`,
-          description: `Starts <t:${Math.floor(event.startsAt.getTime() / 1000)}:R>. Needs ${short.replaceAll(" short", "")}.${link}`,
-          module: "ops",
-        }),
-      ],
-      // Never pings: a call for signups is a message, not a mention.
-      allowedMentions: { parse: [] },
-    })
+    .send(
+      toV2({
+        embeds: [
+          brandEmbed({
+            title: `${safeText(event.title)} still needs players`,
+            description: `Starts <t:${Math.floor(event.startsAt.getTime() / 1000)}:R>. Needs ${short.replaceAll(" short", "")}.${link}`,
+            module: "ops",
+          }),
+        ],
+        // Never pings: a call for signups is a message, not a mention.
+        allowedMentions: { parse: [] },
+      }),
+    )
     .catch(() => null);
   return sent ? { ok: true, message: `Posted a call for ${short}.` } : fail("Posting failed.");
 }
@@ -307,7 +310,7 @@ async function doPostVerifyPanel(ctx: BotContext, guild: Guild, member: GuildMem
   if (!channel.permissionsFor(member)?.has(needed)) return fail("You can't post in that channel.");
   if (!channel.permissionsFor(me)?.has([...needed, PermissionFlagsBits.EmbedLinks]))
     return fail("Garrison can't post embeds in that channel.");
-  await channel.send(verifyPanel(settings));
+  await channel.send(toV2(verifyPanel(settings)));
   return { ok: true, message: `Posted the Verify button in #${channel.name}.` };
 }
 

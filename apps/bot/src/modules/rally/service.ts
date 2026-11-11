@@ -17,6 +17,7 @@ import {
 } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
 import { brandEmbed } from "../../lib/embeds.js";
+import { toV2 } from "../../lib/v2.js";
 import { lfgCard, safeText } from "./card.js";
 import { voiceChannelName } from "./parse.js";
 import { postWording } from "./templates.js";
@@ -36,7 +37,9 @@ export async function refreshCard(
     const channel = guild.channels.cache.get(post.channelId);
     if (!channel?.isTextBased()) return;
     const message = await channel.messages.fetch(post.messageId);
-    await message.edit(lfgCard(post, members ?? (await listActiveMembers(ctx.db, post.id))));
+    await message.edit(
+      toV2(lfgCard(post, members ?? (await listActiveMembers(ctx.db, post.id))), { edit: true }),
+    );
   } catch (error) {
     ctx.logger.debug("Could not refresh an LFG card", { postId: post.id, error });
   }
@@ -104,19 +107,21 @@ export async function announceFullSquad(
 
   const pings = memberIds.map((id) => `<@${id}>`).join(" ");
   await channel
-    .send({
-      // Mentions outside the embed, so they notify; the words inside it.
-      content: pings,
-      embeds: [
-        brandEmbed({
-          title: safeText(post.title),
-          description: `${safeText(renderWording(w.full, w, { title: post.title }))}${voiceId ? `\nVoice is open: <#${voiceId}>` : ""}`,
-          module: "rally",
-        }),
-      ],
-      // Ping the squad and nobody else.
-      allowedMentions: { users: memberIds, roles: [], parse: [] },
-    })
+    .send(
+      toV2({
+        // Mentions outside the embed, so they notify; the words inside it.
+        content: pings,
+        embeds: [
+          brandEmbed({
+            title: safeText(post.title),
+            description: `${safeText(renderWording(w.full, w, { title: post.title }))}${voiceId ? `\nVoice is open: <#${voiceId}>` : ""}`,
+            module: "rally",
+          }),
+        ],
+        // Ping the squad and nobody else.
+        allowedMentions: { users: memberIds, roles: [], parse: [] },
+      }),
+    )
     .catch((error: unknown) => ctx.logger.warn("Could not announce a full squad", { error }));
 }
 

@@ -11,6 +11,7 @@ import type { Client, Guild } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
 import { brandEmbed } from "../../lib/embeds.js";
 import { safeText } from "../../lib/text.js";
+import { toV2 } from "../../lib/v2.js";
 import { opsCard, shortages } from "./card.js";
 
 export async function refreshOpsCard(
@@ -24,7 +25,9 @@ export async function refreshOpsCard(
     const channel = guild.channels.cache.get(event.channelId);
     if (!channel?.isTextBased()) return;
     const message = await channel.messages.fetch(event.messageId);
-    await message.edit(opsCard(event, signups ?? (await listSignups(ctx.db, event.id))));
+    await message.edit(
+      toV2(opsCard(event, signups ?? (await listSignups(ctx.db, event.id))), { edit: true }),
+    );
   } catch (error) {
     ctx.logger.debug("Could not refresh an Ops card", { eventId: event.id, error });
   }
@@ -38,11 +41,13 @@ async function sendTo(guild: Guild, channelId: string, text: string, userIds: st
   const channel = guild.channels.cache.get(channelId);
   if (!channel?.isSendable()) return;
   await channel
-    .send({
-      content: userIds.map((id) => `<@${id}>`).join(" "),
-      embeds: [brandEmbed({ description: text, module: "ops" })],
-      allowedMentions: { users: userIds, roles: [], parse: [] },
-    })
+    .send(
+      toV2({
+        content: userIds.map((id) => `<@${id}>`).join(" "),
+        embeds: [brandEmbed({ description: text, module: "ops" })],
+        allowedMentions: { users: userIds, roles: [], parse: [] },
+      }),
+    )
     .catch(() => {});
 }
 
@@ -90,7 +95,7 @@ export async function sweepOps(ctx: BotContext, client: Client<true>) {
     const channel = guild?.channels.cache.get(event.channelId);
     if (!channel?.isSendable()) continue;
     try {
-      const message = await channel.send(opsCard(event, []));
+      const message = await channel.send(toV2(opsCard(event, [])));
       await setOpsMessage(ctx.db, event.id, message.id);
     } catch (error) {
       ctx.logger.warn("Could not post next week's raid", { eventId: event.id, error });

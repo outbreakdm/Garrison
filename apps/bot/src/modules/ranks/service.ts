@@ -4,6 +4,7 @@ import type { GuildMember, Message } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
 import { brandEmbed } from "../../lib/embeds.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
+import { toV2 } from "../../lib/v2.js";
 import { earnedRewards, rewardProblem, XP_COOLDOWN_MS, XP_MAX, XP_MIN } from "./rules.js";
 
 const SETTINGS_TTL_MS = 60_000;
@@ -95,5 +96,5 @@ export async function handleMessage(ctx: BotContext, message: Message) {
       : message.channel;
   // The client's default allowedMentions means this never pings.
   if (target?.isSendable())
-    await target.send({ embeds: [brandEmbed({ description: text })] }).catch(() => {});
+    await target.send(toV2({ embeds: [brandEmbed({ description: text })] })).catch(() => {});
 }

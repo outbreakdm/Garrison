@@ -2,6 +2,7 @@ import { type Interaction, MessageFlags } from "discord.js";
 import { buttons, commandsByName, modals } from "./commands/index.js";
 import type { BotContext } from "./commands/types.js";
 import { failed } from "./lib/embeds.js";
+import { toV2 } from "./lib/v2.js";
 
 const FAILURE = "Something went wrong on my side. Try again in a moment.";
 
@@ -19,6 +20,7 @@ export async function handleInteraction(interaction: Interaction, ctx: BotContex
   }
   if (!interaction.isChatInputCommand() && !interaction.isButton() && !interaction.isModalSubmit())
     return;
+  useComponentsV2(interaction);
 
   if (!interaction.inCachedGuild()) {
     if (interaction.isRepliable()) {
@@ -62,6 +64,26 @@ export async function handleInteraction(interaction: Interaction, ctx: BotContex
     } catch {
       // The interaction token may have expired; nothing more we can do.
     }
+  }
+}
+
+/**
+ * Every reply goes out in Discord's layout components (see lib/v2.ts), whatever
+ * the command built. Edits of an existing message clear its old-style text.
+ */
+const SENDS = { reply: false, followUp: false, editReply: true, update: true } as const;
+
+function useComponentsV2(interaction: Interaction) {
+  const target = interaction as unknown as Record<string, unknown>;
+  for (const [name, edit] of Object.entries(SENDS)) {
+    const original = target[name];
+    if (typeof original !== "function") continue;
+    target[name] = (payload: unknown, ...rest: unknown[]) =>
+      (original as (...a: unknown[]) => Promise<unknown>).call(
+        interaction,
+        toV2(payload, { edit }),
+        ...rest,
+      );
   }
 }
 

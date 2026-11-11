@@ -18,6 +18,7 @@ import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { BotContext, ButtonHandler, Command } from "../../commands/types.js";
 import { brandEmbed, done, failed, info } from "../../lib/embeds.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
+import { toV2 } from "../../lib/v2.js";
 import { lfgCard, RALLY_PREFIX, safeText } from "./card.js";
 import { LIFETIME_AFTER_START_MS, matchSlot, parseSlots, parseStart } from "./parse.js";
 import { announceFullSquad, refreshCard, syncVoiceAccess } from "./service.js";
@@ -252,18 +253,20 @@ export async function notifyTemplateRole(
   if (!(await claimRallyNotify(ctx.db, guild.id, post.templateId ?? "", post.id))) return;
   const w = postWording(post.wording);
   await channel
-    .send({
-      // The role outside the embed, so it notifies; the words inside it.
-      content: `<@&${role.id}>`,
-      embeds: [
-        brandEmbed({
-          title: `${safeText(renderWording("New {group}", w))}: ${safeText(post.title)}`,
-          description: `[Open the card to join](${url})`,
-          module: "rally",
-        }),
-      ],
-      allowedMentions: { roles: [role.id], users: [], parse: [] },
-    })
+    .send(
+      toV2({
+        // The role outside the embed, so it notifies; the words inside it.
+        content: `<@&${role.id}>`,
+        embeds: [
+          brandEmbed({
+            title: `${safeText(renderWording("New {group}", w))}: ${safeText(post.title)}`,
+            description: `[Open the card to join](${url})`,
+            module: "rally",
+          }),
+        ],
+        allowedMentions: { roles: [role.id], users: [], parse: [] },
+      }),
+    )
     .catch((error: unknown) => ctx.logger.warn("Could not notify a Rally role", { error }));
 }
 
