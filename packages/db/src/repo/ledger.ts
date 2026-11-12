@@ -4,7 +4,15 @@ import { type LedgerSettings, ledgerEvents, ledgerSettings, type NewLedgerEvent 
 
 export async function getLedgerSettings(db: Db, guildId: string): Promise<LedgerSettings> {
   const [row] = await db.select().from(ledgerSettings).where(eq(ledgerSettings.guildId, guildId));
-  return row ?? { guildId, channelId: null, retentionDays: 30, updatedAt: new Date(0) };
+  return (
+    row ?? {
+      guildId,
+      channelId: null,
+      retentionDays: 30,
+      keepMessageText: false,
+      updatedAt: new Date(0),
+    }
+  );
 }
 
 export async function updateLedgerSettings(

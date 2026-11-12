@@ -1143,3 +1143,21 @@
     max-width: none;
   }
 }
+
+/* Ledger: a deleted or edited message's text, quoted under the event. */
+.ledger-text {
+  margin: var(--space-1) 0 0;
+  padding: 2px 0 2px var(--space-3);
+  border-left: 2px solid var(--line);
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ledger-text--before {
+  color: var(--text-muted);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--text-muted) 60%, transparent);
+}
+.ledger-what {
+  min-width: 260px;
+}

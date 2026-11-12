@@ -56,6 +56,8 @@ export async function record(ctx: BotContext, guild: Guild, draft: LedgerDraft) 
       draft.channelId ? `in <#${draft.channelId}>` : null,
     ].filter(Boolean);
     const reason = typeof draft.data.reason === "string" ? safeText(draft.data.reason) : null;
+    const quote = (label: string, v: unknown) =>
+      typeof v === "string" && v ? [{ text: `**${label}:** ${safeText(v)}` }] : [];
     await channel.send(
       cardMessage({
         tone: toneFor(draft.type),
@@ -64,6 +66,9 @@ export async function record(ctx: BotContext, guild: Guild, draft: LedgerDraft) 
         blocks: [
           ...(who.length ? [{ text: who.join(" ") }] : []),
           ...(reason ? [{ text: `**Reason:** ${reason}` }] : []),
+          ...quote("Text", draft.data.text),
+          ...quote("Before", draft.data.before),
+          ...quote("After", draft.data.after),
         ],
         module: "ledger",
         ref: `#${event.id}`,
@@ -120,18 +125,55 @@ export function onMemberLeave(ctx: BotContext, member: GuildMember | PartialGuil
   return record(ctx, member.guild, draft("member_leave", `${name} left`, { targetId: member.id }));
 }
 
-export function onMessageDelete(ctx: BotContext, message: Message | PartialMessage) {
-  if (!message.guild || message.author?.bot) return Promise.resolve();
-  // Author and channel only. Content is never stored.
+/** Longest message text a Ledger event keeps (Discord allows 4000 with Nitro). */
+export const LEDGER_TEXT_MAX = 1500;
+const clip = (text: string) =>
+  text.length > LEDGER_TEXT_MAX ? `${text.slice(0, LEDGER_TEXT_MAX)}…` : text;
+
+/**
+ * A deleted message: author and channel, plus its text when the server keeps message
+ * text and Garrison saw the message (only messages seen since its last restart are
+ * cached; older ones arrive without content).
+ */
+export async function onMessageDelete(ctx: BotContext, message: Message | PartialMessage) {
+  if (!message.guild || message.author?.bot) return;
   const who = message.author
     ? `A message by ${message.author.username}`
     : "A message (author unknown, it wasn't cached)";
-  return record(
+  const keep = (await cachedLedgerSettings(ctx, message.guild.id)).keepMessageText;
+  const text = keep && !message.partial ? message.content : "";
+  const files =
+    keep && !message.partial ? [...message.attachments.values()].map((a) => a.name) : [];
+  await record(
     ctx,
     message.guild,
     draft("message_delete", `${who} was deleted`, {
       targetId: message.author?.id ?? null,
       channelId: message.channelId,
+      data: {
+        ...(text ? { text: clip(text) } : {}),
+        ...(files.length ? { files: files.slice(0, 10) } : {}),
+      },
+    }),
+  );
+}
+
+/** An edited message, recorded only when the server keeps message text. */
+export async function onMessageEdit(
+  ctx: BotContext,
+  before: Message | PartialMessage,
+  after: Message | PartialMessage,
+) {
+  if (!after.guild || before.partial || after.partial || after.author.bot) return;
+  if (before.content === after.content) return; // An embed or pin changed, not the text.
+  if (!(await cachedLedgerSettings(ctx, after.guild.id)).keepMessageText) return;
+  await record(
+    ctx,
+    after.guild,
+    draft("message_edit", `${after.author.username} edited a message`, {
+      targetId: after.author.id,
+      channelId: after.channelId,
+      data: { before: clip(before.content), after: clip(after.content), messageId: after.id },
     }),
   );
 }

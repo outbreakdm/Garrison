@@ -95,7 +95,8 @@ After pulling this change, run `pnpm commands:deploy` once: `/lfg create` has a 
 
 ### Ledger
 
-- Records **who did what, when**: joins and leaves (with account age), kicks, bans, timeouts, role and nickname changes, channel, role and permission edits (with exactly which permissions changed), invites, webhooks, bots added, deleted messages (author and channel), and voice joins, leaves and moves. The actor comes from Discord's audit log. **Message content is never stored.**
+- Records **who did what, when**: joins and leaves (with account age), kicks, bans, timeouts, role and nickname changes, channel, role and permission edits (with exactly which permissions changed), invites, webhooks, bots added, deleted messages (author and channel), and voice joins, leaves and moves. The actor comes from Discord's audit log.
+- **Message text is off by default.** With _Keep the text of deleted and edited messages_ on (Ledger settings on the dashboard), a deleted message's event keeps its text (up to 1,500 characters, and only for messages Garrison saw since its last restart) and edits are logged with the text before and after. The text lives in the event and is removed with it at retention.
 - `/logs settings channel:#mod-log` posts each event there; `/logs search user:@member` shows a member's recent events. The dashboard's Ledger page filters by member and event type, with paging.
 - Events are kept 30 days by default (`keep_days` 7–365). Expired events are removed by a database function that the bot may call but that only deletes rows past retention, and never newer than 7 days, so a compromised bot can't erase recent history.
 

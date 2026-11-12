@@ -119,11 +119,19 @@ describe("ledgerForm", () => {
   it.each([["6"], ["366"], ["30.5"], ["x"]])("rejects retention %j", (v) => {
     expect(ledgerForm.safeParse({ channelId: "", retentionDays: v }).success).toBe(false);
   });
-  it("accepts 7..365 and no channel", () => {
-    expect(ledgerForm.parse({ channelId: "", retentionDays: "90" })).toEqual({
+  it("accepts 7..365 and no channel, with message text off unless ticked", () => {
+    // An unticked box arrives as undefined (see pick).
+    expect(
+      ledgerForm.parse({ channelId: "", retentionDays: "90", keepMessageText: undefined }),
+    ).toEqual({
       channelId: null,
       retentionDays: 90,
+      keepMessageText: false,
     });
+    expect(
+      ledgerForm.parse({ channelId: "", retentionDays: "90", keepMessageText: "on" })
+        .keepMessageText,
+    ).toBe(true);
   });
 });
 

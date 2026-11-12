@@ -53,7 +53,7 @@ const SECURITY = [
   "Garrison asks only for the permissions it uses, never Administrator, and /health tells you when something's off.",
   "Anti-nuke and its trusted list are owner-only, so a compromised admin can't switch them off first.",
   "AI builds only add channels and roles, new roles get no permissions, and a person approves every plan.",
-  "Message text is kept only for ticket transcripts. Logs keep who did what. Both expire on a schedule.",
+  "Message text is kept only for ticket transcripts, and in logs if you turn it on. All of it expires on a schedule you set.",
   "The dashboard signs in with Discord, keeps no Discord token, and re-checks your permissions on every page.",
 ];
 
@@ -72,7 +72,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "What does Garrison store about my members?",
-    a: "Who did what and when, for cases and logs, kept 30 days by default (you choose 7 to 365). Tickets keep their transcript, the messages written in them, for 30 days after closing, or 365 on Pro.",
+    a: "Who did what and when, for cases and logs, kept 30 days by default (you choose 7 to 365). Logs keep the text of deleted and edited messages only if you turn that on. Tickets keep their transcript for 30 days after closing, or 365 on Pro.",
   },
   {
     q: "Can players use it too?",
@@ -722,7 +722,10 @@ export default async function Home() {
                 <Art slot="lp-icon-ledger" className="lp-also__icon" decorative />
                 <strong>{modules.ledger.name}</strong>
                 <span>{modules.ledger.plain}</span>
-                <p>Who did what and when, searchable by member. Never message content.</p>
+                <p>
+                  Who did what and when, searchable by member, with deleted and edited messages if
+                  you want them.
+                </p>
               </li>
               <li>
                 <Art slot="lp-icon-ranks" className="lp-also__icon" decorative />

@@ -20,6 +20,7 @@ import {
   onMemberJoin,
   onMemberLeave,
   onMessageDelete,
+  onMessageEdit,
   onVoiceUpdate,
 } from "./modules/ledger/service.js";
 import { sweepOps } from "./modules/ops/service.js";
@@ -145,7 +146,10 @@ client.on(Events.MessageCreate, (message) => {
     logger.error("Ticket transcript failed", { guildId: message.guildId, error }),
   );
 });
-client.on(Events.MessageUpdate, (_before, after) => {
+client.on(Events.MessageUpdate, (before, after) => {
+  onMessageEdit(ctx, before, after).catch((error) =>
+    logger.error("Ledger edit failed", { guildId: after.guildId, error }),
+  );
   onTicketEdit(ctx, after).catch((error) =>
     logger.error("Ticket edit failed", { guildId: after.guildId, error }),
   );
@@ -172,7 +176,9 @@ client.on(Events.GuildMemberRemove, (member) => {
   );
 });
 client.on(Events.MessageDelete, (message) => {
-  void onMessageDelete(ctx, message);
+  onMessageDelete(ctx, message).catch((error) =>
+    logger.error("Ledger delete failed", { guildId: message.guildId, error }),
+  );
   onTicketDelete(ctx, message).catch((error) =>
     logger.error("Ticket delete failed", { guildId: message.guildId, error }),
   );

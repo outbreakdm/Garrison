@@ -111,6 +111,7 @@ export const ledgerTypeLabels: Record<string, string> = {
   bot_add: "Bot added",
   server_update: "Server edited",
   message_delete: "Message deleted",
+  message_edit: "Message edited",
   message_delete_by_mod: "Message removed",
   message_bulk_delete: "Bulk delete",
   voice_join: "Voice join",

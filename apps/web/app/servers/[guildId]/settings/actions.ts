@@ -183,7 +183,9 @@ export async function saveRanks(form: FormData) {
 
 export async function saveLedger(form: FormData) {
   const { guild } = await authorize(form);
-  const parsed = ledgerForm.safeParse(pick(form, ["channelId", "retentionDays"]));
+  const parsed = ledgerForm.safeParse(
+    pick(form, ["channelId", "retentionDays", "keepMessageText"]),
+  );
   if (!parsed.success) failed(guild.id, PLACES.ledger, "range");
   else if (!(await channelBelongs(guild.id, parsed.data.channelId)))
     failed(guild.id, PLACES.ledger, "bad_channel");

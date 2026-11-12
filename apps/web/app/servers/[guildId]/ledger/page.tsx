@@ -10,6 +10,7 @@ import {
   isEditing,
   SettingsNotice,
   SettingsPanel,
+  Switch,
 } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { listTextChannels } from "@/lib/discord";
@@ -54,7 +55,12 @@ export default async function LedgerPage({
       <div className="page-head">
         <div>
           <h1>Event log</h1>
-          <p>Who did what, kept {settings.retentionDays} days. Message content is never stored.</p>
+          <p>
+            Who did what, kept {settings.retentionDays} days.{" "}
+            {settings.keepMessageText
+              ? "The text of deleted and edited messages is kept too."
+              : "Message text isn't kept."}
+          </p>
         </div>
         <a className="g-btn g-btn--secondary" href="?edit=settings#settings">
           <GearIcon />
@@ -76,6 +82,7 @@ export default async function LedgerPage({
                 : "Dashboard only",
           },
           { label: "Kept for", value: `${settings.retentionDays} days` },
+          { label: "Message text", value: settings.keepMessageText ? "Kept" : "Not kept" },
         ]}
       >
         <form action={saveLedger} className="settings-form" key={settings.updatedAt.getTime()}>
@@ -105,6 +112,12 @@ export default async function LedgerPage({
               <span className="g-help">7 to 365. Older events are removed automatically.</span>
             </label>
           </div>
+          <Switch
+            name="keepMessageText"
+            defaultChecked={settings.keepMessageText}
+            label="Keep the text of deleted and edited messages"
+            help="Lets moderators see what was removed or changed. Garrison only has the text of messages it saw since its last restart, and the text goes with the event when it expires."
+          />
           <FormFoot label="Save Ledger settings" guildId={guild.id} />
         </form>
       </SettingsPanel>
@@ -165,10 +178,21 @@ export default async function LedgerPage({
                   <td>
                     <span className="g-badge">{ledgerTypeLabels[e.type] ?? e.type}</span>
                   </td>
-                  <td>
+                  <td className="ledger-what">
                     {e.summary}
                     {typeof e.data.reason === "string" ? (
                       <div className="muted">Reason: {e.data.reason}</div>
+                    ) : null}
+                    {typeof e.data.text === "string" ? (
+                      <blockquote className="ledger-text">{e.data.text}</blockquote>
+                    ) : null}
+                    {typeof e.data.before === "string" && typeof e.data.after === "string" ? (
+                      <div className="ledger-edit">
+                        <blockquote className="ledger-text ledger-text--before">
+                          {e.data.before}
+                        </blockquote>
+                        <blockquote className="ledger-text">{e.data.after}</blockquote>
+                      </div>
                     ) : null}
                   </td>
                   <td className="mono">

@@ -8,8 +8,8 @@ then updates **Status** and the **Log** before stopping.
 ## Pick up here
 
 - **Now:** Phases 3 to 8 are code done, committed, not pushed or deployed. **Before
-  deploying:** apply migrations `0023_role_menus`, `0024_welcome`, `0025_messages` and
-  `0026_tickets` to production (`DATABASE_MIGRATION_URL` set, `pnpm db:migrate`, see
+  deploying:** apply migrations `0023_role_menus`, `0024_welcome`, `0025_messages`,
+  `0026_tickets` and `0027_ledger_text` to production (`DATABASE_MIGRATION_URL` set, `pnpm db:migrate`, see
   DEPLOY.md); the bot preflight checks for their tables, so a deploy before them stops at
   preflight. **Message Content Intent must be on** in the Developer Portal (Bot → Privileged
   Gateway Intents): the bot now asks for it, and login fails without it.
@@ -20,7 +20,7 @@ then updates **Status** and the **Log** before stopping.
   claim and close it, and read its transcript on the dashboard. Garrison's invite now asks for
   Change Nickname, so existing servers see it in /health until they re-invite or tick it on
   Garrison's role. Next: Phase 9 (custom rank cards), 10 (stream alerts), 11 (giveaways and
-  starboard), and Ledger's message text; Phase 2 (Stripe) once a price is set.
+  starboard); Phase 2 (Stripe) once a price is set.
 - **Branch:** `dashboard-first` (everything up to commit `1aed992` is deployed). Later
   commits (roadmap, plan list, staff and comps) are committed but not pushed or deployed.
 - **Before pushing:** `pnpm -r exec tsc --noEmit`, `pnpm test`, `pnpm exec biome check apps packages`.
@@ -315,7 +315,9 @@ Later phases get their checklists when they start.
 - **Gatehouse:** [ ] captcha verification on the website · [ ] alt-account warning signs ·
   [ ] full server backup and restore (channels, roles, permissions)
 - **Ledger:** [ ] invite tracking · [ ] voice joins and leaves · [ ] nickname changes ·
-  [ ] CSV export
+  [ ] CSV export · [x] the text of deleted and edited messages (off by default, a switch in
+  Ledger settings; migration `0027_ledger_text`; only for messages Garrison saw since its last
+  restart, capped at 1,500 characters, removed with the event)
 - **Rally:** [ ] LFG board on the dashboard for players · [ ] no-show tracking ·
   [ ] squads that repeat
 - **Ops:** [ ] calendar view · [ ] calendar feed (ICS) · [ ] attendance history per member ·
@@ -392,4 +394,7 @@ Decided (2026-11-12, owner):
 - 2026-11-12: Owner decisions recorded (Open decisions). Phase 7 code done: tickets with
   transcripts, migration 0026, Message Content intent requested, the site's message-content
   promise and module count updated. Type-check, 390 tests and Biome pass; checked in the local
-  preview.
+  preview. Committed `28c3151`.
+- 2026-11-12: Ledger keeps the text of deleted and edited messages when a server turns it on
+  (migration 0027); the site's copy says so. Type-check, 392 tests and Biome pass; checked in
+  the local preview.

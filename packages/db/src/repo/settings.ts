@@ -41,7 +41,7 @@ export const EDITABLE_FIELDS = {
   ],
   ops: ["timezone"],
   ranks: ["enabled", "announce", "announceChannelId"],
-  ledger: ["channelId", "retentionDays"],
+  ledger: ["channelId", "retentionDays", "keepMessageText"],
   // The whole ladder is one value, so history and undo treat it as a unit.
   escalation: ["rules"],
   // Templates are checked with checkTemplates before they get here.

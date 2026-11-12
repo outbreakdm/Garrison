@@ -115,6 +115,7 @@ export const ledgerForm = z.object({
   channelId: snowflakeOrNone,
   // Matches /logs settings and the database check; ledger_prune() clamps to the same range.
   retentionDays: int(7, 365, "Keep events for"),
+  keepMessageText: checkbox,
 });
 
 /** Choices offered on the ladder form. Anything else is refused, whatever the browser sends. */
@@ -225,6 +226,7 @@ export const FIELD_LABELS: Record<string, string> = {
   announceChannelId: "Level-up channel",
   channelId: "Ledger channel",
   retentionDays: "Keep events (days)",
+  keepMessageText: "Keep message text",
   rules: "Escalation ladder",
   templates: "LFG templates",
   menus: "Role menus",

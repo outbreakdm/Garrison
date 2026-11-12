@@ -537,13 +537,19 @@ export const ledgerSettings = pgTable(
     channelId: text("channel_id"),
     /** Events older than this are removed by ledger_prune(). */
     retentionDays: integer("retention_days").notNull().default(30),
+    /**
+     * Keep the text of deleted and edited messages in their events (off by default).
+     * The text lives in the event's data and goes with it at retention.
+     */
+    keepMessageText: boolean("keep_message_text").notNull().default(false),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [check("ledger_retention_range", sql`${t.retentionDays} BETWEEN 7 AND 365`)],
 ).enableRLS();
 
 /**
- * Server events: who did what, when. Never message content. Rows are
+ * Server events: who did what, when. Message text only when the server turns on
+ * keep_message_text (deleted and edited messages, in `data`). Rows are
  * insert-only for the bot; only ledger_prune() removes them, and only once
  * they're past the server's retention.
  */
@@ -559,7 +565,7 @@ export const ledgerEvents = pgTable(
     actorId: text("actor_id"),
     targetId: text("target_id"),
     channelId: text("channel_id"),
-    /** Short, human summary written by the bot, e.g. "Added @Raider". No message content. */
+    /** Short, human summary written by the bot, e.g. "Added @Raider". Never message text. */
     summary: text("summary").notNull(),
     data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
