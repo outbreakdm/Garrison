@@ -519,11 +519,25 @@ Decided (2026-11-12, owner):
 - 2026-11-12: Backlog: Player page `/play/<server id>`: any member joins or leaves groups and
   signs up for raids from the web; the bot accepts lfg_join/lfg_leave/raid_signup/raid_withdraw
   without Manage Server, acting only on the requester.
-Ops calendar: five weeks of raids (weekly ones projected) on Rally and the player page, and an ICS feed behind a secret link the dashboard makes, resets or turns off. Migration 0042.
-Attendance and no-shows (Pro `ops.attendance`, opt-in): the minute sweep marks raid signups and group members seen in voice around the start, the rest missed; Rally shows 90-day reliability and staff can correct raid marks. Migration 0043.
-Weekly groups: `/lfg create repeat_weekly` reposts a group a week on (same local time) after its run, host reseated; `/lfg close stop_repeating` ends it. Needs `pnpm commands:deploy`. Migration 0044.
-Voice XP (10 a minute with company, shared cooldown) and XP boosts on Pro (role, channel or category, ×0 to ×3, max 10, history and undo). Migration 0045.
-Ranks seasons on Pro: a season_start request keeps the top 100 in rank_seasons and resets XP in one transaction; the Ranks page lists past seasons; the leaderboard hides 0 XP. Migration 0046.
-Barracks: `/link rs3` (RuneScape 3 hiscores, claimed) and Pro roles from game stats (up to 10 rules over shared accounts, synced every 30 min and on /link, unsafe roles never given). Needs `pnpm commands:deploy`. Migration 0047.
-Quartermaster server templates on Pro: save a server's layout to your account (5 max) and apply it in another server you own; owner-only, additive by name, permissions masked. Migration 0048.
-Depth backlog finished (Rally, Ops, Ranks, Barracks, Quartermaster). 470 tests, type-check and Biome clean. Nothing pushed or deployed.
+- 2026-11-12: Backlog: Ops calendar: five weeks of raids (weekly ones projected) on Rally and
+  the player page, and an ICS feed behind a secret link the dashboard makes, resets or turns
+  off. Migration 0042.
+- 2026-11-12: Backlog: Attendance and no-shows (Pro `ops.attendance`, opt-in): the minute sweep
+  marks raid signups and group members seen in voice around the start, the rest missed; Rally
+  shows 90-day reliability and staff can correct raid marks. Migration 0043.
+- 2026-11-12: Backlog: Weekly groups: `/lfg create repeat_weekly` reposts a group a week on
+  (same local time) after its run, host reseated; `/lfg close stop_repeating` ends it. Needs
+  `pnpm commands:deploy`. Migration 0044.
+- 2026-11-12: Backlog: Voice XP (10 a minute with company, shared cooldown) and XP boosts on Pro
+  (role, channel or category, ×0 to ×3, max 10, history and undo). Migration 0045.
+- 2026-11-12: Backlog: Ranks seasons on Pro: a season_start request keeps the top 100 in
+  rank_seasons and resets XP in one transaction; the Ranks page lists past seasons; the
+  leaderboard hides 0 XP. Migration 0046.
+- 2026-11-12: Backlog: Barracks: `/link rs3` (RuneScape 3 hiscores, claimed) and Pro roles from
+  game stats (up to 10 rules over shared accounts, synced every 30 min and on /link, unsafe
+  roles never given). Needs `pnpm commands:deploy`. Migration 0047.
+- 2026-11-12: Backlog: Quartermaster server templates on Pro: save a server's layout to your
+  account (5 max) and apply it in another server you own; owner-only, additive by name,
+  permissions masked. Migration 0048.
+- 2026-11-12: Backlog: Depth backlog finished (Rally, Ops, Ranks, Barracks, Quartermaster). 470
+  tests, type-check and Biome clean. Nothing pushed or deployed.
