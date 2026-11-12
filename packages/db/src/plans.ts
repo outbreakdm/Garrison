@@ -1,0 +1,61 @@
+/**
+ * Garrison's plans, and the one list of everything they gate.
+ *
+ * If a limit or feature isn't a key in FEATURES, it isn't paywalled. The bot, the
+ * dashboard, the pricing table and the staff page all read this list, so a new gate
+ * starts here. Rule: everything a server needs to stay safe is free; Pro sells
+ * customization, branding, scale and history. See docs/ROADMAP.md.
+ */
+
+export const PLANS = ["free", "pro"] as const;
+export type GuildPlan = (typeof PLANS)[number];
+
+type Module = "rally" | "ops" | "ranks" | "watch" | "gatehouse" | "ledger" | "barracks" | "qm";
+
+interface Feature<T> {
+  module: Module;
+  /** What the key controls, in plain words, for the Plan page and pricing table. */
+  about: string;
+  free: T;
+  pro: T;
+}
+
+/** Only gates the code enforces today. Planned ones live in docs/ROADMAP.md until built. */
+export const FEATURES = {
+  "rally.templates": {
+    module: "rally",
+    about: "LFG templates",
+    free: 3,
+    pro: 25,
+  },
+  "rally.notifyRole": {
+    module: "rally",
+    about: "Notify a role when a group is posted",
+    free: false,
+    pro: true,
+  },
+} satisfies Record<string, Feature<number> | Feature<boolean>>;
+
+export type FeatureKey = keyof typeof FEATURES;
+export type Entitlements = { [K in FeatureKey]: (typeof FEATURES)[K]["free"] };
+
+/**
+ * What a server can do. `staff` is the owner bypass (Discord user IDs in the
+ * GARRISON_STAFF_IDS secret): staff get Pro everywhere, whatever the server pays for.
+ */
+export function entitlements(plan: GuildPlan, opts: { staff?: boolean } = {}): Entitlements {
+  const tier: GuildPlan = opts.staff ? "pro" : plan;
+  return Object.fromEntries(
+    Object.entries(FEATURES).map(([key, feature]) => [key, feature[tier]]),
+  ) as Entitlements;
+}
+
+/** Parse the comma-separated GARRISON_STAFF_IDS value into a set of Discord user IDs. */
+export function parseStaffIds(raw: string | undefined): ReadonlySet<string> {
+  return new Set(
+    (raw ?? "")
+      .split(",")
+      .map((id) => id.trim())
+      .filter((id) => /^\d{17,20}$/.test(id)),
+  );
+}

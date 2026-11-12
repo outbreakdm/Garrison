@@ -4,6 +4,8 @@
  * templates with exactly the same rules.
  */
 
+import { FEATURES, type GuildPlan } from "./plans";
+
 export interface LfgSlotGroupLike {
   name: string;
   count: number;
@@ -158,12 +160,15 @@ export interface RallyTemplate {
   isDefault: boolean;
 }
 
-export const TEMPLATE_HARD_MAX = 25;
-export const PLAN_LIMITS = {
-  free: { templates: 3, notifyRole: false },
-  pro: { templates: TEMPLATE_HARD_MAX, notifyRole: true },
-} as const;
-export type GuildPlan = keyof typeof PLAN_LIMITS;
+/** Rally's view of the plan list in plans.ts; kept so existing callers don't change. */
+export const TEMPLATE_HARD_MAX = FEATURES["rally.templates"].pro;
+export const PLAN_LIMITS: Record<GuildPlan, { templates: number; notifyRole: boolean }> = {
+  free: {
+    templates: FEATURES["rally.templates"].free,
+    notifyRole: FEATURES["rally.notifyRole"].free,
+  },
+  pro: { templates: TEMPLATE_HARD_MAX, notifyRole: FEATURES["rally.notifyRole"].pro },
+};
 
 /** A role notification goes out at most this often per template. */
 export const NOTIFY_COOLDOWN_MS = 15 * 60_000;

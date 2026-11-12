@@ -1,6 +1,7 @@
 import { and, asc, eq, gt, inArray, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import type { Db } from "../client";
-import type { GuildPlan, RallyWording } from "../rally";
+import type { GuildPlan } from "../plans";
+import type { RallyWording } from "../rally";
 import { NOTIFY_COOLDOWN_MS } from "../rally";
 import {
   guildPlans,

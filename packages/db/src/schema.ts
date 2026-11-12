@@ -15,7 +15,8 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { GuildPlan, RallyTemplate, RallyWording } from "./rally";
+import type { GuildPlan } from "./plans";
+import type { RallyTemplate, RallyWording } from "./rally";
 
 /**
  * Every table enables row-level security with no policies. The bot and the

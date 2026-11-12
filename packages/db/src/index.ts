@@ -1,4 +1,5 @@
 export * from "./client";
+export * from "./plans";
 export * from "./rally";
 export * from "./repo/actions";
 export * from "./repo/barracks";
