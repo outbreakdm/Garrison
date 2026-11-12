@@ -20,6 +20,7 @@ const ITEMS = [
     plain: modules.quartermaster.plain,
   },
   { group: null, href: "/settings", name: "Settings", plain: null },
+  { group: null, href: "/plan", name: "Plan", plain: null },
 ];
 
 export function ServerNav({ guildId }: { guildId: string }) {

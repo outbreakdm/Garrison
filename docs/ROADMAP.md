@@ -7,7 +7,8 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **Now:** Phase 1, plans foundation. Next: the dashboard **Plan** page, then the staff page.
+- **Now:** Phase 1, plans foundation. Next: check the Plan page in the local preview, then
+  the staff page (every server's plan in one list).
 - **Branch:** `dashboard-first` (everything up to commit `1aed992` is deployed). Later
   commits (roadmap, plan list, staff and comps) are committed but not pushed or deployed.
 - **Before pushing:** `pnpm -r exec tsc --noEmit`, `pnpm test`, `pnpm exec biome check apps packages`.
@@ -137,7 +138,10 @@ Card accent colour and footer text come from the same settings, read by `lib/car
       bot does later with nobody acting, so the bypass is server-level.)
 - [ ] Apply migration `0022_plans_comps` to production and add the owner's row to
       `platform_staff` (owner runs the SQL; see Owner bypass above).
-- [ ] Dashboard **Plan** page per server: current plan, the Free vs Pro table from the list.
+- [x] Dashboard **Plan** page per server (`/servers/:id/plan`, in the nav after Settings):
+      current plan, the Free vs Pro table from `FEATURES`, and for staff a "Give this server
+      Pro for free" / "Put back on Free" form (`plan/actions.ts`, re-checks access and staff).
+      Not yet checked in the browser.
 - [ ] Staff admin page: every server's plan; give or remove a comp.
 
 ### Phase 3: shared card editor
@@ -200,3 +204,6 @@ Later phases get their checklists when they start.
 - 2026-11-11: Plan feature list (`packages/db/src/plans.ts`) and tests added; Rally reads its
   limits from it. Type-check, all tests and Biome pass. Committed `6504bbf`.
 - 2026-11-11: Staff and complimentary plans in the database (migration 0022, repo, tests).
+  Committed `2a3141d`.
+- 2026-11-11: Plan page on the dashboard with the staff comp form. Type-check, 344 tests and
+  Biome pass.
