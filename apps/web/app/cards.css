@@ -1384,3 +1384,7 @@
   height: 20px;
   object-fit: contain;
 }
+.swatch__chip--off {
+  background: var(--surface-sunken);
+  border-style: dashed;
+}

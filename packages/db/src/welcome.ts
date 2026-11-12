@@ -11,6 +11,7 @@
 import { blankCard, type CustomCard, lockedCardFields, parseCard } from "./cards";
 import { type Entitlements, FEATURES } from "./plans";
 import type { Parsed } from "./rally";
+import { isPresetBackground, isRankImage } from "./rank-cards";
 
 export interface WelcomeConfig {
   joinEnabled: boolean;
@@ -22,6 +23,8 @@ export interface WelcomeConfig {
   dmEnabled: boolean;
   dmCard: CustomCard;
   joinRoleIds: string[];
+  /** Pro: a drawn welcome image (background key or Discord image link). Null: off. */
+  joinImage: string | null;
 }
 
 /** Words in a card that become the member's details when it's sent. */
@@ -53,6 +56,7 @@ export const DEFAULT_WELCOME: WelcomeConfig = {
     blocks: [{ kind: "text", text: "Hi {name}. Read the rules channel first, then say hello." }],
   },
   joinRoleIds: [],
+  joinImage: null,
 };
 
 export interface WelcomeVars {
@@ -114,6 +118,11 @@ export function readWelcome(
     const c = channel(raw[key], "");
     if (c.ok) out[key] = c.value;
   }
+  if (
+    typeof raw.joinImage === "string" &&
+    (isPresetBackground(raw.joinImage) || isRankImage(raw.joinImage))
+  )
+    out.joinImage = raw.joinImage;
   if (Array.isArray(raw.joinRoleIds))
     out.joinRoleIds = raw.joinRoleIds.filter(
       (id): id is string => typeof id === "string" && SNOWFLAKE.test(id),
@@ -170,6 +179,19 @@ export function checkWelcome(
         error: `Free servers give ${limit} role on join. Garrison Pro gives up to ${JOIN_ROLES_MAX}.`,
       };
     out.joinRoleIds = unique;
+  }
+  if ("joinImage" in patch) {
+    const v = patch.joinImage;
+    if (v !== null && v !== "" && v !== undefined) {
+      if (typeof v !== "string" || (!isPresetBackground(v) && !isRankImage(v)))
+        return {
+          ok: false,
+          error: "Pick a background, or paste a link to an image uploaded to Discord.",
+        };
+      if (!ent["welcome.image"] && v !== before.joinImage)
+        return { ok: false, error: "The welcome image is part of Garrison Pro." };
+      out.joinImage = v;
+    } else out.joinImage = null;
   }
   const next = { ...before, ...out };
   if (next.joinEnabled && !next.joinChannelId)

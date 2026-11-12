@@ -53,6 +53,25 @@ describe("welcome rules", () => {
     });
   });
 
+  it("keeps the welcome image for Pro, from a preset or Discord only", () => {
+    const free = entitlements("free");
+    const pro = entitlements("pro");
+    expect(checkWelcome({ joinImage: "frost" }, free, DEFAULT_WELCOME).ok).toBe(false);
+    expect(checkWelcome({ joinImage: "frost" }, pro, DEFAULT_WELCOME)).toMatchObject({
+      ok: true,
+      value: { joinImage: "frost" },
+    });
+    expect(checkWelcome({ joinImage: "https://evil.example/a.png" }, pro, DEFAULT_WELCOME).ok).toBe(
+      false,
+    );
+    expect(
+      checkWelcome({ joinImage: null }, free, { ...DEFAULT_WELCOME, joinImage: "frost" }),
+    ).toMatchObject({
+      ok: true,
+      value: { joinImage: null },
+    });
+  });
+
   it("falls back to defaults for anything stored that doesn't parse", () => {
     expect(readWelcome(null)).toEqual(DEFAULT_WELCOME);
     expect(readWelcome({ joinCard: { nope: 1 }, joinRoleIds: ["x", R[0]] })).toEqual({

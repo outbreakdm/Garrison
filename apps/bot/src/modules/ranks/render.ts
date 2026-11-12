@@ -27,7 +27,7 @@ export const CARD_HEIGHT = 300;
 
 const require = createRequire(import.meta.url);
 let fontsReady = false;
-function registerFonts() {
+export function registerFonts() {
   if (fontsReady) return;
   const font = (pkg: string, file: string, family: string) =>
     GlobalFonts.registerFromPath(require.resolve(`@expo-google-fonts/${pkg}/${file}`), family);
@@ -56,7 +56,7 @@ const IMAGE_MAX_BYTES = 4 * 1024 * 1024;
 const IMAGE_TIMEOUT_MS = 5000;
 
 /** Fetch an image from Discord's CDN only; anything else, too big or too slow is skipped. */
-async function fetchImage(url: string | null): Promise<Image | null> {
+export async function fetchImage(url: string | null): Promise<Image | null> {
   if (!url || !isRankImage(url)) return null;
   try {
     const res = await fetch(url, {
@@ -76,7 +76,7 @@ async function fetchImage(url: string | null): Promise<Image | null> {
 }
 
 /** Draw `img` to fill the box, cropping the overflow (CSS object-fit: cover). */
-function cover(ctx: SKRSContext2D, img: Image, w: number, h: number) {
+export function cover(ctx: SKRSContext2D, img: Image, w: number, h: number) {
   const scale = Math.max(w / img.width, h / img.height);
   const dw = img.width * scale;
   const dh = img.height * scale;
@@ -84,7 +84,7 @@ function cover(ctx: SKRSContext2D, img: Image, w: number, h: number) {
 }
 
 /** Shrink `text` with an ellipsis until it fits `max` pixels. */
-function fit(ctx: SKRSContext2D, text: string, max: number) {
+export function fit(ctx: SKRSContext2D, text: string, max: number) {
   if (ctx.measureText(text).width <= max) return text;
   let t = text;
   while (t.length > 1 && ctx.measureText(`${t}…`).width > max) t = t.slice(0, -1);

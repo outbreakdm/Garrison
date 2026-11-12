@@ -9,7 +9,7 @@ then updates **Status** and the **Log** before stopping.
 
 - **Now:** Phases 1 and 3 to 11, and the follow-ups in the Log, are code done, committed,
   not pushed or deployed. **Before deploying:** apply every migration from `0023_role_menus`
-  through `0035_giveaway_repeat` to production (`DATABASE_MIGRATION_URL` set,
+  through `0036_welcome_image` to production (`DATABASE_MIGRATION_URL` set,
   `pnpm db:migrate`, see DEPLOY.md); the bot preflight checks for their tables, so a deploy
   before them stops at
   preflight. **Message Content Intent must be on** in the Developer Portal (Bot → Privileged
@@ -487,3 +487,7 @@ Decided (2026-11-12, owner):
   and repeating giveaways on Pro: "Run again when it ends" (migration 0035).
 - 2026-11-12: Follow-up: server emoji (Pro, `emoji.custom`) in role menus, ticket topics and the
   starboard. Type :name: on the dashboard; previews draw the emoji; each must be this server's.
+- 2026-11-12: Follow-ups: a welcome image on Pro (the new member's avatar, name and number, drawn
+  by the bot; Welcome → Welcome image), and members filling their rank card details on their
+  Account page as well as with /rankcard (migration 0036). Next: modmail by DM, then the
+  depth backlog from the top (Watch).

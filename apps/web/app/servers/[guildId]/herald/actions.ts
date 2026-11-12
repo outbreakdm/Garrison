@@ -123,3 +123,15 @@ export async function saveJoinRoles(form: FormData) {
     "roles",
   );
 }
+
+/** The welcome image (Pro): off, a preset background, or an image uploaded to Discord. */
+export async function saveWelcomeImage(form: FormData) {
+  const choice = String(form.get("background") ?? "");
+  const image = choice === "image" ? String(form.get("imageUrl") ?? "").trim() : choice;
+  return save(
+    form,
+    { joinImage: image || null },
+    image ? "Saved the welcome image." : "The welcome image is off.",
+    "image",
+  );
+}

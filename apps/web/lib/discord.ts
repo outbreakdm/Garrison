@@ -329,6 +329,17 @@ function memberCard(m: RawMember): MemberCard {
 
 const botAuth = () => ({ headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` } });
 
+/** Is this person in the server right now? Asked of Discord with the bot's token. */
+export async function isGuildMember(guildId: string, userId: string): Promise<boolean> {
+  if (!SNOWFLAKE.test(userId)) return false;
+  try {
+    await discord<RawMember>(`/guilds/${guildId}/members/${userId}`, botAuth());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * One person by ID: their member record when they're in the server, else the
  * bare user (someone who left or was banned can still be banned or looked up).

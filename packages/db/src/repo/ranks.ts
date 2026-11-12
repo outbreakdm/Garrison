@@ -146,7 +146,15 @@ export async function getRankDetails(
   return row?.details && typeof row.details === "object" ? row.details : {};
 }
 
-/** Bot side: save a member's answers (already cleaned with cleanRankDetails). */
+/** Servers where this member has earned XP: where a rank card can show their details. */
+export async function listRankGuildsForUser(db: Db, userId: string) {
+  return db
+    .select({ guildId: memberXp.guildId, level: memberXp.level })
+    .from(memberXp)
+    .where(eq(memberXp.userId, userId));
+}
+
+/** Save a member's answers (already cleaned with cleanRankDetails). The bot and the dashboard both may. */
 export async function saveRankDetails(
   db: Db,
   guildId: string,

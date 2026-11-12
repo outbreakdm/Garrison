@@ -100,6 +100,12 @@ export const FEATURES = {
     free: false,
     pro: true,
   },
+  "welcome.image": {
+    module: "welcome",
+    about: "A welcome image with the new member's avatar and name",
+    free: false,
+    pro: true,
+  },
   "welcome.roles": {
     module: "welcome",
     about: "Roles given on join",

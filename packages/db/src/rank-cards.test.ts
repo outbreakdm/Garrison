@@ -111,7 +111,9 @@ describe("rank card storage, under each role's grants", () => {
     });
     await exec("RESET ROLE");
     await exec("SET ROLE garrison_web");
-    // The dashboard reads answers but can't write them.
+    // The dashboard saves a member's own answers (the action checks it's theirs), but can't delete.
+    await saveRankDetails(db, G, "100000000000000002", { field00001: "Mage" });
+    expect(await getRankDetails(db, G, "100000000000000002")).toEqual({ field00001: "Mage" });
     const err = await Promise.resolve(db.delete(rankProfiles)).then(
       () => null,
       (e: Error & { cause?: Error }) => `${e.message} ${e.cause?.message ?? ""}`,

@@ -8,12 +8,13 @@ import {
   getWelcome,
   type WelcomeConfig,
 } from "@garrison/db";
-import type { GuildMember, PartialGuildMember } from "discord.js";
+import { AttachmentBuilder, type GuildMember, type PartialGuildMember } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
 import { customCardMessage } from "../../lib/card.js";
 import { cachedGatehouseSettings, raidUnderway } from "../gatehouse/service.js";
 import { menuRoleProblem } from "../roles/menu.js";
 import { roleFacts } from "../roles/service.js";
+import { renderWelcomeBanner } from "./banner.js";
 
 /**
  * Herald (Welcome): a card when someone joins or leaves, a welcome DM (Pro), and
@@ -70,6 +71,32 @@ function message(card: CustomCard, ent: Entitlements, member: GuildMember | Part
   };
 }
 
+/**
+ * The welcome card, with the drawn welcome image under it on Pro. If drawing
+ * fails, the card goes out on its own: a welcome should never be lost to art.
+ */
+async function joinMessage(w: WelcomeConfig, ent: Entitlements, member: GuildMember) {
+  if (!w.joinImage || !ent["welcome.image"]) return message(w.joinCard, ent, member);
+  const png = await renderWelcomeBanner({
+    background: w.joinImage,
+    accent: w.joinCard.accent,
+    avatarUrl: member.displayAvatarURL({ extension: "png", size: 256 }),
+    name: member.displayName,
+    server: member.guild.name,
+    count: member.guild.memberCount,
+  }).catch(() => null);
+  if (!png) return message(w.joinCard, ent, member);
+  return {
+    ...message({ ...w.joinCard, image: "attachment://welcome.png" }, ent, member),
+    files: [
+      new AttachmentBuilder(png, {
+        name: "welcome.png",
+        description: `Welcome, ${member.displayName}`,
+      }),
+    ],
+  };
+}
+
 async function sendTo(
   member: GuildMember | PartialGuildMember,
   channelId: string,
@@ -103,7 +130,7 @@ export async function welcomeJoin(ctx: BotContext, member: GuildMember) {
   if (give.length) await member.roles.add(give, "Welcome: roles on join").catch(() => null);
 
   if (w.joinEnabled && w.joinChannelId && takeSlot(guild.id))
-    await sendTo(member, w.joinChannelId, message(w.joinCard, ent, member));
+    await sendTo(member, w.joinChannelId, await joinMessage(w, ent, member));
   if (w.dmEnabled && ent["welcome.dm"])
     await member.send(message(w.dmCard, ent, member)).catch(() => null); // DMs may be closed.
 }

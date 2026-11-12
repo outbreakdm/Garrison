@@ -1,13 +1,14 @@
-import { listLinks, listSharesForUser } from "@garrison/db";
+import { listLinks, listSharesForUser, RANK_CARD_LIMITS } from "@garrison/db";
 import type { Metadata } from "next";
 import { GameMark, linkDetail, providerLabel } from "@/components/GameMark";
 import { Topbar } from "@/components/Topbar";
 import { WOW_REGIONS } from "@/lib/barracks";
 import { battlenetConfigured } from "@/lib/battlenet";
 import { getDb } from "@/lib/db";
+import { rankDetailsForms } from "@/lib/rank-details";
 import { requireSession } from "@/lib/session";
 import { currentTheme } from "@/lib/theme";
-import { removeAccountLink, stopSharing } from "./actions";
+import { removeAccountLink, saveMyRankDetails, stopSharing } from "./actions";
 
 export const metadata: Metadata = { title: "Your accounts" };
 
@@ -16,6 +17,7 @@ const MESSAGES: Record<string, string> = {
   "linked=wow": "Linked your World of Warcraft characters.",
   "removed=1": "Removed.",
   "unshared=1": "That server's roster no longer shows your accounts.",
+  "rank=saved": "Saved. /rank shows them on your card.",
   "error=state": "That link expired or was tampered with. Try again.",
   "error=battlenet": "Battle.net didn't answer, or the link was refused. Try again.",
   "error=invalid": "That didn't match anything of yours.",
@@ -33,9 +35,10 @@ export default async function AccountPage({
     return name && q[name] === value;
   });
   const db = await getDb();
-  const [links, shares] = await Promise.all([
+  const [links, shares, rankForms] = await Promise.all([
     listLinks(db, session.userId),
     listSharesForUser(db, session.userId),
+    rankDetailsForms(session.userId).catch(() => []),
   ]);
   const wow = battlenetConfigured();
 
@@ -110,6 +113,47 @@ export default async function AccountPage({
                   </div>
                 )}
               </section>
+
+              {rankForms.length ? (
+                <section className="g-card card-col" id="rank-cards" aria-labelledby="rank-title">
+                  <h2 className="card-title" id="rank-title">
+                    Your rank cards
+                  </h2>
+                  <p className="g-help">
+                    These servers' rank cards show a few details about you. Same as /rankcard in
+                    Discord.
+                  </p>
+                  {rankForms.map((r) => (
+                    <form
+                      className="card-col rank-details"
+                      action={saveMyRankDetails}
+                      key={r.guildId}
+                    >
+                      <input type="hidden" name="guildId" value={r.guildId} />
+                      <strong>{r.guildName}</strong>
+                      <div className="field-row">
+                        {r.fields.map((f) => (
+                          <label className="g-field" key={f.id} htmlFor={`${r.guildId}-${f.id}`}>
+                            <span>{f.label}</span>
+                            <input
+                              className="g-input"
+                              id={`${r.guildId}-${f.id}`}
+                              name={`f_${f.id}`}
+                              defaultValue={r.answers[f.id] ?? ""}
+                              maxLength={RANK_CARD_LIMITS.value}
+                            />
+                          </label>
+                        ))}
+                      </div>
+                      <div className="form-foot">
+                        <button type="submit" className="g-btn g-btn--secondary">
+                          Save for {r.guildName}
+                        </button>
+                      </div>
+                    </form>
+                  ))}
+                </section>
+              ) : null}
 
               <section className="g-card table-card" aria-labelledby="shared-title">
                 <div className="table-card__head card-head">

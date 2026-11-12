@@ -1192,6 +1192,8 @@ export const welcomeSettings = pgTable("welcome_settings", {
   dmEnabled: boolean("dm_enabled").notNull().default(false),
   dmCard: jsonb("dm_card").$type<CustomCard>(),
   joinRoleIds: text("join_role_ids").array().notNull().default(sql`'{}'::text[]`),
+  /** Pro: a drawn welcome image on the welcome card. A rank-card background key or a Discord image link; null is off. */
+  joinImage: text("join_image"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
 export type RallySettings = typeof rallySettings.$inferSelect;

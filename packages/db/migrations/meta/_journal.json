@@ -253,6 +253,13 @@
       "when": 1794492981760,
       "tag": "0035_giveaway_repeat",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794493280406,
+      "tag": "0036_welcome_image",
+      "breakpoints": true
     }
   ]
 }
