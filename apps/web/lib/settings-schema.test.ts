@@ -101,18 +101,27 @@ describe("ranksForm", () => {
     expect(
       ranksForm.safeParse({ enabled: "on", announce: "channel", announceChannelId: "" }).success,
     ).toBe(false);
-    expect(ranksForm.parse({ enabled: "on", announce: "channel", announceChannelId: ch })).toEqual({
+    expect(
+      ranksForm.parse({ enabled: "on", voiceXp: "on", announce: "channel", announceChannelId: ch }),
+    ).toEqual({
       enabled: true,
+      voiceXp: true,
       announce: "channel",
       announceChannelId: ch,
     });
-    expect(ranksForm.parse({ enabled: undefined, announce: "off", announceChannelId: ch })).toEqual(
-      {
-        enabled: false,
+    expect(
+      ranksForm.parse({
+        enabled: undefined,
+        voiceXp: undefined,
         announce: "off",
-        announceChannelId: null,
-      },
-    );
+        announceChannelId: ch,
+      }),
+    ).toEqual({
+      enabled: false,
+      voiceXp: false,
+      announce: "off",
+      announceChannelId: null,
+    });
     expect(ranksForm.safeParse({ announce: "everyone", announceChannelId: "" }).success).toBe(
       false,
     );

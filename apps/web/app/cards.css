@@ -1543,3 +1543,15 @@
     display: inline;
   }
 }
+
+/* Ranks: XP boost rows (where, then how much). */
+.boost-rows {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 40rem;
+}
+.boost-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 8.5rem;
+  gap: var(--space-2);
+}

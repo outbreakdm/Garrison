@@ -46,7 +46,8 @@ export const EDITABLE_FIELDS = {
   ],
   ops: ["timezone", "trackAttendance"],
   // The rank card is checked with checkRankCard before it gets here.
-  ranks: ["enabled", "announce", "announceChannelId", "card"],
+  // Boosts are checked with checkBoosts before they get here.
+  ranks: ["enabled", "announce", "announceChannelId", "card", "voiceXp", "boosts"],
   ledger: ["channelId", "retentionDays", "keepMessageText"],
   // The whole ladder is one value, so history and undo treat it as a unit.
   escalation: ["rules"],

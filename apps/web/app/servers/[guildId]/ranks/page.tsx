@@ -1,4 +1,6 @@
 import {
+  BOOST_MULTIPLIERS,
+  BOOSTS_MAX,
   entitlements,
   getGuildPlan,
   getLeaderboard,
@@ -7,10 +9,12 @@ import {
   levelForXp,
   listRankRewards,
   RANK_BACKGROUNDS,
+  readBoosts,
   readRankCard,
 } from "@garrison/db";
 import type { Metadata } from "next";
 import { Art } from "@/components/Art";
+import { ProTag } from "@/components/cards/CardEditor";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import {
   ChannelSelect,
@@ -22,13 +26,13 @@ import {
   Switch,
 } from "@/components/settings";
 import { getDb } from "@/lib/db";
-import { listGuildRoles, listTextChannels } from "@/lib/discord";
+import { getServerLayout, listGuildRoles, listTextChannels } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
 import { isDangerousRole } from "@/lib/permissions";
 import { requireGuildAccess } from "@/lib/session";
 import { REWARD_ROWS } from "@/lib/settings-schema";
 import { saveRanks, saveRewards } from "../settings/actions";
-import { saveRankCard } from "./actions";
+import { saveBoosts, saveRankCard } from "./actions";
 import { RankCardEditor } from "./RankCardEditor";
 
 const ANNOUNCE: Record<string, string> = {
@@ -50,7 +54,7 @@ export default async function RanksPage({
   const { guild, session } = await requireGuildAccess(guildId);
   const query = await searchParams;
   const db = await getDb();
-  const [settings, top, rewards, roles, channels, plan, flash] = await Promise.all([
+  const [settings, top, rewards, roles, channels, plan, flash, layout] = await Promise.all([
     getRanksSettings(db, guild.id),
     getLeaderboard(db, guild.id, 25),
     listRankRewards(db, guild.id),
@@ -58,8 +62,20 @@ export default async function RanksPage({
     listTextChannels(guild.id).catch(() => []),
     getGuildPlan(db, guild.id),
     readFlash(),
+    getServerLayout(guild.id).catch(() => null),
   ]);
   const ent = entitlements(plan);
+  const boosts = readBoosts(settings.boosts);
+  const placeName = new Map<string, string>([
+    ...(layout?.roles ?? []).map((r) => [`role:${r.id}`, `@${r.name}`] as [string, string]),
+    ...(layout?.categories ?? []).map(
+      (c) => [`channel:${c.id}`, `${c.name} (category)`] as [string, string],
+    ),
+    ...[...(layout?.loose ?? []), ...(layout?.categories ?? []).flatMap((c) => c.channels)].map(
+      (c) => [`channel:${c.id}`, `${c.kind === "voice" ? "🔊" : "#"}${c.name}`] as [string, string],
+    ),
+  ]);
+  const multLabel = (m: number) => (m === 0 ? "No XP" : `×${m}`);
   const card = readRankCard(settings.card);
   const cardFacts = [
     {
@@ -88,7 +104,9 @@ export default async function RanksPage({
           <h1>Leaderboard</h1>
           <p>
             {settings.enabled
-              ? "Members earn XP for chatting, once a minute at most."
+              ? settings.voiceXp
+                ? "Members earn XP for chatting and for time in voice, once a minute at most."
+                : "Members earn XP for chatting, once a minute at most."
               : "Ranks are off: members earn no XP."}{" "}
             Garrison counts who posted and when, never what they wrote.
           </p>
@@ -115,6 +133,7 @@ export default async function RanksPage({
         open={isEditing(query, "settings")}
         facts={[
           { label: "XP", value: settings.enabled ? "On" : "Off" },
+          { label: "Voice", value: settings.voiceXp ? "On" : "Off" },
           {
             label: "Level-ups",
             value:
@@ -132,6 +151,12 @@ export default async function RanksPage({
               defaultChecked={settings.enabled}
               label="Give XP for messages"
               help="Turning this off keeps everyone's XP; nobody earns more."
+            />
+            <Switch
+              name="voiceXp"
+              defaultChecked={settings.voiceXp}
+              label="Give XP for time in voice"
+              help="10 XP a minute, with at least one other person in the channel. Not while deafened or in the AFK channel."
             />
             <div className="card-col">
               <label className="g-field" htmlFor="announce">
@@ -173,6 +198,100 @@ export default async function RanksPage({
           planHref={`/servers/${guild.id}/plan`}
           action={saveRankCard}
         />
+      </SettingsPanel>
+
+      <SettingsPanel
+        id="boosts"
+        title="XP boosts"
+        open={isEditing(query, "boosts")}
+        facts={[
+          {
+            label: "Boosts",
+            value: boosts.length
+              ? boosts
+                  .map(
+                    (b) =>
+                      `${placeName.get(`${b.kind}:${b.id}`) ?? "Removed"} ${multLabel(b.multiplier)}`,
+                  )
+                  .join(", ")
+              : "None",
+          },
+          ...(boosts.length && !ent["ranks.boosts"]
+            ? [{ label: "Pro", value: "Paused on Free" }]
+            : []),
+        ]}
+      >
+        <form action={saveBoosts} className="settings-form" key={JSON.stringify(boosts)}>
+          <input type="hidden" name="guildId" value={guild.id} />
+          <p className="g-help">
+            More XP for a role (boosters, event winners) or in a channel or category, or none at all
+            in places like a bot-commands channel. With several that apply, the biggest counts, and
+            No XP always wins. <ProTag on={ent["ranks.boosts"]} />
+          </p>
+          <div className="boost-rows">
+            {Array.from({ length: Math.min(BOOSTS_MAX, boosts.length + 3) }, (_, i) => {
+              const b = boosts[i];
+              const value = b ? `${b.kind}:${b.id}` : "";
+              return (
+                <div className="boost-row" key={b ? value : `new-${i}`}>
+                  <select
+                    className="g-input"
+                    name={`boost${i}_target`}
+                    aria-label={`Boost ${i + 1} role or channel`}
+                    defaultValue={value}
+                    disabled={!ent["ranks.boosts"] && !b}
+                  >
+                    <option value="">No boost</option>
+                    {b && !placeName.has(value) ? <option value={value}>Removed</option> : null}
+                    <optgroup label="Roles">
+                      {(layout?.roles ?? [])
+                        .filter((r) => !r.managed)
+                        .map((r) => (
+                          <option key={r.id} value={`role:${r.id}`}>
+                            @{r.name}
+                          </option>
+                        ))}
+                    </optgroup>
+                    <optgroup label="Categories">
+                      {(layout?.categories ?? []).map((c) => (
+                        <option key={c.id} value={`channel:${c.id}`}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Channels">
+                      {[
+                        ...(layout?.loose ?? []),
+                        ...(layout?.categories ?? []).flatMap((c) => c.channels),
+                      ]
+                        .filter((c) => c.kind !== "other")
+                        .map((c) => (
+                          <option key={c.id} value={`channel:${c.id}`}>
+                            {c.kind === "voice" ? "🔊" : "#"}
+                            {c.name}
+                          </option>
+                        ))}
+                    </optgroup>
+                  </select>
+                  <select
+                    className="g-input"
+                    name={`boost${i}_mult`}
+                    aria-label={`Boost ${i + 1} multiplier`}
+                    defaultValue={String(b?.multiplier ?? 2)}
+                    disabled={!ent["ranks.boosts"] && !b}
+                  >
+                    {BOOST_MULTIPLIERS.map((m) => (
+                      <option key={m} value={m}>
+                        {multLabel(m)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })}
+          </div>
+          <FormFoot label="Save boosts" guildId={guild.id} />
+        </form>
       </SettingsPanel>
 
       <div className="ranks-layout">

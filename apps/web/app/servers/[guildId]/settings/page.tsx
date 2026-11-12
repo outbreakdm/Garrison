@@ -63,6 +63,18 @@ function describe(
     return Array.isArray(value) && value.length
       ? value.map((id) => `#${channels.get(String(id)) ?? "deleted-channel"}`).join(", ")
       : "none";
+  if (field === "boosts")
+    return Array.isArray(value) && value.length
+      ? value
+          .map((b: { kind: string; id: string; multiplier: number }) => {
+            const where =
+              b.kind === "role"
+                ? `@${roleNames.get(b.id) ?? "deleted-role"}`
+                : `#${channels.get(b.id) ?? "a channel or category"}`;
+            return `${where} ${b.multiplier === 0 ? "no XP" : `×${b.multiplier}`}`;
+          })
+          .join(", ")
+      : "none";
   if (field === "templates")
     return Array.isArray(value) && value.length
       ? value.map((t: { name?: string }) => t.name ?? "?").join(", ")

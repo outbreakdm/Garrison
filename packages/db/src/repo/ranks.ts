@@ -25,6 +25,8 @@ export async function getRanksSettings(db: Db, guildId: string): Promise<RanksSe
       announce: "same_channel",
       announceChannelId: null,
       card: null,
+      voiceXp: false,
+      boosts: [],
       updatedAt: new Date(0),
     }
   );
@@ -60,17 +62,28 @@ export async function awardXp(
   gain: number,
   cooldownMs: number,
   now = new Date(),
+  source: "message" | "voice" = "message",
 ): Promise<AwardResult> {
   const userId = user.id;
   const cutoff = new Date(now.getTime() - cooldownMs);
+  const voice = source === "voice" ? 1 : 0;
   const [row] = await db
     .insert(memberXp)
-    .values({ guildId, userId, username: user.username, xp: gain, messages: 1, lastXpAt: now })
+    .values({
+      guildId,
+      userId,
+      username: user.username,
+      xp: gain,
+      messages: 1 - voice,
+      voiceMinutes: voice,
+      lastXpAt: now,
+    })
     .onConflictDoUpdate({
       target: [memberXp.guildId, memberXp.userId],
       set: {
         xp: sql`${memberXp.xp} + ${gain}`,
-        messages: sql`${memberXp.messages} + 1`,
+        messages: sql`${memberXp.messages} + ${1 - voice}`,
+        voiceMinutes: sql`${memberXp.voiceMinutes} + ${voice}`,
         lastXpAt: now,
       },
       setWhere: lt(memberXp.lastXpAt, cutoff),

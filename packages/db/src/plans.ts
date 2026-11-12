@@ -223,6 +223,12 @@ export const FEATURES = {
     free: false,
     pro: true,
   },
+  "ranks.boosts": {
+    module: "ranks",
+    about: "XP boosts by role, channel or category, and channels with no XP",
+    free: false,
+    pro: true,
+  },
   "rally.templates": {
     module: "rally",
     about: "LFG templates",

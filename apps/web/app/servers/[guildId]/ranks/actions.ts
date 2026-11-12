@@ -2,6 +2,8 @@
 
 import {
   applySettingsChange,
+  BOOSTS_MAX,
+  checkBoosts,
   checkRankCard,
   DEFAULT_RANK_CARD,
   entitlements,
@@ -11,6 +13,7 @@ import {
 } from "@garrison/db";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
+import { getServerLayout } from "@/lib/discord";
 import { flashBack } from "@/lib/flash";
 import { checkGuildAccess } from "@/lib/session";
 
@@ -51,4 +54,50 @@ export async function saveRankCard(form: FormData) {
       error: result.reason === "unchanged" ? "Nothing changed." : "Try again in a minute.",
     });
   return back({ ok: "Saved the rank card. /rank draws it from now on." });
+}
+
+/**
+ * XP boosts (Pro). Each row is "role:<id>" or "channel:<id>" with a multiplier;
+ * blank rows are skipped. Targets must exist in this server. A server back on
+ * Free can still clear its boosts.
+ */
+export async function saveBoosts(form: FormData) {
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  if (!access) redirect("/servers");
+  const { guild, session } = access;
+  const back = (outcome: { ok: string } | { error: string }) =>
+    flashBack(`/servers/${guild.id}/ranks`, outcome, "?edit=boosts#boosts");
+  const raw: { kind: string; id: string; multiplier: number }[] = [];
+  for (let i = 0; i < BOOSTS_MAX; i++) {
+    const target = String(form.get(`boost${i}_target`) ?? "");
+    if (!target) continue;
+    const [kind = "", id = ""] = target.split(":");
+    raw.push({ kind, id, multiplier: Number(form.get(`boost${i}_mult`)) });
+  }
+  const checked = checkBoosts(raw);
+  if (!checked.ok) return back({ error: checked.error });
+  const db = await getDb();
+  if (checked.value.length && !entitlements(await getGuildPlan(db, guild.id))["ranks.boosts"])
+    return back({ error: "XP boosts are part of Garrison Pro. Nothing was saved." });
+  const layout = await getServerLayout(guild.id).catch(() => null);
+  if (!layout) return back({ error: "Couldn't check the server's roles and channels. Try again." });
+  const roles = new Set(layout.roles.map((r) => r.id));
+  const places = new Set([
+    ...layout.loose.map((c) => c.id),
+    ...layout.categories.flatMap((c) => [c.id, ...c.channels.map((ch) => ch.id)]),
+  ]);
+  if (checked.value.some((b) => !(b.kind === "role" ? roles : places).has(b.id)))
+    return back({ error: "One of those roles or channels isn't in this server any more." });
+  const result = await applySettingsChange(db, {
+    guildId: guild.id,
+    module: "ranks",
+    patch: { boosts: checked.value },
+    userId: session.userId,
+    username: session.username,
+  });
+  if (!result.ok)
+    return back({
+      error: result.reason === "unchanged" ? "Nothing changed." : "Try again in a minute.",
+    });
+  return back({ ok: "Saved the boosts. They apply from the next XP earned." });
 }

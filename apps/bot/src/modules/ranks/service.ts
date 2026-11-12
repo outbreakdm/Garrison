@@ -1,21 +1,82 @@
 import { randomInt } from "node:crypto";
-import { awardXp, getRanksSettings, listRankRewards, type RanksSettings } from "@garrison/db";
-import type { GuildMember, Message } from "discord.js";
+import {
+  awardXp,
+  boostFor,
+  entitlements,
+  getGuildPlan,
+  getRanksSettings,
+  listRankRewards,
+  type RankBoost,
+  type RanksSettings,
+  readBoosts,
+} from "@garrison/db";
+import type { Guild, GuildBasedChannel, GuildMember, Message } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { earnedRewards, rewardProblem, XP_COOLDOWN_MS, XP_MAX, XP_MIN } from "./rules.js";
 
 const SETTINGS_TTL_MS = 60_000;
-const settingsCache = new Map<string, { settings: RanksSettings; at: number }>();
+const settingsCache = new Map<
+  string,
+  { settings: RanksSettings; boosts: RankBoost[]; at: number }
+>();
 /** Skip the database for members who just earned XP. The database cooldown is still the authority. */
 const recent = new Map<string, number>();
 
-export async function cachedRanksSettings(ctx: BotContext, guildId: string) {
+async function cachedRanks(ctx: BotContext, guildId: string) {
   const hit = settingsCache.get(guildId);
-  if (hit && Date.now() - hit.at < SETTINGS_TTL_MS) return hit.settings;
-  const settings = await getRanksSettings(ctx.db, guildId);
-  settingsCache.set(guildId, { settings, at: Date.now() });
-  return settings;
+  if (hit && Date.now() - hit.at < SETTINGS_TTL_MS) return hit;
+  const [settings, plan] = await Promise.all([
+    getRanksSettings(ctx.db, guildId),
+    getGuildPlan(ctx.db, guildId),
+  ]);
+  // Boosts are Pro: on Free they're kept but not applied.
+  const boosts = entitlements(plan)["ranks.boosts"] ? readBoosts(settings.boosts) : [];
+  const entry = { settings, boosts, at: Date.now() };
+  settingsCache.set(guildId, entry);
+  return entry;
+}
+
+export async function cachedRanksSettings(ctx: BotContext, guildId: string) {
+  return (await cachedRanks(ctx, guildId)).settings;
+}
+
+/** The boost multiplier for this member in this channel (1 without boosts). */
+export async function boostAt(
+  ctx: BotContext,
+  member: GuildMember | null,
+  channel: { id: string; parentId: string | null } | null,
+) {
+  if (!member) return 1;
+  const { boosts } = await cachedRanks(ctx, member.guild.id);
+  if (!boosts.length) return 1;
+  return boostFor(boosts, {
+    roleIds: member.roles.cache.keys(),
+    channelId: channel?.id ?? null,
+    parentId: channel?.parentId ?? null,
+  });
+}
+
+/** Rewards and the level-up message, wherever level-ups go (`fallback` for "where they were"). */
+export async function celebrateLevel(
+  ctx: BotContext,
+  guild: Guild,
+  member: GuildMember | null,
+  userId: string,
+  level: number,
+  settings: RanksSettings,
+  fallback: GuildBasedChannel | null,
+) {
+  const given = member ? await grantRewards(ctx, member, level) : [];
+  if (settings.announce === "off") return;
+  const roles = given.length ? ` and got ${given.map((id) => `<@&${id}>`).join(" ")}` : "";
+  const text = `<@${userId}> reached level ${level}${roles}.`;
+  const target =
+    settings.announce === "channel" && settings.announceChannelId
+      ? guild.channels.cache.get(settings.announceChannelId)
+      : fallback;
+  // The client's default allowedMentions means this never pings.
+  if (target?.isSendable()) await target.send(text).catch(() => {});
 }
 
 export function invalidateRanksSettings(guildId: string) {
@@ -71,27 +132,31 @@ export async function handleMessage(ctx: BotContext, message: Message) {
   recent.set(key, Date.now());
   if (recent.size > 50_000) recent.clear();
 
+  const member =
+    message.member ?? (await message.guild.members.fetch(message.author.id).catch(() => null));
+  const channel = message.channel.isThread() ? message.channel.parent : message.channel;
+  const gain = Math.round(
+    randomInt(XP_MIN, XP_MAX + 1) *
+      (await boostAt(ctx, member, channel ? { id: channel.id, parentId: channel.parentId } : null)),
+  );
+  if (gain <= 0) return;
+
   await ensureGuild(ctx, message.guild);
   const result = await awardXp(
     ctx.db,
     message.guildId,
     { id: message.author.id, username: message.author.username },
-    randomInt(XP_MIN, XP_MAX + 1),
+    gain,
     XP_COOLDOWN_MS,
   );
   if (!result.awarded || !result.leveledUpTo) return;
-
-  const member =
-    message.member ?? (await message.guild.members.fetch(message.author.id).catch(() => null));
-  const given = member ? await grantRewards(ctx, member, result.leveledUpTo) : [];
-  if (settings.announce === "off") return;
-
-  const roles = given.length ? ` and got ${given.map((id) => `<@&${id}>`).join(" ")}` : "";
-  const text = `<@${message.author.id}> reached level ${result.leveledUpTo}${roles}.`;
-  const target =
-    settings.announce === "channel" && settings.announceChannelId
-      ? message.guild.channels.cache.get(settings.announceChannelId)
-      : message.channel;
-  // The client's default allowedMentions means this never pings.
-  if (target?.isSendable()) await target.send(text).catch(() => {});
+  await celebrateLevel(
+    ctx,
+    message.guild,
+    member,
+    message.author.id,
+    result.leveledUpTo,
+    settings,
+    message.channel,
+  );
 }

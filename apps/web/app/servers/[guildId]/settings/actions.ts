@@ -199,7 +199,9 @@ export async function saveOps(form: FormData) {
 
 export async function saveRanks(form: FormData) {
   const { guild } = await authorize(form);
-  const parsed = ranksForm.safeParse(pick(form, ["enabled", "announce", "announceChannelId"]));
+  const parsed = ranksForm.safeParse(
+    pick(form, ["enabled", "voiceXp", "announce", "announceChannelId"]),
+  );
   if (!parsed.success) failed(guild.id, PLACES.ranks, "range");
   else if (!(await channelBelongs(guild.id, parsed.data.announceChannelId)))
     failed(guild.id, PLACES.ranks, "bad_channel");

@@ -101,6 +101,7 @@ export const opsForm = z.object({
 export const ranksForm = z
   .object({
     enabled: checkbox,
+    voiceXp: checkbox,
     announce: z.enum(["off", "same_channel", "channel"], { message: "Pick where level-ups go." }),
     announceChannelId: snowflakeOrNone,
   })
@@ -221,6 +222,8 @@ export const FIELD_LABELS: Record<string, string> = {
   flagAccountAgeDays: "Flag accounts under (days)",
   timezone: "Time zone",
   trackAttendance: "Track attendance",
+  voiceXp: "XP for voice",
+  boosts: "XP boosts",
   staffRoleIds: "Staff roles",
   verifyRoleId: "Verified role",
   verifyMinAccountAgeDays: "Verify: min account age (days)",

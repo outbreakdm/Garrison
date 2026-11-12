@@ -31,6 +31,7 @@ import { sweepOps } from "./modules/ops/service.js";
 import { ClaudePlanner } from "./modules/quartermaster/planner.js";
 import { sweepRally } from "./modules/rally/service.js";
 import { handleMessage } from "./modules/ranks/service.js";
+import { sweepVoiceXp } from "./modules/ranks/voice.js";
 import { onStarReaction } from "./modules/starboard/service.js";
 import { onDirectMessage } from "./modules/tickets/modmail.js";
 import {
@@ -136,6 +137,7 @@ client.once(Events.ClientReady, async (ready) => {
     );
     await sweepRally(ctx, ready).catch((error) => logger.error("Rally sweep failed", { error }));
     await sweepOps(ctx, ready).catch((error) => logger.error("Ops sweep failed", { error }));
+    await sweepVoiceXp(ctx, ready).catch((error) => logger.error("Voice XP failed", { error }));
     await sweepMessages(ctx, ready).catch((error) =>
       logger.error("Scheduled messages failed", { error }),
     );

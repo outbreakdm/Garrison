@@ -11,6 +11,7 @@ export * from "./ops-calendar";
 export * from "./plans";
 export * from "./profile";
 export * from "./rally";
+export * from "./rank-boosts";
 export * from "./rank-cards";
 export * from "./repo/actions";
 export * from "./repo/alerts";

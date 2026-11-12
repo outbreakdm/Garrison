@@ -22,6 +22,7 @@ import type { BonusRole } from "./giveaways";
 import type { SavedMessage } from "./messages";
 import type { GuildPlan } from "./plans";
 import type { RallyTemplate, RallyWording } from "./rally";
+import type { RankBoost } from "./rank-boosts";
 import type { RankCardStyle } from "./rank-cards";
 import type { RoleMenu } from "./role-menus";
 import type { TicketPanel } from "./tickets";
@@ -506,6 +507,10 @@ export const ranksSettings = pgTable("ranks_settings", {
   announceChannelId: text("announce_channel_id"),
   /** The rank card's look and detail fields (rank-cards.ts). Null: Garrison's standard card. */
   card: jsonb("card").$type<RankCardStyle>(),
+  /** XP for time in voice (with someone else, not deafened, not in the AFK channel). */
+  voiceXp: boolean("voice_xp").notNull().default(false),
+  /** Pro: XP multipliers by role, channel or category (rank-boosts.ts). */
+  boosts: jsonb("boosts").$type<RankBoost[]>().notNull().default(sql`'[]'::jsonb`),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
 
@@ -555,6 +560,7 @@ export const memberXp = pgTable(
     xp: integer("xp").notNull().default(0),
     level: integer("level").notNull().default(0),
     messages: integer("messages").notNull().default(0),
+    voiceMinutes: integer("voice_minutes").notNull().default(0),
     lastXpAt: timestamp("last_xp_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
