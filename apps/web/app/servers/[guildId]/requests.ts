@@ -1,14 +1,19 @@
 "use server";
 
 import {
+  entitlements,
   getCase,
+  getGuildPlan,
   getLfgPost,
   getOpsEvent,
   getQmBuild,
   getQmBuildByVersion,
   getQuarantine,
+  getRoleMenus,
+  isPaused,
   type QueueInput,
   queueDashboardAction,
+  readRoleMenus,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -24,7 +29,7 @@ import { checkGuildAccess } from "@/lib/session";
  * the requester's own Discord permissions.
  */
 
-const PAGES = new Set(["", "gatehouse", "watch", "rally", "quartermaster"]);
+const PAGES = new Set(["", "gatehouse", "watch", "rally", "quartermaster", "insignia"]);
 /** A member's page under Watch is the one page with an ID in its path. */
 const MEMBER_PAGE = /^watch\/member\/\d{17,20}$/;
 const SNOWFLAKE = /^\d{17,20}$/;
@@ -104,6 +109,23 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       const channels = await listTextChannels(guildId).catch(() => []);
       if (!channels.some((c) => c.id === channelId)) return { ok: false, error: "channel" };
       return { ok: true, input: { kind, payload: { channelId } } };
+    }
+    case "post_role_menu": {
+      const menuId = field(form, "menuId");
+      const channelId = field(form, "channelId");
+      const [raw, plan, channels] = await Promise.all([
+        getRoleMenus(db, guildId),
+        getGuildPlan(db, guildId),
+        listTextChannels(guildId).catch(() => []),
+      ]);
+      const menus = readRoleMenus(raw);
+      const index = menus.findIndex((m) => m.id === menuId);
+      const menu = menus[index];
+      if (!menu) return { ok: false, error: "not_found" };
+      if (isPaused(index, entitlements(plan))) return { ok: false, error: "menu_paused" };
+      if (!menu.options.length) return { ok: false, error: "menu_empty" };
+      if (!channels.some((c) => c.id === channelId)) return { ok: false, error: "channel" };
+      return { ok: true, input: { kind, payload: { menuId: menu.id, channelId } } };
     }
     case "anti_nuke": {
       // Owner only, asked of Discord now; the bot asks again before applying.

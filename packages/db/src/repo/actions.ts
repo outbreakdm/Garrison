@@ -14,6 +14,7 @@ import {
   type LockdownStartPayload,
   type ModActionPayload,
   type MoveSignupPayload,
+  type PostRoleMenuPayload,
   type PurgePayload,
   type QmPlanPayload,
   type RaidSignupPayload,
@@ -44,7 +45,8 @@ export type QueueInput =
   | { kind: "raid_withdraw"; payload: RaidWithdrawPayload }
   | { kind: "qm_plan"; payload: QmPlanPayload }
   | { kind: "qm_apply"; payload: IdPayload }
-  | { kind: "qm_cancel"; payload: IdPayload };
+  | { kind: "qm_cancel"; payload: IdPayload }
+  | { kind: "post_role_menu"; payload: PostRoleMenuPayload };
 
 /** Per server: at most this many requests waiting at once. */
 export const MAX_PENDING_PER_GUILD = 10;

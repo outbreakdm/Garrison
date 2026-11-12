@@ -293,6 +293,138 @@
   gap: var(--space-2);
 }
 
+/* --- Role menus (Insignia) ------------------------------------------------------
+   The menu editor adds role rows, rules and a post bar to the card editor. */
+.menu-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.option-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.option-list:empty {
+  display: none;
+}
+.option {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 7ch auto;
+  gap: var(--space-2);
+  align-items: center;
+  animation: block-in 0.2s var(--ease-out);
+}
+.option__emoji {
+  text-align: center;
+  padding-inline: 4px;
+}
+.option__desc,
+.option__note {
+  grid-column: 1 / -2;
+}
+.option__note {
+  margin: 0;
+}
+.g-help--warn {
+  color: var(--caution);
+}
+.unsaved {
+  color: var(--caution);
+  font-weight: 600;
+}
+
+/* Starting points for a new menu: real radio buttons, drawn as plates. */
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-2);
+}
+.preset {
+  position: relative;
+  display: flex;
+}
+.preset input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.preset__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  transition:
+    border-color 0.15s var(--ease-out),
+    background-color 0.15s var(--ease-out);
+}
+.preset:hover .preset__body {
+  border-color: var(--text-muted);
+}
+.preset input:checked + .preset__body {
+  border-color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface-raised));
+}
+.preset input:focus-visible + .preset__body {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.preset__name {
+  font-size: 14px;
+  font-weight: 600;
+}
+.preset__title {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Post and remove: under the editor, ruled off, apart from saving. */
+.menu-editor__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+.post-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2) var(--space-3);
+  flex: 1 1 420px;
+}
+.post-form .g-field {
+  flex: 0 1 240px;
+}
+.post-form > .g-help {
+  flex: 1 1 100%;
+}
+
+@media (max-width: 520px) {
+  .option {
+    grid-template-columns: minmax(0, 1fr) 7ch auto;
+  }
+  .option__role {
+    grid-column: 1 / -1;
+  }
+  .option__desc,
+  .option__note {
+    grid-column: 1 / -1;
+  }
+  .post-form .g-field,
+  .post-form .g-btn {
+    flex: 1 1 100%;
+  }
+}
+
 /* --- Discord preview (.dc) ----------------------------------------------------
    Discord's dark theme and Components V2 anatomy: a container with a 4px colour
    bar, a heading, text, dividers, media, controls, then small grey footer text. */
@@ -594,6 +726,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .option,
   .block {
     animation: none;
   }

@@ -5,6 +5,7 @@ import type {
   ChatInputCommandInteraction,
   ModalSubmitInteraction,
   RESTPostAPIChatInputApplicationCommandsJSONBody,
+  StringSelectMenuInteraction,
 } from "discord.js";
 import type { Logger } from "../lib/logger.js";
 import type { Metrics } from "../lib/metrics.js";
@@ -30,6 +31,12 @@ export interface Command {
 export interface ButtonHandler {
   prefix: string;
   execute(interaction: ButtonInteraction<"cached">, ctx: BotContext): Promise<void>;
+}
+
+/** Handles dropdowns (string selects) whose custom ID starts with `prefix:`. */
+export interface SelectHandler {
+  prefix: string;
+  execute(interaction: StringSelectMenuInteraction<"cached">, ctx: BotContext): Promise<void>;
 }
 
 /** Handles modal (form) submissions whose custom ID starts with `prefix:`. */

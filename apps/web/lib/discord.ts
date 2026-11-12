@@ -201,6 +201,25 @@ async function guildInfo(guildId: string) {
   return entry;
 }
 
+/**
+ * Where Garrison's own highest role sits: it can only give roles below it. Null
+ * when Discord can't say (the bot checks again before acting, so this only
+ * decides what the dashboard warns about).
+ */
+export async function botTopPosition(guildId: string): Promise<number | null> {
+  try {
+    const [me, roles] = await Promise.all([
+      discord<{ roles: string[] }>(`/guilds/${guildId}/members/${env().DISCORD_CLIENT_ID}`, {
+        headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` },
+      }),
+      listGuildRoles(guildId),
+    ]);
+    return Math.max(0, ...roles.filter((r) => me.roles.includes(r.id)).map((r) => r.position));
+  } catch {
+    return null;
+  }
+}
+
 /** Roles a Rally template could notify: not @everyone, not managed by an integration. */
 export async function listNotifiableRoles(guildId: string) {
   return (await listGuildRoles(guildId))

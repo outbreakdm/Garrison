@@ -69,6 +69,12 @@ export const SEARCH_INDEX: SearchEntry[] = [
   ),
   page("/ranks", modules.ranks.name, modules.ranks.plain, "xp level leaderboard rewards"),
   page(
+    "/insignia",
+    modules.insignia.name,
+    modules.insignia.plain,
+    "role menu reaction roles self assign buttons dropdown colours pings card",
+  ),
+  page(
     "/quartermaster",
     modules.quartermaster.name,
     modules.quartermaster.plain,

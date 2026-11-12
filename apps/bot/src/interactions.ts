@@ -1,5 +1,5 @@
 import { type Interaction, MessageFlags } from "discord.js";
-import { buttons, commandsByName, modals } from "./commands/index.js";
+import { buttons, commandsByName, modals, selects } from "./commands/index.js";
 import type { BotContext } from "./commands/types.js";
 
 const FAILURE = "Something went wrong on my side. Try again in a moment.";
@@ -16,7 +16,12 @@ export async function handleInteraction(interaction: Interaction, ctx: BotContex
       );
     return;
   }
-  if (!interaction.isChatInputCommand() && !interaction.isButton() && !interaction.isModalSubmit())
+  if (
+    !interaction.isChatInputCommand() &&
+    !interaction.isButton() &&
+    !interaction.isStringSelectMenu() &&
+    !interaction.isModalSubmit()
+  )
     return;
 
   if (!interaction.inCachedGuild()) {
@@ -42,6 +47,11 @@ export async function handleInteraction(interaction: Interaction, ctx: BotContex
     if (interaction.isModalSubmit()) {
       const modal = modals.find((m) => interaction.customId.startsWith(`${m.prefix}:`));
       if (modal) await modal.execute(interaction, ctx);
+      return;
+    }
+    if (interaction.isStringSelectMenu()) {
+      const select = selects.find((s) => interaction.customId.startsWith(`${s.prefix}:`));
+      if (select) await select.execute(interaction, ctx);
       return;
     }
     const handler = buttons.find((b) => interaction.customId.startsWith(`${b.prefix}:`));

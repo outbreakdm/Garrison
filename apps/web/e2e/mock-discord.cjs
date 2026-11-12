@@ -17,7 +17,8 @@ const guilds = {
       },
       { id: "500000000000000002", name: "Garrison", position: 4, permissions: "0", managed: true },
     ],
-    members: { 1: ["mods"] },
+    // User 1 manages the server; Garrison (the bot) holds its own role.
+    members: { 1: ["mods"], "123456789012345678": ["500000000000000002"] },
     // People the member search and member pages can find.
     people: [
       {

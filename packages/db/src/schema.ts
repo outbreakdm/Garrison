@@ -17,6 +17,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { GuildPlan } from "./plans";
 import type { RallyTemplate, RallyWording } from "./rally";
+import type { RoleMenu } from "./role-menus";
 
 /**
  * Every table enables row-level security with no policies. The bot and the
@@ -421,6 +422,7 @@ export const settingsModule = pgEnum("settings_module", [
   "escalation",
   "rally",
   "rewards",
+  "roles",
 ]);
 
 /** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */
@@ -797,6 +799,7 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "qm_plan",
   "qm_apply",
   "qm_cancel",
+  "post_role_menu",
 ]);
 export const dashboardActionStatus = pgEnum("dashboard_action_status", [
   "pending",
@@ -839,6 +842,11 @@ export interface BuildVersionPayload {
   version: number;
 }
 export interface VerifyPanelPayload {
+  channelId: string;
+}
+/** Post a role menu, or update the message it was last posted as. */
+export interface PostRoleMenuPayload {
+  menuId: string;
   channelId: string;
 }
 /** Warn, time out, kick or ban from the dashboard. The bot checks the moderator's own permissions. */
@@ -985,5 +993,46 @@ export const platformStaff = pgTable("platform_staff", {
   addedAt: timestamp("added_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
 
+// ---------------------------------------------------------------------------
+// Role menus
+// ---------------------------------------------------------------------------
+
+/** A server's role menus, edited on the dashboard as one value (with history and undo). */
+export const roleMenuSettings = pgTable(
+  "role_menu_settings",
+  {
+    guildId: text("guild_id")
+      .primaryKey()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    menus: jsonb("menus").$type<RoleMenu[]>().notNull().default(sql`'[]'::jsonb`),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      "role_menus_list",
+      sql`jsonb_typeof(${t.menus}) = 'array' AND jsonb_array_length(${t.menus}) <= 25`,
+    ),
+  ],
+).enableRLS();
+
+/**
+ * Where each menu was last posted, written by the bot. Separate from the menus
+ * so undoing a settings change never loses track of a message in Discord.
+ */
+export const roleMenuPosts = pgTable(
+  "role_menu_posts",
+  {
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    menuId: text("menu_id").notNull(),
+    channelId: text("channel_id").notNull(),
+    messageId: text("message_id").notNull(),
+    postedAt: timestamp("posted_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.guildId, t.menuId] })],
+).enableRLS();
+
+export type RoleMenuPost = typeof roleMenuPosts.$inferSelect;
 export type RallySettings = typeof rallySettings.$inferSelect;
 export type { GuildPlan };

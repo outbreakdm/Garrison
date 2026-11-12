@@ -11,7 +11,9 @@ import {
   getOpsEvent,
   getOpsTimezone,
   getQmBuildByVersion,
+  getRoleMenuPost,
   listSignups,
+  recordRoleMenuPost,
   saveHealthSnapshot,
   setOpsMessage,
   signUp,
@@ -33,6 +35,8 @@ import { parseWhen } from "../ops/when.js";
 import { undoBuild } from "../quartermaster/service.js";
 import { parseSlots } from "../rally/parse.js";
 import { refreshCard } from "../rally/service.js";
+import { menuRoleProblem, menuRoleProblemText, roleMenuMessage } from "../roles/menu.js";
+import { loadMenu, roleFacts } from "../roles/service.js";
 import { undoCase } from "../watch/service.js";
 import {
   doCreateLfg,
@@ -78,6 +82,10 @@ const lockdownStart = z.object({
 const caseNumber = z.object({ caseNumber: z.number().int().min(1) });
 const buildVersion = z.object({ version: z.number().int().min(1) });
 const verifyPanelPayload = z.object({ channelId: snowflake });
+const postRoleMenu = z.object({
+  menuId: z.string().regex(/^[a-z0-9]{6,16}$/),
+  channelId: snowflake,
+});
 const antiNuke = z.object({
   enabled: z.boolean(),
   trustedIds: z.array(snowflake).max(10),
@@ -305,6 +313,68 @@ async function doPostVerifyPanel(ctx: BotContext, guild: Guild, member: GuildMem
   return { ok: true, message: `Posted the Verify button in #${channel.name}.` };
 }
 
+/**
+ * Post a role menu, or update it where it was last posted. Posting it in another
+ * channel moves it: the old message is deleted (it's Garrison's own). Every role
+ * must be one a menu may hand out, checked again on every click.
+ */
+async function doPostRoleMenu(ctx: BotContext, guild: Guild, member: GuildMember, raw: unknown) {
+  const p = postRoleMenu.safeParse(raw);
+  if (!p.success) return fail("That request wasn't valid.");
+  const loaded = await loadMenu(ctx, guild.id, p.data.menuId);
+  if (!loaded) return fail("That menu was removed. Refresh the page.");
+  const { menu, ent, paused } = loaded;
+  if (paused)
+    return fail(
+      `${menu.name} is paused: this server has more role menus than its plan runs. Remove one or upgrade on the Plan page.`,
+    );
+  if (!menu.options.length) return fail(`Add at least one role to ${menu.name} before posting it.`);
+  const me = guild.members.me ?? (await guild.members.fetchMe());
+  if (!me.permissions.has(PermissionFlagsBits.ManageRoles))
+    return fail("Garrison needs the Manage Roles permission to run role menus.");
+  for (const id of [...menu.options.map((o) => o.roleId), menu.requiredRoleId]) {
+    if (!id) continue;
+    const role = guild.roles.cache.get(id);
+    const problem = menuRoleProblem(
+      role ? roleFacts(role) : undefined,
+      guild.id,
+      me.roles.highest.position,
+    );
+    // The needed role is only checked for, never handed out.
+    if (problem && (id !== menu.requiredRoleId || problem === "missing"))
+      return fail(menuRoleProblemText(problem, role ? `@${role.name}` : "a role"));
+  }
+  const channel = guild.channels.cache.get(p.data.channelId);
+  if (!channel?.isSendable() || !channel.isTextBased()) return fail("Pick a text channel.");
+  const needed = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages];
+  if (!channel.permissionsFor(member)?.has(needed)) return fail("You can't post in that channel.");
+  if (!channel.permissionsFor(me)?.has(needed)) return fail("Garrison can't post in that channel.");
+
+  const message = roleMenuMessage(menu, ent);
+  const before = await getRoleMenuPost(ctx.db, guild.id, menu.id);
+  const oldChannel = before ? guild.channels.cache.get(before.channelId) : null;
+  const old =
+    before && oldChannel?.isTextBased()
+      ? await oldChannel.messages.fetch(before.messageId).catch(() => null)
+      : null;
+  if (old && before?.channelId === channel.id) {
+    await old.edit(message);
+    return { ok: true, message: `Updated ${menu.name} in #${channel.name}.` };
+  }
+  const posted = await channel.send(message);
+  await recordRoleMenuPost(ctx.db, {
+    guildId: guild.id,
+    menuId: menu.id,
+    channelId: channel.id,
+    messageId: posted.id,
+  });
+  if (old) {
+    await old.delete().catch(() => null);
+    return { ok: true, message: `Moved ${menu.name} to #${channel.name}.` };
+  }
+  return { ok: true, message: `Posted ${menu.name} in #${channel.name}.` };
+}
+
 /** Owner only, checked here against Discord: anti-nuke is the guard against rogue admins. */
 async function doAntiNuke(ctx: BotContext, guild: Guild, member: GuildMember, raw: unknown) {
   if (member.id !== guild.ownerId) return fail("Only the server owner can change anti-nuke.");
@@ -380,6 +450,8 @@ export async function runDashboardAction(
       return doQmApply(ctx, guild, member, action.payload);
     case "qm_cancel":
       return doQmCancel(ctx, guild, action.payload);
+    case "post_role_menu":
+      return doPostRoleMenu(ctx, guild, member, action.payload);
     default:
       return fail("Garrison doesn't know that request.");
   }

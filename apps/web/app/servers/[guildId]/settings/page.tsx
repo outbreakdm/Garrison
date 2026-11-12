@@ -228,6 +228,11 @@ export default async function SettingsPage({
               name="LFG templates"
               value="Roles and wording per game"
             />
+            <Place
+              href={`${base}/insignia`}
+              name="Role menus"
+              value="Roles members pick for themselves"
+            />
           </div>
         </nav>
       </div>
@@ -260,7 +265,7 @@ export default async function SettingsPage({
                     {Object.entries(h.changes).map(([field, { from, to }]) => (
                       <div key={field}>
                         {FIELD_LABELS[field] ?? field}:{" "}
-                        {field === "templates"
+                        {field === "templates" || field === "menus"
                           ? templatesChangeText(from, to)
                           : `${describe(field, from, names, roleNames)} → ${describe(field, to, names, roleNames)}`}
                       </div>

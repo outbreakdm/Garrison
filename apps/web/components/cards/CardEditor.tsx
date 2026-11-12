@@ -368,8 +368,8 @@ export function CardEditor({
 }
 
 /**
- * Shown above the save button when a Free server tries Pro styling: the preview
- * keeps the look, saving needs Pro. One click puts the standard look back.
+ * Shown above the save button when a Free server tries a Pro option: the preview
+ * keeps it, saving needs Pro. One click puts back what was saved.
  */
 export function ProNotice({
   labels,
@@ -386,12 +386,13 @@ export function ProNotice({
   return (
     <div className="notice notice--pro" role="status">
       <span>
-        {list} {labels.length === 1 ? "is" : "are"} part of Garrison Pro. The preview shows the
-        look; Free servers save the standard one.
+        {list} {labels.length === 1 ? "is" : "are"} part of Garrison Pro. The preview shows{" "}
+        {labels.length === 1 ? "it" : "them"}; Free servers can't save{" "}
+        {labels.length === 1 ? "it" : "them"}.
       </span>
       <span className="notice__actions">
         <button type="button" className="g-btn g-btn--secondary g-btn--sm" onClick={onReset}>
-          Use the standard look
+          Undo Pro changes
         </button>
         <a className="g-btn g-btn--ghost g-btn--sm" href={planHref}>
           See Pro

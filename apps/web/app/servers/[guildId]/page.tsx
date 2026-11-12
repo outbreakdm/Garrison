@@ -46,6 +46,7 @@ const REQUEST_PAGE: Record<string, string> = {
   qm_apply: "/quartermaster",
   qm_cancel: "/quartermaster",
   undo_build: "/quartermaster",
+  post_role_menu: "/insignia",
   run_health: "#requests",
 };
 

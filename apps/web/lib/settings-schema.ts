@@ -227,6 +227,7 @@ export const FIELD_LABELS: Record<string, string> = {
   retentionDays: "Keep events (days)",
   rules: "Escalation ladder",
   templates: "LFG templates",
+  menus: "Role menus",
 };
 
 type NamedTemplate = { id?: string; name?: string };

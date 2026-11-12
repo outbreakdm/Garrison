@@ -14,10 +14,12 @@ export * from "./repo/plans";
 export * from "./repo/quartermaster";
 export * from "./repo/rally";
 export * from "./repo/ranks";
+export * from "./repo/role-menus";
 export * from "./repo/search";
 export * from "./repo/settings";
 export * from "./repo/web";
 export * from "./role";
+export * from "./role-menus";
 export type {
   CallSignupsPayload,
   CaseAction,
@@ -45,6 +47,7 @@ export type {
   OpsEvent,
   OpsSettings,
   OpsSignup,
+  PostRoleMenuPayload,
   QmBuild,
   QmCreated,
   QmOperation,
@@ -54,6 +57,7 @@ export type {
   RallySettings,
   RankReward,
   RanksSettings,
+  RoleMenuPost,
   RosterShare,
   SettingsChange,
   SettingsDiff,

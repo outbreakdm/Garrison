@@ -162,6 +162,13 @@
       "when": 1794446664294,
       "tag": "0022_plans_comps",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794462426997,
+      "tag": "0023_role_menus",
+      "breakpoints": true
     }
   ]
 }

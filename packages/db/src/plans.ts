@@ -12,6 +12,7 @@ export type GuildPlan = (typeof PLANS)[number];
 
 type Module =
   | "cards"
+  | "roles"
   | "rally"
   | "ops"
   | "ranks"
@@ -47,6 +48,18 @@ export const FEATURES = {
   "cards.footer": {
     module: "cards",
     about: "Your own footer on cards, or none",
+    free: false,
+    pro: true,
+  },
+  "roles.menus": {
+    module: "roles",
+    about: "Role menus",
+    free: 3,
+    pro: 25,
+  },
+  "roles.limits": {
+    module: "roles",
+    about: "Limit picks per menu (up to 2, 3…) and require a role to use a menu",
     free: false,
     pro: true,
   },

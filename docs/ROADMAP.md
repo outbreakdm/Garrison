@@ -7,10 +7,13 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **Now:** Phase 3 (shared card editor) is done. Phase 4 (role menus on the editor) is in
-  progress. Migration `0022_plans_comps` and the owner's `platform_staff` row are in
-  production; the Phase 1 code still needs pushing and deploying. Migrate with
-  `DATABASE_MIGRATION_URL` set: `pnpm db:migrate` (see DEPLOY.md).
+- **Now:** Phases 3 (card editor) and 4 (role menus) are code done, committed, not pushed or
+  deployed. **Before deploying:** apply migration `0023_role_menus` to production
+  (`DATABASE_MIGRATION_URL` set, `pnpm db:migrate`, see DEPLOY.md); the bot preflight checks
+  for `role_menu_settings` and `role_menu_posts`, so a deploy before it stops at preflight.
+  After deploying: post a menu on a test server and press its buttons (the one part not
+  checked locally, since no bot runs in the local preview). Next: Phase 2 (Stripe) once a
+  price is decided, or Phase 5 (bot profile per server).
 - **Branch:** `dashboard-first` (everything up to commit `1aed992` is deployed). Later
   commits (roadmap, plan list, staff and comps) are committed but not pushed or deployed.
 - **Before pushing:** `pnpm -r exec tsc --noEmit`, `pnpm test`, `pnpm exec biome check apps packages`.
@@ -27,7 +30,7 @@ then updates **Status** and the **Log** before stopping.
 | 1 | Plans foundation: one feature list, one entitlement check, owner bypass, comps, Plan page | **Done**: migration 0022 and the staff row are in production; code not deployed yet |
 | 2 | Stripe in test mode: Checkout, customer portal, webhook, then live keys | Not started |
 | 3 | Shared card editor (field editor + live preview + Pro-locked styling) | **Done** (not deployed) |
-| 4 | Role menus (first module on the card editor) | **In progress** |
+| 4 | Role menus (first module on the card editor) | **Code done**, not deployed: needs migration 0023 |
 | 5 | Bot profile per server (name, avatar, banner, bio, card colours) | Not started |
 | 6 | Welcome (messages, leave messages, roles on join) | Not started |
 | 7 | Tickets / modmail | Not started |
@@ -170,6 +173,38 @@ Card accent colour and footer text come from the same settings, read by `lib/car
   a marked stand-in with the host in the preview (Discord itself loads them). Image upload
   (R2) would remove that; not planned yet.
 
+### Phase 4: role menus (module "Insignia", plain label "Role menus")
+
+- [x] Rules, shared by bot and dashboard (`packages/db/src/role-menus.ts`): a menu is a
+      `CustomCard` plus buttons (up to 15) or a dropdown (up to 25), one standard emoji per
+      role, "any number" or "just one" picks on Free; "up to N" picks and a needed role on Pro
+      (`roles.limits`). Free runs 3 menus, Pro 25 (`roles.menus`). Over the limit after a
+      downgrade, the last menus pause (saved, buttons answer "paused"); nothing is deleted.
+      Limits a Pro server set keep applying after a downgrade: access never loosens.
+- [x] Storage (migration `0023_role_menus`): `role_menu_settings` (the menu list, edited by
+      the dashboard with Settings history and undo, read by the bot) and `role_menu_posts`
+      (where each menu is posted, written only by the bot). New request kind
+      `post_role_menu`. Tested under each role's grants.
+- [x] Bot (`apps/bot/src/modules/roles/`): posts or updates the menu (posting elsewhere
+      moves it and deletes the old message), buttons toggle a role, the dropdown sets the
+      member's roles from that menu, "just one" swaps. Every click is checked against the
+      menu as saved now; a role is never handed out if it's @everyone, managed, has
+      moderation or admin powers, or sits above Garrison. Answers are private cards.
+      Dropdowns are routed through a new `SelectHandler` registry.
+- [x] Dashboard (`/servers/:id/insignia`, nav "Insignia · Role menus"): starting points
+      (Notifications, Games, Name colour, blank), the card editor plus roles, picks and who
+      can use it, the live preview with the real buttons or dropdown, Save (blocked in the
+      browser when the server would refuse, so edits are never lost), Post/Update/Move in a
+      channel (only the saved menu, never unsaved edits), Remove (undoable). Roles a menu
+      can't give are left out of the picker; roles above Garrison are marked with how to fix.
+      Search, Overview links, Settings history ("Role menus: Added Games") and the Settings
+      map know about it.
+- [x] Checked in the local preview (desktop, phone, light theme; no sideways scroll):
+      add, edit, Pro refusal and undo, save, queue a post, history. Not checked: the bot
+      posting and answering clicks against real Discord.
+- Later: server (custom) emoji on Pro, temporary roles on Pro, button colours, the landing
+  page still says "Eight modules" (Insignia makes nine; copy change for the owner to approve).
+
 Later phases get their checklists when they start.
 
 ## Depth for current modules (backlog)
@@ -229,3 +264,6 @@ Later phases get their checklists when they start.
 - 2026-11-12: Phase 3 done: shared card shape, bot renderer, card editor and Discord preview,
   checked in the local preview at desktop and phone width (no sideways scroll) and with the
   impeccable detector (only findings are Discord's own anatomy inside the preview).
+  Committed `2c421a5`.
+- 2026-11-12: Phase 4 code done: role menus (rules, migration 0023, bot posting and clicks,
+  dashboard page). Type-check, 365 tests and Biome pass; checked in the local preview.

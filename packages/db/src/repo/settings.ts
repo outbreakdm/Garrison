@@ -9,6 +9,7 @@ import {
   rallySettings,
   rankRewards,
   ranksSettings,
+  roleMenuSettings,
   type SettingsChange,
   type SettingsDiff,
   type SettingsModule,
@@ -44,6 +45,8 @@ export const EDITABLE_FIELDS = {
   rally: ["templates"],
   // Level rewards are one list too: [{ level, roleId }].
   rewards: ["rewards"],
+  // Role menus are checked with checkRoleMenus before they get here.
+  roles: ["menus"],
 } as const satisfies Record<SettingsModule, readonly string[]>;
 
 /** One step of the escalation ladder, as the dashboard edits it and history stores it. */
@@ -155,10 +158,11 @@ const TABLES = {
   ranks: ranksSettings,
   ledger: ledgerSettings,
   rally: rallySettings,
+  roles: roleMenuSettings,
 } as const;
 
 /** Modules whose settings row is created on first use, by the bot or the dashboard. */
-const LAZY = new Set<SettingsModule>(["ops", "ranks", "ledger", "rally"]);
+const LAZY = new Set<SettingsModule>(["ops", "ranks", "ledger", "rally", "roles"]);
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 type Row = Record<string, unknown>;
@@ -244,6 +248,12 @@ async function writeRow(tx: Tx, module: SettingsModule, guildId: string, values:
         .update(rallySettings)
         .set(set as Partial<typeof rallySettings.$inferInsert>)
         .where(eq(rallySettings.guildId, guildId));
+      return;
+    case "roles":
+      await tx
+        .update(roleMenuSettings)
+        .set(set as Partial<typeof roleMenuSettings.$inferInsert>)
+        .where(eq(roleMenuSettings.guildId, guildId));
       return;
   }
 }

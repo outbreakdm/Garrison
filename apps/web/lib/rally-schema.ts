@@ -64,4 +64,5 @@ export const ACTION_KIND: Record<string, string> = {
   qm_plan: "Plan build",
   qm_apply: "Apply build",
   qm_cancel: "Discard plan",
+  post_role_menu: "Post role menu",
 };
