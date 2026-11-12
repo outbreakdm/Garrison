@@ -4,7 +4,14 @@ import { type Giveaway, giveawayEntries, giveaways } from "../schema";
 
 export type NewGiveaway = Omit<
   typeof giveaways.$inferInsert,
-  "id" | "status" | "winnerIds" | "shownEntries" | "createdAt" | "endedAt" | "messageId"
+  | "id"
+  | "status"
+  | "winnerIds"
+  | "drawnIds"
+  | "shownEntries"
+  | "createdAt"
+  | "endedAt"
+  | "messageId"
 >;
 
 export async function createGiveaway(db: Db, g: NewGiveaway): Promise<Giveaway> {
@@ -100,15 +107,28 @@ export async function finishGiveaway(
 ): Promise<Giveaway | null> {
   const [row] = await db
     .update(giveaways)
-    .set({ status: outcome.status, winnerIds: outcome.winnerIds, endedAt: now })
+    .set({
+      status: outcome.status,
+      winnerIds: outcome.winnerIds,
+      drawnIds: outcome.winnerIds,
+      endedAt: now,
+    })
     .where(and(eq(giveaways.id, id), eq(giveaways.status, "running")))
     .returning();
   return row ?? null;
 }
 
-/** A reroll: the new winners replace the old. */
-export async function setGiveawayWinners(db: Db, id: string, winnerIds: string[]) {
-  await db.update(giveaways).set({ winnerIds }).where(eq(giveaways.id, id));
+/** A reroll: the new winners replace the old, and join everyone drawn so far. */
+export async function setGiveawayWinners(
+  db: Db,
+  id: string,
+  winnerIds: string[],
+  drawnIds: string[],
+) {
+  await db
+    .update(giveaways)
+    .set({ winnerIds, drawnIds: [...new Set([...drawnIds, ...winnerIds])] })
+    .where(eq(giveaways.id, id));
 }
 
 export async function setShownEntries(db: Db, id: string, n: number) {

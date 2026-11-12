@@ -297,9 +297,10 @@ export async function doGiveawayAction(
   }
   if (g.status !== "ended") return fail("Only a finished giveaway can be drawn again.");
   const entries = await listGiveawayEntries(ctx.db, g.id);
-  const winners = drawWinners(entries, g.winners, secureRandom, g.winnerIds);
+  // Never anyone drawn before, in the first draw or any reroll.
+  const winners = drawWinners(entries, g.winners, secureRandom, [...g.drawnIds, ...g.winnerIds]);
   if (!winners.length) return fail("Everyone who entered has already won. Nobody's left to draw.");
-  await setGiveawayWinners(ctx.db, g.id, winners);
+  await setGiveawayWinners(ctx.db, g.id, winners, [...g.drawnIds, ...g.winnerIds]);
   const updated = { ...g, winnerIds: winners };
   await refreshCard(ctx, guild, updated, entries.length);
   await announce(guild, updated, winners, true);

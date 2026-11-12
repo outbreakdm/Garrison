@@ -1437,6 +1437,8 @@ export const giveaways = pgTable(
     bonusRoles: jsonb("bonus_roles").$type<BonusRole[]>().notNull().default(sql`'[]'::jsonb`),
     accent: text("accent"),
     winnerIds: text("winner_ids").array().notNull().default(sql`'{}'::text[]`),
+    /** Everyone drawn so far, across rerolls, so "Draw again" never picks someone twice. */
+    drawnIds: text("drawn_ids").array().notNull().default(sql`'{}'::text[]`),
     /** Entries as last shown on the card, so it's edited only when the count changes. */
     shownEntries: integer("shown_entries").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

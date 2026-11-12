@@ -225,6 +225,13 @@
       "when": 1794490078165,
       "tag": "0031_starboard",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794490336737,
+      "tag": "0032_giveaway_rerolls",
+      "breakpoints": true
     }
   ]
 }

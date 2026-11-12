@@ -307,7 +307,8 @@ export default async function GiveawaysPage({
                         {act(g.id, "end", "Draw now")}
                         {act(g.id, "cancel", "Cancel", true)}
                       </>
-                    ) : g.status === "ended" && entries > g.winnerIds.length ? (
+                    ) : g.status === "ended" &&
+                      entries > new Set([...g.drawnIds, ...g.winnerIds]).size ? (
                       act(g.id, "reroll", "Draw again")
                     ) : null}
                   </span>

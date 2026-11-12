@@ -10,6 +10,7 @@ import {
   leaveGiveaway,
   listDueGiveaways,
   listGiveawayEntries,
+  setGiveawayWinners,
 } from "./repo/giveaways";
 import { upsertGuild } from "./repo/guilds";
 import { giveaways } from "./schema";
@@ -116,6 +117,11 @@ describe("giveaway storage, under each role's grants", () => {
     expect((await listDueGiveaways(db)).map((x) => x.id)).toEqual([g.id]);
     expect(await finishGiveaway(db, g.id, { status: "ended", winnerIds: ["u1"] })).not.toBeNull();
     expect(await finishGiveaway(db, g.id, { status: "ended", winnerIds: ["u2"] })).toBeNull();
+    // Rerolls add to everyone drawn, so nobody is drawn twice.
+    await setGiveawayWinners(db, g.id, ["u3"], ["u1"]);
+    const [after] = await db.select().from(giveaways);
+    expect(after?.winnerIds).toEqual(["u3"]);
+    expect(after?.drawnIds?.sort()).toEqual(["u1", "u3"]);
     await exec("RESET ROLE");
     await exec("SET ROLE garrison_web");
     const err = await Promise.resolve(db.update(giveaways).set({ status: "running" })).then(
