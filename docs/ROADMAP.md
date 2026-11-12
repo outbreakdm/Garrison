@@ -23,8 +23,13 @@ then updates **Status** and the **Log** before stopping.
   Garrison's role. Check `/rank` draws its image on the real host (the canvas module's Alpine
   binary). For Twitch alerts, create a Twitch app (dev.twitch.tv/console) and add
   `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` as GitHub secrets (the deploy passes them on);
-  YouTube alerts need no key. Then start a giveaway and star a message on a test server. Next:
-  Phase 2 (Stripe) once a price is set, then the depth backlog.
+  YouTube alerts need no key. Then start a giveaway and star a message on a test server.
+  Run `pnpm commands:deploy` once (new options: `/lfg create repeat_weekly`, `/lfg close
+  stop_repeating`, `/link rs3`). On a Pro test server, also check: voice XP and a boost, ending
+  a season, attendance marks after a raid, a stat-role rule after `/link osrs`, and saving a
+  server template then applying it in a second server you own. The calendar feed link should
+  open in a calendar app. Next: Phase 2 (Stripe) once a price is set. The depth backlog is
+  done; what's left needs the owner (Kick alerts, YouTube live, uploaded backgrounds).
 - **Branch:** `dashboard-first` (everything up to commit `1aed992` is deployed). Later
   commits (roadmap, plan list, staff and comps) are committed but not pushed or deployed.
 - **Before pushing:** `pnpm -r exec tsc --noEmit`, `pnpm test`, `pnpm exec biome check apps packages`.
@@ -392,7 +397,7 @@ Later phases get their checklists when they start.
 - **Ops:** [x] calendar view · [x] calendar feed (ICS; migration `0042_ops_calendar`) · [x] attendance history per member (Pro `ops.attendance`, migration `0043_attendance`) ·
   [x] signing up from the web (the same player page)
 - **Ranks:** [x] XP for time in voice · [x] XP boosts by role or channel (Pro `ranks.boosts`; migration `0045_voice_xp_boosts`) · [x] seasons (Pro `ranks.seasons`; migration `0046_rank_seasons`) ·
-  [ ] custom rank cards (phase 9)
+  [x] custom rank cards (phase 9)
 - **Barracks:** [x] more game accounts (RuneScape 3, claimed) · [x] roles that follow game stats (Pro `barracks.statRoles`; migration `0047_stat_roles`)
 - **Quartermaster:** [x] server templates that copy a layout (Pro `qm.templates`; migration `0048_server_templates`) · [x] scheduled backups (shares
   the Gatehouse backup engine; weekly on Pro)
@@ -521,3 +526,4 @@ Voice XP (10 a minute with company, shared cooldown) and XP boosts on Pro (role,
 Ranks seasons on Pro: a season_start request keeps the top 100 in rank_seasons and resets XP in one transaction; the Ranks page lists past seasons; the leaderboard hides 0 XP. Migration 0046.
 Barracks: `/link rs3` (RuneScape 3 hiscores, claimed) and Pro roles from game stats (up to 10 rules over shared accounts, synced every 30 min and on /link, unsafe roles never given). Needs `pnpm commands:deploy`. Migration 0047.
 Quartermaster server templates on Pro: save a server's layout to your account (5 max) and apply it in another server you own; owner-only, additive by name, permissions masked. Migration 0048.
+Depth backlog finished (Rally, Ops, Ranks, Barracks, Quartermaster). 470 tests, type-check and Biome clean. Nothing pushed or deployed.
