@@ -144,6 +144,10 @@ h2 {
 .table-wrap {
   overflow-x: auto;
 }
+/* Short tables (a few narrow columns) that fit a phone without scrolling. */
+table.g-table.g-table--fit {
+  min-width: 0;
+}
 table.g-table {
   width: 100%;
   border-collapse: collapse;

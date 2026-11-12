@@ -70,7 +70,7 @@ export default async function PlanPage({
           <h2 className="card-title" id="compare">
             Free and Pro
           </h2>
-          <table className="g-table">
+          <table className="g-table g-table--fit">
             <thead>
               <tr>
                 <th scope="col">Feature</th>
