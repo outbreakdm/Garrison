@@ -112,6 +112,9 @@ try {
 if (env) {
   // Newest tables first: if these exist with grants, everything older does too.
   const latest = [
+    "alert_settings",
+    "alert_state",
+    "rank_profiles",
     "ticket_settings",
     "tickets",
     "ticket_messages",
@@ -146,6 +149,8 @@ if (env) {
   console.log("Optional");
   if (env.ANTHROPIC_API_KEY) ok("Quartermaster is on");
   else warn("ANTHROPIC_API_KEY isn't set: /qm build stays off.");
+  if (env.TWITCH_CLIENT_ID && env.TWITCH_CLIENT_SECRET) ok("Twitch alerts are on");
+  else warn("TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET aren't both set: Twitch alerts stay off.");
 }
 console.log(failed ? "\nFix the ✗ items, then run this again." : "\nAll set. Start Garrison.");
 process.exit(failed ? 1 : 0);

@@ -25,6 +25,17 @@ const schema = z.object({
     .max(65535)
     .optional()
     .or(z.literal("").transform(() => undefined)),
+  /** A Twitch app's client ID and secret, for live alerts. Without both, Twitch alerts stay off. */
+  TWITCH_CLIENT_ID: z
+    .string()
+    .min(1)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  TWITCH_CLIENT_SECRET: z
+    .string()
+    .min(1)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
   /** Model Quartermaster plans with. */
   QM_MODEL: z.string().min(1).default("claude-opus-5-5"),
 });

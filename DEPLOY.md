@@ -296,6 +296,8 @@ cd apps/bot-cloudflare
 npx wrangler secret put DISCORD_TOKEN       # same token as Step 2.2
 npx wrangler secret put DATABASE_URL        # the bot's string from Step 3.4 (port 6543, garrison_bot)
 npx wrangler secret put ANTHROPIC_API_KEY   # optional: only if you want /qm build
+npx wrangler secret put TWITCH_CLIENT_ID     # optional: Twitch live alerts (dev.twitch.tv/console)
+npx wrangler secret put TWITCH_CLIENT_SECRET # optional: the same Twitch app's secret
 cd ../..
 ```
 

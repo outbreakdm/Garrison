@@ -9,7 +9,7 @@ then updates **Status** and the **Log** before stopping.
 
 - **Now:** Phases 3 to 8 are code done, committed, not pushed or deployed. **Before
   deploying:** apply migrations `0023_role_menus`, `0024_welcome`, `0025_messages`,
-  `0026_tickets`, `0027_ledger_text` and `0028_rank_cards` to production (`DATABASE_MIGRATION_URL` set, `pnpm db:migrate`, see
+  `0026_tickets`, `0027_ledger_text`, `0028_rank_cards` and `0029_alerts` to production (`DATABASE_MIGRATION_URL` set, `pnpm db:migrate`, see
   DEPLOY.md); the bot preflight checks for their tables, so a deploy before them stops at
   preflight. **Message Content Intent must be on** in the Developer Portal (Bot → Privileged
   Gateway Intents): the bot now asks for it, and login fails without it.
@@ -20,8 +20,10 @@ then updates **Status** and the **Log** before stopping.
   claim and close it, and read its transcript on the dashboard. Garrison's invite now asks for
   Change Nickname, so existing servers see it in /health until they re-invite or tick it on
   Garrison's role. Check `/rank` draws its image on the real host (the canvas module's Alpine
-  binary). Next: Phase 10 (stream alerts), 11 (giveaways and starboard); Phase 2 (Stripe) once
-  a price is set.
+  binary). For Twitch alerts, create a Twitch app (dev.twitch.tv/console) and add
+  `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` as GitHub secrets (the deploy passes them on);
+  YouTube alerts need no key. Next: Phase 11 (giveaways and starboard); Phase 2 (Stripe) once a
+  price is set.
 - **Branch:** `dashboard-first` (everything up to commit `1aed992` is deployed). Later
   commits (roadmap, plan list, staff and comps) are committed but not pushed or deployed.
 - **Before pushing:** `pnpm -r exec tsc --noEmit`, `pnpm test`, `pnpm exec biome check apps packages`.
@@ -44,7 +46,7 @@ then updates **Status** and the **Log** before stopping.
 | 7 | Tickets / modmail | **Code done**, not deployed: needs migration 0026 and the Message Content intent |
 | 8 | Message builder (post now or on a schedule) | **Code done**, not deployed: needs migration 0025 |
 | 9 | Custom rank cards with character details | **Code done**, not deployed: needs migration 0028 |
-| 10 | Stream and video alerts (Twitch, YouTube, Kick) | Not started |
+| 10 | Stream and video alerts (Twitch, YouTube, Kick) | **Code done**, not deployed: needs migration 0029; Twitch needs the owner's keys; Kick later |
 | 11 | Giveaways and starboard | Not started |
 | — | Depth for current modules (backlog below), slotted between phases | Not started |
 
@@ -306,6 +308,27 @@ Card accent colour and footer text come from the same settings, read by `lib/car
 - Later: members filling details on the dashboard, a season badge, uploading a background
   instead of pasting a Discord link.
 
+### Phase 10: stream alerts (module "Beacon", plain label "Alerts")
+
+- [x] Rules (`packages/db/src/alerts.ts`, browser-safe): a feed watches a Twitch login or a
+      YouTube channel (ID or @handle, from a name or a link), posts in one channel and may ping
+      one role. Free 3 feeds (`alerts.feeds`), Pro 25 with your own message and colour
+      (`alerts.custom`); extras pause on Free.
+- [x] Storage (migration `0029_alerts`): `alert_settings` (the list, Settings history and undo)
+      and `alert_state` (what the bot last saw and posted; the dashboard reads it for "Live now",
+      "Last alert", "Waiting for Garrison's Twitch keys", "Channel not found").
+- [x] Bot (`apps/bot/src/modules/alerts/`): Twitch Helix with a client-credentials token,
+      YouTube's public channel feed (no key; @handles resolved once from the channel page).
+      Each item is claimed with a conditional update before posting, so it's announced once;
+      a first check records without posting; videos older than a day aren't announced.
+      `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` are optional secrets, passed through the
+      Cloudflare Worker and the deploy workflow; preflight says whether Twitch is on.
+- [x] Dashboard (`/servers/:id/beacon`, nav "Beacon · Alerts"): add a feed, edit where it posts,
+      the ping and (Pro) the message and colour with a live preview, each feed's status.
+      Checked in the local preview (add from links, Pro refusal, statuses, phone width).
+- Later: Kick (its public API needs an app review), YouTube live streams (needs the YouTube
+  Data API key), a "send a test alert" button.
+
 ### Phase 8: message builder (module "Dispatch", plain label "Messages")
 
 - [x] Rules (`packages/db/src/messages.ts`, browser-safe): saved messages (up to 50) are a
@@ -421,3 +444,7 @@ Decided (2026-11-12, owner):
   the local preview. Committed `8f66ecc`.
 - 2026-11-12: Phase 9 code done: rank cards drawn as images, Pro styling and details,
   `/rankcard`, migration 0028. Type-check, 399 tests and Biome pass; checked in the local preview.
+  Committed `a2c5bb5`.
+- 2026-11-12: Phase 10 code done: Twitch and YouTube alerts, migration 0029. YouTube works
+  without a key; Twitch waits on the owner's Twitch app keys. Type-check, 407 tests and Biome pass;
+  checked in the local preview.

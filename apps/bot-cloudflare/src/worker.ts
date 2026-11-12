@@ -21,6 +21,8 @@ interface Env {
   DISCORD_TOKEN: string;
   DATABASE_URL: string;
   ANTHROPIC_API_KEY?: string;
+  TWITCH_CLIENT_ID?: string;
+  TWITCH_CLIENT_SECRET?: string;
   // Plain settings, from wrangler.jsonc vars:
   DISCORD_CLIENT_ID: string;
   QM_MODEL?: string;
@@ -44,6 +46,8 @@ export class GarrisonBot extends Container<Env> {
       LOG_LEVEL: env.LOG_LEVEL ?? "info",
     };
     if (env.ANTHROPIC_API_KEY) vars.ANTHROPIC_API_KEY = env.ANTHROPIC_API_KEY;
+    if (env.TWITCH_CLIENT_ID) vars.TWITCH_CLIENT_ID = env.TWITCH_CLIENT_ID;
+    if (env.TWITCH_CLIENT_SECRET) vars.TWITCH_CLIENT_SECRET = env.TWITCH_CLIENT_SECRET;
     if (env.QM_MODEL) vars.QM_MODEL = env.QM_MODEL;
     this.envVars = vars;
   }

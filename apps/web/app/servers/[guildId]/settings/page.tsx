@@ -321,7 +321,8 @@ export default async function SettingsPage({
                         {field === "templates" ||
                         field === "menus" ||
                         field === "messages" ||
-                        field === "panels"
+                        field === "panels" ||
+                        field === "feeds"
                           ? templatesChangeText(from, to)
                           : `${describe(field, from, names, roleNames)} → ${describe(field, to, names, roleNames)}`}
                       </div>

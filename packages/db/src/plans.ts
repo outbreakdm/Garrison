@@ -17,6 +17,7 @@ type Module =
   | "roles"
   | "welcome"
   | "tickets"
+  | "alerts"
   | "rally"
   | "ops"
   | "ranks"
@@ -136,6 +137,18 @@ export const FEATURES = {
   "ranks.cards": {
     module: "ranks",
     about: "Rank cards with your background, colour, and details members fill in",
+    free: false,
+    pro: true,
+  },
+  "alerts.feeds": {
+    module: "alerts",
+    about: "Stream and video alerts",
+    free: 3,
+    pro: 25,
+  },
+  "alerts.custom": {
+    module: "alerts",
+    about: "Your own alert message and colour",
     free: false,
     pro: true,
   },

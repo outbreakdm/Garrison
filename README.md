@@ -30,6 +30,7 @@ packages/
 | Herald        | Welcome           | **Built** | (dashboard)                                                                 |
 | Dispatch      | Messages          | **Built** | (dashboard)                                                                 |
 | Parley        | Tickets           | **Built** | `/ticket`                                                                   |
+| Beacon        | Alerts            | **Built** | (dashboard)                                                                 |
 | Quartermaster | AI builder        | **Built** | `/qm`                                                                       |
 
 ### Watch
@@ -107,6 +108,13 @@ After pulling this change, run `pnpm commands:deploy` once: `/lfg create` has a 
 - **Transcripts:** every message written in an open ticket is recorded, with edits (latest text) and deletions (kept, marked deleted). This is why Garrison asks for Message Content. Closed tickets keep their transcript 30 days on Free and 365 on Pro, set when the ticket closes so a later downgrade never shortens it; then the ticket, transcript and notes are deleted. The bot can delete a ticket only once it has expired (row-level security).
 - The dashboard's **Tickets** page has the queue (waiting on staff, waiting on the member, unclaimed, closed), search by number, member or transcript text, each ticket's transcript with staff-only notes, and Claim and Close.
 - Free: 1 panel, 3 topics. Pro: 10 panels of 10 topics, a form of up to 5 questions before a ticket opens, auto-assign to the staff member with the fewest open tickets, and stats.
+
+### Beacon (stream alerts)
+
+- Watches a **Twitch** channel (goes live) or a **YouTube** channel (new video) and posts a card with the thumbnail and a Watch button, optionally pinging one role (never @everyone). Each stream and video is announced once: its ID is swapped in with a conditional update before posting, and a feed's first check only records what's there.
+- YouTube uses the channel's public feed (no key). Twitch needs a Twitch app: set `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` (dev.twitch.tv/console); without them Twitch alerts stay off and the dashboard says so.
+- Twitch is checked every 2 minutes and YouTube every 5, once per watched channel however many servers watch it. Every request has a timeout; provider text is made inert before it's posted.
+- Free: 3 alerts with the standard look. Pro: 25, with your own message (`{name}`, `{title}`, `{game}`, `{url}`) and colour. Set up on the dashboard's Alerts page with a live preview.
 
 ### Ranks
 

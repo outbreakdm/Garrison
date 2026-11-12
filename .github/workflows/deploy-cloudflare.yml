@@ -108,10 +108,14 @@ jobs:
           DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TWITCH_CLIENT_ID: ${{ secrets.TWITCH_CLIENT_ID }}
+          TWITCH_CLIENT_SECRET: ${{ secrets.TWITCH_CLIENT_SECRET }}
         run: |
           printf '%s' "$DISCORD_TOKEN" | npx wrangler secret put DISCORD_TOKEN
           printf '%s' "$DATABASE_URL" | npx wrangler secret put DATABASE_URL
           if [ -n "$ANTHROPIC_API_KEY" ]; then printf '%s' "$ANTHROPIC_API_KEY" | npx wrangler secret put ANTHROPIC_API_KEY; fi
+          if [ -n "$TWITCH_CLIENT_ID" ]; then printf '%s' "$TWITCH_CLIENT_ID" | npx wrangler secret put TWITCH_CLIENT_ID; fi
+          if [ -n "$TWITCH_CLIENT_SECRET" ]; then printf '%s' "$TWITCH_CLIENT_SECRET" | npx wrangler secret put TWITCH_CLIENT_SECRET; fi
 
       - name: Done
         run: |

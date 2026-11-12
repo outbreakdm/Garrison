@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, isNotNull, notInArray, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import {
+  alertSettings,
   type EscalationRule,
   escalationRules,
   gatehouseSettings,
@@ -66,6 +67,8 @@ export const EDITABLE_FIELDS = {
     "joinRoleIds",
   ],
   // Panels are checked with checkTicketPanels, the rest with checkTicketOptions.
+  // Feeds are checked with checkAlertFeeds before they get here.
+  alerts: ["feeds"],
   tickets: [
     "panels",
     "staffRoleIds",
@@ -190,6 +193,7 @@ const TABLES = {
   welcome: welcomeSettings,
   messages: messageSettings,
   tickets: ticketSettings,
+  alerts: alertSettings,
 } as const;
 
 /** Modules whose settings row is created on first use, by the bot or the dashboard. */
@@ -202,6 +206,7 @@ const LAZY = new Set<SettingsModule>([
   "welcome",
   "messages",
   "tickets",
+  "alerts",
 ]);
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -300,6 +305,12 @@ async function writeRow(tx: Tx, module: SettingsModule, guildId: string, values:
         .update(welcomeSettings)
         .set(set as Partial<typeof welcomeSettings.$inferInsert>)
         .where(eq(welcomeSettings.guildId, guildId));
+      return;
+    case "alerts":
+      await tx
+        .update(alertSettings)
+        .set(set as Partial<typeof alertSettings.$inferInsert>)
+        .where(eq(alertSettings.guildId, guildId));
       return;
     case "tickets":
       await tx

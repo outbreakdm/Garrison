@@ -204,6 +204,13 @@
       "when": 1794488775521,
       "tag": "0028_rank_cards",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1794489327464,
+      "tag": "0029_alerts",
+      "breakpoints": true
     }
   ]
 }

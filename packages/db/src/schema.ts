@@ -15,6 +15,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { AlertFeed } from "./alerts";
 import type { CustomCard } from "./cards";
 import type { SavedMessage } from "./messages";
 import type { GuildPlan } from "./plans";
@@ -430,6 +431,7 @@ export const settingsModule = pgEnum("settings_module", [
   "welcome",
   "messages",
   "tickets",
+  "alerts",
 ]);
 
 /** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */
@@ -1336,3 +1338,51 @@ export type TicketPanelPost = typeof ticketPanelPosts.$inferSelect;
 export type Ticket = typeof tickets.$inferSelect;
 export type TicketMessage = typeof ticketMessages.$inferSelect;
 export type TicketNote = typeof ticketNotes.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Stream and video alerts (Beacon)
+// ---------------------------------------------------------------------------
+
+/** A server's alert feeds, edited on the dashboard as one value (with history and undo). */
+export const alertSettings = pgTable(
+  "alert_settings",
+  {
+    guildId: text("guild_id")
+      .primaryKey()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    feeds: jsonb("feeds").$type<AlertFeed[]>().notNull().default(sql`'[]'::jsonb`),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      "alert_feeds_list",
+      sql`jsonb_typeof(${t.feeds}) = 'array' AND jsonb_array_length(${t.feeds}) <= 25`,
+    ),
+  ],
+).enableRLS();
+
+/**
+ * What the bot last saw for each feed, written by the bot. The last item is
+ * swapped in with a conditional update before posting, so it's posted once.
+ */
+export const alertState = pgTable(
+  "alert_state",
+  {
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    feedId: text("feed_id").notNull(),
+    /** A YouTube @handle resolved to its channel ID. */
+    resolvedId: text("resolved_id"),
+    /** The Twitch stream ID or YouTube video ID last posted (or first seen). */
+    lastItemId: text("last_item_id"),
+    liveSince: timestamp("live_since", { withTimezone: true }),
+    /** Why the feed isn't working, in a word: not_found, not_configured. */
+    problem: text("problem"),
+    checkedAt: timestamp("checked_at", { withTimezone: true }),
+    postedAt: timestamp("posted_at", { withTimezone: true }),
+  },
+  (t) => [primaryKey({ columns: [t.guildId, t.feedId] })],
+).enableRLS();
+
+export type AlertStateRow = typeof alertState.$inferSelect;

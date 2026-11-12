@@ -1331,3 +1331,10 @@
   border-radius: inherit;
   background: var(--rc-accent);
 }
+
+/* Alerts: the role an alert pings, shown above the preview as Discord shows it. */
+.preview-ping {
+  margin: 0;
+  font-size: 13px;
+  color: var(--intel);
+}

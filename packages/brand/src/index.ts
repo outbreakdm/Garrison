@@ -74,6 +74,7 @@ export const modules = {
   herald: { name: "Herald", plain: "Welcome" },
   dispatch: { name: "Dispatch", plain: "Messages" },
   parley: { name: "Parley", plain: "Tickets" },
+  beacon: { name: "Beacon", plain: "Alerts" },
   quartermaster: { name: "Quartermaster", plain: "AI builder" },
 } as const;
 

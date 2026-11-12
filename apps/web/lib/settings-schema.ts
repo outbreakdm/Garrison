@@ -242,6 +242,7 @@ export const FIELD_LABELS: Record<string, string> = {
   joinRoleIds: "Roles on join",
   panels: "Ticket panels",
   card: "Rank card",
+  feeds: "Stream alerts",
   "tickets.staffRoleIds": "Ticket staff roles",
   "tickets.logChannelId": "Ticket log channel",
   parentId: "Tickets open in",

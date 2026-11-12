@@ -8,6 +8,7 @@ import { ensureGuild, forgetGuild } from "./lib/guild-registry.js";
 import { startHealthServer } from "./lib/health.js";
 import { createLogger } from "./lib/logger.js";
 import { Metrics } from "./lib/metrics.js";
+import { sweepAlerts } from "./modules/alerts/service.js";
 import { refreshOsrs } from "./modules/barracks/refresh.js";
 import { processDashboardActions } from "./modules/dashboard/actions.js";
 import { sweepMessages } from "./modules/dispatch/service.js";
@@ -56,6 +57,14 @@ const ctx: BotContext = {
   metrics: new Metrics(),
 };
 if (!ctx.planner) logger.info("Quartermaster is off: set ANTHROPIC_API_KEY to enable /qm build");
+const alertKeys = {
+  twitch:
+    env.TWITCH_CLIENT_ID && env.TWITCH_CLIENT_SECRET
+      ? { clientId: env.TWITCH_CLIENT_ID, secret: env.TWITCH_CLIENT_SECRET }
+      : null,
+};
+if (!alertKeys.twitch)
+  logger.info("Twitch alerts are off: set TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET");
 
 // Guild Members is privileged: turn on "Server Members Intent" in the Developer Portal.
 // Gatehouse needs it to see joins, and Guild Moderation (not privileged) for the
@@ -104,6 +113,9 @@ client.once(Events.ClientReady, async (ready) => {
     await sweepOps(ctx, ready).catch((error) => logger.error("Ops sweep failed", { error }));
     await sweepMessages(ctx, ready).catch((error) =>
       logger.error("Scheduled messages failed", { error }),
+    );
+    await sweepAlerts(ctx, ready, alertKeys).catch((error) =>
+      logger.error("Alert sweep failed", { error }),
     );
     await sweepTickets(ctx, ready).catch((error) => logger.error("Ticket sweep failed", { error }));
     await maybePruneLedger(ctx).catch((error) => logger.error("Ledger prune failed", { error }));

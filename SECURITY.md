@@ -82,7 +82,9 @@ Then set `DATABASE_URL` to the pooled connection string with user `garrison_bot.
 - **Least data:** Discord Connections are imported only from a separate sign-in that asks for `identify connections`, and only verified, non-revoked game accounts are kept. Battle.net imports character name, realm, level, class and faction. Tokens are used once and never stored.
 - **Honest labels:** links proven by Discord or Battle.net are "verified"; OSRS links are "claimed".
 - Members can only remove their own links: every dashboard action is scoped to the signed-in user's ID, and the end-to-end check tries to remove someone else's.
-- External APIs are called politely: OSRS hiscores at most one request every 1.5 s, refreshed in small batches.
+- External APIs are called politely: OSRS hiscores at most one request every 1.5 s, refreshed in small batches. Stream alerts check Twitch every 2 minutes and YouTube every 5, one request per watched channel, with timeouts.
+- The bot fetches images only from Discord's CDN (rank card backgrounds and avatars), capped at 4 MB and 5 s, with redirects refused. Alert thumbnails are links Discord fetches itself.
+- Twitch app credentials (`TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`) are optional bot secrets, used only for Twitch's client-credentials token.
 
 ## Quartermaster (AI)
 
