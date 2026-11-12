@@ -53,6 +53,7 @@ export interface CreateLfgInput {
   expiresAt: Date;
   templateId?: string | null;
   wording?: (RallyWording & { voice: boolean }) | null;
+  repeatWeekly?: boolean;
 }
 
 /** Create a post with the host in it. Returns null if the host already has an open group here. */
@@ -193,6 +194,35 @@ export async function leaveLfg(db: Db, postId: string, userId: string): Promise<
       .orderBy(asc(lfgMembers.joinedAt));
     return { ok: true, post: updated ?? post, members, hostLeft };
   });
+}
+
+/**
+ * Weekly groups whose run is over (expired, or closed and past their end) and
+ * that haven't been reposted or stopped yet.
+ */
+export async function listLfgRepeatsDue(db: Db, now = new Date()) {
+  return db
+    .select()
+    .from(lfgPosts)
+    .where(
+      and(
+        eq(lfgPosts.repeatWeekly, true),
+        isNull(lfgPosts.repeatedAt),
+        inArray(lfgPosts.status, ["closed", "expired"]),
+        lte(lfgPosts.expiresAt, now),
+      ),
+    )
+    .limit(100);
+}
+
+/** Next week's post was made, or the host stopped the repeat. Only the first call wins. */
+export async function markLfgRepeated(db: Db, postId: string, now = new Date()) {
+  const rows = await db
+    .update(lfgPosts)
+    .set({ repeatedAt: now })
+    .where(and(eq(lfgPosts.id, postId), isNull(lfgPosts.repeatedAt)))
+    .returning({ id: lfgPosts.id });
+  return rows.length > 0;
 }
 
 /** Close or expire a post. Returns null if it was already closed. */

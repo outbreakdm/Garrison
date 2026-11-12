@@ -10,6 +10,7 @@ import {
   leaveLfg,
   listActiveMembers,
   listOpenLfg,
+  markLfgRepeated,
   renderWording,
   setLfgMessage,
 } from "@garrison/db";
@@ -76,9 +77,23 @@ export const lfg: Command = {
             .setName("note")
             .setDescription('Requirements, e.g. "rank Gold+"')
             .setMaxLength(NOTE_MAX),
+        )
+        .addBooleanOption((o) =>
+          o
+            .setName("repeat_weekly")
+            .setDescription("Post this group again every week at the same time"),
         ),
     )
-    .addSubcommand((s) => s.setName("close").setDescription("Close your open group"))
+    .addSubcommand((s) =>
+      s
+        .setName("close")
+        .setDescription("Close your open group")
+        .addBooleanOption((o) =>
+          o
+            .setName("stop_repeating")
+            .setDescription("For a weekly group: don't post it again next week"),
+        ),
+    )
     .addSubcommand((s) => s.setName("list").setDescription("Show open groups in this server"))
     .toJSON(),
   async execute(interaction, ctx) {
@@ -123,7 +138,16 @@ export const lfg: Command = {
         return;
       }
       await refreshCard(ctx, guild, closed);
-      await interaction.reply({ content: "Closed your group.", ...ephemeral });
+      const stop = closed.repeatWeekly && interaction.options.getBoolean("stop_repeating") === true;
+      if (stop) await markLfgRepeated(ctx.db, closed.id);
+      await interaction.reply({
+        content: !closed.repeatWeekly
+          ? "Closed your group."
+          : stop
+            ? "Closed your group. It won't be posted again."
+            : "Closed your group. It posts again next week; `/lfg close stop_repeating:True` on that one ends it.",
+        ...ephemeral,
+      });
       return;
     }
 
@@ -191,6 +215,7 @@ export const lfg: Command = {
       ),
       templateId: template?.id ?? null,
       wording: template ? { ...template.wording, voice: template.voice } : null,
+      repeatWeekly: interaction.options.getBoolean("repeat_weekly") === true,
     });
     if (!post) {
       await interaction.reply({

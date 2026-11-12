@@ -39,6 +39,7 @@ export function lfgCard(post: LfgPost, members: LfgMember[]): Card {
     `Host <@${post.hostId}>`,
     post.startsAt.getTime() <= Date.now() + 60_000 ? "starts now" : `starts ${ts(post.startsAt)}`,
   ];
+  if (post.repeatWeekly && active) lead.push("weekly");
   if (post.note)
     lead.push(
       w.requirement ? `${safeText(w.requirement)}: ${safeText(post.note)}` : safeText(post.note),

@@ -31,6 +31,8 @@ const post: LfgPost = {
   expiresAt: new Date(Date.now() + 3_600_000),
   status: "open",
   voiceChannelId: null,
+  repeatWeekly: false,
+  repeatedAt: null,
   createdAt: new Date(),
   closedAt: null,
   templateId: null,

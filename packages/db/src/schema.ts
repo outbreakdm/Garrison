@@ -283,6 +283,10 @@ export const lfgPosts = pgTable(
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     status: lfgStatus("status").notNull().default("open"),
     /** Voice channel Garrison created for the full squad. Garrison deletes only channels recorded here. */
+    /** Post again a week later (same local time) once this one has run. */
+    repeatWeekly: boolean("repeat_weekly").notNull().default(false),
+    /** When next week's post was made, or the repeat was stopped. */
+    repeatedAt: timestamp("repeated_at", { withTimezone: true }),
     voiceChannelId: text("voice_channel_id"),
     /** The Rally template it was posted from, if any. */
     templateId: text("template_id"),
