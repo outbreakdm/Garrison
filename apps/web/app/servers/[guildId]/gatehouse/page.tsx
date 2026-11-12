@@ -1,5 +1,13 @@
-import { getOverview, listOpenQuarantines } from "@garrison/db";
+import {
+  backupsKept,
+  entitlements,
+  getGuildPlan,
+  getOverview,
+  listBackups,
+  listOpenQuarantines,
+} from "@garrison/db";
 import type { Metadata } from "next";
+import { ProTag } from "@/components/cards/CardEditor";
 import { formatTime } from "@/components/format";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import {
@@ -15,7 +23,7 @@ import { guildOwnerId, listGuildRoles, listTextChannels } from "@/lib/discord";
 import { isDangerousRole } from "@/lib/permissions";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
-import { saveAntiRaid, saveVerification } from "../settings/actions";
+import { saveAntiRaid, saveBackupWeekly, saveVerification } from "../settings/actions";
 
 export const metadata: Metadata = { title: "Gatehouse" };
 
@@ -25,6 +33,8 @@ const KINDS = [
   "release_quarantine",
   "post_verify_panel",
   "anti_nuke",
+  "backup_create",
+  "backup_restore",
 ];
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -57,14 +67,24 @@ export default async function GatehousePage({
   const { guild, session } = await requireGuildAccess(guildId);
   const query = await searchParams;
   const db = await getDb();
-  const [{ gatehouse: g, activeLockdown: l }, quarantines, channels, roles, ownerId] =
-    await Promise.all([
-      getOverview(db, guild.id),
-      listOpenQuarantines(db, guild.id),
-      listTextChannels(guild.id).catch(() => []),
-      listGuildRoles(guild.id).catch(() => []),
-      guildOwnerId(guild.id).catch(() => null),
-    ]);
+  const [
+    { gatehouse: g, activeLockdown: l },
+    quarantines,
+    channels,
+    roles,
+    ownerId,
+    backups,
+    plan,
+  ] = await Promise.all([
+    getOverview(db, guild.id),
+    listOpenQuarantines(db, guild.id),
+    listTextChannels(guild.id).catch(() => []),
+    listGuildRoles(guild.id).catch(() => []),
+    guildOwnerId(guild.id).catch(() => null),
+    listBackups(db, guild.id),
+    getGuildPlan(db, guild.id),
+  ]);
+  const ent = entitlements(plan);
   const isOwner = ownerId === session.userId;
   const roleName = (id: string | null | undefined) =>
     id ? `@${roles.find((r) => r.id === id)?.name ?? "deleted role"}` : "None";
@@ -485,6 +505,82 @@ export default async function GatehousePage({
           <p className="g-help">Only the owner or a trusted user can restore roles.</p>
         </div>
       </div>
+
+      <section className="g-card card-col" id="backups" aria-labelledby="backups-title">
+        <div className="queue__head">
+          <h2 className="card-title" id="backups-title">
+            Backups <span className="count">{backups.length}</span>
+          </h2>
+          <form action={requestAction}>
+            <Hidden guildId={guild.id} kind="backup_create" />
+            <button type="submit" className="g-btn g-btn--secondary">
+              Back up now
+            </button>
+          </form>
+        </div>
+        <p className="g-help">
+          Roles, categories, channels and their permissions. Restoring recreates only what's missing
+          and never deletes or changes what's there, so it's safe after a nuke. Garrison keeps{" "}
+          {backupsKept(ent)} {backupsKept(ent) === 1 ? "backup" : "backups"}; a new one replaces the
+          oldest. Only the server owner can restore.
+        </p>
+        {backups.length ? (
+          <ul className="queue__list">
+            {backups.map((b) => (
+              <li key={b.id} className="gw-row">
+                <span className="gw-row__main">
+                  <span className="ticket-row__topic">{formatTime(b.createdAt)}</span>
+                  <span className="ticket-row__who">
+                    {b.roleCount} roles · {b.channelCount} channels ·{" "}
+                    {b.kind === "weekly" ? "weekly" : `by ${b.createdByName ?? "staff"}`}
+                    {b.restoredAt ? ` · restored ${formatTime(b.restoredAt)}` : ""}
+                  </span>
+                </span>
+                <span />
+                <span className="gw-row__actions">
+                  {isOwner ? (
+                    <details className="confirm">
+                      <summary className="confirm__toggle g-btn g-btn--ghost g-btn--sm">
+                        Restore…
+                      </summary>
+                      <form action={requestAction} className="card-col">
+                        <Hidden guildId={guild.id} kind="backup_restore" />
+                        <input type="hidden" name="backupId" value={b.id} />
+                        <p className="g-help">
+                          Recreates roles and channels from this backup that aren't in the server
+                          now.
+                        </p>
+                        <button type="submit" className="g-btn g-btn--danger g-btn--sm">
+                          Yes, restore what's missing
+                        </button>
+                      </form>
+                    </details>
+                  ) : null}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="queue__empty muted">No backups yet. Take one now, before you need it.</p>
+        )}
+        <form action={saveBackupWeekly} className="settings-form">
+          <input type="hidden" name="guildId" value={guild.id} />
+          <label className="switch">
+            <input
+              type="checkbox"
+              name="backupWeekly"
+              defaultChecked={g?.backupWeekly ?? false}
+              disabled={!ent["backups.weekly"] && !g?.backupWeekly}
+            />
+            <span className="switch__text">
+              <span className="field-label">
+                Back up every week by itself <ProTag on={ent["backups.weekly"]} />
+              </span>
+            </span>
+          </label>
+          <FormFoot label="Save" guildId={guild.id} />
+        </form>
+      </section>
     </>
   );
 }

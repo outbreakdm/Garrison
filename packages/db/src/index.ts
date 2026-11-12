@@ -1,5 +1,6 @@
 export * from "./alerts";
 export * from "./automod";
+export * from "./backups";
 export * from "./cards";
 export * from "./client";
 export * from "./emoji";
@@ -13,6 +14,7 @@ export * from "./rank-cards";
 export * from "./repo/actions";
 export * from "./repo/alerts";
 export * from "./repo/automod";
+export * from "./repo/backups";
 export * from "./repo/barracks";
 export * from "./repo/cases";
 export * from "./repo/gatehouse";

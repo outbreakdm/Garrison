@@ -21,6 +21,7 @@ type Module =
   | "giveaways"
   | "starboard"
   | "automod"
+  | "backups"
   | "rally"
   | "ops"
   | "ranks"
@@ -194,6 +195,18 @@ export const FEATURES = {
   "automod.ai": {
     module: "automod",
     about: "AI moderation: OpenAI's moderation model reads messages for harassment, hate and more",
+    free: false,
+    pro: true,
+  },
+  "backups.kept": {
+    module: "backups",
+    about: "Server backups kept (roles, channels and permissions)",
+    free: 1,
+    pro: 30,
+  },
+  "backups.weekly": {
+    module: "backups",
+    about: "A server backup every week, taken by itself",
     free: false,
     pro: true,
   },

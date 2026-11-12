@@ -16,6 +16,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { AlertFeed } from "./alerts";
+import type { ServerBackup } from "./backups";
 import type { CustomCard } from "./cards";
 import type { BonusRole } from "./giveaways";
 import type { SavedMessage } from "./messages";
@@ -169,6 +170,8 @@ export const gatehouseSettings = pgTable(
     verifyMinAccountAgeDays: integer("verify_min_account_age_days").notNull().default(0),
     /** Verify on the website (sign in with Discord, captcha when configured) instead of in Discord. */
     verifyWeb: boolean("verify_web").notNull().default(false),
+    /** Pro: take a server backup every week. */
+    backupWeekly: boolean("backup_weekly").notNull().default(false),
     /** Anti-nuke: stop one actor deleting channels/roles or mass-banning. Owner-only to change. */
     antiNukeEnabled: boolean("anti_nuke_enabled").notNull().default(true),
     /** Users and bots anti-nuke never acts on. The owner is always trusted. Owner-only to change. */
@@ -849,6 +852,8 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "giveaway_action",
   "test_alert",
   "web_verify",
+  "backup_create",
+  "backup_restore",
 ]);
 export const dashboardActionStatus = pgEnum("dashboard_action_status", [
   "pending",
@@ -1634,3 +1639,33 @@ export const automodSettings = pgTable(
     check("automod_words", sql`cardinality(${t.words}) <= 250`),
   ],
 ).enableRLS();
+
+// ---------------------------------------------------------------------------
+// Server backups (Gatehouse)
+// ---------------------------------------------------------------------------
+
+export const backupKind = pgEnum("backup_kind", ["manual", "weekly"]);
+
+/** A snapshot of a server's roles, channels and permissions (backups.ts). Written by the bot. */
+export const serverBackups = pgTable(
+  "server_backups",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    kind: backupKind("kind").notNull().default("manual"),
+    createdById: text("created_by_id"),
+    createdByName: text("created_by_name"),
+    data: jsonb("data").$type<ServerBackup>().notNull(),
+    roleCount: integer("role_count").notNull().default(0),
+    channelCount: integer("channel_count").notNull().default(0),
+    /** Backup ID → new ID, for everything a restore recreated, so a second restore adds nothing. */
+    restoredMap: jsonb("restored_map").$type<Record<string, string>>().notNull().default({}),
+    restoredAt: timestamp("restored_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("server_backups_guild").on(t.guildId, t.createdAt)],
+).enableRLS();
+
+export type ServerBackupRow = typeof serverBackups.$inferSelect;

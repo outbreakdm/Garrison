@@ -7,6 +7,7 @@ import {
   countRunningGiveaways,
   entitlements,
   getAlertFeeds,
+  getBackup,
   getCase,
   getGiveaway,
   getGuildPlan,
@@ -198,6 +199,17 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       if ((await countRunningGiveaways(db, guildId)) >= ent["giveaways.running"])
         return { ok: false, error: "giveaway_full" };
       return { ok: true, input: { kind, payload: checked.value } };
+    }
+    case "backup_create":
+      return { ok: true, input: { kind, payload: {} } };
+    case "backup_restore": {
+      // Owner only, asked of Discord now; the bot asks again before restoring.
+      const owner = await guildOwnerId(guildId).catch(() => null);
+      if (!owner || owner !== requesterId) return { ok: false, error: "owner_only_restore" };
+      const id = field(form, "backupId");
+      const b = uuid.safeParse(id).success ? await getBackup(db, guildId, id) : null;
+      if (!b) return { ok: false, error: "not_found" };
+      return { ok: true, input: { kind, payload: { backupId: b.id } } };
     }
     case "test_alert": {
       const feedId = field(form, "feedId");

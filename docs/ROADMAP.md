@@ -9,7 +9,7 @@ then updates **Status** and the **Log** before stopping.
 
 - **Now:** Phases 1 and 3 to 11, and the follow-ups in the Log, are code done, committed,
   not pushed or deployed. **Before deploying:** apply every migration from `0023_role_menus`
-  through `0040_web_verify` to production (`DATABASE_MIGRATION_URL` set,
+  through `0041_backups` to production (`DATABASE_MIGRATION_URL` set,
   `pnpm db:migrate`, see DEPLOY.md); the bot preflight checks for their tables, so a deploy
   before them stops at
   preflight. **Message Content Intent must be on** in the Developer Portal (Bot → Privileged
@@ -382,7 +382,7 @@ Later phases get their checklists when they start.
   members · [x] appeals form on the dashboard feeding a queue · [x] temporary bans that lift
   themselves
 - **Gatehouse:** [x] captcha verification on the website · [x] alt-account warning signs ·
-  [ ] full server backup and restore (channels, roles, permissions)
+  [x] full server backup and restore (channels, roles, permissions)
 - **Ledger:** [ ] invite tracking · [ ] voice joins and leaves · [ ] nickname changes ·
   [ ] CSV export · [x] the text of deleted and edited messages (off by default, a switch in
   Ledger settings; migration `0027_ledger_text`; only for messages Garrison saw since its last
@@ -394,8 +394,8 @@ Later phases get their checklists when they start.
 - **Ranks:** [ ] XP for time in voice · [ ] XP boosts by role or channel · [ ] seasons ·
   [ ] custom rank cards (phase 9)
 - **Barracks:** [ ] more game accounts · [ ] roles that follow game stats
-- **Quartermaster:** [ ] server templates that copy a layout · [ ] scheduled backups (shares
-  the Gatehouse backup engine)
+- **Quartermaster:** [ ] server templates that copy a layout · [x] scheduled backups (shares
+  the Gatehouse backup engine; weekly on Pro)
 
 ## New modules (in build order)
 
@@ -506,3 +506,5 @@ Decided (2026-11-12, owner):
   Migration 0040.
 - 2026-11-12: Backlog: alt-account warnings (joins that look like a recent ban: name, account age,
   avatar), posted to the security alert channel.
+- 2026-11-12: Backlog: server backup and restore (owner-only, additive, idempotent; Free 1 kept,
+  Pro 30 and weekly). Migration 0041.

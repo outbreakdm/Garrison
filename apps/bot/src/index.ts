@@ -13,6 +13,7 @@ import { refreshOsrs } from "./modules/barracks/refresh.js";
 import { processDashboardActions } from "./modules/dashboard/actions.js";
 import { sweepMessages } from "./modules/dispatch/service.js";
 import { handleAuditLogEntry } from "./modules/gatehouse/anti-nuke.js";
+import { sweepWeeklyBackups } from "./modules/gatehouse/backup.js";
 import { handleMemberJoin, sweepExpiredLockdowns } from "./modules/gatehouse/service.js";
 import { sweepGiveaways } from "./modules/giveaways/service.js";
 import { snapshotAllHealth } from "./modules/health/command.js";
@@ -136,6 +137,9 @@ client.once(Events.ClientReady, async (ready) => {
     );
     await sweepAlerts(ctx, ready, alertKeys).catch((error) =>
       logger.error("Alert sweep failed", { error }),
+    );
+    await sweepWeeklyBackups(ctx, ready).catch((error) =>
+      logger.error("Weekly backups failed", { error }),
     );
     await liftExpiredBans(ctx, ready).catch((error) =>
       logger.error("Temporary ban sweep failed", { error }),

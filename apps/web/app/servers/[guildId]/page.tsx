@@ -54,6 +54,8 @@ const REQUEST_PAGE: Record<string, string> = {
   start_giveaway: "/spoils",
   giveaway_action: "/spoils",
   test_alert: "/beacon",
+  backup_create: "/gatehouse#backups",
+  backup_restore: "/gatehouse#backups",
   run_health: "#requests",
 };
 

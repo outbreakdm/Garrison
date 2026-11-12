@@ -1,6 +1,12 @@
 "use server";
 
-import { applySettingsChange, type SettingsModule, undoSettingsChange } from "@garrison/db";
+import {
+  applySettingsChange,
+  entitlements,
+  getGuildPlan,
+  type SettingsModule,
+  undoSettingsChange,
+} from "@garrison/db";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { listGuildRoles, listTextChannels } from "@/lib/discord";
@@ -42,6 +48,7 @@ const PLACES = {
   ladder: { page: "watch", panel: "edit-ladder" },
   antiRaid: { page: "gatehouse", panel: "anti-raid" },
   verification: { page: "gatehouse", panel: "verification" },
+  backups: { page: "gatehouse", panel: "backups" },
   ranks: { page: "ranks", panel: "settings" },
   rewards: { page: "ranks", panel: "rewards" },
   ledger: { page: "ledger", panel: "settings" },
@@ -137,6 +144,15 @@ export async function saveAntiRaid(form: FormData) {
     else
       await save("gatehouse", form, { ...parsed.data, staffRoleIds }, PLACES.antiRaid, "antiraid");
   }
+}
+
+/** Weekly backups (Pro). A server back on Free can still turn them off. */
+export async function saveBackupWeekly(form: FormData) {
+  const { guild } = await authorize(form);
+  const on = form.get("backupWeekly") === "on";
+  if (on && !entitlements(await getGuildPlan(await getDb(), guild.id))["backups.weekly"])
+    failed(guild.id, PLACES.backups, "pro");
+  else await save("gatehouse", form, { backupWeekly: on }, PLACES.backups);
 }
 
 export async function saveVerification(form: FormData) {

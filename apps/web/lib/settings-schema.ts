@@ -226,6 +226,7 @@ export const FIELD_LABELS: Record<string, string> = {
   rewards: "Level rewards",
   appealsEnabled: "Appeals page",
   verifyWeb: "Verify on the website",
+  backupWeekly: "Weekly backups",
   enabled: "Ranks",
   announce: "Level-ups",
   announceChannelId: "Level-up channel",

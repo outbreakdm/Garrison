@@ -72,4 +72,6 @@ export const ACTION_KIND: Record<string, string> = {
   start_giveaway: "Start giveaway",
   giveaway_action: "Giveaway",
   test_alert: "Test alert",
+  backup_create: "Back up the server",
+  backup_restore: "Restore a backup",
 };

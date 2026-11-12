@@ -27,6 +27,7 @@ import { safeText } from "../../lib/text.js";
 import { doTestAlert } from "../alerts/service.js";
 import { postMessageNow } from "../dispatch/service.js";
 import { restoreQuarantine } from "../gatehouse/anti-nuke.js";
+import { doBackupCreate, doBackupRestore } from "../gatehouse/backup.js";
 import { verifyPanel } from "../gatehouse/embeds.js";
 import {
   invalidateGatehouseSettings,
@@ -489,6 +490,10 @@ export async function runDashboardAction(
       return doGiveawayAction(ctx, guild, action.payload);
     case "test_alert":
       return doTestAlert(ctx, guild, member, action.payload);
+    case "backup_create":
+      return doBackupCreate(ctx, guild, member);
+    case "backup_restore":
+      return doBackupRestore(ctx, guild, member, action.payload);
     default:
       return fail("Garrison doesn't know that request.");
   }

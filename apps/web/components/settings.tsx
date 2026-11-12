@@ -34,6 +34,7 @@ const ERRORS: Record<string, string> = {
   reward_duplicate: "Each level can have one reward. Nothing was saved.",
   reward_dangerous: "A reward role can't have admin or moderation powers. Nothing was saved.",
   unchanged: "Nothing changed.",
+  pro: "That's part of Garrison Pro. Nothing was saved.",
   not_ready: "Garrison hasn't finished setting up this server. Try again in a minute.",
   not_found: "That change doesn't exist.",
   already_undone: "That change was already undone.",
