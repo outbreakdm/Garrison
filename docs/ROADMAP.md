@@ -7,31 +7,19 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **Now:** Phases 1 and 3 to 11, and the follow-ups in the Log, are code done, committed,
-  not pushed or deployed. **Before deploying:** apply every migration from `0023_role_menus`
-  through `0048_server_templates` to production (`DATABASE_MIGRATION_URL` set,
-  `pnpm db:migrate`, see DEPLOY.md); the bot preflight checks for their tables, so a deploy
-  before them stops at
-  preflight. **Message Content Intent must be on** in the Developer Portal (Bot → Privileged
-  Gateway Intents): the bot now asks for it, and login fails without it.
-  After deploying: post a menu on a test server and press its buttons (the one part not
-  checked locally, since no bot runs in the local preview), change Garrison's nickname
-  from Settings, turn on a welcome card and join on a test account, and schedule a message
-  a few minutes ahead, then post a ticket panel, open a ticket on a test account, write in it,
-  claim and close it, and read its transcript on the dashboard. Garrison's invite now asks for
-  Change Nickname, so existing servers see it in /health until they re-invite or tick it on
-  Garrison's role. Check `/rank` draws its image on the real host (the canvas module's Alpine
-  binary). For Twitch alerts, create a Twitch app (dev.twitch.tv/console) and add
-  `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` as GitHub secrets (the deploy passes them on);
-  YouTube alerts need no key. Then start a giveaway and star a message on a test server.
-  Run `pnpm commands:deploy` once (new options: `/lfg create repeat_weekly`, `/lfg close
-  stop_repeating`, `/link rs3`). On a Pro test server, also check: voice XP and a boost, ending
+- **Now:** Phases 1 and 3 to 11 and the depth backlog are **deployed** (2026-11-12, run
+  43328874352). Migrations through `0048_server_templates` are applied in production and
+  recorded in `drizzle.__drizzle_migrations` (0021 and 0022 had been applied by hand), so
+  `pnpm db:migrate` starts from 0049. Slash commands are registered (26).
+  Still to check on a test server: post a role menu and press its buttons, change Garrison's
+  nickname from Settings, a welcome card on join, a scheduled message, a ticket from open to
+  transcript, `/rank` drawing on the real host, a giveaway and a starred message.
+  On a Pro test server, also check: voice XP and a boost, ending
   a season, attendance marks after a raid, a stat-role rule after `/link osrs`, and saving a
   server template then applying it in a second server you own. The calendar feed link should
   open in a calendar app. Next: Phase 2 (Stripe) once a price is set. The depth backlog is
   done; what's left needs the owner (Kick alerts, YouTube live, uploaded backgrounds).
-- **Branch:** `dashboard-first` (everything up to commit `1aed992` is deployed). Later
-  commits (roadmap, plan list, staff and comps) are committed but not pushed or deployed.
+- **Branch:** `dashboard-first`, pushed; everything through commit `506f9d0` is deployed.
 - **Before pushing:** `pnpm -r exec tsc --noEmit`, `pnpm test`, `pnpm exec biome check apps packages`.
 - **Deploying:** "deploy" means commit, push, then
   `gh workflow run deploy-cloudflare.yml --repo outbreakdm/Garrison --ref <branch> -f target=everything -f register_commands=true`.
@@ -549,3 +537,7 @@ Decided (2026-11-12, owner):
   permissions masked. Migration 0048.
 - 2026-11-12: Backlog: Depth backlog finished (Rally, Ops, Ranks, Barracks, Quartermaster). 470
   tests, type-check and Biome clean. Nothing pushed or deployed.
+- 2026-11-12: Deployed. Migrations 0023-0048 applied to production through the Supabase
+  connection (no local .env), and 0021-0048 recorded for drizzle. The first run stopped at
+  preflight, which wrongly expected the bot to read appeals and ticket notes; fixed the lists
+  (506f9d0) and redeployed.
