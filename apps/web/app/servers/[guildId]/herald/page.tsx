@@ -1,6 +1,7 @@
 import {
   entitlements,
   getGuildPlan,
+  getOverview,
   getWelcome,
   JOIN_ROLES_MAX,
   type WelcomeConfig,
@@ -60,13 +61,16 @@ export default async function WelcomePage({
   const { guild, session } = await requireGuildAccess(guildId);
   const query = await searchParams;
   const db = await getDb();
-  const [w, plan, channels, roles, botTop] = await Promise.all([
+  const [w, plan, channels, roles, botTop, overview] = await Promise.all([
     getWelcome(db, guild.id),
     getGuildPlan(db, guild.id),
     listTextChannels(guild.id).catch(() => []),
     listGuildRoles(guild.id).catch(() => []),
     botTopPosition(guild.id),
+    getOverview(db, guild.id),
   ]);
+  const verifyId = overview.gatehouse?.verifyRoleId;
+  const verifyRole = verifyId ? roles.find((r) => r.id === verifyId) : null;
   const ent = entitlements(plan);
   const editing = typeof query.edit === "string" ? query.edit : null;
   const channelName = new Map(channels.map((c) => [c.id, c.name]));
@@ -179,6 +183,12 @@ export default async function WelcomePage({
               );
             })}
           </div>
+          {verifyRole ? (
+            <p className="g-help g-help--warn">
+              Verification is on (it gives @{verifyRole.name}). Roles on join are given before
+              someone verifies, so pick roles that don't open the channels verification guards.
+            </p>
+          ) : null}
           <p className="g-help">
             Given as soon as someone joins, before the welcome card. Roles with moderation or admin
             powers never are.
