@@ -22,6 +22,7 @@ import {
   pruneTickets,
   recordTicketEvent,
   recordTicketMessage,
+  reopenTicket,
   type Ticket,
   type TicketAnswer,
   type TicketAttachment,
@@ -154,6 +155,76 @@ const TALK = [
   PermissionFlagsBits.ReadMessageHistory,
 ];
 
+/** A private channel for one ticket: the member, the staff roles and Garrison only. */
+function ticketChannel(
+  guild: Guild,
+  me: GuildMember,
+  config: TicketConfig,
+  member: GuildMember,
+  number: number,
+  topic: string,
+) {
+  const parent = config.parentId ? guild.channels.cache.get(config.parentId) : null;
+  // Members may attach screenshots only if Garrison itself may (Discord's rule for overwrites).
+  const memberAllow = me.permissions.has(PermissionFlagsBits.AttachFiles)
+    ? [...TALK, PermissionFlagsBits.AttachFiles]
+    : TALK;
+  const overwrites: OverwriteResolvable[] = [
+    { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+    { id: member.id, allow: memberAllow },
+    { id: me.id, allow: [...TALK, PermissionFlagsBits.EmbedLinks] },
+    ...config.staffRoleIds
+      .filter((id) => guild.roles.cache.has(id))
+      .map((id) => ({ id, allow: memberAllow })),
+  ];
+  return guild.channels.create({
+    name: ticketChannelName(number),
+    type: ChannelType.GuildText,
+    parent: parent?.type === ChannelType.GuildCategory ? parent.id : null,
+    permissionOverwrites: overwrites,
+    topic: `Ticket #${number} · ${topic} · opened by ${member.user.username}`,
+    reason: `Ticket #${number} for ${member.user.username}`,
+  });
+}
+
+/**
+ * Reopen a closed ticket from the dashboard: a fresh channel for the same member
+ * and number, and the transcript carries on where it stopped.
+ */
+export async function reopenClosedTicket(
+  ctx: BotContext,
+  guild: Guild,
+  ticket: Ticket,
+  by: GuildMember,
+): Promise<{ ok: boolean; message: string }> {
+  const config = await getTicketConfig(ctx.db, guild.id);
+  const me = guild.members.me ?? (await guild.members.fetchMe());
+  if (!me.permissions.has(PermissionFlagsBits.ManageChannels))
+    return { ok: false, message: "Garrison needs the Manage Channels permission to open tickets." };
+  const opener = await guild.members.fetch(ticket.openerId).catch(() => null);
+  if (!opener) return { ok: false, message: `${ticket.openerName} isn't in the server any more.` };
+  const channel = await ticketChannel(guild, me, config, opener, ticket.number, ticket.topicLabel);
+  const row = await reopenTicket(ctx.db, ticket.id, channel.id);
+  if (!row) {
+    await channel.delete("Ticket was already open").catch(() => null);
+    return { ok: false, message: `Ticket #${ticket.number} is already open.` };
+  }
+  open.set(channel.id, { ticketId: row.id, guildId: guild.id, openerId: row.openerId });
+  await recordTicketEvent(ctx.db, {
+    ticketId: row.id,
+    guildId: guild.id,
+    text: `${by.displayName} reopened this ticket.`,
+  });
+  await channel.send({
+    ...cardMessage({
+      ...openingCard(row, config),
+      lead: `Reopened by <@${by.id}> for <@${row.openerId}>. The transcript so far is on the dashboard.`,
+    }),
+    allowedMentions: { users: [row.openerId] },
+  });
+  return { ok: true, message: `Reopened ticket #${row.number} in #${channel.name}.` };
+}
+
 /** Open the ticket: a private channel, the opening card, and a line in the transcript. */
 export async function createTicket(
   ctx: BotContext,
@@ -170,28 +241,8 @@ export async function createTicket(
       "It needs the Manage Channels permission. Ask a moderator to check Garrison's role.",
       "alert",
     );
-  const parent = config.parentId ? guild.channels.cache.get(config.parentId) : null;
-  // Members may attach screenshots only if Garrison itself may (Discord's rule for overwrites).
-  const memberAllow = me.permissions.has(PermissionFlagsBits.AttachFiles)
-    ? [...TALK, PermissionFlagsBits.AttachFiles]
-    : TALK;
-  const overwrites: OverwriteResolvable[] = [
-    { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-    { id: member.id, allow: memberAllow },
-    { id: me.id, allow: [...TALK, PermissionFlagsBits.EmbedLinks] },
-    ...config.staffRoleIds
-      .filter((id) => guild.roles.cache.has(id))
-      .map((id) => ({ id, allow: memberAllow })),
-  ];
   const number = await nextTicketNumber(ctx.db, guild.id);
-  const channel = await guild.channels.create({
-    name: ticketChannelName(number),
-    type: ChannelType.GuildText,
-    parent: parent?.type === ChannelType.GuildCategory ? parent.id : null,
-    permissionOverwrites: overwrites,
-    topic: `Ticket #${number} · ${topic.label} · opened by ${member.user.username}`,
-    reason: `Ticket opened by ${member.user.username}`,
-  });
+  const channel = await ticketChannel(guild, me, config, member, number, topic.label);
   let ticket: Ticket;
   try {
     const assignee =
@@ -387,7 +438,7 @@ async function deleteTicketChannel(
   const channel = guild.channels.cache.get(t.channelId);
   try {
     if (channel) await channel.delete("Ticket closed");
-    await markTicketChannelGone(ctx.db, t.id);
+    await markTicketChannelGone(ctx.db, t.id, t.channelId);
   } catch (error) {
     // Left for the sweep to retry (Garrison may have lost Manage Channels).
     ctx.logger.warn("Could not delete a closed ticket's channel", { guildId: guild.id, error });
@@ -409,7 +460,7 @@ export async function onTicketChannelDeleted(ctx: BotContext, guild: Guild, chan
   });
   open.delete(channelId);
   if (closed) {
-    await markTicketChannelGone(ctx.db, ticket.id);
+    await markTicketChannelGone(ctx.db, ticket.id, channelId);
     await recordTicketEvent(ctx.db, {
       ticketId: ticket.id,
       guildId: guild.id,

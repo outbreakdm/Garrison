@@ -232,6 +232,13 @@
       "when": 1794490336737,
       "tag": "0032_giveaway_rerolls",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1794492732961,
+      "tag": "0033_ticket_reopen",
+      "breakpoints": true
     }
   ]
 }

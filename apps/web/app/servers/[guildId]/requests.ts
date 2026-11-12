@@ -205,11 +205,13 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
     }
     case "ticket_action": {
       const op = field(form, "op");
-      if (op !== "claim" && op !== "close") return { ok: false, error: "invalid" };
+      if (op !== "claim" && op !== "close" && op !== "reopen")
+        return { ok: false, error: "invalid" };
       const ticketId = field(form, "ticketId");
       const t = uuid.safeParse(ticketId).success ? await getTicket(db, guildId, ticketId) : null;
       if (!t) return { ok: false, error: "not_found" };
-      if (t.status !== "open") return { ok: false, error: "ticket_closed" };
+      if (op === "reopen" ? t.status !== "closed" : t.status !== "open")
+        return { ok: false, error: op === "reopen" ? "ticket_open" : "ticket_closed" };
       const reason = field(form, "reason").trim().slice(0, TICKET_LIMITS.reason) || null;
       return { ok: true, input: { kind, payload: { ticketId: t.id, op, reason } } };
     }

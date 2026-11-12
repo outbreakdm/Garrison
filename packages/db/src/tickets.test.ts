@@ -14,12 +14,14 @@ import {
   listOpenTicketChannels,
   listTicketMessages,
   listTickets,
+  markTicketChannelGone,
   markTicketMessageDeleted,
   nextTicketNumber,
   openTicket,
   pruneTickets,
   recordTicketEvent,
   recordTicketMessage,
+  reopenTicket,
   ticketQueueCounts,
 } from "./repo/tickets";
 import { ticketMessages, tickets } from "./schema";
@@ -269,6 +271,26 @@ describe("ticket storage, under each role's grants", () => {
       at: closedAt,
     });
     expect(closed?.status).toBe("closed");
+    // Reopened in a new channel, then closed again for the expiry checks below.
+    const reopened = await reopenTicket(db, ticket.id, "300000000000000009");
+    expect(reopened).toMatchObject({
+      status: "open",
+      channelId: "300000000000000009",
+      closedAt: null,
+    });
+    expect(await reopenTicket(db, ticket.id, "300000000000000010")).toBeNull();
+    // The old channel's deletion no longer marks the reopened ticket's channel gone.
+    await markTicketChannelGone(db, ticket.id, "300000000000000001");
+    expect(
+      (await listOpenTicketChannels(db)).some((t) => t.channelId === "300000000000000009"),
+    ).toBe(true);
+    await closeTicket(db, {
+      id: ticket.id,
+      by: { id: "100000000000000009", name: "mod" },
+      reason: "Role restored",
+      expiresAt: expiresAt(free, closedAt),
+      at: closedAt,
+    });
     // A double press closes nothing.
     expect(
       await closeTicket(db, {

@@ -226,7 +226,22 @@ export default async function TicketPage({
                   </span>
                 </form>
               </>
-            ) : null}
+            ) : (
+              <form action={requestAction} className="card-col">
+                <input type="hidden" name="guildId" value={guild.id} />
+                <input type="hidden" name="page" value={page} />
+                <input type="hidden" name="kind" value="ticket_action" />
+                <input type="hidden" name="ticketId" value={ticket.id} />
+                <input type="hidden" name="op" value="reopen" />
+                <button type="submit" className="g-btn g-btn--secondary">
+                  Reopen ticket
+                </button>
+                <span className="g-help">
+                  Garrison opens a new channel for {ticket.openerName} and the staff. The transcript
+                  carries on here.
+                </span>
+              </form>
+            )}
           </div>
 
           <div className="g-card card-col" id="notes">

@@ -269,8 +269,31 @@ export async function closeTicket(
   return row ?? null;
 }
 
-export async function markTicketChannelGone(db: Db, id: string) {
-  await db.update(tickets).set({ channelGone: true }).where(eq(tickets.id, id));
+/** The ticket's channel is gone. Only if it's still that channel: a reopened ticket has a new one. */
+export async function markTicketChannelGone(db: Db, id: string, channelId: string) {
+  await db
+    .update(tickets)
+    .set({ channelGone: true })
+    .where(and(eq(tickets.id, id), eq(tickets.channelId, channelId)));
+}
+
+/** Reopen a closed ticket in a new channel. Null when it wasn't closed (a double press). */
+export async function reopenTicket(db: Db, id: string, channelId: string) {
+  const [row] = await db
+    .update(tickets)
+    .set({
+      status: "open",
+      channelId,
+      channelGone: false,
+      closedAt: null,
+      closedBy: null,
+      closedByName: null,
+      closeReason: null,
+      expiresAt: null,
+    })
+    .where(and(eq(tickets.id, id), eq(tickets.status, "closed")))
+    .returning();
+  return row ?? null;
 }
 
 /** Closed tickets whose channel is still there a minute after closing (a restart in between). */

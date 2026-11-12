@@ -10,7 +10,7 @@ then updates **Status** and the **Log** before stopping.
 - **Now:** Phases 3 to 8 are code done, committed, not pushed or deployed. **Before
   deploying:** apply migrations `0023_role_menus`, `0024_welcome`, `0025_messages`,
   `0026_tickets`, `0027_ledger_text`, `0028_rank_cards`, `0029_alerts`, `0030_giveaways` and
-  `0031_starboard` and `0032_giveaway_rerolls` to production (`DATABASE_MIGRATION_URL` set, `pnpm db:migrate`, see
+  `0031_starboard` `0032_giveaway_rerolls` and `0033_ticket_reopen` to production (`DATABASE_MIGRATION_URL` set, `pnpm db:migrate`, see
   DEPLOY.md); the bot preflight checks for their tables, so a deploy before them stops at
   preflight. **Message Content Intent must be on** in the Developer Portal (Bot → Privileged
   Gateway Intents): the bot now asks for it, and login fails without it.
@@ -479,3 +479,5 @@ Decided (2026-11-12, owner):
 - 2026-11-12: Review pass over this session's work (ticket open/close races, alert
   de-duplication, giveaway draws, starboard claims, the new partials). One fix: "Draw again"
   now skips everyone drawn before, not just the last draw (migration 0032).
+- 2026-11-12: Follow-ups: a ticket's transcript downloads as a text file; a closed ticket can be
+  reopened from the dashboard in a new channel (migration 0033).

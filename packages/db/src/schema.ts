@@ -910,7 +910,7 @@ export interface PostTicketPanelPayload {
 /** Claim or close a ticket from the dashboard, as the member who asked. */
 export interface TicketActionPayload {
   ticketId: string;
-  op: "claim" | "close";
+  op: "claim" | "close" | "reopen";
   reason: string | null;
 }
 /** Start a giveaway from the dashboard. Checked again by the bot. */

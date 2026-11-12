@@ -13,7 +13,7 @@ import { z } from "zod";
 import type { BotContext } from "../../commands/types.js";
 import { cardMessage } from "../../lib/card.js";
 import { panelMessage } from "./panel.js";
-import { claim, closeAndArchive } from "./service.js";
+import { claim, closeAndArchive, reopenClosedTicket } from "./service.js";
 
 /**
  * Ticket requests from the dashboard: post a panel, or claim or close a ticket as
@@ -29,7 +29,7 @@ const postPanel = z.object({
 });
 const action = z.object({
   ticketId: z.string().uuid(),
-  op: z.enum(["claim", "close"]),
+  op: z.enum(["claim", "close", "reopen"]),
   reason: z.string().trim().max(TICKET_LIMITS.reason).nullable(),
 });
 
@@ -103,6 +103,10 @@ export async function doTicketAction(
   if (!p.success) return fail("That request wasn't valid.");
   const ticket = await getTicket(ctx.db, guild.id, p.data.ticketId);
   if (!ticket) return fail("That ticket was removed.");
+  if (p.data.op === "reopen")
+    return ticket.status === "closed"
+      ? reopenClosedTicket(ctx, guild, ticket, member)
+      : fail(`Ticket #${ticket.number} is already open.`);
   if (ticket.status !== "open") return fail(`Ticket #${ticket.number} is already closed.`);
   if (p.data.op === "claim") {
     const result = await claim(ctx, member, ticket.id);

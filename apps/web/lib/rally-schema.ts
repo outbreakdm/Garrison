@@ -68,7 +68,7 @@ export const ACTION_KIND: Record<string, string> = {
   bot_profile: "Change Garrison's profile",
   post_message: "Post message",
   post_ticket_panel: "Post ticket panel",
-  ticket_action: "Claim or close ticket",
+  ticket_action: "Ticket: claim, close or reopen",
   start_giveaway: "Start giveaway",
   giveaway_action: "Giveaway",
 };

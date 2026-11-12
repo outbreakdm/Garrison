@@ -26,6 +26,7 @@ const ERRORS: Record<string, string> = {
   giveaway_pro: "Entry rules, bonus entries and your own colour are part of Garrison Pro.",
   giveaway_full: "This server runs as many giveaways at once as its plan allows. End one first.",
   ticket_closed: "That ticket is already closed.",
+  ticket_open: "That ticket is already open.",
   qm_not_yours: "Only the person who asked for a plan can apply it. You can discard it.",
 };
 
