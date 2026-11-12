@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, isNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { guilds, type ModCase, modCases, type NewModCase } from "../schema";
 
@@ -63,6 +63,25 @@ export async function countActiveWarnings(db: Db, guildId: string, targetId: str
  * Mark a case as undone. Returns the updated case, or null when the case does
  * not exist or was already revoked (so a double-clicked Undo is harmless).
  */
+/** How long a temporary ban can last: the choices /ban and the dashboard offer. */
+export const BAN_LENGTHS = [3600, 86_400, 259_200, 604_800, 2_592_000, 7_776_000] as const;
+
+/** Temporary bans whose time is up and that nobody has lifted yet. */
+export async function listExpiredBans(db: Db, now = new Date()) {
+  return db
+    .select()
+    .from(modCases)
+    .where(
+      and(
+        eq(modCases.action, "ban"),
+        isNull(modCases.revokedAt),
+        isNotNull(modCases.expiresAt),
+        lte(modCases.expiresAt, now),
+      ),
+    )
+    .limit(50);
+}
+
 export async function revokeCase(db: Db, guildId: string, caseNumber: number, revokedById: string) {
   const [row] = await db
     .update(modCases)

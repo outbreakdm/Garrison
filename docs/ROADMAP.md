@@ -379,7 +379,7 @@ Later phases get their checklists when they start.
 ## Depth for current modules (backlog)
 
 - **Watch:** [ ] automod (spam, invite links, mass mentions, word lists) · [ ] mod notes on
-  members · [ ] appeals form on the dashboard feeding a queue · [ ] temporary bans that lift
+  members · [ ] appeals form on the dashboard feeding a queue · [x] temporary bans that lift
   themselves
 - **Gatehouse:** [ ] captcha verification on the website · [ ] alt-account warning signs ·
   [ ] full server backup and restore (channels, roles, permissions)
@@ -495,3 +495,4 @@ Decided (2026-11-12, owner):
   opens; messages are relayed both ways (`//` keeps a staff line internal). New intent
   `DirectMessages` (not privileged). Migration 0037. All follow-ups are done except Kick alerts
   and YouTube live (both need keys or an app review) and uploading backgrounds (needs storage).
+- 2026-11-12: Backlog: temporary bans (`/ban length:` and the dashboard), lifted by the minute sweep.

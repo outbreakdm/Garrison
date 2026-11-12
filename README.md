@@ -44,6 +44,7 @@ packages/
 - Members get a neutral DM with the reason and how to appeal (`/moderation dm_members` and `appeal_text`).
 - `/moderation log_channel:#mod-log` posts every case to a channel.
 
+- **Temporary bans:** `/ban length:` (1 hour to 90 days) or the dashboard's ban form. The minute sweep lifts them when their time is up, marks the case undone by Garrison and says so in the log.
 ### Gatehouse
 
 - **Anti-raid**: watches the join rate. By default, 10 joins in 30 s is a raid. Garrison then locks the server, pauses invites and lifts the lockdown after 15 min, or only alerts if you set `raid_response:Alert only`. One raid gives one alert.

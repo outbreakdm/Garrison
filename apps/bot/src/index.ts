@@ -39,6 +39,7 @@ import {
   onTicketMessage,
   sweepTickets,
 } from "./modules/tickets/service.js";
+import { liftExpiredBans } from "./modules/watch/service.js";
 import { welcomeJoin, welcomeLeave } from "./modules/welcome/service.js";
 
 const env = loadEnv();
@@ -131,6 +132,9 @@ client.once(Events.ClientReady, async (ready) => {
     );
     await sweepAlerts(ctx, ready, alertKeys).catch((error) =>
       logger.error("Alert sweep failed", { error }),
+    );
+    await liftExpiredBans(ctx, ready).catch((error) =>
+      logger.error("Temporary ban sweep failed", { error }),
     );
     await sweepGiveaways(ctx, ready).catch((error) =>
       logger.error("Giveaway sweep failed", { error }),

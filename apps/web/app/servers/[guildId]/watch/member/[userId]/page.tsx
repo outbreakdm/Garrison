@@ -194,12 +194,25 @@ export default async function MemberPage({
             <div className="mod-action">
               <h2>Ban</h2>
               <p className="g-help">
-                Works whether or not they're in the server. Undo it from their cases.
+                Works whether or not they're in the server. A temporary ban lifts itself; any ban
+                can be undone from their cases.
               </p>
               <details className="confirm">
                 <summary className="confirm__toggle g-btn g-btn--ghost">Ban…</summary>
                 <form action={requestAction} className="card-col">
                   {hidden("ban")}
+                  <label className="g-field" htmlFor="ban-length">
+                    <span>How long</span>
+                    <select className="g-input" id="ban-length" name="banLength" defaultValue="0">
+                      <option value="0">Permanent (until undone)</option>
+                      <option value="3600">1 hour</option>
+                      <option value="86400">1 day</option>
+                      <option value="259200">3 days</option>
+                      <option value="604800">1 week</option>
+                      <option value="2592000">30 days</option>
+                      <option value="7776000">90 days</option>
+                    </select>
+                  </label>
                   <label className="g-field" htmlFor="ban-delete">
                     <span>Delete their recent messages</span>
                     <select className="g-input" id="ban-delete" name="deleteMessages">

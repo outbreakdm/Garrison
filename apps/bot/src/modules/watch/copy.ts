@@ -52,6 +52,7 @@ export function dmTitle(action: MemberAction, guildName: string, durationSeconds
   const forDuration = durationSeconds ? ` for ${formatDuration(durationSeconds)}` : "";
   const where = action === "warn" ? `in ${guildName}` : `from ${guildName}`;
   if (action === "timeout") return `You were timed out in ${guildName}${forDuration}`;
+  if (action === "ban") return `You were banned from ${guildName}${forDuration}`;
   return `You were ${verbs[action].past} ${where}`;
 }
 

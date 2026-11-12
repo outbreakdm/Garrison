@@ -1,6 +1,7 @@
 "use server";
 
 import {
+  BAN_LENGTHS,
   checkGiveaway,
   checkProfileRequest,
   countRunningGiveaways,
@@ -288,12 +289,14 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       const userId = field(form, "userId");
       const duration = Number(field(form, "duration") || "0");
       const del = Number(field(form, "deleteMessages") || "0");
+      const banFor = Number(field(form, "banLength") || "0");
       if (
         !isModAction(action) ||
         !SNOWFLAKE.test(userId) ||
         userId === userId0(guildId) ||
         (action === "timeout" && !TIMEOUTS.has(duration)) ||
-        !BAN_DELETE.has(del)
+        !BAN_DELETE.has(del) ||
+        (action === "ban" && banFor !== 0 && !(BAN_LENGTHS as readonly number[]).includes(banFor))
       )
         return { ok: false, error: "invalid" };
       if (userId === requesterId) return { ok: false, error: "self" };
@@ -305,7 +308,8 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
             action,
             userId,
             reason: field(form, "reason").slice(0, 512) || null,
-            durationSeconds: action === "timeout" ? duration : null,
+            durationSeconds:
+              action === "timeout" ? duration : action === "ban" && banFor ? banFor : null,
             deleteMessageSeconds: action === "ban" ? del : 0,
           },
         },

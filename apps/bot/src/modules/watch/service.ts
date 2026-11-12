@@ -4,11 +4,13 @@ import {
   getCase,
   getWatchSettings,
   listEscalationRules,
+  listExpiredBans,
   type ModCase,
   revokeCase,
   type WatchSettings,
 } from "@garrison/db";
 import {
+  type Client,
   DiscordAPIError,
   type Guild,
   type GuildMember,
@@ -19,6 +21,7 @@ import {
 import type { BotContext } from "../../commands/types.js";
 import { cardMessage } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
+import { safeText } from "../../lib/text.js";
 import { recordModeratorAction } from "../gatehouse/anti-nuke.js";
 import { canUndo, escalationReason, hierarchyError, type MemberAction, NO_REASON } from "./copy.js";
 import { caseCard, dmCard } from "./embeds.js";
@@ -195,7 +198,9 @@ export async function applyMemberAction(
 
   if (!dmFirst) dmSent = await sendDm(req, settings);
 
-  const durationSeconds = req.action === "timeout" ? (req.durationSeconds ?? null) : null;
+  // A timeout always has a length; a ban may (a temporary ban, lifted by the sweep).
+  const durationSeconds =
+    req.action === "timeout" || req.action === "ban" ? (req.durationSeconds ?? null) : null;
   const created = await createCase(ctx.db, {
     guildId: req.guild.id,
     action: req.action,
@@ -312,4 +317,42 @@ export async function undoCase(
   const settings = await getWatchSettings(ctx.db, guild.id);
   await postCaseLog(ctx, guild, settings, revoked);
   return { ok: true, case: revoked };
+}
+
+/**
+ * The minute sweep: lift temporary bans whose time is up. The case is marked
+ * undone by Garrison and the log says why; a ban already lifted by hand is fine.
+ */
+export async function liftExpiredBans(ctx: BotContext, client: Client<true>, now = new Date()) {
+  for (const c of await listExpiredBans(ctx.db, now)) {
+    const guild = client.guilds.cache.get(c.guildId);
+    if (!guild || !c.targetId) continue;
+    const me = guild.members.me ?? (await guild.members.fetchMe());
+    if (!me.permissions.has(PermissionFlagsBits.BanMembers)) continue;
+    try {
+      await guild.members.unban(c.targetId, `Temporary ban (case #${c.caseNumber}) ended`);
+    } catch (error) {
+      if (!(error instanceof DiscordAPIError && error.code === RESTJSONErrorCodes.UnknownBan)) {
+        ctx.logger.warn("Could not lift a temporary ban", { guildId: guild.id, error });
+        continue;
+      }
+    }
+    const lifted = await revokeCase(ctx.db, guild.id, c.caseNumber, me.id);
+    if (!lifted) continue;
+    const settings = await getWatchSettings(ctx.db, guild.id);
+    if (!settings.logChannelId) continue;
+    const channel = guild.channels.cache.get(settings.logChannelId);
+    if (channel?.isSendable())
+      await channel
+        .send(
+          cardMessage({
+            tone: "go",
+            title: `Ban lifted: ${safeText(c.targetTag ?? c.targetId)}`,
+            blocks: [{ text: `Case #${c.caseNumber} was a temporary ban, and its time is up.` }],
+            module: "watch",
+            ref: `#${c.caseNumber}`,
+          }),
+        )
+        .catch(() => null);
+  }
 }

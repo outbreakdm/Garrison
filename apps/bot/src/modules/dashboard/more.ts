@@ -48,7 +48,13 @@ const modAction = z.object({
   action: z.enum(["warn", "timeout", "kick", "ban"]),
   userId: snowflake,
   reason,
-  durationSeconds: z.number().int().min(1).max(MAX_TIMEOUT_SECONDS).nullable(),
+  // Timeouts up to Discord's 28 days; temporary bans up to 90 days.
+  durationSeconds: z
+    .number()
+    .int()
+    .min(1)
+    .max(90 * 86_400)
+    .nullable(),
   deleteMessageSeconds: z.number().int().min(0).max(604_800),
 });
 const purge = z.object({
@@ -100,6 +106,8 @@ export async function doModAction(
   if (!p.success) return fail("That request wasn't valid.");
   const { action, userId } = p.data;
   if (action === "timeout" && !p.data.durationSeconds) return fail("Pick how long to time out.");
+  if (action === "timeout" && (p.data.durationSeconds ?? 0) > MAX_TIMEOUT_SECONDS)
+    return fail("Timeouts can last 28 days at most.");
   // Manage Server opens the dashboard; the action itself needs what its slash command needs.
   if (member.id !== guild.ownerId && !member.permissions.has(moderatorPermission[action]))
     return fail(`You need ${PERMISSION_NAME[action]} in Discord to do that.`);
@@ -116,12 +124,12 @@ export async function doModAction(
     member: targetMember,
     action,
     reason: p.data.reason || null,
-    durationSeconds: action === "timeout" ? p.data.durationSeconds : null,
+    durationSeconds: action === "timeout" || action === "ban" ? p.data.durationSeconds : null,
     deleteMessageSeconds: action === "ban" ? p.data.deleteMessageSeconds : undefined,
   });
   if (!result.ok) return fail(result.error);
   const length =
-    action === "timeout" && p.data.durationSeconds
+    (action === "timeout" || action === "ban") && p.data.durationSeconds
       ? ` for ${formatDuration(p.data.durationSeconds)}`
       : "";
   const dm = result.dmSent === false ? " Their DMs are closed, so they weren't told." : "";

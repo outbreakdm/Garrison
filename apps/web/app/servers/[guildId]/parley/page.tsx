@@ -363,7 +363,7 @@ export default async function TicketsPage({
               <span>Members can open a ticket by DMing Garrison</span>
               <span className="g-help">
                 They pick this server, and a staff-only ticket opens. What staff write there goes to
-                their DMs; start a line with // to keep it in the channel.
+                their DMs; start a line with <code>{"//"}</code> to keep it in the channel.
               </span>
             </span>
           </label>
