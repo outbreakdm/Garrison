@@ -28,7 +28,12 @@ import { doTestAlert } from "../alerts/service.js";
 import { postMessageNow } from "../dispatch/service.js";
 import { restoreQuarantine } from "../gatehouse/anti-nuke.js";
 import { verifyPanel } from "../gatehouse/embeds.js";
-import { invalidateGatehouseSettings, lockGuild, unlockGuild } from "../gatehouse/service.js";
+import {
+  invalidateGatehouseSettings,
+  lockGuild,
+  unlockGuild,
+  verifyMember,
+} from "../gatehouse/service.js";
 import { doGiveawayAction, doStartGiveaway } from "../giveaways/service.js";
 import { healthFor } from "../health/command.js";
 import { opsCard, shortages } from "../ops/card.js";
@@ -380,6 +385,17 @@ async function doPostRoleMenu(ctx: BotContext, guild: Guild, member: GuildMember
   return { ok: true, message: `Posted ${menu.name} in #${channel.name}.` };
 }
 
+/** A member passed the website's verify page: the same checks as the Verify button. */
+async function doWebVerify(ctx: BotContext, guild: Guild, userId: string): Promise<Outcome> {
+  const settings = await getGatehouseSettings(ctx.db, guild.id);
+  if (!settings.verifyWeb || !settings.verifyRoleId)
+    return fail("This server doesn't verify on the website any more.");
+  const member = await guild.members.fetch(userId).catch(() => null);
+  if (!member) return fail("Join the server first, then verify.");
+  const message = await verifyMember(ctx, member);
+  return { ok: message.startsWith("Verified") || message.startsWith("You're already"), message };
+}
+
 /** Owner only, checked here against Discord: anti-nuke is the guard against rogue admins. */
 async function doAntiNuke(ctx: BotContext, guild: Guild, member: GuildMember, raw: unknown) {
   if (member.id !== guild.ownerId) return fail("Only the server owner can change anti-nuke.");
@@ -406,6 +422,8 @@ export async function runDashboardAction(
 ): Promise<Outcome> {
   const guild = client.guilds.cache.get(action.guildId);
   if (!guild) return fail("Garrison isn't in that server any more.");
+  // Website verification is asked for by the member themself, not a manager.
+  if (action.kind === "web_verify") return doWebVerify(ctx, guild, action.requestedById);
   const member = await requester(guild, action.requestedById);
   if (!member) return fail("You no longer have Manage Server in this server.");
   switch (action.kind) {

@@ -18,6 +18,8 @@ export interface BotContext {
   planner?: Planner;
   /** Activity and response-time counters. Absent in tests. */
   metrics?: Metrics;
+  /** The dashboard's address, for links Garrison posts. */
+  appUrl?: string;
 }
 
 export interface Command {

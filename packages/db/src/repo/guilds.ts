@@ -59,6 +59,19 @@ export async function getWatchSettings(db: Db, guildId: string): Promise<WatchSe
   return created;
 }
 
+/** What the website verify page needs. Read-only. Null when verification isn't on the website. */
+export async function webVerifySettings(db: Db, guildId: string) {
+  const [row] = await db
+    .select({
+      roleId: gatehouseSettings.verifyRoleId,
+      minAge: gatehouseSettings.verifyMinAccountAgeDays,
+      web: gatehouseSettings.verifyWeb,
+    })
+    .from(gatehouseSettings)
+    .where(eq(gatehouseSettings.guildId, guildId));
+  return row?.roleId && row.web ? { roleId: row.roleId, minAge: row.minAge } : null;
+}
+
 /** Are appeals open for this server? Read-only (the dashboard can't create the settings row). */
 export async function appealsOpen(db: Db, guildId: string): Promise<boolean> {
   const [row] = await db

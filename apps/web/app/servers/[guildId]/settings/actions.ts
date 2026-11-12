@@ -142,7 +142,7 @@ export async function saveAntiRaid(form: FormData) {
 export async function saveVerification(form: FormData) {
   const { guild } = await authorize(form);
   const parsed = verificationForm.safeParse(
-    pick(form, ["verifyRoleId", "verifyMinAccountAgeDays"]),
+    pick(form, ["verifyRoleId", "verifyMinAccountAgeDays", "verifyWeb"]),
   );
   if (!parsed.success) failed(guild.id, PLACES.verification, "range");
   else {

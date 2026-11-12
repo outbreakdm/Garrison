@@ -90,11 +90,15 @@ jobs:
           DISCORD_CLIENT_SECRET: ${{ secrets.DISCORD_CLIENT_SECRET }}
           BNET_CLIENT_ID: ${{ secrets.BNET_CLIENT_ID }}
           BNET_CLIENT_SECRET: ${{ secrets.BNET_CLIENT_SECRET }}
+          TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
+          TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
         run: |
           printf '%s' "$DISCORD_TOKEN" | npx wrangler secret put DISCORD_TOKEN
           printf '%s' "$DISCORD_CLIENT_SECRET" | npx wrangler secret put DISCORD_CLIENT_SECRET
           if [ -n "$BNET_CLIENT_ID" ]; then printf '%s' "$BNET_CLIENT_ID" | npx wrangler secret put BNET_CLIENT_ID; fi
           if [ -n "$BNET_CLIENT_SECRET" ]; then printf '%s' "$BNET_CLIENT_SECRET" | npx wrangler secret put BNET_CLIENT_SECRET; fi
+          if [ -n "$TURNSTILE_SITE_KEY" ]; then printf '%s' "$TURNSTILE_SITE_KEY" | npx wrangler secret put TURNSTILE_SITE_KEY; fi
+          if [ -n "$TURNSTILE_SECRET" ]; then printf '%s' "$TURNSTILE_SECRET" | npx wrangler secret put TURNSTILE_SECRET; fi
 
       - name: Deploy bot (builds the container image)
         if: inputs.target != 'dashboard'

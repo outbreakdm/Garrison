@@ -2,6 +2,17 @@ import "server-only";
 import { z } from "zod";
 
 const schema = z.object({
+  /** Cloudflare Turnstile keys for the website verify page's captcha. Without them it checks the Discord sign-in only. */
+  TURNSTILE_SITE_KEY: z
+    .string()
+    .min(1)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  TURNSTILE_SECRET: z
+    .string()
+    .min(1)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
   /** Public URL of the dashboard, e.g. https://dash.garrison.gg. The OAuth redirect is APP_URL/auth/callback. */
   APP_URL: z.string().url(),
   DISCORD_CLIENT_ID: z.string().regex(/^\d+$/),

@@ -60,7 +60,8 @@ export type QueueInput =
   | { kind: "ticket_action"; payload: TicketActionPayload }
   | { kind: "start_giveaway"; payload: StartGiveawayPayload }
   | { kind: "giveaway_action"; payload: GiveawayActionPayload }
-  | { kind: "test_alert"; payload: TestAlertPayload };
+  | { kind: "test_alert"; payload: TestAlertPayload }
+  | { kind: "web_verify"; payload: Record<string, never> };
 
 /** Per server: at most this many requests waiting at once. */
 export const MAX_PENDING_PER_GUILD = 10;

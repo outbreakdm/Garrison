@@ -59,6 +59,7 @@ packages/
 - Anti-nuke settings and the trusted list (`/security anti_nuke`, `trusted_add`…) are **owner-only**, so a compromised admin can't switch it off first. Keep Garrison's role at the top of the role list, or it can't strip roles above it.
 - Alerts go to `/security alert_channel`, or to the Watch log channel if none is set.
 
+- **Website verification:** with *Verify on the website* on, the Verify button links to `/verify/<server ID>`: the member signs in with Discord (which a bot can't), passes a Cloudflare Turnstile captcha when the host has `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET`, and Garrison gives the role through a request, checking the account age again.
 ### Rally
 
 - **`/lfg create`** posts a card anyone can join: numbered slots (`size:5`) or roles (`roles:Tank 1, Healer 1, DPS 3`), a start time (`starts:10m`) and a note (`note:rank Gold+`). Buttons: **Join as …**, **Leave**, **Close group**. The card shows Open, 1 left or Full.

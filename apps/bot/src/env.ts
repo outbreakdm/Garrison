@@ -42,6 +42,12 @@ const schema = z.object({
     .min(1)
     .optional()
     .or(z.literal("").transform(() => undefined)),
+  /** The dashboard's address, for links Garrison posts (website verification). */
+  APP_URL: z
+    .string()
+    .url()
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
   /** Model Quartermaster plans with. */
   QM_MODEL: z.string().min(1).default("claude-opus-5-5"),
 });

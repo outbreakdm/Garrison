@@ -29,6 +29,10 @@ export function proxy(request: NextRequest) {
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self' https://discord.com https://oauth.battle.net",
+    // The website verify page's captcha (Cloudflare Turnstile) runs in a frame.
+    ...(request.nextUrl.pathname.startsWith("/verify/")
+      ? ["frame-src https://challenges.cloudflare.com"]
+      : []),
     "frame-ancestors 'none'",
     ...(isDev ? [] : ["upgrade-insecure-requests"]),
   ].join("; ");

@@ -60,6 +60,7 @@ const ctx: BotContext = {
     ? new ClaudePlanner(env.ANTHROPIC_API_KEY, env.QM_MODEL)
     : undefined,
   metrics: new Metrics(),
+  appUrl: env.APP_URL,
 };
 if (!ctx.planner) logger.info("Quartermaster is off: set ANTHROPIC_API_KEY to enable /qm build");
 const alertKeys = {

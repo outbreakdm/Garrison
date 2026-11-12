@@ -9,6 +9,7 @@
   "observability": { "enabled": true },
   "vars": {
     "DISCORD_CLIENT_ID": "000000000000000000",
+    "APP_URL": "https://dash.example.com",
     "LOG_LEVEL": "info"
   },
   "containers": [

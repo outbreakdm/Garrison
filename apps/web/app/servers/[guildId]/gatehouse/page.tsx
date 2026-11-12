@@ -356,6 +356,20 @@ export default async function GatehousePage({
                       defaultValue={g?.verifyMinAccountAgeDays ?? 0}
                     />
                   </label>
+                  <label className="switch">
+                    <input
+                      type="checkbox"
+                      name="verifyWeb"
+                      defaultChecked={g?.verifyWeb ?? false}
+                    />
+                    <span className="switch__text">
+                      <span>Verify on the website</span>
+                      <span className="g-help">
+                        The Verify button links to a page where members sign in with Discord (and
+                        pass a captcha if the host has Turnstile keys) before getting the role.
+                      </span>
+                    </span>
+                  </label>
                   <FormFoot label="Save verification" guildId={guild.id} />
                 </form>
               </details>

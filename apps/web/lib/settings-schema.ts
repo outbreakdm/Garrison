@@ -55,10 +55,12 @@ export const antiRaidForm = gatehouseForm.pick({
   autoUnlockMinutes: true,
   flagAccountAgeDays: true,
 });
-export const verificationForm = gatehouseForm.pick({
-  verifyRoleId: true,
-  verifyMinAccountAgeDays: true,
-});
+export const verificationForm = gatehouseForm
+  .pick({
+    verifyRoleId: true,
+    verifyMinAccountAgeDays: true,
+  })
+  .extend({ verifyWeb: checkbox });
 
 /** Staff roles come from a multi-select: up to 10 distinct role IDs. */
 export function parseStaffRoles(form: FormData) {
@@ -223,6 +225,7 @@ export const FIELD_LABELS: Record<string, string> = {
   verifyMinAccountAgeDays: "Verify: min account age (days)",
   rewards: "Level rewards",
   appealsEnabled: "Appeals page",
+  verifyWeb: "Verify on the website",
   enabled: "Ranks",
   announce: "Level-ups",
   announceChannelId: "Level-up channel",

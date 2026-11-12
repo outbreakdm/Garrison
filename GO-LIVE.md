@@ -149,6 +149,8 @@ github.com/outbreakdm/Garrison → **Settings** (top tab) → left menu
 | `TWITCH_CLIENT_ID`      | optional: Twitch live alerts (a Twitch app's client ID) |
 | `TWITCH_CLIENT_SECRET`  | optional: the same Twitch app's client secret           |
 | `OPENAI_API_KEY`        | optional: AI moderation on Pro (free moderation endpoint) |
+| `TURNSTILE_SITE_KEY`    | optional: captcha on the website verify page (Cloudflare Turnstile) |
+| `TURNSTILE_SECRET`      | optional: the same Turnstile widget's secret key        |
 
 **Variables** tab → **New repository variable**:
 

@@ -1,5 +1,11 @@
 import { getGatehouseSettings, updateGatehouseSettings } from "@garrison/db";
-import { ChannelType, PermissionFlagsBits } from "discord.js";
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ChannelType,
+  PermissionFlagsBits,
+} from "discord.js";
 import { ephemeral, guildCommand } from "../../../commands/builders.js";
 import type { ButtonHandler, Command } from "../../../commands/types.js";
 import { ensureGuild } from "../../../lib/guild-registry.js";
@@ -101,6 +107,23 @@ export const verify: Command = {
 export const verifyButton: ButtonHandler = {
   prefix: VERIFY_BUTTON_ID,
   async execute(interaction, ctx) {
+    const settings = await getGatehouseSettings(ctx.db, interaction.guildId);
+    // Website verification: a link to the page, where a captcha may run first.
+    if (settings.verifyWeb && settings.verifyRoleId && ctx.appUrl) {
+      await interaction.reply({
+        content: "Verify on Garrison's website: sign in with Discord and you're in.",
+        components: [
+          new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder()
+              .setStyle(ButtonStyle.Link)
+              .setLabel("Verify on the website")
+              .setURL(`${ctx.appUrl}/verify/${interaction.guildId}`),
+          ),
+        ],
+        ...ephemeral,
+      });
+      return;
+    }
     await interaction.deferReply(ephemeral);
     await interaction.editReply(await verifyMember(ctx, interaction.member));
   },

@@ -167,6 +167,8 @@ export const gatehouseSettings = pgTable(
     /** Role the verification button gives. Null means verification is off. */
     verifyRoleId: text("verify_role_id"),
     verifyMinAccountAgeDays: integer("verify_min_account_age_days").notNull().default(0),
+    /** Verify on the website (sign in with Discord, captcha when configured) instead of in Discord. */
+    verifyWeb: boolean("verify_web").notNull().default(false),
     /** Anti-nuke: stop one actor deleting channels/roles or mass-banning. Owner-only to change. */
     antiNukeEnabled: boolean("anti_nuke_enabled").notNull().default(true),
     /** Users and bots anti-nuke never acts on. The owner is always trusted. Owner-only to change. */
@@ -846,6 +848,7 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "start_giveaway",
   "giveaway_action",
   "test_alert",
+  "web_verify",
 ]);
 export const dashboardActionStatus = pgEnum("dashboard_action_status", [
   "pending",

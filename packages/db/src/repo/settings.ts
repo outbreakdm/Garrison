@@ -41,6 +41,7 @@ export const EDITABLE_FIELDS = {
     "staffRoleIds",
     "verifyRoleId",
     "verifyMinAccountAgeDays",
+    "verifyWeb",
   ],
   ops: ["timezone"],
   // The rank card is checked with checkRankCard before it gets here.
