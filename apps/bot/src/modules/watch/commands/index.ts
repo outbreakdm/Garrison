@@ -4,6 +4,7 @@ import { caseCommand } from "./case.js";
 import { history } from "./history.js";
 import { kick } from "./kick.js";
 import { moderation } from "./moderation.js";
+import { note } from "./note.js";
 import { purge } from "./purge.js";
 import { timeout } from "./timeout.js";
 import { undoButton } from "./undo.js";
@@ -18,5 +19,6 @@ export const watchCommands: Command[] = [
   caseCommand,
   history,
   moderation,
+  note,
 ];
 export const watchButtons: ButtonHandler[] = [undoButton];

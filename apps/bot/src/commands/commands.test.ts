@@ -22,6 +22,7 @@ describe("command definitions", () => {
       "case",
       "history",
       "moderation",
+      "note",
       "lockdown",
       "verify",
       "security",

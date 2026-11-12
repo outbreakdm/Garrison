@@ -52,6 +52,8 @@ export const watchSettings = pgTable("watch_settings", {
   dmMembers: boolean("dm_members").notNull().default(true),
   /** Shown in moderation DMs under "How to appeal". */
   appealText: text("appeal_text"),
+  /** Members with a case here can appeal on the dashboard's public appeal page. */
+  appealsEnabled: boolean("appeals_enabled").notNull().default(false),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
 
@@ -1533,3 +1535,62 @@ export const starboardPosts = pgTable(
 ).enableRLS();
 
 export type StarboardPost = typeof starboardPosts.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Watch: notes and appeals
+// ---------------------------------------------------------------------------
+
+/** Staff notes on a member. Members never see them. Removed notes are kept, marked removed. */
+export const memberNotes = pgTable(
+  "member_notes",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    authorId: text("author_id").notNull(),
+    authorName: text("author_name").notNull(),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+  },
+  (t) => [
+    index("member_notes_guild_user").on(t.guildId, t.userId, t.id),
+    check("member_notes_length", sql`length(${t.body}) BETWEEN 1 AND 1000`),
+  ],
+).enableRLS();
+
+export const appealStatus = pgEnum("appeal_status", ["open", "accepted", "denied"]);
+
+/** An appeal from someone with a case in the server, written on the public appeal page. */
+export const appeals = pgTable(
+  "appeals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    username: text("username").notNull(),
+    caseNumber: integer("case_number"),
+    body: text("body").notNull(),
+    status: appealStatus("status").notNull().default("open"),
+    /** What the staff told them, shown on the appeal page. */
+    response: text("response"),
+    reviewerId: text("reviewer_id"),
+    reviewerName: text("reviewer_name"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("appeals_guild_status").on(t.guildId, t.status, t.createdAt),
+    index("appeals_user").on(t.userId, t.guildId),
+    check("appeals_body", sql`length(${t.body}) BETWEEN 20 AND 2000`),
+    check("appeals_response", sql`${t.response} IS NULL OR length(${t.response}) <= 1000`),
+  ],
+).enableRLS();
+
+export type MemberNote = typeof memberNotes.$inferSelect;
+export type Appeal = typeof appeals.$inferSelect;

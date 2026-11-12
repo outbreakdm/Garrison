@@ -20,20 +20,24 @@ const form = (entries: Record<string, string>) => {
 describe("watchForm", () => {
   it("reads checkboxes, empty channels and blank text", () => {
     const f = form({ logChannelId: "", appealText: "  " });
-    expect(watchForm.parse(pick(f, ["logChannelId", "dmMembers", "appealText"]))).toEqual({
+    const keys = ["logChannelId", "dmMembers", "appealText", "appealsEnabled"];
+    expect(watchForm.parse(pick(f, keys))).toEqual({
       logChannelId: null,
       dmMembers: false,
       appealText: null,
+      appealsEnabled: false,
     });
     const g = form({
       logChannelId: "123456789012345678",
       dmMembers: "on",
       appealText: "Open a ticket",
+      appealsEnabled: "on",
     });
-    expect(watchForm.parse(pick(g, ["logChannelId", "dmMembers", "appealText"]))).toEqual({
+    expect(watchForm.parse(pick(g, keys))).toEqual({
       logChannelId: "123456789012345678",
       dmMembers: true,
       appealText: "Open a ticket",
+      appealsEnabled: true,
     });
   });
 

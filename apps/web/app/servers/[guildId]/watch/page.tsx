@@ -1,6 +1,8 @@
 import {
+  appealsOpen,
   cleanQuery,
   getOverview,
+  listAppeals,
   listEscalationRules,
   listRecentCases,
   searchCases,
@@ -23,6 +25,8 @@ import {
 } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { listTextChannels, searchMembers } from "@/lib/discord";
+import { env } from "@/lib/env";
+import { readFlash } from "@/lib/flash";
 import { requireGuildAccess } from "@/lib/session";
 import {
   durationText,
@@ -31,8 +35,10 @@ import {
   LADDER_WINDOWS,
   windowText,
 } from "@/lib/settings-schema";
+import { ago } from "../parley/when";
 import { requestAction } from "../requests";
 import { saveLadder, saveWatch } from "../settings/actions";
+import { decide } from "./actions";
 
 export const metadata: Metadata = { title: "Watch" };
 
@@ -59,14 +65,19 @@ export default async function WatchPage({
   const q = cleanQuery(query.q);
   const memberQuery = typeof query.member === "string" ? query.member.trim().slice(0, 32) : "";
   const db = await getDb();
-  const [cases, rules, { watch: w }, channels, found] = await Promise.all([
-    q ? searchCases(db, guild.id, q, 50) : listRecentCases(db, guild.id, 50),
-    listEscalationRules(db, guild.id),
-    getOverview(db, guild.id),
-    listTextChannels(guild.id).catch(() => []),
-    // null means Discord didn't answer, which the page says rather than showing nobody.
-    memberQuery ? searchMembers(guild.id, memberQuery).catch(() => null) : null,
-  ]);
+  const [cases, rules, { watch: w }, channels, found, appealsOn, appeals, flash] =
+    await Promise.all([
+      q ? searchCases(db, guild.id, q, 50) : listRecentCases(db, guild.id, 50),
+      listEscalationRules(db, guild.id),
+      getOverview(db, guild.id),
+      listTextChannels(guild.id).catch(() => []),
+      // null means Discord didn't answer, which the page says rather than showing nobody.
+      memberQuery ? searchMembers(guild.id, memberQuery).catch(() => null) : null,
+      appealsOpen(db, guild.id),
+      listAppeals(db, guild.id),
+      readFlash(),
+    ]);
+  const appealUrl = `${env().APP_URL}/appeal/${guild.id}`;
   const first = rules[0]?.warnCount ?? 0;
   const logChannel = channels.find((c) => c.id === w?.logChannelId);
   return (
@@ -88,6 +99,95 @@ export default async function WatchPage({
         query={query}
       />
       <SettingsNotice query={query} />
+      {flash?.ok ? (
+        <div className="notice notice--ok" role="status">
+          {flash.ok}
+        </div>
+      ) : null}
+      {flash?.error ? (
+        <div className="notice" role="alert">
+          {flash.error}
+        </div>
+      ) : null}
+      {appealsOn || appeals.open.length || appeals.decided.length ? (
+        <section className="g-card queue" id="appeals" aria-labelledby="appeals-title">
+          <div className="queue__head">
+            <h2 className="card-title" id="appeals-title">
+              Appeals <span className="count">{appeals.open.length}</span>
+            </h2>
+            <span className="g-help mono">{appealUrl}</span>
+          </div>
+          {appeals.open.length ? (
+            <ul className="queue__list">
+              {appeals.open.map((a) => (
+                <li key={a.id} className="appeal-row">
+                  <div className="card-col">
+                    <span className="ticket-row__topic">
+                      <Link href={`/servers/${guild.id}/watch/member/${a.userId}`}>
+                        {a.username}
+                      </Link>
+                      {a.caseNumber ? ` · case #${a.caseNumber}` : ""}
+                    </span>
+                    <p className="appeal-row__body">{a.body}</p>
+                    <span className="g-help">{ago(a.createdAt)}</span>
+                  </div>
+                  <form action={decide} className="card-col">
+                    <input type="hidden" name="guildId" value={guild.id} />
+                    <input type="hidden" name="appealId" value={a.id} />
+                    <label className="g-field" htmlFor={`resp-${a.id}`}>
+                      <span>Reply (they see it)</span>
+                      <textarea
+                        className="g-input"
+                        id={`resp-${a.id}`}
+                        name="response"
+                        rows={2}
+                        maxLength={1000}
+                      />
+                    </label>
+                    {a.caseNumber ? (
+                      <label className="check">
+                        <input type="checkbox" name="undo" defaultChecked />
+                        <span>If accepted, undo case #{a.caseNumber}</span>
+                      </label>
+                    ) : null}
+                    <div className="row-between">
+                      <button
+                        type="submit"
+                        name="decision"
+                        value="accept"
+                        className="g-btn g-btn--secondary"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        type="submit"
+                        name="decision"
+                        value="deny"
+                        className="g-btn g-btn--ghost"
+                      >
+                        Deny
+                      </button>
+                    </div>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="queue__empty muted">No appeals waiting.</p>
+          )}
+          {appeals.decided.length ? (
+            <p className="g-help">
+              Last 30 days:{" "}
+              {appeals.decided
+                .map(
+                  (a) =>
+                    `${a.username} ${a.status === "accepted" ? "accepted" : "denied"} by ${a.reviewerName ?? "staff"}`,
+                )
+                .join(" · ")}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="g-card card-col" id="moderate" aria-label="Moderate">
         <div className="row-between">
@@ -235,6 +335,7 @@ export default async function WatchPage({
           },
           { label: "DMs", value: (w?.dmMembers ?? true) ? "On" : "Off" },
           { label: "Appeal text", value: w?.appealText ? "Custom" : "Default" },
+          { label: "Appeals page", value: appealsOn ? "On" : "Off" },
         ]}
       >
         <form action={saveWatch} className="settings-form" key={w?.updatedAt.getTime() ?? 0}>
@@ -256,6 +357,12 @@ export default async function WatchPage({
                 defaultChecked={w?.dmMembers ?? true}
                 label="DM members when they're moderated"
                 help="They get the action, the reason and how to appeal."
+              />
+              <Switch
+                name="appealsEnabled"
+                defaultChecked={appealsOn}
+                label="Take appeals on a page of their own"
+                help={`Anyone with a case here can appeal at ${appealUrl}. With the text below blank, the DMs link to it.`}
               />
             </div>
             <label className="g-field" htmlFor="appealText">

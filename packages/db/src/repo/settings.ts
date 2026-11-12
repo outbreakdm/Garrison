@@ -28,7 +28,7 @@ import {
  * absent: they stay owner-only commands in Discord.
  */
 export const EDITABLE_FIELDS = {
-  watch: ["logChannelId", "dmMembers", "appealText"],
+  watch: ["logChannelId", "dmMembers", "appealText", "appealsEnabled"],
   gatehouse: [
     "alertChannelId",
     "antiRaidEnabled",

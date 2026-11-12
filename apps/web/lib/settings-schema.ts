@@ -30,6 +30,7 @@ export const watchForm = z.object({
     .trim()
     .max(300, "Appeal text can be 300 characters at most.")
     .transform((v) => v || null),
+  appealsEnabled: checkbox,
 });
 
 export const gatehouseForm = z.object({
@@ -221,6 +222,7 @@ export const FIELD_LABELS: Record<string, string> = {
   verifyRoleId: "Verified role",
   verifyMinAccountAgeDays: "Verify: min account age (days)",
   rewards: "Level rewards",
+  appealsEnabled: "Appeals page",
   enabled: "Ranks",
   announce: "Level-ups",
   announceChannelId: "Level-up channel",

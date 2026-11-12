@@ -4,6 +4,7 @@ import { applySettingsChange, type SettingsModule, undoSettingsChange } from "@g
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { listGuildRoles, listTextChannels } from "@/lib/discord";
+import { env } from "@/lib/env";
 import { isDangerousRole } from "@/lib/permissions";
 import { isSnowflake } from "@/lib/security";
 import { checkGuildAccess } from "@/lib/session";
@@ -95,11 +96,19 @@ async function save(
 
 export async function saveWatch(form: FormData) {
   const { guild } = await authorize(form);
-  const parsed = watchForm.safeParse(pick(form, ["logChannelId", "dmMembers", "appealText"]));
+  const parsed = watchForm.safeParse(
+    pick(form, ["logChannelId", "dmMembers", "appealText", "appealsEnabled"]),
+  );
   if (!parsed.success) failed(guild.id, PLACES.watch, "range");
   else if (!(await channelBelongs(guild.id, parsed.data.logChannelId)))
     failed(guild.id, PLACES.watch, "bad_channel");
-  else await save("watch", form, parsed.data, PLACES.watch);
+  else {
+    // With appeals on and no appeal text of their own, the DMs point at the appeal page.
+    const data = { ...parsed.data };
+    if (data.appealsEnabled && !data.appealText)
+      data.appealText = `Appeal here: ${env().APP_URL}/appeal/${guild.id}`;
+    await save("watch", form, data, PLACES.watch);
+  }
 }
 
 /** Anti-raid thresholds, the alert channel and the staff roles that keep talking in a lockdown. */

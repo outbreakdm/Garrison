@@ -1388,3 +1388,24 @@
   background: var(--surface-sunken);
   border-style: dashed;
 }
+
+/* --- Appeals ---------------------------------------------------------------------- */
+.appeal-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-2);
+}
+.appeal-row__body {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.appeal {
+  max-width: 760px;
+}
+@media (max-width: 720px) {
+  .appeal-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

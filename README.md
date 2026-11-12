@@ -44,6 +44,8 @@ packages/
 - Members get a neutral DM with the reason and how to appeal (`/moderation dm_members` and `appeal_text`).
 - `/moderation log_channel:#mod-log` posts every case to a channel.
 
+- **Staff notes:** `/note add` and `/note list`, and the Notes section on a member's dashboard page. Members never see them; removed notes are kept, marked removed.
+- **Appeals:** with *Take appeals on a page of their own* on (Watch settings), anyone with an active case can appeal at `/appeal/<server ID>` after signing in with Discord: one open appeal at a time, a week's wait after a denial. Appeals queue on the Watch page; staff accept (optionally undoing the case) or deny, with a reply the member reads on the appeal page. With the appeal text blank, moderation DMs link to the page.
 - **Temporary bans:** `/ban length:` (1 hour to 90 days) or the dashboard's ban form. The minute sweep lifts them when their time is up, marks the case undone by Garrison and says so in the log.
 ### Gatehouse
 

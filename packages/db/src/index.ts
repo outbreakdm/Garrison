@@ -19,6 +19,7 @@ export * from "./repo/guilds";
 export * from "./repo/ledger";
 export * from "./repo/messages";
 export * from "./repo/metrics";
+export * from "./repo/notes";
 export * from "./repo/ops";
 export * from "./repo/plans";
 export * from "./repo/quartermaster";
@@ -35,6 +36,7 @@ export * from "./role";
 export * from "./role-menus";
 export type {
   AlertStateRow,
+  Appeal,
   BotProfilePayload,
   CallSignupsPayload,
   CaseAction,
@@ -56,6 +58,7 @@ export type {
   LinkedAccount,
   Lockdown,
   LockdownSnapshotEntry,
+  MemberNote,
   MemberXp,
   MessageSend,
   ModCase,

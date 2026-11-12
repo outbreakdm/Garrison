@@ -1,4 +1,10 @@
-import { getMemberRank, levelForXp, listCasesForTarget } from "@garrison/db";
+import {
+  getMemberRank,
+  levelForXp,
+  listCasesForTarget,
+  listMemberNotes,
+  NOTE_MAX,
+} from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -7,9 +13,11 @@ import { MemberAvatar } from "@/components/MemberAvatar";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { getDb } from "@/lib/db";
 import { fetchMemberCard, listGuildRoles } from "@/lib/discord";
+import { readFlash } from "@/lib/flash";
 import { requireGuildAccess } from "@/lib/session";
 import { durationText } from "@/lib/settings-schema";
 import { requestAction } from "../../../requests";
+import { addNote, removeNote } from "../../actions";
 
 export const metadata: Metadata = { title: "Member" };
 
@@ -28,11 +36,13 @@ export default async function MemberPage({
   if (!/^\d{17,20}$/.test(userId)) notFound();
   const query = await searchParams;
   const db = await getDb();
-  const [member, cases, rank, roles] = await Promise.all([
+  const [member, cases, rank, roles, notes, flash] = await Promise.all([
     fetchMemberCard(guild.id, userId).catch(() => null),
     listCasesForTarget(db, guild.id, userId, 25),
     getMemberRank(db, guild.id, userId),
     listGuildRoles(guild.id).catch(() => []),
+    listMemberNotes(db, guild.id, userId),
+    readFlash(),
   ]);
   // Someone Discord no longer knows can still have cases here: show those under their last name.
   const name = member?.name ?? cases[0]?.targetTag ?? rank?.username ?? null;
@@ -237,6 +247,63 @@ export default async function MemberPage({
           ) : null}
         </section>
       )}
+
+      <section className="g-card card-col" id="notes" aria-labelledby="notes-title">
+        <h2 className="card-title" id="notes-title">
+          Staff notes <span className="count">{notes.length}</span>
+        </h2>
+        <p className="g-help">Only staff see these, here and with /note in Discord.</p>
+        {flash?.ok ? (
+          <div className="notice notice--ok" role="status">
+            {flash.ok}
+          </div>
+        ) : null}
+        {flash?.error ? (
+          <div className="notice" role="alert">
+            {flash.error}
+          </div>
+        ) : null}
+        {notes.length ? (
+          <ul className="notes">
+            {notes.map((n) => (
+              <li key={n.id}>
+                <p>{n.body}</p>
+                <span className="g-help">
+                  {n.authorName} · {formatTime(n.createdAt)}
+                </span>
+                <form action={removeNote}>
+                  <input type="hidden" name="guildId" value={guild.id} />
+                  <input type="hidden" name="userId" value={userId} />
+                  <input type="hidden" name="noteId" value={n.id} />
+                  <button type="submit" className="g-btn g-btn--ghost g-btn--sm">
+                    Remove
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <form action={addNote} className="card-col">
+          <input type="hidden" name="guildId" value={guild.id} />
+          <input type="hidden" name="userId" value={userId} />
+          <label className="g-field" htmlFor="note-body">
+            <span>Add a note</span>
+            <textarea
+              className="g-input"
+              id="note-body"
+              name="body"
+              rows={2}
+              maxLength={NOTE_MAX}
+              required
+            />
+          </label>
+          <div className="form-foot">
+            <button type="submit" className="g-btn g-btn--secondary">
+              Add note
+            </button>
+          </div>
+        </form>
+      </section>
 
       <div className="g-card table-card">
         <div className="table-card__head row-between">

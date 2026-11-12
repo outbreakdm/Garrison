@@ -59,6 +59,15 @@ export async function getWatchSettings(db: Db, guildId: string): Promise<WatchSe
   return created;
 }
 
+/** Are appeals open for this server? Read-only (the dashboard can't create the settings row). */
+export async function appealsOpen(db: Db, guildId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ on: watchSettings.appealsEnabled })
+    .from(watchSettings)
+    .where(eq(watchSettings.guildId, guildId));
+  return row?.on === true;
+}
+
 export type WatchSettingsPatch = Partial<
   Pick<WatchSettings, "logChannelId" | "dmMembers" | "appealText">
 >;
