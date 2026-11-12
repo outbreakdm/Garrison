@@ -45,6 +45,7 @@ import { applyBotProfile } from "../profile/apply.js";
 import { undoBuild } from "../quartermaster/service.js";
 import { parseSlots } from "../rally/parse.js";
 import { refreshCard } from "../rally/service.js";
+import { doSeasonStart } from "../ranks/seasons.js";
 import { menuRoleProblem, menuRoleProblemText, roleMenuMessage } from "../roles/menu.js";
 import { loadMenu, roleFacts } from "../roles/service.js";
 import { doPostTicketPanel, doTicketAction } from "../tickets/dashboard.js";
@@ -501,6 +502,8 @@ export async function runDashboardAction(
       return doBackupCreate(ctx, guild, member);
     case "backup_restore":
       return doBackupRestore(ctx, guild, member, action.payload);
+    case "season_start":
+      return doSeasonStart(ctx, guild, member, action.payload);
     default:
       return fail("Garrison doesn't know that request.");
   }

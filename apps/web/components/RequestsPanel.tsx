@@ -10,6 +10,7 @@ const ERRORS: Record<string, string> = {
   channel: "Pick a text channel from this server.",
   owner_only: "Only the server owner can change anti-nuke.",
   owner_only_restore: "Only the server owner can restore a backup.",
+  season_pro: "Seasons are part of Garrison Pro. Nothing was queued.",
   busy: "Garrison has 10 requests waiting for this server. Try again shortly.",
   too_fast: "That's a lot of requests at once. Wait a minute and try again.",
   cooldown: "That was done recently. Try again later.",

@@ -1555,3 +1555,24 @@
   grid-template-columns: minmax(0, 1fr) 8.5rem;
   gap: var(--space-2);
 }
+
+/* Ranks: finished seasons, each opening to its top 10. */
+.season-row > details > summary {
+  cursor: pointer;
+  list-style: none;
+}
+.season-row > details > summary::-webkit-details-marker {
+  display: none;
+}
+.season-board {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-3);
+  padding: 0 var(--space-2) 0 var(--space-6);
+  font-size: 14px;
+}
+.season-board li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}

@@ -74,4 +74,5 @@ export const ACTION_KIND: Record<string, string> = {
   test_alert: "Test alert",
   backup_create: "Back up the server",
   backup_restore: "Restore a backup",
+  season_start: "End the season",
 };

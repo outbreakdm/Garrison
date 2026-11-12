@@ -8,14 +8,18 @@ import {
   isPresetBackground,
   levelForXp,
   listRankRewards,
+  listSeasons,
   RANK_BACKGROUNDS,
   readBoosts,
   readRankCard,
+  SEASON_NAME_MAX,
 } from "@garrison/db";
 import type { Metadata } from "next";
 import { Art } from "@/components/Art";
 import { ProTag } from "@/components/cards/CardEditor";
+import { formatTime } from "@/components/format";
 import { MemberAvatar } from "@/components/MemberAvatar";
+import { RequestsPanel } from "@/components/RequestsPanel";
 import {
   ChannelSelect,
   FormFoot,
@@ -31,6 +35,7 @@ import { contentKey, readFlash } from "@/lib/flash";
 import { isDangerousRole } from "@/lib/permissions";
 import { requireGuildAccess } from "@/lib/session";
 import { REWARD_ROWS } from "@/lib/settings-schema";
+import { requestAction } from "../requests";
 import { saveRanks, saveRewards } from "../settings/actions";
 import { saveBoosts, saveRankCard } from "./actions";
 import { RankCardEditor } from "./RankCardEditor";
@@ -54,16 +59,19 @@ export default async function RanksPage({
   const { guild, session } = await requireGuildAccess(guildId);
   const query = await searchParams;
   const db = await getDb();
-  const [settings, top, rewards, roles, channels, plan, flash, layout] = await Promise.all([
-    getRanksSettings(db, guild.id),
-    getLeaderboard(db, guild.id, 25),
-    listRankRewards(db, guild.id),
-    listGuildRoles(guild.id).catch(() => []),
-    listTextChannels(guild.id).catch(() => []),
-    getGuildPlan(db, guild.id),
-    readFlash(),
-    getServerLayout(guild.id).catch(() => null),
-  ]);
+  const [settings, top, rewards, roles, channels, plan, flash, layout, seasons] = await Promise.all(
+    [
+      getRanksSettings(db, guild.id),
+      getLeaderboard(db, guild.id, 25),
+      listRankRewards(db, guild.id),
+      listGuildRoles(guild.id).catch(() => []),
+      listTextChannels(guild.id).catch(() => []),
+      getGuildPlan(db, guild.id),
+      readFlash(),
+      getServerLayout(guild.id).catch(() => null),
+      listSeasons(db, guild.id),
+    ],
+  );
   const ent = entitlements(plan);
   const boosts = readBoosts(settings.boosts);
   const placeName = new Map<string, string>([
@@ -117,6 +125,7 @@ export default async function RanksPage({
         </a>
       </div>
       <SettingsNotice query={query} />
+      <RequestsPanel guildId={guild.id} kinds={["season_start"]} query={query} />
       {flash?.ok ? (
         <div className="notice notice--ok" role="status">
           {flash.ok}
@@ -293,6 +302,86 @@ export default async function RanksPage({
           <FormFoot label="Save boosts" guildId={guild.id} />
         </form>
       </SettingsPanel>
+
+      <section className="g-card card-col" id="seasons" aria-labelledby="seasons-title">
+        <div className="queue__head">
+          <h2 className="card-title" id="seasons-title">
+            Seasons <ProTag on={ent["ranks.seasons"]} />
+          </h2>
+          <span className="g-help">
+            {seasons[0]
+              ? `Season ${seasons[0].number + 1} since ${formatTime(seasons[0].endedAt)}`
+              : "Season 1: since Ranks began"}
+          </span>
+        </div>
+        <p className="g-help">
+          Ending a season keeps its final top 100 here, then puts everyone back to 0 XP and level 0
+          so the next one starts even. Reward roles members already have stay. This can't be undone.
+        </p>
+        {ent["ranks.seasons"] ? (
+          <details className="confirm">
+            <summary className="confirm__toggle g-btn g-btn--secondary g-btn--sm">
+              End this season…
+            </summary>
+            <form action={requestAction} className="card-col">
+              <input type="hidden" name="guildId" value={guild.id} />
+              <input type="hidden" name="page" value="ranks" />
+              <input type="hidden" name="kind" value="season_start" />
+              <input type="hidden" name="confirm" value="yes" />
+              <label className="g-field" htmlFor="season-name">
+                <span>Name for the season that's ending</span>
+                <input
+                  className="g-input"
+                  id="season-name"
+                  name="name"
+                  maxLength={SEASON_NAME_MAX}
+                  placeholder={`Season ${(seasons[0]?.number ?? 0) + 1}`}
+                />
+              </label>
+              <button type="submit" className="g-btn g-btn--danger g-btn--sm">
+                Yes, end it and reset everyone's XP
+              </button>
+            </form>
+          </details>
+        ) : null}
+        {seasons.length ? (
+          <ul className="queue__list">
+            {seasons.map((s) => (
+              <li key={s.id} className="season-row">
+                <details>
+                  <summary className="gw-row">
+                    <span className="gw-row__main">
+                      <span className="ticket-row__topic">{s.name}</span>
+                      <span className="ticket-row__who">
+                        {s.startedAt ? `${formatTime(s.startedAt)} to ` : "Until "}
+                        {formatTime(s.endedAt)} · {s.members} members
+                        {s.endedByName ? ` · ended by ${s.endedByName}` : ""}
+                      </span>
+                    </span>
+                    <span className="ticket-row__who">
+                      {s.standings[0]
+                        ? `🥇 ${s.standings[0].username || "a member"}`
+                        : "Nobody ranked"}
+                    </span>
+                  </summary>
+                  <ol className="season-board">
+                    {s.standings.slice(0, 10).map((p) => (
+                      <li key={p.userId}>
+                        <span>{p.username || `Member ${p.userId.slice(-4)}`}</span>
+                        <span className="mono muted">
+                          Lv {p.level} · {p.xp.toLocaleString("en-US")} XP
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </details>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="queue__empty muted">No finished seasons yet.</p>
+        )}
+      </section>
 
       <div className="ranks-layout">
         <section className="g-card table-card" aria-labelledby="board-title">

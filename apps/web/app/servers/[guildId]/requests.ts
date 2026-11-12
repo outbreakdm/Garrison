@@ -27,6 +27,7 @@ import {
   readAlertFeeds,
   readMessages,
   readRoleMenus,
+  SEASON_NAME_MAX,
   TICKET_LIMITS,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
@@ -55,6 +56,7 @@ const PAGES = new Set([
   "parley",
   "spoils",
   "beacon",
+  "ranks",
 ]);
 /** A member's page under Watch is the one page with an ID in its path. */
 const MEMBER_PAGE = /^watch\/member\/\d{17,20}$/;
@@ -202,6 +204,15 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
     }
     case "backup_create":
       return { ok: true, input: { kind, payload: {} } };
+    case "season_start": {
+      if (!entitlements(await getGuildPlan(db, guildId))["ranks.seasons"])
+        return { ok: false, error: "season_pro" };
+      if (field(form, "confirm") !== "yes") return { ok: false, error: "invalid" };
+      return {
+        ok: true,
+        input: { kind, payload: { name: field(form, "name").trim().slice(0, SEASON_NAME_MAX) } },
+      };
+    }
     case "backup_restore": {
       // Owner only, asked of Discord now; the bot asks again before restoring.
       const owner = await guildOwnerId(guildId).catch(() => null);

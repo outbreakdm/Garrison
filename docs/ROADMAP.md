@@ -9,7 +9,7 @@ then updates **Status** and the **Log** before stopping.
 
 - **Now:** Phases 1 and 3 to 11, and the follow-ups in the Log, are code done, committed,
   not pushed or deployed. **Before deploying:** apply every migration from `0023_role_menus`
-  through `0045_voice_xp_boosts` to production (`DATABASE_MIGRATION_URL` set,
+  through `0046_rank_seasons` to production (`DATABASE_MIGRATION_URL` set,
   `pnpm db:migrate`, see DEPLOY.md); the bot preflight checks for their tables, so a deploy
   before them stops at
   preflight. **Message Content Intent must be on** in the Developer Portal (Bot → Privileged
@@ -391,7 +391,7 @@ Later phases get their checklists when they start.
   [x] squads that repeat (`/lfg create repeat_weekly`, migration `0044_lfg_repeat`)
 - **Ops:** [x] calendar view · [x] calendar feed (ICS; migration `0042_ops_calendar`) · [x] attendance history per member (Pro `ops.attendance`, migration `0043_attendance`) ·
   [x] signing up from the web (the same player page)
-- **Ranks:** [x] XP for time in voice · [x] XP boosts by role or channel (Pro `ranks.boosts`; migration `0045_voice_xp_boosts`) · [ ] seasons ·
+- **Ranks:** [x] XP for time in voice · [x] XP boosts by role or channel (Pro `ranks.boosts`; migration `0045_voice_xp_boosts`) · [x] seasons (Pro `ranks.seasons`; migration `0046_rank_seasons`) ·
   [ ] custom rank cards (phase 9)
 - **Barracks:** [ ] more game accounts · [ ] roles that follow game stats
 - **Quartermaster:** [ ] server templates that copy a layout · [x] scheduled backups (shares
@@ -518,3 +518,4 @@ Ops calendar: five weeks of raids (weekly ones projected) on Rally and the playe
 Attendance and no-shows (Pro `ops.attendance`, opt-in): the minute sweep marks raid signups and group members seen in voice around the start, the rest missed; Rally shows 90-day reliability and staff can correct raid marks. Migration 0043.
 Weekly groups: `/lfg create repeat_weekly` reposts a group a week on (same local time) after its run, host reseated; `/lfg close stop_repeating` ends it. Needs `pnpm commands:deploy`. Migration 0044.
 Voice XP (10 a minute with company, shared cooldown) and XP boosts on Pro (role, channel or category, ×0 to ×3, max 10, history and undo). Migration 0045.
+Ranks seasons on Pro: a season_start request keeps the top 100 in rank_seasons and resets XP in one transaction; the Ranks page lists past seasons; the leaderboard hides 0 XP. Migration 0046.

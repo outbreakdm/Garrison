@@ -1,6 +1,13 @@
 import { and, asc, count, desc, eq, gt, isNotNull, lt, sql } from "drizzle-orm";
 import type { Db } from "../client";
-import { memberXp, type RanksSettings, rankProfiles, rankRewards, ranksSettings } from "../schema";
+import {
+  memberXp,
+  type RanksSettings,
+  rankProfiles,
+  rankRewards,
+  rankSeasons,
+  ranksSettings,
+} from "../schema";
 
 /** XP needed to go from `level` to `level + 1`. A common, gently rising curve. */
 export const xpForNextLevel = (level: number) => 5 * level * level + 50 * level + 100;
@@ -123,7 +130,8 @@ export async function getLeaderboard(db: Db, guildId: string, limit = 10) {
   return db
     .select()
     .from(memberXp)
-    .where(eq(memberXp.guildId, guildId))
+    // Nobody with 0 XP: after a new season starts, the board fills up again as people earn.
+    .where(and(eq(memberXp.guildId, guildId), gt(memberXp.xp, 0)))
     .orderBy(desc(memberXp.xp), asc(memberXp.userId))
     .limit(limit);
 }
@@ -181,4 +189,70 @@ export async function saveRankDetails(
       target: [rankProfiles.guildId, rankProfiles.userId],
       set: { details, updatedAt: new Date() },
     });
+}
+
+export const SEASON_NAME_MAX = 40;
+export const SEASON_STANDINGS = 100;
+
+export async function listSeasons(db: Db, guildId: string, limit = 12) {
+  return db
+    .select()
+    .from(rankSeasons)
+    .where(eq(rankSeasons.guildId, guildId))
+    .orderBy(desc(rankSeasons.number))
+    .limit(limit);
+}
+
+/**
+ * End the current season: keep its top 100, then put everyone's XP, level,
+ * messages and voice minutes back to zero. Reward roles stay where they are.
+ * One transaction, with the server's XP rows locked, so XP earned at the same
+ * moment lands either in the old season or the new one.
+ */
+export async function endSeason(
+  db: Db,
+  guildId: string,
+  input: { name: string; byId: string; byName: string },
+  now = new Date(),
+) {
+  return db.transaction(async (tx) => {
+    const rows = await tx
+      .select()
+      .from(memberXp)
+      .where(eq(memberXp.guildId, guildId))
+      .orderBy(desc(memberXp.xp))
+      .for("update");
+    const [last] = await tx
+      .select({ number: rankSeasons.number, endedAt: rankSeasons.endedAt })
+      .from(rankSeasons)
+      .where(eq(rankSeasons.guildId, guildId))
+      .orderBy(desc(rankSeasons.number))
+      .limit(1);
+    const number = (last?.number ?? 0) + 1;
+    const active = rows.filter((r) => r.xp > 0);
+    const [season] = await tx
+      .insert(rankSeasons)
+      .values({
+        guildId,
+        number,
+        name: input.name.trim().slice(0, SEASON_NAME_MAX) || `Season ${number}`,
+        startedAt: last?.endedAt ?? null,
+        endedAt: now,
+        endedById: input.byId,
+        endedByName: input.byName,
+        standings: active.slice(0, SEASON_STANDINGS).map((r) => ({
+          userId: r.userId,
+          username: r.username,
+          xp: r.xp,
+          level: r.level,
+        })),
+        members: active.length,
+      })
+      .returning();
+    await tx
+      .update(memberXp)
+      .set({ xp: 0, level: 0, messages: 0, voiceMinutes: 0 })
+      .where(eq(memberXp.guildId, guildId));
+    return season;
+  });
 }

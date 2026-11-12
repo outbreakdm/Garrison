@@ -229,6 +229,12 @@ export const FEATURES = {
     free: false,
     pro: true,
   },
+  "ranks.seasons": {
+    module: "ranks",
+    about: "Seasons: reset the leaderboard and keep each season's final standings",
+    free: false,
+    pro: true,
+  },
   "rally.templates": {
     module: "rally",
     about: "LFG templates",

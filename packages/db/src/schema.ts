@@ -569,6 +569,35 @@ export const memberXp = pgTable(
   ],
 ).enableRLS();
 
+/** One row per finished season: its final standings (top 100), kept after XP is reset. */
+export interface SeasonStanding {
+  userId: string;
+  username: string;
+  xp: number;
+  level: number;
+}
+
+export const rankSeasons = pgTable(
+  "rank_seasons",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    number: integer("number").notNull(),
+    name: text("name").notNull(),
+    /** When it began: the previous season's end, or null for the first. */
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    endedAt: timestamp("ended_at", { withTimezone: true }).notNull().defaultNow(),
+    endedById: text("ended_by_id"),
+    endedByName: text("ended_by_name"),
+    standings: jsonb("standings").$type<SeasonStanding[]>().notNull(),
+    members: integer("members").notNull().default(0),
+  },
+  (t) => [uniqueIndex("rank_seasons_guild_number").on(t.guildId, t.number)],
+).enableRLS();
+
+export type RankSeason = typeof rankSeasons.$inferSelect;
 export type RanksSettings = typeof ranksSettings.$inferSelect;
 export type RankReward = typeof rankRewards.$inferSelect;
 export type MemberXp = typeof memberXp.$inferSelect;
@@ -872,6 +901,7 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "web_verify",
   "backup_create",
   "backup_restore",
+  "season_start",
 ]);
 export const dashboardActionStatus = pgEnum("dashboard_action_status", [
   "pending",
