@@ -1,6 +1,7 @@
 export * from "./cards";
 export * from "./client";
 export * from "./plans";
+export * from "./profile";
 export * from "./rally";
 export * from "./repo/actions";
 export * from "./repo/barracks";
@@ -21,6 +22,7 @@ export * from "./repo/web";
 export * from "./role";
 export * from "./role-menus";
 export type {
+  BotProfilePayload,
   CallSignupsPayload,
   CaseAction,
   CreateRaidPayload,

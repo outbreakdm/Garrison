@@ -137,6 +137,7 @@ export const inviteSettings = {
     bit(14) | // Embed Links
     bit(16) | // Read Message History
     bit(20) | // Connect
+    bit(26) | // Change Nickname
     bit(28) | // Manage Roles
     bit(40), // Moderate Members
 } as const;

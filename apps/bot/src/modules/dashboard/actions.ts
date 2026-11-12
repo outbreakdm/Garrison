@@ -32,6 +32,7 @@ import { opsCard, shortages } from "../ops/card.js";
 import { MAX_SCHEDULED } from "../ops/commands.js";
 import { announcePromotion, refreshOpsCard } from "../ops/service.js";
 import { parseWhen } from "../ops/when.js";
+import { applyBotProfile } from "../profile/apply.js";
 import { undoBuild } from "../quartermaster/service.js";
 import { parseSlots } from "../rally/parse.js";
 import { refreshCard } from "../rally/service.js";
@@ -452,6 +453,8 @@ export async function runDashboardAction(
       return doQmCancel(ctx, guild, action.payload);
     case "post_role_menu":
       return doPostRoleMenu(ctx, guild, member, action.payload);
+    case "bot_profile":
+      return applyBotProfile(ctx, guild, action.payload);
     default:
       return fail("Garrison doesn't know that request.");
   }

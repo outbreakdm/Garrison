@@ -12,6 +12,7 @@ export type GuildPlan = (typeof PLANS)[number];
 
 type Module =
   | "cards"
+  | "profile"
   | "roles"
   | "rally"
   | "ops"
@@ -48,6 +49,12 @@ export const FEATURES = {
   "cards.footer": {
     module: "cards",
     about: "Your own footer on cards, or none",
+    free: false,
+    pro: true,
+  },
+  "profile.identity": {
+    module: "profile",
+    about: "Garrison's own avatar, banner and bio in your server",
     free: false,
     pro: true,
   },

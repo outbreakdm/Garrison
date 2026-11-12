@@ -7,13 +7,15 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **Now:** Phases 3 (card editor) and 4 (role menus) are code done, committed, not pushed or
-  deployed. **Before deploying:** apply migration `0023_role_menus` to production
+- **Now:** Phases 3 (card editor), 4 (role menus) and 5 (bot profile per server) are code
+  done, committed, not pushed or deployed. **Before deploying:** apply migration `0023_role_menus` to production
   (`DATABASE_MIGRATION_URL` set, `pnpm db:migrate`, see DEPLOY.md); the bot preflight checks
   for `role_menu_settings` and `role_menu_posts`, so a deploy before it stops at preflight.
   After deploying: post a menu on a test server and press its buttons (the one part not
-  checked locally, since no bot runs in the local preview). Next: Phase 2 (Stripe) once a
-  price is decided, or Phase 5 (bot profile per server).
+  checked locally, since no bot runs in the local preview), and change Garrison's nickname
+  from Settings. Garrison's invite now asks for Change Nickname, so existing servers see it
+  in /health until they re-invite or tick it on Garrison's role. Next: Phase 2 (Stripe) once
+  a price is decided, or Phase 6 (Welcome).
 - **Branch:** `dashboard-first` (everything up to commit `1aed992` is deployed). Later
   commits (roadmap, plan list, staff and comps) are committed but not pushed or deployed.
 - **Before pushing:** `pnpm -r exec tsc --noEmit`, `pnpm test`, `pnpm exec biome check apps packages`.
@@ -31,7 +33,7 @@ then updates **Status** and the **Log** before stopping.
 | 2 | Stripe in test mode: Checkout, customer portal, webhook, then live keys | Not started |
 | 3 | Shared card editor (field editor + live preview + Pro-locked styling) | **Done** (not deployed) |
 | 4 | Role menus (first module on the card editor) | **Code done**, not deployed: needs migration 0023 |
-| 5 | Bot profile per server (name, avatar, banner, bio, card colours) | Not started |
+| 5 | Bot profile per server (name, avatar, banner, bio, card colours) | **Code done** (not deployed); card colour and footer defaults moved to later |
 | 6 | Welcome (messages, leave messages, roles on join) | Not started |
 | 7 | Tickets / modmail | Not started |
 | 8 | Message builder (post now or on a schedule) | Not started |
@@ -205,6 +207,27 @@ Card accent colour and footer text come from the same settings, read by `lib/car
 - Later: server (custom) emoji on Pro, temporary roles on Pro, button colours, the landing
   page still says "Eight modules" (Insignia makes nine; copy change for the owner to approve).
 
+### Phase 5: bot profile per server
+
+- [x] Checked Discord's docs: `PATCH /guilds/{id}/members/@me` takes `nick`, `avatar`,
+      `banner` (base64 data URIs) and `bio`. Nickname needs Change Nickname, now in the invite
+      and `/health` (Profile row).
+- [x] Rules (`packages/db/src/profile.ts`, browser-safe): nickname on Free; avatar, banner and
+      bio on Pro (`profile.identity`); putting any part back to Garrison's own is always
+      allowed. Images are PNG, JPEG or GIF data URIs up to 400 KB, resized in the browser
+      (avatar 256 px square, banner 960 × 384).
+- [x] Request kind `bot_profile` (added to migration 0023, so there's still one migration
+      to apply). Only the fields that changed are sent; the bot checks the plan again and
+      applies them. Request lists leave image data out of what pages load.
+- [x] Dashboard: Settings → "Garrison in this server", with a live Discord profile card
+      (banner, avatar, name, App tag, bio). Discord doesn't share a member's bio, so the bio
+      field says it replaces what's there. Checked in the local preview (Free refusal, a
+      nickname-only request queued, phone width).
+- No settings history for the profile: Discord holds it, and undo is "Garrison's own" per
+  part. Image data stays in that request's row; prune old image payloads later.
+- Later: server-wide card accent colour and footer defaults (they must never recolour
+  moderation and alert cards, whose colours report state).
+
 Later phases get their checklists when they start.
 
 ## Depth for current modules (backlog)
@@ -267,3 +290,6 @@ Later phases get their checklists when they start.
   Committed `2c421a5`.
 - 2026-11-12: Phase 4 code done: role menus (rules, migration 0023, bot posting and clicks,
   dashboard page). Type-check, 365 tests and Biome pass; checked in the local preview.
+  Committed `bdc94ad`.
+- 2026-11-12: Phase 5 code done: Garrison's nickname, avatar, banner and bio per server.
+  Type-check, 368 tests and Biome pass; checked in the local preview.

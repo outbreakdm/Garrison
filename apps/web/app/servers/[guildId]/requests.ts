@@ -1,6 +1,7 @@
 "use server";
 
 import {
+  checkProfileRequest,
   entitlements,
   getCase,
   getGuildPlan,
@@ -29,7 +30,7 @@ import { checkGuildAccess } from "@/lib/session";
  * the requester's own Discord permissions.
  */
 
-const PAGES = new Set(["", "gatehouse", "watch", "rally", "quartermaster", "insignia"]);
+const PAGES = new Set(["", "gatehouse", "watch", "rally", "quartermaster", "insignia", "settings"]);
 /** A member's page under Watch is the one page with an ID in its path. */
 const MEMBER_PAGE = /^watch\/member\/\d{17,20}$/;
 const SNOWFLAKE = /^\d{17,20}$/;
@@ -126,6 +127,18 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       if (!menu.options.length) return { ok: false, error: "menu_empty" };
       if (!channels.some((c) => c.id === channelId)) return { ok: false, error: "channel" };
       return { ok: true, input: { kind, payload: { menuId: menu.id, channelId } } };
+    }
+    case "bot_profile": {
+      let raw: unknown;
+      try {
+        raw = JSON.parse(field(form, "profile"));
+      } catch {
+        return { ok: false, error: "invalid" };
+      }
+      const checked = checkProfileRequest(raw, entitlements(await getGuildPlan(db, guildId)));
+      if (!checked.ok)
+        return { ok: false, error: /Pro/.test(checked.error) ? "profile_pro" : "profile" };
+      return { ok: true, input: { kind, payload: checked.value } };
     }
     case "anti_nuke": {
       // Owner only, asked of Discord now; the bot asks again before applying.

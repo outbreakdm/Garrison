@@ -3166,7 +3166,8 @@
         "qm_plan",
         "qm_apply",
         "qm_cancel",
-        "post_role_menu"
+        "post_role_menu",
+        "bot_profile"
       ]
     },
     "public.dashboard_action_status": {

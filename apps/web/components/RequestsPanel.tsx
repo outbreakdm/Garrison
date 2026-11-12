@@ -14,6 +14,9 @@ const ERRORS: Record<string, string> = {
   cooldown: "That was done recently. Try again later.",
   self: "You can't moderate yourself.",
   qm_request: "Describe what to build, in 500 characters or fewer.",
+  profile:
+    "That change wasn't valid. Nicknames are up to 32 characters, bios up to 190, and images must be PNG, JPEG or GIF.",
+  profile_pro: "Garrison's own avatar, banner and bio in your server are part of Garrison Pro.",
   menu_empty: "Add at least one role and save the menu before posting it.",
   menu_paused: "This menu is paused: the server has more menus than its plan runs.",
   qm_not_yours: "Only the person who asked for a plan can apply it. You can discard it.",

@@ -1,7 +1,8 @@
-import { and, count, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import { and, count, desc, eq, getTableColumns, gte, inArray, lt, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import {
   type AntiNukePayload,
+  type BotProfilePayload,
   type BuildVersionPayload,
   type CallSignupsPayload,
   type CaseNumberPayload,
@@ -46,7 +47,8 @@ export type QueueInput =
   | { kind: "qm_plan"; payload: QmPlanPayload }
   | { kind: "qm_apply"; payload: IdPayload }
   | { kind: "qm_cancel"; payload: IdPayload }
-  | { kind: "post_role_menu"; payload: PostRoleMenuPayload };
+  | { kind: "post_role_menu"; payload: PostRoleMenuPayload }
+  | { kind: "bot_profile"; payload: BotProfilePayload };
 
 /** Per server: at most this many requests waiting at once. */
 export const MAX_PENDING_PER_GUILD = 10;
@@ -122,9 +124,13 @@ export async function queueDashboardAction(
   });
 }
 
+/** Recent requests. Image data is left out of the payload: pages only show outcomes. */
 export async function listDashboardActions(db: Db, guildId: string, limit = 10) {
   return db
-    .select()
+    .select({
+      ...getTableColumns(dashboardActions),
+      payload: sql<unknown>`${dashboardActions.payload} - 'avatar' - 'banner'`,
+    })
     .from(dashboardActions)
     .where(eq(dashboardActions.guildId, guildId))
     .orderBy(desc(dashboardActions.createdAt))

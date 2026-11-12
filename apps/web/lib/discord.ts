@@ -220,6 +220,34 @@ export async function botTopPosition(guildId: string): Promise<number | null> {
   }
 }
 
+/** How Garrison looks in one server now: its nickname and server-only images. */
+export interface BotLook {
+  nick: string | null;
+  avatarUrl: string | null;
+  bannerUrl: string | null;
+}
+
+export async function botLook(guildId: string): Promise<BotLook | null> {
+  const id = env().DISCORD_CLIENT_ID;
+  try {
+    const me = await discord<{
+      nick?: string | null;
+      avatar?: string | null;
+      banner?: string | null;
+    }>(`/guilds/${guildId}/members/${id}`, {
+      headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` },
+    });
+    const cdn = `https://cdn.discordapp.com/guilds/${guildId}/users/${id}`;
+    return {
+      nick: me.nick ?? null,
+      avatarUrl: me.avatar ? `${cdn}/avatars/${me.avatar}.png?size=128` : null,
+      bannerUrl: me.banner ? `${cdn}/banners/${me.banner}.png?size=480` : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** Roles a Rally template could notify: not @everyone, not managed by an integration. */
 export async function listNotifiableRoles(guildId: string) {
   return (await listGuildRoles(guildId))

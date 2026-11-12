@@ -1,4 +1,5 @@
 ALTER TYPE "public"."dashboard_action_kind" ADD VALUE IF NOT EXISTS 'post_role_menu';--> statement-breakpoint
+ALTER TYPE "public"."dashboard_action_kind" ADD VALUE IF NOT EXISTS 'bot_profile';--> statement-breakpoint
 ALTER TYPE "public"."settings_module" ADD VALUE IF NOT EXISTS 'roles';--> statement-breakpoint
 CREATE TABLE "role_menu_posts" (
 	"guild_id" text NOT NULL,

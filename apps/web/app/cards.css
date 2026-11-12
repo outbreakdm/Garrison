@@ -425,6 +425,62 @@
   }
 }
 
+/* --- Garrison's profile in a server ---------------------------------------------
+   Image pickers on the left; Discord's profile card as the preview. */
+.image-pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+.image-pick__frame {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  text-align: center;
+}
+.image-pick--avatar .image-pick__frame {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+}
+.image-pick--banner .image-pick__frame {
+  width: 160px;
+  height: 64px;
+}
+.image-pick__frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.image-pick__frame .g-help {
+  padding: 4px;
+  font-size: 11px;
+  line-height: 14px;
+}
+.image-pick__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.file-btn {
+  position: relative;
+  overflow: hidden;
+}
+.file-btn input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.file-btn:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 /* --- Discord preview (.dc) ----------------------------------------------------
    Discord's dark theme and Components V2 anatomy: a container with a 4px colour
    bar, a heading, text, dividers, media, controls, then small grey footer text. */
@@ -730,4 +786,58 @@
   .block {
     animation: none;
   }
+}
+
+/* Discord's profile card: banner, a round avatar cut into it, name, App tag, bio. */
+.dc-profile {
+  position: relative;
+  max-width: 340px;
+  background: #232428;
+  border-radius: 8px;
+}
+.dc-profile__banner {
+  height: 120px;
+  background: #0b0d10;
+}
+.dc-profile__banner img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.dc-profile__avatar {
+  position: absolute;
+  top: 76px;
+  left: 16px;
+  display: grid;
+  place-items: center;
+  width: 80px;
+  height: 80px;
+  overflow: hidden;
+  border: 6px solid #232428;
+  border-radius: 50%;
+  background: #0b0d10;
+  color: #d4ff3a;
+}
+.dc-profile__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.dc-profile__body {
+  padding: 48px 16px 16px;
+}
+.dc-profile__name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #f2f3f5;
+}
+.dc-profile__bio {
+  margin: 12px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--dc-line);
+  font-size: 14px;
+  line-height: 1.375;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }

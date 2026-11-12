@@ -1,4 +1,6 @@
 import {
+  entitlements,
+  getGuildPlan,
   getLedgerSettings,
   getOpsTimezone,
   getOverview,
@@ -8,14 +10,17 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { RequestsPanel } from "@/components/RequestsPanel";
 import { SettingsNotice } from "@/components/settings";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { getDb } from "@/lib/db";
-import { listGuildRoles, listTextChannels } from "@/lib/discord";
+import { botLook, listGuildRoles, listTextChannels } from "@/lib/discord";
 import { requireGuildAccess } from "@/lib/session";
 import { FIELD_LABELS, ladderText, templatesChangeText } from "@/lib/settings-schema";
 import { currentTheme } from "@/lib/theme";
+import { requestAction } from "../requests";
 import { saveOps, undoChange } from "./actions";
+import { BotProfileForm } from "./BotProfileForm";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -74,22 +79,25 @@ export default async function SettingsPage({
   searchParams,
 }: {
   params: Promise<{ guildId: string }>;
-  searchParams: Promise<Record<string, string | undefined>>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { guildId } = await params;
   const { guild, session } = await requireGuildAccess(guildId);
   const query = await searchParams;
   const db = await getDb();
-  const [overview, timezone, ranks, ledger, history, channels, roles, theme] = await Promise.all([
-    getOverview(db, guild.id),
-    getOpsTimezone(db, guild.id),
-    getRanksSettings(db, guild.id),
-    getLedgerSettings(db, guild.id),
-    listSettingsChanges(db, guild.id),
-    listTextChannels(guild.id).catch(() => []),
-    listGuildRoles(guild.id).catch(() => []),
-    currentTheme(),
-  ]);
+  const [overview, timezone, ranks, ledger, history, channels, roles, theme, plan, look] =
+    await Promise.all([
+      getOverview(db, guild.id),
+      getOpsTimezone(db, guild.id),
+      getRanksSettings(db, guild.id),
+      getLedgerSettings(db, guild.id),
+      listSettingsChanges(db, guild.id),
+      listTextChannels(guild.id).catch(() => []),
+      listGuildRoles(guild.id).catch(() => []),
+      currentTheme(),
+      getGuildPlan(db, guild.id),
+      botLook(guild.id),
+    ]);
   const w = overview.watch;
   const g = overview.gatehouse;
   const names = new Map(channels.map((c) => [c.id, c.name]));
@@ -236,6 +244,30 @@ export default async function SettingsPage({
           </div>
         </nav>
       </div>
+
+      <RequestsPanel guildId={guild.id} kinds={["bot_profile"]} query={query} />
+      <section className="g-card card-col" id="profile" aria-labelledby="profile-title">
+        <h2 className="card-title" id="profile-title">
+          Garrison in this server
+        </h2>
+        <p className="g-help">
+          Its name and look here only; other servers keep their own. Undo by putting back Garrison's
+          own for each part.
+        </p>
+        {look ? (
+          <BotProfileForm
+            guildId={guild.id}
+            current={look}
+            pro={entitlements(plan)["profile.identity"]}
+            planHref={`${base}/plan`}
+            requestAction={requestAction}
+          />
+        ) : (
+          <p className="notice" role="alert">
+            Discord didn't say how Garrison looks here. Refresh to try again.
+          </p>
+        )}
+      </section>
 
       <div className="g-card table-card" id="history">
         <div className="table-card__head row-between">

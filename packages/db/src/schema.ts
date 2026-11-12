@@ -800,6 +800,7 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "qm_apply",
   "qm_cancel",
   "post_role_menu",
+  "bot_profile",
 ]);
 export const dashboardActionStatus = pgEnum("dashboard_action_status", [
   "pending",
@@ -843,6 +844,17 @@ export interface BuildVersionPayload {
 }
 export interface VerifyPanelPayload {
   channelId: string;
+}
+/**
+ * Change how Garrison looks in one server. A missing field is left as it is; null
+ * puts back Garrison's own (no nickname, the global avatar, no banner or bio).
+ * Images are data URIs, already resized in the browser.
+ */
+export interface BotProfilePayload {
+  nick?: string | null;
+  bio?: string | null;
+  avatar?: string | null;
+  banner?: string | null;
 }
 /** Post a role menu, or update the message it was last posted as. */
 export interface PostRoleMenuPayload {
