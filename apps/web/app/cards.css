@@ -1409,3 +1409,137 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Ops calendar: five weeks of raids. A grid on wide screens, a day list on phones. */
+.ops-cal__grid {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  border: 1px solid var(--line);
+}
+.ops-cal__row + .ops-cal__row {
+  border-top: 1px solid var(--line);
+}
+.ops-cal__weekday {
+  padding: var(--space-2);
+  font-weight: 500;
+  text-align: left;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--surface-raised);
+}
+.ops-cal__day {
+  height: 88px;
+  padding: var(--space-2);
+  vertical-align: top;
+}
+.ops-cal__date {
+  display: block;
+  margin-bottom: var(--space-1);
+}
+.ops-cal__item + .ops-cal__item {
+  margin-top: var(--space-1);
+}
+.ops-cal__day + .ops-cal__day {
+  border-left: 1px solid var(--line);
+}
+.ops-cal__day.is-past {
+  background: var(--surface-sunken, var(--surface));
+}
+.ops-cal__day.is-past .ops-cal__date {
+  color: var(--text-muted);
+}
+.ops-cal__date {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.ops-cal__date-long {
+  display: none;
+}
+.ops-cal__day.is-today .ops-cal__date-short {
+  display: inline-block;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.ops-cal__item {
+  display: block;
+  overflow: hidden;
+  padding: 2px var(--space-1);
+  border-left: 2px solid var(--accent-strong);
+  font-size: 12px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--surface-raised);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.ops-cal__item.is-projected {
+  border-left-style: dashed;
+  border-left-color: var(--line);
+  color: var(--text-muted);
+  background: transparent;
+}
+.ops-cal__time,
+.ops-cal__title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ops-cal__time {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.ops-cal .queue__empty {
+  margin-top: var(--space-3);
+}
+@media (max-width: 720px) {
+  .ops-cal__grid,
+  .ops-cal__grid tbody,
+  .ops-cal__row,
+  .ops-cal__day {
+    display: block;
+  }
+  .ops-cal__grid {
+    border: 0;
+  }
+  .ops-cal__row + .ops-cal__row {
+    border-top: 0;
+  }
+  .ops-cal__row--head,
+  .ops-cal__day.is-empty,
+  .ops-cal__date-short,
+  .ops-cal__day.is-today .ops-cal__date-short {
+    display: none;
+  }
+  .ops-cal__day {
+    height: auto;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .ops-cal__day + .ops-cal__day {
+    border-left: 0;
+  }
+  .ops-cal__day.is-past {
+    background: none;
+  }
+  .ops-cal__date-long {
+    display: inline;
+  }
+  .ops-cal__day.is-today .ops-cal__date-long::after {
+    content: " · today";
+    color: var(--accent-strong);
+  }
+  .ops-cal__item {
+    white-space: normal;
+  }
+  .ops-cal__time,
+  .ops-cal__title {
+    display: inline;
+  }
+}

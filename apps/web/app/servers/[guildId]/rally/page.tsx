@@ -1,12 +1,14 @@
 import {
   capacity,
   checkTemplates,
+  getCalendarToken,
   getGuildPlan,
   getOpsTimezone,
   getRallyTemplates,
   listActiveMembers,
   listDashboardActions,
   listOpenLfg,
+  listOpsForCalendar,
   listSignups,
   listUpcomingOps,
   memberNames,
@@ -14,13 +16,20 @@ import {
 import type { Metadata } from "next";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { formatTime } from "@/components/format";
+import { OpsCalendar } from "@/components/OpsCalendar";
 import { FormPanel } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { listTextChannels } from "@/lib/discord";
+import { env } from "@/lib/env";
 import { ACTION_KIND, ACTION_STATUS } from "@/lib/rally-schema";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
-import { requestCallSignups, requestCreateRaid, requestMoveSignup } from "./actions";
+import {
+  requestCallSignups,
+  requestCreateRaid,
+  requestMoveSignup,
+  setCalendarFeed,
+} from "./actions";
 
 const QUEUED: Record<string, string> = {
   create_raid: "Queued. Garrison posts the raid in a few seconds.",
@@ -56,15 +65,19 @@ export default async function RallyPage({
   const { guild, session } = await requireGuildAccess(guildId);
   const query = await searchParams;
   const db = await getDb();
-  const [posts, raids, allActions, timezone, channels, rawTemplates, plan] = await Promise.all([
-    listOpenLfg(db, guild.id),
-    listUpcomingOps(db, guild.id),
-    listDashboardActions(db, guild.id, 30),
-    getOpsTimezone(db, guild.id),
-    listTextChannels(guild.id).catch(() => []),
-    getRallyTemplates(db, guild.id),
-    getGuildPlan(db, guild.id),
-  ]);
+  const [posts, raids, allActions, timezone, channels, rawTemplates, plan, calendarRaids, feed] =
+    await Promise.all([
+      listOpenLfg(db, guild.id),
+      listUpcomingOps(db, guild.id),
+      listDashboardActions(db, guild.id, 30),
+      getOpsTimezone(db, guild.id),
+      listTextChannels(guild.id).catch(() => []),
+      getRallyTemplates(db, guild.id),
+      getGuildPlan(db, guild.id),
+      listOpsForCalendar(db, guild.id, new Date(Date.now() - 14 * 86_400_000)),
+      getCalendarToken(db, guild.id),
+    ]);
+  const feedUrl = feed ? `${env().APP_URL}/calendar/${guild.id}/${feed}.ics` : null;
   const checked = checkTemplates(rawTemplates, plan);
   const templates = checked.ok ? checked.value : [];
   const defaultTemplate = templates.find((t) => t.isDefault);
@@ -624,6 +637,61 @@ export default async function RallyPage({
           )}
         </section>
       </div>
+
+      <section className="g-card card-col" id="calendar" aria-labelledby="calendar-title">
+        <div className="queue__head">
+          <h2 className="card-title" id="calendar-title">
+            Calendar
+          </h2>
+          <span className="g-help">Times in {timezone}</span>
+        </div>
+        <OpsCalendar raids={calendarRaids} timeZone={timezone} />
+        <div className="card-col">
+          <h3 className="field-label">Calendar feed</h3>
+          {feedUrl ? (
+            <>
+              <p className="g-help">
+                Add this link in Google Calendar (Other calendars → From URL), Outlook or Apple
+                Calendar, and raids show up there. Anyone with the link sees raid names, times and
+                notes, not who signed up. Members see it on the{" "}
+                <a href={`/play/${guild.id}`}>player page</a>.
+              </p>
+              <input
+                className="g-input mono"
+                readOnly
+                value={feedUrl}
+                aria-label="Calendar feed link"
+              />
+              <div className="row-between">
+                <form action={setCalendarFeed}>
+                  <input type="hidden" name="guildId" value={guild.id} />
+                  <button type="submit" className="g-btn g-btn--secondary g-btn--sm">
+                    New link
+                  </button>
+                </form>
+                <form action={setCalendarFeed}>
+                  <input type="hidden" name="guildId" value={guild.id} />
+                  <input type="hidden" name="feed" value="off" />
+                  <button type="submit" className="g-btn g-btn--ghost g-btn--sm">
+                    Turn off
+                  </button>
+                </form>
+              </div>
+              <p className="g-help">A new link stops the old one working.</p>
+            </>
+          ) : (
+            <form action={setCalendarFeed} className="row-between">
+              <input type="hidden" name="guildId" value={guild.id} />
+              <p className="g-help">
+                A link calendar apps can subscribe to, so raids show up next to everything else.
+              </p>
+              <button type="submit" className="g-btn g-btn--secondary g-btn--sm">
+                Make a link
+              </button>
+            </form>
+          )}
+        </div>
+      </section>
 
       {recent.length ? (
         <div className="g-card table-card">

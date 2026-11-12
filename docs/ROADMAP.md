@@ -9,7 +9,7 @@ then updates **Status** and the **Log** before stopping.
 
 - **Now:** Phases 1 and 3 to 11, and the follow-ups in the Log, are code done, committed,
   not pushed or deployed. **Before deploying:** apply every migration from `0023_role_menus`
-  through `0041_backups` to production (`DATABASE_MIGRATION_URL` set,
+  through `0042_ops_calendar` to production (`DATABASE_MIGRATION_URL` set,
   `pnpm db:migrate`, see DEPLOY.md); the bot preflight checks for their tables, so a deploy
   before them stops at
   preflight. **Message Content Intent must be on** in the Developer Portal (Bot → Privileged
@@ -389,7 +389,7 @@ Later phases get their checklists when they start.
   restart, capped at 1,500 characters, removed with the event)
 - **Rally:** [x] LFG board on the dashboard for players (`/play/<server id>`, any member) · [ ] no-show tracking ·
   [ ] squads that repeat
-- **Ops:** [ ] calendar view · [ ] calendar feed (ICS) · [ ] attendance history per member ·
+- **Ops:** [x] calendar view · [x] calendar feed (ICS; migration `0042_ops_calendar`) · [ ] attendance history per member ·
   [x] signing up from the web (the same player page)
 - **Ranks:** [ ] XP for time in voice · [ ] XP boosts by role or channel · [ ] seasons ·
   [ ] custom rank cards (phase 9)
@@ -511,4 +511,7 @@ Decided (2026-11-12, owner):
 - 2026-11-12: Backlog: Ledger invite tracking (new intent `GuildInvites`, not privileged; top
   inviters on the Ledger page) and CSV export on Pro (`ledger.export`). Voice and nickname
   events were already logged.
-Player page `/play/<server id>`: any member joins or leaves groups and signs up for raids from the web; the bot accepts lfg_join/lfg_leave/raid_signup/raid_withdraw without Manage Server, acting only on the requester.
+- 2026-11-12: Backlog: Player page `/play/<server id>`: any member joins or leaves groups and
+  signs up for raids from the web; the bot accepts lfg_join/lfg_leave/raid_signup/raid_withdraw
+  without Manage Server, acting only on the requester.
+Ops calendar: five weeks of raids (weekly ones projected) on Rally and the player page, and an ICS feed behind a secret link the dashboard makes, resets or turns off. Migration 0042.

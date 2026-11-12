@@ -15,6 +15,39 @@ export async function getOpsTimezone(db: Db, guildId: string) {
   return row?.timezone ?? "UTC";
 }
 
+/** The calendar feed's secret, or null when the feed is off. */
+export async function getCalendarToken(db: Db, guildId: string) {
+  const [row] = await db
+    .select({ token: opsSettings.calendarToken })
+    .from(opsSettings)
+    .where(eq(opsSettings.guildId, guildId));
+  return row?.token ?? null;
+}
+
+/** Turn the feed on with a new secret (old links stop working), or off with null. */
+export async function setCalendarToken(db: Db, guildId: string, token: string | null) {
+  await db
+    .insert(opsSettings)
+    .values({ guildId, calendarToken: token })
+    .onConflictDoUpdate({ target: opsSettings.guildId, set: { calendarToken: token } });
+}
+
+/** Raids for the calendar: those not cancelled, from `since` on. */
+export async function listOpsForCalendar(db: Db, guildId: string, since: Date) {
+  return db
+    .select()
+    .from(opsEvents)
+    .where(
+      and(
+        eq(opsEvents.guildId, guildId),
+        sql`${opsEvents.status} <> 'cancelled'`,
+        gt(opsEvents.startsAt, since),
+      ),
+    )
+    .orderBy(asc(opsEvents.startsAt))
+    .limit(300);
+}
+
 export async function setOpsTimezone(db: Db, guildId: string, timezone: string) {
   await db
     .insert(opsSettings)

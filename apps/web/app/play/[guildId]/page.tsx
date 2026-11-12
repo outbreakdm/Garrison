@@ -1,17 +1,21 @@
 import {
   getActiveGuild,
+  getCalendarToken,
   getOpsTimezone,
   listActiveMembers,
   listOpenLfg,
+  listOpsForCalendar,
   listSignups,
   listUpcomingOps,
 } from "@garrison/db";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { formatTime } from "@/components/format";
+import { OpsCalendar } from "@/components/OpsCalendar";
 import { Topbar } from "@/components/Topbar";
 import { getDb } from "@/lib/db";
 import { isGuildMember } from "@/lib/discord";
+import { env } from "@/lib/env";
 import { readFlash } from "@/lib/flash";
 import { isSnowflake } from "@/lib/security";
 import { requireSession } from "@/lib/session";
@@ -31,12 +35,15 @@ export default async function PlayPage({ params }: { params: Promise<{ guildId: 
   const db = await getDb();
   const guild = await getActiveGuild(db, guildId);
   if (!guild || !(await isGuildMember(guild.id, session.userId))) notFound();
-  const [groups, raids, tz, flash] = await Promise.all([
+  const [groups, raids, tz, flash, calendarRaids, feed] = await Promise.all([
     listOpenLfg(db, guild.id),
     listUpcomingOps(db, guild.id),
     getOpsTimezone(db, guild.id),
     readFlash(),
+    listOpsForCalendar(db, guild.id, new Date(Date.now() - 14 * 86_400_000)),
+    getCalendarToken(db, guild.id),
   ]);
+  const feedUrl = feed ? `${env().APP_URL}/calendar/${guild.id}/${feed}.ics` : null;
   const [members, signups] = await Promise.all([
     Promise.all(groups.map((g) => listActiveMembers(db, g.id))),
     Promise.all(raids.slice(0, 20).map((r) => listSignups(db, r.id))),
@@ -192,6 +199,29 @@ export default async function PlayPage({ params }: { params: Promise<{ guildId: 
             ) : (
               <p className="queue__empty muted">No raids scheduled.</p>
             )}
+          </section>
+
+          <section className="g-card card-col" aria-labelledby="calendar-title">
+            <div className="queue__head">
+              <h2 className="card-title" id="calendar-title">
+                Calendar
+              </h2>
+              {feedUrl ? (
+                <a
+                  className="g-btn g-btn--secondary g-btn--sm"
+                  href={feedUrl.replace(/^https?:/, "webcal:")}
+                >
+                  Add to your calendar
+                </a>
+              ) : null}
+            </div>
+            <OpsCalendar raids={calendarRaids} timeZone={tz} />
+            {feedUrl ? (
+              <p className="g-help">
+                Or paste this link into Google Calendar (Other calendars → From URL):{" "}
+                <span className="mono">{feedUrl}</span>
+              </p>
+            ) : null}
           </section>
         </div>
       </main>

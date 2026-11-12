@@ -1,6 +1,13 @@
 "use server";
 
-import { getOpsEvent, listSignups, type QueueInput, queueDashboardAction } from "@garrison/db";
+import { randomBytes } from "node:crypto";
+import {
+  getOpsEvent,
+  listSignups,
+  type QueueInput,
+  queueDashboardAction,
+  setCalendarToken,
+} from "@garrison/db";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { listTextChannels } from "@/lib/discord";
@@ -39,6 +46,21 @@ async function queue(form: FormData, input: QueueInput) {
 async function eventBelongs(guildId: string, eventId: string) {
   const event = await getOpsEvent(await getDb(), guildId, eventId);
   return event?.status === "scheduled" ? event : null;
+}
+
+/**
+ * The calendar feed: make a link (or a new one, which cuts off the old) or turn
+ * it off. Saved directly: there's nothing for Garrison to do in Discord.
+ */
+export async function setCalendarFeed(form: FormData) {
+  const { guild } = await authorize(form);
+  const on = form.get("feed") !== "off";
+  await setCalendarToken(
+    await getDb(),
+    guild.id,
+    on ? randomBytes(24).toString("base64url") : null,
+  );
+  redirect(`/servers/${guild.id}/rally?calendar=${on ? "on" : "off"}#calendar`);
 }
 
 export async function requestCreateRaid(form: FormData) {

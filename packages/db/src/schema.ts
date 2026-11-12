@@ -333,6 +333,8 @@ export const opsSettings = pgTable("ops_settings", {
     .references(() => guilds.id, { onDelete: "cascade" }),
   /** IANA time zone used when /raid create gets a date without one. */
   timezone: text("timezone").notNull().default("UTC"),
+  /** The secret in the calendar feed's link (ICS). Null: no feed. Reset to cut off old links. */
+  calendarToken: text("calendar_token"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
 
