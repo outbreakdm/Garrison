@@ -9,8 +9,8 @@ then updates **Status** and the **Log** before stopping.
 
 - **Now:** Phases 3 to 8 are code done, committed, not pushed or deployed. **Before
   deploying:** apply migrations `0023_role_menus`, `0024_welcome`, `0025_messages`,
-  `0026_tickets`, `0027_ledger_text`, `0028_rank_cards`, `0029_alerts` and `0030_giveaways`
-  to production (`DATABASE_MIGRATION_URL` set, `pnpm db:migrate`, see
+  `0026_tickets`, `0027_ledger_text`, `0028_rank_cards`, `0029_alerts`, `0030_giveaways` and
+  `0031_starboard` to production (`DATABASE_MIGRATION_URL` set, `pnpm db:migrate`, see
   DEPLOY.md); the bot preflight checks for their tables, so a deploy before them stops at
   preflight. **Message Content Intent must be on** in the Developer Portal (Bot → Privileged
   Gateway Intents): the bot now asks for it, and login fails without it.
@@ -23,8 +23,8 @@ then updates **Status** and the **Log** before stopping.
   Garrison's role. Check `/rank` draws its image on the real host (the canvas module's Alpine
   binary). For Twitch alerts, create a Twitch app (dev.twitch.tv/console) and add
   `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` as GitHub secrets (the deploy passes them on);
-  YouTube alerts need no key. Next: Phase 11 (giveaways and starboard); Phase 2 (Stripe) once a
-  price is set.
+  YouTube alerts need no key. Then start a giveaway and star a message on a test server. Next:
+  Phase 2 (Stripe) once a price is set, then the depth backlog.
 - **Branch:** `dashboard-first` (everything up to commit `1aed992` is deployed). Later
   commits (roadmap, plan list, staff and comps) are committed but not pushed or deployed.
 - **Before pushing:** `pnpm -r exec tsc --noEmit`, `pnpm test`, `pnpm exec biome check apps packages`.
@@ -48,7 +48,7 @@ then updates **Status** and the **Log** before stopping.
 | 8 | Message builder (post now or on a schedule) | **Code done**, not deployed: needs migration 0025 |
 | 9 | Custom rank cards with character details | **Code done**, not deployed: needs migration 0028 |
 | 10 | Stream and video alerts (Twitch, YouTube, Kick) | **Code done**, not deployed: needs migration 0029; Twitch needs the owner's keys; Kick later |
-| 11 | Giveaways and starboard | **Giveaways code done** (migration 0030); starboard in progress |
+| 11 | Giveaways and starboard | **Code done**, not deployed: needs migrations 0030 and 0031 |
 | — | Depth for current modules (backlog below), slotted between phases | Not started |
 
 ## How plans work
@@ -343,7 +343,16 @@ Card accent colour and footer text come from the same settings, read by `lib/car
 - [x] Dashboard (`/servers/:id/spoils`, nav "Spoils · Giveaways"): start one (Pro rules shown
       locked on Free), recent giveaways with entries, winners by name and their actions. Checked
       in the local preview (the form, the queued request's payload, the list).
-- [ ] Starboard.
+- [x] Starboard (module "Honors", plain label "Starboard"): rules in
+      `packages/db/src/starboard.ts` (one emoji, 1 to 50 reactions, the author's own star off by
+      default, ignored channels, Pro colour `starboard.look`); migration `0031_starboard`
+      (`starboard_settings` with history, `starboard_posts` with IDs and counts only, claimed
+      before reposting and released if the post fails); the bot listens to reactions (new
+      intent `GuildMessageReactions`, not privileged) and reposts with the text, first image and
+      a jump link, never pinging; age-restricted messages only go to an age-restricted board.
+      Dashboard `/servers/:id/honors`. Checked in the local preview (save, phone width).
+- Later: custom server emoji for the starboard, a giveaway command in Discord, giveaways that
+  repeat.
 
 ### Phase 8: message builder (module "Dispatch", plain label "Messages")
 
@@ -463,4 +472,6 @@ Decided (2026-11-12, owner):
   Committed `a2c5bb5`.
 - 2026-11-12: Phase 10 code done: Twitch and YouTube alerts, migration 0029. YouTube works
   without a key; Twitch waits on the owner's Twitch app keys. Type-check, 407 tests and Biome pass;
-  checked in the local preview.
+  checked in the local preview. Committed `a93f4e9`.
+- 2026-11-12: Phase 11 code done: giveaways (`f5afbf2`, migration 0030) and the starboard
+  (migration 0031). Type-check, 419 tests and Biome pass; checked in the local preview.

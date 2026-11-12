@@ -12,5 +12,6 @@ export * from "./profile";
 export * from "./rank-cards";
 export * from "./role-menus";
 export type { BotProfilePayload } from "./schema";
+export * from "./starboard";
 export * from "./tickets";
 export * from "./welcome";

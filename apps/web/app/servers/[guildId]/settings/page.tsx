@@ -52,6 +52,10 @@ function describe(
     return `@${roleNames.get(String(value)) ?? "deleted-role"}`;
   if (field === "parentId") return value ? "a category" : "the top of the channel list";
   if (field === "card") return value ? "a custom card" : "the standard card";
+  if (field === "ignoredChannelIds")
+    return Array.isArray(value) && value.length
+      ? value.map((id) => `#${channels.get(String(id)) ?? "deleted-channel"}`).join(", ")
+      : "none";
   if (field === "templates")
     return Array.isArray(value) && value.length
       ? value.map((t: { name?: string }) => t.name ?? "?").join(", ")
@@ -256,6 +260,11 @@ export default async function SettingsPage({
               href={`${base}/insignia`}
               name="Role menus"
               value="Roles members pick for themselves"
+            />
+            <Place
+              href={`${base}/honors`}
+              name="Starboard"
+              value="Where starred messages go, and how many stars"
             />
             <Place
               href={`${base}/parley`}

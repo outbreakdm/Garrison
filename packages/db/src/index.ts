@@ -26,6 +26,7 @@ export * from "./repo/ranks";
 export * from "./repo/role-menus";
 export * from "./repo/search";
 export * from "./repo/settings";
+export * from "./repo/starboard";
 export * from "./repo/tickets";
 export * from "./repo/web";
 export * from "./repo/welcome";
@@ -80,6 +81,7 @@ export type {
   SettingsChange,
   SettingsDiff,
   SettingsModule,
+  StarboardPost,
   StartGiveawayPayload,
   Ticket,
   TicketActionPayload,
@@ -92,6 +94,7 @@ export type {
   WebSession,
 } from "./schema";
 export * as schema from "./schema";
+export * from "./starboard";
 export * from "./tickets";
 export * from "./time";
 export * from "./welcome";

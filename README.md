@@ -32,6 +32,7 @@ packages/
 | Parley        | Tickets           | **Built** | `/ticket`                                                                   |
 | Beacon        | Alerts            | **Built** | (dashboard)                                                                 |
 | Spoils        | Giveaways         | **Built** | (dashboard)                                                                 |
+| Honors        | Starboard         | **Built** | (dashboard)                                                                 |
 | Quartermaster | AI builder        | **Built** | `/qm`                                                                       |
 
 ### Watch
@@ -123,6 +124,13 @@ After pulling this change, run `pnpm commands:deploy` once: `/lfg create` has a 
 - When time's up the minute sweep draws winners with a secure random draw, each entry weighing as much as its entries, and replies to the card naming them (the only pings). A draw is claimed by a conditional update, so it happens once. **Draw now**, **Cancel** and **Draw again** (new winners, never the same people) are on the dashboard.
 - Free: 2 running at once, open to everyone. Pro: 20, entry rules (a role, or a level from Ranks), up to 3 bonus-entry roles, and the card's colour.
 
+### Honors (starboard)
+
+- When a message collects the server's emoji (⭐ by default) as many times as it asks (3 by default), Garrison reposts it to the starboard channel: the count, who wrote it and where, their text and first image, and a Jump button. Later reactions update the count. Mentions in the repost never ping.
+- The author's own reaction doesn't count unless the server says so; bots' messages, the board itself and ignored channels never reach it; messages from age-restricted channels only go to an age-restricted board.
+- Only the message's IDs and its star count are stored, never its text. A repost is claimed before it's posted, so a message reaches the board once.
+- Free: everything. Pro: the board's colour. Set up on the dashboard's Starboard page.
+
 ### Ranks
 
 - **Off by default.** Turn it on with `/ranks settings enabled:true`. Members then earn 15–25 XP for chatting, at most once a minute. The cooldown is enforced in the database, so spam and multiple bot processes can't farm XP. Only who posted and when is used: no message content.
@@ -142,7 +150,7 @@ The bot keeps a few counts, never content: messages per server per UTC day, when
 
 ### Intents
 
-`Guilds`, `Guild Moderation` (audit log, for anti-nuke), `Guild Voice States` (Rally), `Guild Messages` (Ranks, tickets), and two privileged intents: **Server Members** and **Message Content** (ticket transcripts). Turn both on under Bot → Privileged Gateway Intents in the Developer Portal, or login fails with "Used disallowed intents". Past 100 servers, Discord must approve Message Content for the bot.
+`Guilds`, `Guild Moderation` (audit log, for anti-nuke), `Guild Voice States` (Rally), `Guild Messages` (Ranks, tickets), `Guild Message Reactions` (the starboard), and two privileged intents: **Server Members** and **Message Content** (ticket transcripts). Turn both on under Bot → Privileged Gateway Intents in the Developer Portal, or login fails with "Used disallowed intents". Past 100 servers, Discord must approve Message Content for the bot.
 
 ## Dashboard
 

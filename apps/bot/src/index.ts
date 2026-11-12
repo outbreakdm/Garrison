@@ -29,6 +29,7 @@ import { sweepOps } from "./modules/ops/service.js";
 import { ClaudePlanner } from "./modules/quartermaster/planner.js";
 import { sweepRally } from "./modules/rally/service.js";
 import { handleMessage } from "./modules/ranks/service.js";
+import { onStarReaction } from "./modules/starboard/service.js";
 import {
   loadOpenTickets,
   onTicketChannelDeleted,
@@ -82,12 +83,15 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     // Privileged: turn on "Message Content Intent" in the Developer Portal.
     GatewayIntentBits.MessageContent,
+    // Not privileged. The starboard counts reactions.
+    GatewayIntentBits.GuildMessageReactions,
   ],
   // Never ping from bot messages. Reasons and other user-typed text are echoed
   // back, and must not be able to trigger @everyone, role or user pings.
   allowedMentions: { parse: [], repliedUser: false },
   // Ledger needs leave and delete events for members and messages that aren't cached.
-  partials: [Partials.GuildMember, Partials.Message],
+  // The starboard needs reactions on messages from before the last restart.
+  partials: [Partials.GuildMember, Partials.Message, Partials.Reaction, Partials.User],
 });
 
 const SWEEP_INTERVAL_MS = 60_000;
@@ -168,6 +172,16 @@ client.on(Events.MessageUpdate, (before, after) => {
   );
   onTicketEdit(ctx, after).catch((error) =>
     logger.error("Ticket edit failed", { guildId: after.guildId, error }),
+  );
+});
+client.on(Events.MessageReactionAdd, (reaction) => {
+  onStarReaction(ctx, reaction).catch((error) =>
+    logger.warn("Starboard failed", { guildId: reaction.message.guildId, error }),
+  );
+});
+client.on(Events.MessageReactionRemove, (reaction) => {
+  onStarReaction(ctx, reaction).catch((error) =>
+    logger.warn("Starboard failed", { guildId: reaction.message.guildId, error }),
   );
 });
 client.on(Events.ChannelDelete, (channel) => {

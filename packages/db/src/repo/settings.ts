@@ -16,6 +16,7 @@ import {
   type SettingsDiff,
   type SettingsModule,
   settingsChanges,
+  starboardSettings,
   ticketSettings,
   watchSettings,
   welcomeSettings,
@@ -69,6 +70,16 @@ export const EDITABLE_FIELDS = {
   // Panels are checked with checkTicketPanels, the rest with checkTicketOptions.
   // Feeds are checked with checkAlertFeeds before they get here.
   alerts: ["feeds"],
+  // Checked with checkStarboard before it gets here.
+  starboard: [
+    "enabled",
+    "channelId",
+    "emoji",
+    "threshold",
+    "selfStar",
+    "ignoredChannelIds",
+    "accent",
+  ],
   tickets: [
     "panels",
     "staffRoleIds",
@@ -194,6 +205,7 @@ const TABLES = {
   messages: messageSettings,
   tickets: ticketSettings,
   alerts: alertSettings,
+  starboard: starboardSettings,
 } as const;
 
 /** Modules whose settings row is created on first use, by the bot or the dashboard. */
@@ -207,6 +219,7 @@ const LAZY = new Set<SettingsModule>([
   "messages",
   "tickets",
   "alerts",
+  "starboard",
 ]);
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -305,6 +318,12 @@ async function writeRow(tx: Tx, module: SettingsModule, guildId: string, values:
         .update(welcomeSettings)
         .set(set as Partial<typeof welcomeSettings.$inferInsert>)
         .where(eq(welcomeSettings.guildId, guildId));
+      return;
+    case "starboard":
+      await tx
+        .update(starboardSettings)
+        .set(set as Partial<typeof starboardSettings.$inferInsert>)
+        .where(eq(starboardSettings.guildId, guildId));
       return;
     case "alerts":
       await tx

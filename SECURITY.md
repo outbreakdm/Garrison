@@ -105,7 +105,7 @@ Then set `DATABASE_URL` to the pooled connection string with user `garrison_bot.
 
 ## Discord
 
-- Intents: `Guilds`, `Guild Moderation`, `Guild Voice States`, `Guild Messages`, `Server Members` and `Message Content`. Ranks still counts messages by author and time only.
+- Intents: `Guilds`, `Guild Moderation`, `Guild Voice States`, `Guild Messages`, `Guild Message Reactions`, `Server Members` and `Message Content`. Ranks still counts messages by author and time only. The starboard reposts a message's text in Discord but stores only its IDs and star count.
 - **Message text is stored only in ticket transcripts and, if a server turns it on, in Ledger events** for deleted and edited messages (off by default, capped at 1,500 characters, removed with the event at retention). Transcripts hold messages written inside an open ticket's channel. A transcript lives as long as its ticket: 30 days after closing on Free, 365 on Pro, fixed at closing. Then the ticket, transcript and staff notes are deleted together. The bot may delete a ticket only once it has expired (RLS); the dashboard can only read tickets and transcripts, and can only add notes.
 - Ledger stores who did what and when; message text only as above. Partials are enabled only so leave and delete events arrive for uncached members and messages.
 - Transcript text is shown on the dashboard as plain text (never HTML or markdown), and attachment links are shown only when they point at Discord's CDN.

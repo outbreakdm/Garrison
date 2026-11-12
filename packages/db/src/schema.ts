@@ -433,6 +433,7 @@ export const settingsModule = pgEnum("settings_module", [
   "messages",
   "tickets",
   "alerts",
+  "starboard",
 ]);
 
 /** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */
@@ -1466,3 +1467,53 @@ export const giveawayEntries = pgTable(
 ).enableRLS();
 
 export type Giveaway = typeof giveaways.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Starboard (Honors)
+// ---------------------------------------------------------------------------
+
+/** A server's starboard settings, one row, edited on the dashboard with history and undo. */
+export const starboardSettings = pgTable(
+  "starboard_settings",
+  {
+    guildId: text("guild_id")
+      .primaryKey()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    enabled: boolean("enabled").notNull().default(false),
+    channelId: text("channel_id"),
+    emoji: text("emoji").notNull().default("⭐"),
+    threshold: integer("threshold").notNull().default(3),
+    selfStar: boolean("self_star").notNull().default(false),
+    ignoredChannelIds: text("ignored_channel_ids").array().notNull().default(sql`'{}'::text[]`),
+    accent: text("accent"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [check("starboard_threshold", sql`${t.threshold} BETWEEN 1 AND 50`)],
+).enableRLS();
+
+/**
+ * A message on the starboard: IDs and the star count only, never its text. The
+ * row is claimed before the repost, so a message is posted to the board once.
+ */
+export const starboardPosts = pgTable(
+  "starboard_posts",
+  {
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    messageId: text("message_id").notNull(),
+    channelId: text("channel_id").notNull(),
+    authorId: text("author_id").notNull(),
+    /** The repost on the board. Null while it's being posted. */
+    starMessageId: text("star_message_id"),
+    stars: integer("stars").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.guildId, t.messageId] }),
+    index("starboard_posts_recent").on(t.guildId, t.createdAt),
+  ],
+).enableRLS();
+
+export type StarboardPost = typeof starboardPosts.$inferSelect;

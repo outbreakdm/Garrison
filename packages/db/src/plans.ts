@@ -19,6 +19,7 @@ type Module =
   | "tickets"
   | "alerts"
   | "giveaways"
+  | "starboard"
   | "rally"
   | "ops"
   | "ranks"
@@ -162,6 +163,12 @@ export const FEATURES = {
   "giveaways.rules": {
     module: "giveaways",
     about: "Giveaway entry rules (a role or a level), bonus entries and your own colour",
+    free: false,
+    pro: true,
+  },
+  "starboard.look": {
+    module: "starboard",
+    about: "Your own starboard colour",
     free: false,
     pro: true,
   },
