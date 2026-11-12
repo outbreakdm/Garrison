@@ -418,8 +418,16 @@ Later phases get their checklists when they start.
 
 ## Open decisions for the owner
 
-- **Price** for Pro per server (Dyno and Carl-bot sit around $5 a month). The structure is
-  set (per server, the table above); the amount isn't recorded anywhere yet.
+- **Price** for Pro per server. The structure is set (per server, the table above); the
+  amount isn't chosen yet. Researched 2026-11-12 (third-party figures, approximate): MEE6
+  about $11.99/mo; Dyno about $4.99–5.99/mo or $49.99/yr; Carl-bot about $3.99–7.99/mo;
+  Ticket Tool $7.99/mo; Apollo $7.99/mo or $69.99/yr (its own announcement); Arcane about
+  $7/mo; Sesh about $5–6.99/mo; Raid-Helper €25/yr (its own page). Garrison Pro covers what
+  takes three or four of those. Proposed: **$5.99/mo or $49.99/yr per server**, with a
+  founders' discount at launch. Waiting on the owner.
+- **Rank card uploads:** stored in Cloudflare R2 (`garrison-media`, served at
+  `media.garrisonbot.com`); the owner enables R2 in the Cloudflare dashboard first. Default
+  backgrounds ship in the repo. Plan and image prompts: `docs/rank-card-backgrounds.md`.
 
 Decided (2026-11-12, owner):
 
