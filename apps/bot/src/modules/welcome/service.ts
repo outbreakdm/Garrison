@@ -6,11 +6,12 @@ import {
   getActiveLockdown,
   getGuildPlan,
   getWelcome,
+  type WelcomeConfig,
 } from "@garrison/db";
 import type { GuildMember, PartialGuildMember } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
 import { customCardMessage } from "../../lib/card.js";
-import { raidUnderway } from "../gatehouse/service.js";
+import { cachedGatehouseSettings, raidUnderway } from "../gatehouse/service.js";
 import { menuRoleProblem } from "../roles/menu.js";
 import { roleFacts } from "../roles/service.js";
 
@@ -21,6 +22,21 @@ import { roleFacts } from "../roles/service.js";
  */
 
 export const WELCOMES_PER_MINUTE = 10;
+/** Longest wait for anti-raid to judge a burst before welcoming someone. */
+export const RAID_WAIT_MAX_MS = 30_000;
+const SETTINGS_TTL_MS = 30_000;
+const settingsCache = new Map<string, { at: number; value: WelcomeConfig }>();
+
+/** Welcome settings, cached briefly: they're read on every join and leave. */
+async function welcomeSettings(ctx: BotContext, guildId: string) {
+  const hit = settingsCache.get(guildId);
+  if (hit && Date.now() - hit.at < SETTINGS_TTL_MS) return hit.value;
+  const value = await getWelcome(ctx.db, guildId);
+  settingsCache.set(guildId, { at: Date.now(), value });
+  return value;
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const recent = new Map<string, number[]>();
 
 /** Room for one more card in this server this minute? Records it if so. */
@@ -67,9 +83,14 @@ async function sendTo(
 export async function welcomeJoin(ctx: BotContext, member: GuildMember) {
   if (member.user.bot) return;
   const { guild } = member;
-  const w = await getWelcome(ctx.db, guild.id);
+  const w = await welcomeSettings(ctx, guild.id);
   if (!w.joinEnabled && !w.dmEnabled && !w.joinRoleIds.length) return;
+  // Anti-raid only knows a join was part of a raid once the burst crosses its
+  // threshold, so the first raiders would be welcomed. Wait out its window first.
+  const gate = await cachedGatehouseSettings(ctx, guild.id);
+  if (gate.antiRaidEnabled) await sleep(Math.min(gate.raidWindowSeconds * 1000, RAID_WAIT_MAX_MS));
   if (await quiet(ctx, guild.id)) return;
+  if (!guild.members.cache.has(member.id)) return; // Left or removed meanwhile.
   const ent = entitlements(await getGuildPlan(ctx.db, guild.id));
 
   // Roles first, so the welcome lands with the member already in their channels.
@@ -89,7 +110,7 @@ export async function welcomeJoin(ctx: BotContext, member: GuildMember) {
 
 export async function welcomeLeave(ctx: BotContext, member: GuildMember | PartialGuildMember) {
   if (member.user?.bot) return;
-  const w = await getWelcome(ctx.db, member.guild.id);
+  const w = await welcomeSettings(ctx, member.guild.id);
   if (!w.leaveEnabled || !w.leaveChannelId) return;
   if (await quiet(ctx, member.guild.id)) return;
   if (!takeSlot(member.guild.id)) return;

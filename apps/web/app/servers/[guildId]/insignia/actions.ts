@@ -8,15 +8,15 @@ import {
   getGuildPlan,
   getRoleMenuPost,
   getRoleMenus,
-  newMenuId,
+  newId,
   ROLE_MENU_PRESETS,
   type RoleMenu,
   readRoleMenus,
 } from "@garrison/db";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { listGuildRoles } from "@/lib/discord";
+import { flashBack } from "@/lib/flash";
 import { isDangerousRole } from "@/lib/permissions";
 import { checkGuildAccess } from "@/lib/session";
 
@@ -27,20 +27,8 @@ import { checkGuildAccess } from "@/lib/session";
  * be managed by an integration or carry moderation or admin powers.
  */
 
-const FLASH = "garrison_flash";
-
-async function back(guildId: string, outcome: { ok: string } | { error: string }, open = "") {
-  // Messages travel in a short-lived httpOnly cookie, not the URL, so a link
-  // can't put arbitrary text on the page.
-  (await cookies()).set(FLASH, JSON.stringify(outcome), {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    path: `/servers/${guildId}/insignia`,
-    maxAge: 20,
-  });
-  redirect(`/servers/${guildId}/insignia${open ? `?edit=${open}#${open}` : ""}`);
-}
+const back = (guildId: string, outcome: { ok: string } | { error: string }, open = "") =>
+  flashBack(`/servers/${guildId}/insignia`, outcome, `${open ? `?edit=${open}#${open}` : ""}`);
 
 async function load(form: FormData) {
   const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
@@ -82,7 +70,7 @@ export async function addMenu(form: FormData) {
   if (!preset) return back(ctx.guild.id, { error: "Pick a starting point." });
   const name = String(form.get("name") ?? "").trim() || preset.name;
   const menu: RoleMenu = {
-    id: newMenuId(crypto01),
+    id: newId(crypto01),
     name,
     card: preset.card,
     style: preset.style,

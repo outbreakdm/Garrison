@@ -28,6 +28,16 @@ describe("runHealthChecks", () => {
     expect(statuses(healthy).every((s) => s === "ok")).toBe(true);
   });
 
+  it("only warns when Change Nickname is missing: one dashboard feature needs it", () => {
+    const checks = runHealthChecks({
+      ...healthy,
+      botPermissions: ALL_REQUIRED & ~PermissionFlagsBits.ChangeNickname,
+    });
+    const profile = checks.find((c) => c.text.startsWith("Profile:"));
+    expect(profile?.status).toBe("warn");
+    expect(checks.some((c) => c.status === "fix")).toBe(false);
+  });
+
   it("names missing permissions per module", () => {
     const checks = runHealthChecks({
       ...healthy,

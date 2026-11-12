@@ -12,6 +12,14 @@ export interface MentionNames {
   channels: Map<string, string>;
 }
 
+/** Discord shows timestamps in each reader's zone; the preview uses UTC so the server
+ * and the browser draw the same text (a locale-dependent format breaks hydration). */
+const STAMP = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
 const INLINE: [RegExp, (m: RegExpExecArray, key: string, names: MentionNames) => ReactNode][] = [
   [
     /^`([^`\n]+)`/,
@@ -78,10 +86,7 @@ const INLINE: [RegExp, (m: RegExpExecArray, key: string, names: MentionNames) =>
     /^<t:(\d{1,12})(?::([tTdDfFR]))?>/,
     (m, k) => (
       <span className="dc-time" key={k}>
-        {new Date(Number(m[1]) * 1000).toLocaleString(undefined, {
-          dateStyle: "medium",
-          timeStyle: "short",
-        })}
+        {STAMP.format(new Date(Number(m[1]) * 1000))} UTC
       </span>
     ),
   ],

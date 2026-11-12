@@ -10,10 +10,10 @@ import {
   type RallyTemplate,
   TEMPLATE_PRESETS,
 } from "@garrison/db";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { listNotifiableRoles, listTextChannels } from "@/lib/discord";
+import { flashBack } from "@/lib/flash";
 import { templateFromForm, upsertTemplate } from "@/lib/rally-templates";
 import { checkGuildAccess } from "@/lib/session";
 
@@ -23,20 +23,8 @@ import { checkGuildAccess } from "@/lib/session";
  * the bot uses. Channels and roles must belong to this server.
  */
 
-const FLASH = "garrison_flash";
-
-async function back(guildId: string, outcome: { ok: string } | { error: string }, anchor = "") {
-  // Messages travel in a short-lived httpOnly cookie, not the URL, so a link
-  // can't put arbitrary text on the page.
-  (await cookies()).set(FLASH, JSON.stringify(outcome), {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    path: `/servers/${guildId}/rally/templates`,
-    maxAge: 20,
-  });
-  redirect(`/servers/${guildId}/rally/templates${anchor ? `#${anchor}` : ""}`);
-}
+const back = (guildId: string, outcome: { ok: string } | { error: string }, anchor = "") =>
+  flashBack(`/servers/${guildId}/rally/templates`, outcome, `${anchor ? `#${anchor}` : ""}`);
 
 async function load(form: FormData) {
   const access = await checkGuildAccess(String(form.get("guildId") ?? ""));

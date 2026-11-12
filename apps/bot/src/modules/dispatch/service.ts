@@ -7,10 +7,11 @@ import {
   getMessages,
   getOpsTimezone,
   lastSends,
-  listAllMessages,
+  listScheduledMessages,
   pausedSchedules,
   readMessages,
   recordSentMessage,
+  releaseSend,
   type SavedMessage,
 } from "@garrison/db";
 import {
@@ -63,7 +64,7 @@ async function post(guild: Guild, channelId: string, m: SavedMessage, ent: Entit
 
 /** The minute sweep: post whatever schedule is due, once. */
 export async function sweepMessages(ctx: BotContext, client: Client<true>, now = new Date()) {
-  for (const row of await listAllMessages(ctx.db)) {
+  for (const row of await listScheduledMessages(ctx.db)) {
     const guild = client.guilds.cache.get(row.guildId);
     if (!guild) continue;
     const messages = readMessages(row.messages).filter((m) => m.schedule && m.channelId);
@@ -83,17 +84,13 @@ export async function sweepMessages(ctx: BotContext, client: Client<true>, now =
       if (!occurrence) continue;
       const send = { guildId: guild.id, messageId: m.id, occurrence };
       if (!(await claimSend(ctx.db, { ...send, channelId: m.channelId }))) continue;
-      try {
-        const sent = await post(guild, m.channelId, m, ent);
-        if (sent) await recordSentMessage(ctx.db, send, sent.id);
-        else
-          ctx.logger.warn("Scheduled message had nowhere to go", {
-            guildId: guild.id,
-            messageId: m.id,
-          });
-      } catch (error) {
+      // A failed post gives its claim back, so the next sweep retries it (within the hour).
+      const sent = await post(guild, m.channelId, m, ent).catch((error: unknown) => {
         ctx.logger.error("Scheduled message failed", { guildId: guild.id, messageId: m.id, error });
-      }
+        return null;
+      });
+      if (sent) await recordSentMessage(ctx.db, send, sent.id);
+      else await releaseSend(ctx.db, send);
     }
   }
 }
@@ -123,16 +120,14 @@ export async function postMessageNow(
   if (!channel.permissionsFor(member)?.has(needed))
     return { ok: false, message: "You can't post in that channel, so Garrison won't either." };
   const ent = entitlements(await getGuildPlan(ctx.db, guild.id));
-  const occurrence = new Date();
-  await claimSend(ctx.db, {
-    guildId: guild.id,
-    messageId: m.id,
-    occurrence,
-    channelId: channel.id,
-  });
-  const sent = await post(guild, channel.id, m, ent);
-  if (!sent)
+  const send = { guildId: guild.id, messageId: m.id, occurrence: new Date() };
+  await claimSend(ctx.db, { ...send, channelId: channel.id });
+  const sent = await post(guild, channel.id, m, ent).catch(() => null);
+  if (!sent) {
+    // Nothing went out, so this mustn't count as a send (it would hide a scheduled one).
+    await releaseSend(ctx.db, send);
     return { ok: false, message: "Garrison can't post in that channel. Check its permissions." };
-  await recordSentMessage(ctx.db, { guildId: guild.id, messageId: m.id, occurrence }, sent.id);
+  }
+  await recordSentMessage(ctx.db, send, sent.id);
   return { ok: true, message: `Posted ${m.name} in #${channel.name}.` };
 }

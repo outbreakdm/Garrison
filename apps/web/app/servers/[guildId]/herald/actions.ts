@@ -8,10 +8,10 @@ import {
   getWelcome,
   type WelcomeConfig,
 } from "@garrison/db";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { listGuildRoles, listTextChannels } from "@/lib/discord";
+import { flashBack } from "@/lib/flash";
 import { isDangerousRole } from "@/lib/permissions";
 import { checkGuildAccess } from "@/lib/session";
 
@@ -21,7 +21,6 @@ import { checkGuildAccess } from "@/lib/session";
  * join have no moderation or admin powers), then saves with history and undo.
  */
 
-const FLASH = "garrison_flash";
 const PARTS = {
   join: {
     enabled: "joinEnabled",
@@ -38,16 +37,8 @@ const PARTS = {
   dm: { enabled: "dmEnabled", channel: null, card: "dmCard", name: "welcome DM" },
 } as const;
 
-async function back(guildId: string, outcome: { ok: string } | { error: string }, open = "") {
-  (await cookies()).set(FLASH, JSON.stringify(outcome), {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    path: `/servers/${guildId}/herald`,
-    maxAge: 20,
-  });
-  redirect(`/servers/${guildId}/herald${open ? `?edit=${open}#${open}` : ""}`);
-}
+const back = (guildId: string, outcome: { ok: string } | { error: string }, open = "") =>
+  flashBack(`/servers/${guildId}/herald`, outcome, `${open ? `?edit=${open}#${open}` : ""}`);
 
 async function save(
   form: FormData,

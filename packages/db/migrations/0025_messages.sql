@@ -23,7 +23,7 @@ ALTER TABLE "message_sends" ADD CONSTRAINT "message_sends_guild_id_guilds_id_fk"
 ALTER TABLE "message_settings" ADD CONSTRAINT "message_settings_guild_id_guilds_id_fk" FOREIGN KEY ("guild_id") REFERENCES "public"."guilds"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 -- Least privilege (SECURITY.md). The dashboard edits saved messages (with history
 -- in settings_changes); the bot only reads them. The bot records each send; the
--- dashboard only reads that. A send row is never deleted, so it can't post twice.
+-- dashboard only reads that. A claimed send can't be claimed again, so it can't post twice.
 GRANT SELECT ON public.message_settings TO garrison_bot;--> statement-breakpoint
 CREATE POLICY "garrison_bot_read" ON public.message_settings AS PERMISSIVE FOR SELECT TO garrison_bot USING (true);--> statement-breakpoint
 GRANT SELECT, INSERT (guild_id, messages, updated_at) ON public.message_settings TO garrison_web;--> statement-breakpoint
@@ -35,5 +35,9 @@ GRANT SELECT, INSERT, UPDATE (discord_message_id) ON public.message_sends TO gar
 CREATE POLICY "garrison_bot_read" ON public.message_sends AS PERMISSIVE FOR SELECT TO garrison_bot USING (true);--> statement-breakpoint
 CREATE POLICY "garrison_bot_insert" ON public.message_sends AS PERMISSIVE FOR INSERT TO garrison_bot WITH CHECK (true);--> statement-breakpoint
 CREATE POLICY "garrison_bot_update" ON public.message_sends AS PERMISSIVE FOR UPDATE TO garrison_bot USING (true) WITH CHECK (true);--> statement-breakpoint
+-- A claim whose post failed is released (deleted) so the next sweep retries it;
+-- a send that reached Discord (discord_message_id set) can never be deleted.
+GRANT DELETE ON public.message_sends TO garrison_bot;--> statement-breakpoint
+CREATE POLICY "garrison_bot_release" ON public.message_sends AS PERMISSIVE FOR DELETE TO garrison_bot USING (discord_message_id IS NULL);--> statement-breakpoint
 GRANT SELECT ON public.message_sends TO garrison_web;--> statement-breakpoint
 CREATE POLICY "garrison_web_read" ON public.message_sends AS PERMISSIVE FOR SELECT TO garrison_web USING (true);

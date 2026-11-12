@@ -4,7 +4,13 @@ import { DANGEROUS_PERMISSIONS, permissionNames } from "../gatehouse/nuke.js";
 const P = PermissionFlagsBits;
 
 /** Everything Garrison needs, by module, and why. Never Administrator. */
-export const REQUIRED_PERMISSIONS: { module: string; bits: bigint; why: string }[] = [
+/** `optional`: only one feature needs it, so missing it is a warning, not a fix. */
+export const REQUIRED_PERMISSIONS: {
+  module: string;
+  bits: bigint;
+  why: string;
+  optional?: boolean;
+}[] = [
   {
     module: "Core",
     bits: P.ViewChannel | P.SendMessages | P.EmbedLinks,
@@ -26,6 +32,7 @@ export const REQUIRED_PERMISSIONS: { module: string; bits: bigint; why: string }
     module: "Profile",
     bits: P.ChangeNickname,
     why: "to use the nickname set for it on the dashboard",
+    optional: true,
   },
 ];
 
@@ -67,7 +74,7 @@ export function runHealthChecks(h: HealthInput): Check[] {
     const missing = req.bits & ~h.botPermissions;
     if (missing && !isAdmin) {
       checks.push({
-        status: "fix",
+        status: req.optional ? "warn" : "fix",
         text: `${req.module}: I'm missing ${permissionNames(missing)}, ${req.why}.`,
       });
     }

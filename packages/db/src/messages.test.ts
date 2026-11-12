@@ -11,7 +11,14 @@ import {
 } from "./messages";
 import { entitlements } from "./plans";
 import { upsertGuild } from "./repo/guilds";
-import { claimSend, getMessages, lastSends, recordSentMessage } from "./repo/messages";
+import {
+  claimSend,
+  getMessages,
+  lastSends,
+  listScheduledMessages,
+  recordSentMessage,
+  releaseSend,
+} from "./repo/messages";
 import { applySettingsChange } from "./repo/settings";
 import { messageSettings } from "./schema";
 import { createTestDb } from "./testing";
@@ -123,7 +130,28 @@ describe("message storage, under each role's grants", () => {
     };
     expect(await claimSend(db, { ...send, channelId: C })).toBe(true);
     expect(await claimSend(db, { ...send, channelId: C })).toBe(false);
+    // A failed post gives its claim back, and it can be claimed again.
+    await releaseSend(db, send);
+    expect(await claimSend(db, { ...send, channelId: C })).toBe(true);
     await recordSentMessage(db, send, "900000000000000001");
+    // A send that reached Discord can't be released.
+    await releaseSend(db, send);
+    expect(await claimSend(db, { ...send, channelId: C })).toBe(false);
+    // Only servers with something scheduled reach the sweep.
+    expect(await listScheduledMessages(db)).toEqual([]);
+    await exec("RESET ROLE");
+    await exec("SET ROLE garrison_web");
+    const scheduled = msg({ schedule: { at: "2026-11-12T20:00", repeat: "none" } });
+    await applySettingsChange(db, {
+      guildId: G,
+      module: "messages",
+      patch: { messages: [scheduled] },
+      userId: "1",
+      username: "taner",
+    });
+    await exec("RESET ROLE");
+    await exec("SET ROLE garrison_bot");
+    expect((await listScheduledMessages(db)).map((r) => r.guildId)).toEqual([G]);
     expect((await lastSends(db, G)).get("msg0000001")).toEqual(send.occurrence);
     const err = await Promise.resolve(db.update(messageSettings).set({ messages: [] })).then(
       () => null,

@@ -12,12 +12,12 @@ import {
   SCHEDULED_HARD_MAX,
 } from "@garrison/db";
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import Link from "next/link";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { FormPanel } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { listGuildRoles, listTextChannels } from "@/lib/discord";
+import { contentKey, readFlash } from "@/lib/flash";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
 import { addMessage, removeMessage, saveMessage } from "./actions";
@@ -64,13 +64,7 @@ export default async function MessagesPage({
     }).format(d);
   const REPEAT = { none: "Once", daily: "Daily", weekly: "Weekly" } as const;
 
-  let flash: { ok?: string; error?: string } | null = null;
-  try {
-    const c = (await cookies()).get("garrison_flash")?.value;
-    flash = c ? JSON.parse(c) : null;
-  } catch {
-    flash = null;
-  }
+  const flash = await readFlash();
 
   return (
     <>
@@ -171,7 +165,7 @@ export default async function MessagesPage({
           <details
             className="g-card panel"
             id={m.id}
-            key={`${m.id}-${JSON.stringify(m).length}`}
+            key={`${m.id}-${contentKey(m)}`}
             open={editing === m.id}
           >
             <summary className="panel__summary">

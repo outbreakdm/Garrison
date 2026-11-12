@@ -10,10 +10,10 @@ import {
   WORDING_LIMITS,
 } from "@garrison/db";
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import Link from "next/link";
 import { getDb } from "@/lib/db";
 import { listNotifiableRoles, listTextChannels } from "@/lib/discord";
+import { contentKey, readFlash } from "@/lib/flash";
 import { requireGuildAccess } from "@/lib/session";
 import { addTemplate, removeTemplate, saveTemplate } from "./actions";
 
@@ -86,13 +86,7 @@ export default async function RallyTemplatesPage({
   const templates = checked.ok ? checked.value : [];
   const limit = PLAN_LIMITS[plan];
   const full = templates.length >= limit.templates;
-  let flash: { ok?: string; error?: string } | null = null;
-  try {
-    const c = (await cookies()).get("garrison_flash")?.value;
-    flash = c ? JSON.parse(c) : null;
-  } catch {
-    flash = null;
-  }
+  const flash = await readFlash();
 
   return (
     <>
@@ -162,7 +156,7 @@ export default async function RallyTemplatesPage({
       </form>
 
       {templates.map((t) => (
-        <details className="g-card template" id={t.id} key={`${t.id}-${JSON.stringify(t).length}`}>
+        <details className="g-card template" id={t.id} key={`${t.id}-${contentKey(t)}`}>
           <summary className="row-between">
             <span>
               <strong>{t.name}</strong>

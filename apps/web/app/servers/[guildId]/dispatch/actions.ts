@@ -8,14 +8,14 @@ import {
   getGuildPlan,
   getMessages,
   MESSAGE_PRESETS,
-  newMenuId,
+  newId,
   readMessages,
   type SavedMessage,
 } from "@garrison/db";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { listTextChannels } from "@/lib/discord";
+import { flashBack } from "@/lib/flash";
 import { checkGuildAccess } from "@/lib/session";
 
 /**
@@ -24,18 +24,8 @@ import { checkGuildAccess } from "@/lib/session";
  * list with the same checker the bot reads it with.
  */
 
-const FLASH = "garrison_flash";
-
-async function back(guildId: string, outcome: { ok: string } | { error: string }, open = "") {
-  (await cookies()).set(FLASH, JSON.stringify(outcome), {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    path: `/servers/${guildId}/dispatch`,
-    maxAge: 20,
-  });
-  redirect(`/servers/${guildId}/dispatch${open ? `?edit=${open}#${open}` : ""}`);
-}
+const back = (guildId: string, outcome: { ok: string } | { error: string }, open = "") =>
+  flashBack(`/servers/${guildId}/dispatch`, outcome, `${open ? `?edit=${open}#${open}` : ""}`);
 
 async function load(form: FormData) {
   const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
@@ -77,7 +67,7 @@ export async function addMessage(form: FormData) {
   if (!preset) return back(ctx.guild.id, { error: "Pick a starting point." });
   const name = String(form.get("name") ?? "").trim() || preset.name;
   const m: SavedMessage = {
-    id: newMenuId(crypto01),
+    id: newId(crypto01),
     name,
     card: preset.card,
     buttons: [],

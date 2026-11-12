@@ -69,13 +69,6 @@ export function isOneEmoji(text: string) {
   return graphemes.length === 1;
 }
 
-export function newMenuId(random: () => number = Math.random) {
-  let id = "";
-  for (let i = 0; i < 10; i++)
-    id += "abcdefghijklmnopqrstuvwxyz0123456789"[Math.floor(random() * 36)];
-  return id;
-}
-
 /** How many menus this plan runs. Menus past it are paused, in list order. */
 export const menuLimit = (ent: Entitlements) => ent["roles.menus"];
 export const isPaused = (index: number, ent: Entitlements) => index >= menuLimit(ent);

@@ -10,12 +10,12 @@ import {
   readRoleMenus,
 } from "@garrison/db";
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import Link from "next/link";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { FormPanel } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { botTopPosition, listGuildRoles, listTextChannels } from "@/lib/discord";
+import { contentKey, readFlash } from "@/lib/flash";
 import { isDangerousRole } from "@/lib/permissions";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
@@ -64,13 +64,7 @@ export default async function RoleMenusPage({
     }));
   const need = roles.filter((r) => !r.managed).map(({ id, name }) => ({ id, name }));
 
-  let flash: { ok?: string; error?: string } | null = null;
-  try {
-    const c = (await cookies()).get("garrison_flash")?.value;
-    flash = c ? JSON.parse(c) : null;
-  } catch {
-    flash = null;
-  }
+  const flash = await readFlash();
 
   return (
     <>
@@ -175,7 +169,7 @@ export default async function RoleMenusPage({
           <details
             className="g-card panel"
             id={menu.id}
-            key={`${menu.id}-${JSON.stringify(menu).length}`}
+            key={`${menu.id}-${contentKey(menu)}`}
             open={editing === menu.id}
           >
             <summary className="panel__summary">

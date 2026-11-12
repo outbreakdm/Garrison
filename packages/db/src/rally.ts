@@ -4,6 +4,7 @@
  * templates with exactly the same rules.
  */
 
+import { newId } from "./ids";
 import { FEATURES, type GuildPlan } from "./plans";
 
 export interface LfgSlotGroupLike {
@@ -390,9 +391,5 @@ export const TEMPLATE_PRESETS: Record<
 };
 
 /** Up to 16 lowercase letters and digits, for template IDs. */
-export function newTemplateId(random: () => number = Math.random) {
-  let id = "";
-  for (let i = 0; i < 10; i++)
-    id += "abcdefghijklmnopqrstuvwxyz0123456789"[Math.floor(random() * 36)];
-  return id;
-}
+/** Kept for existing callers; the generator lives in ids.ts. */
+export const newTemplateId = newId;

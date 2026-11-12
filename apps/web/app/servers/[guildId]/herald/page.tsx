@@ -7,11 +7,11 @@ import {
   type WelcomeConfig,
 } from "@garrison/db";
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { getDb } from "@/lib/db";
 import { botTopPosition, listGuildRoles, listTextChannels } from "@/lib/discord";
+import { contentKey, readFlash } from "@/lib/flash";
 import { isDangerousRole } from "@/lib/permissions";
 import { requireGuildAccess } from "@/lib/session";
 import { saveJoinRoles, saveWelcomeCard } from "./actions";
@@ -82,13 +82,7 @@ export default async function WelcomePage({
   const where = (on: boolean, id: string | null) =>
     on ? (id ? `On · #${channelName.get(id) ?? "deleted-channel"}` : "On · no channel") : "Off";
 
-  let flash: { ok?: string; error?: string } | null = null;
-  try {
-    const c = (await cookies()).get("garrison_flash")?.value;
-    flash = c ? JSON.parse(c) : null;
-  } catch {
-    flash = null;
-  }
+  const flash = await readFlash();
 
   const common = {
     guildId: guild.id,
@@ -103,7 +97,13 @@ export default async function WelcomePage({
     p: "join" | "leave" | "dm",
     saved: { enabled: boolean; channelId: string | null; card: WelcomeConfig["joinCard"] },
   ) => (
-    <WelcomeCardForm {...common} part={p} saved={saved} locked={p === "dm" && !ent["welcome.dm"]} />
+    <WelcomeCardForm
+      key={contentKey(saved)}
+      {...common}
+      part={p}
+      saved={saved}
+      locked={p === "dm" && !ent["welcome.dm"]}
+    />
   );
 
   return (
@@ -151,7 +151,7 @@ export default async function WelcomePage({
         ]}
         open={editing === "roles"}
       >
-        <form action={saveJoinRoles} className="settings-form">
+        <form action={saveJoinRoles} className="settings-form" key={contentKey(w.joinRoleIds)}>
           <input type="hidden" name="guildId" value={guild.id} />
           <div className="settings-grid">
             {Array.from({ length: roleSlots }, (_, i) => {

@@ -1,4 +1,4 @@
-import { and, desc, eq, max } from "drizzle-orm";
+import { and, desc, eq, isNull, max, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { type MessageSend, messageSends, messageSettings } from "../schema";
 
@@ -11,11 +11,14 @@ export async function getMessages(db: Db, guildId: string): Promise<unknown[]> {
   return Array.isArray(row?.messages) ? row.messages : [];
 }
 
-/** Bot side: every server's list, for the scheduler. */
-export async function listAllMessages(db: Db): Promise<{ guildId: string; messages: unknown[] }[]> {
+/** Bot side: the lists of servers that have anything scheduled, for the minute sweep. */
+export async function listScheduledMessages(
+  db: Db,
+): Promise<{ guildId: string; messages: unknown[] }[]> {
   return db
     .select({ guildId: messageSettings.guildId, messages: messageSettings.messages })
-    .from(messageSettings);
+    .from(messageSettings)
+    .where(sql`jsonb_path_exists(${messageSettings.messages}, '$[*] ? (@.schedule != null)')`);
 }
 
 /** When each message last went out (its latest occurrence). */
@@ -55,6 +58,23 @@ export async function claimSend(
     .onConflictDoNothing()
     .returning({ messageId: messageSends.messageId });
   return rows.length > 0;
+}
+
+/** Bot side: give back a claim whose post failed, so the send can be tried again. */
+export async function releaseSend(
+  db: Db,
+  send: { guildId: string; messageId: string; occurrence: Date },
+) {
+  await db
+    .delete(messageSends)
+    .where(
+      and(
+        eq(messageSends.guildId, send.guildId),
+        eq(messageSends.messageId, send.messageId),
+        eq(messageSends.occurrence, send.occurrence),
+        isNull(messageSends.discordMessageId),
+      ),
+    );
 }
 
 export async function recordSentMessage(

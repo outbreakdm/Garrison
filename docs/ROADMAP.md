@@ -344,3 +344,10 @@ Later phases get their checklists when they start.
 - 2026-11-12: Phase 7 skipped pending the message-content decision. Phase 8 code done:
   message builder with schedules, migration 0025. Type-check, 380 tests and Biome pass;
   checked in the local preview.
+- 2026-11-12: Code review of everything since `1842f71`, all ten findings fixed: a failed
+  scheduled or "Post now" send gives its claim back so it's retried (migration 0025 lets the
+  bot delete only unsent claims); the sweep reads only servers with schedules; welcomes wait
+  out the anti-raid window so the first raiders of a burst get no roles; welcome settings
+  are cached 30 s; Change Nickname missing is a /health warning, not a fix; the preview's
+  timestamps are drawn in UTC (no hydration mismatch); editors remount when what they edit
+  changes; one flash helper (`lib/flash.ts`) and one ID generator (`ids.ts`).
