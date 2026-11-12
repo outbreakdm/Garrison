@@ -238,6 +238,13 @@ export const FIELD_LABELS: Record<string, string> = {
   dmEnabled: "Welcome DM",
   dmCard: "Welcome DM text",
   joinRoleIds: "Roles on join",
+  panels: "Ticket panels",
+  "tickets.staffRoleIds": "Ticket staff roles",
+  "tickets.logChannelId": "Ticket log channel",
+  parentId: "Tickets open in",
+  maxOpen: "Open tickets per member",
+  pingStaff: "Ping staff on new tickets",
+  autoAssign: "Auto-assign tickets",
 };
 
 type NamedTemplate = { id?: string; name?: string };

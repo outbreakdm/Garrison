@@ -12,11 +12,15 @@ import {
   getQmBuildByVersion,
   getQuarantine,
   getRoleMenus,
+  getTicket,
+  getTicketConfig,
+  isPanelPaused,
   isPaused,
   type QueueInput,
   queueDashboardAction,
   readMessages,
   readRoleMenus,
+  TICKET_LIMITS,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -41,9 +45,12 @@ const PAGES = new Set([
   "insignia",
   "settings",
   "dispatch",
+  "parley",
 ]);
 /** A member's page under Watch is the one page with an ID in its path. */
 const MEMBER_PAGE = /^watch\/member\/\d{17,20}$/;
+/** A ticket's own page. */
+const TICKET_PAGE = /^parley\/\d{1,9}$/;
 const SNOWFLAKE = /^\d{17,20}$/;
 /** Timeout lengths the dashboard offers, in seconds: 1 min to 28 days. */
 const TIMEOUTS = new Set([60, 600, 3600, 21_600, 86_400, 604_800, 2_419_200]);
@@ -138,6 +145,32 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       if (!menu.options.length) return { ok: false, error: "menu_empty" };
       if (!channels.some((c) => c.id === channelId)) return { ok: false, error: "channel" };
       return { ok: true, input: { kind, payload: { menuId: menu.id, channelId } } };
+    }
+    case "post_ticket_panel": {
+      const panelId = field(form, "panelId");
+      const channelId = field(form, "channelId");
+      const [config, plan, channels] = await Promise.all([
+        getTicketConfig(db, guildId),
+        getGuildPlan(db, guildId),
+        listTextChannels(guildId).catch(() => []),
+      ]);
+      const index = config.panels.findIndex((p) => p.id === panelId);
+      const panel = config.panels[index];
+      if (!panel) return { ok: false, error: "not_found" };
+      if (isPanelPaused(index, entitlements(plan))) return { ok: false, error: "panel_paused" };
+      if (!panel.topics.length) return { ok: false, error: "panel_empty" };
+      if (!channels.some((c) => c.id === channelId)) return { ok: false, error: "channel" };
+      return { ok: true, input: { kind, payload: { panelId: panel.id, channelId } } };
+    }
+    case "ticket_action": {
+      const op = field(form, "op");
+      if (op !== "claim" && op !== "close") return { ok: false, error: "invalid" };
+      const ticketId = field(form, "ticketId");
+      const t = uuid.safeParse(ticketId).success ? await getTicket(db, guildId, ticketId) : null;
+      if (!t) return { ok: false, error: "not_found" };
+      if (t.status !== "open") return { ok: false, error: "ticket_closed" };
+      const reason = field(form, "reason").trim().slice(0, TICKET_LIMITS.reason) || null;
+      return { ok: true, input: { kind, payload: { ticketId: t.id, op, reason } } };
     }
     case "post_message": {
       const messageId = field(form, "messageId");
@@ -335,7 +368,7 @@ export async function requestAction(form: FormData) {
   if (!access) redirect("/servers");
   const { session, guild } = access;
   const asked = field(form, "page");
-  const page = PAGES.has(asked) || MEMBER_PAGE.test(asked) ? asked : "";
+  const page = PAGES.has(asked) || MEMBER_PAGE.test(asked) || TICKET_PAGE.test(asked) ? asked : "";
   const base = `/servers/${guild.id}${page ? `/${page}` : ""}`;
   const built = await build(form, guild.id, session.userId);
   if (!built.ok) redirect(`${base}?${new URLSearchParams({ error: built.error })}#requests`);

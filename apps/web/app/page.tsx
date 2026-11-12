@@ -26,11 +26,34 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
+const NUMBER_WORDS = [
+  "Zero",
+  "One",
+  "Two",
+  "Three",
+  "Four",
+  "Five",
+  "Six",
+  "Seven",
+  "Eight",
+  "Nine",
+  "Ten",
+  "Eleven",
+  "Twelve",
+  "Thirteen",
+  "Fourteen",
+  "Fifteen",
+  "Sixteen",
+];
+/** How many modules Garrison has, in words, from the one module list. */
+const MODULE_COUNT = Object.keys(modules).length;
+const moduleCount = NUMBER_WORDS[MODULE_COUNT] ?? String(MODULE_COUNT);
+
 const SECURITY = [
   "Garrison asks only for the permissions it uses, never Administrator, and /health tells you when something's off.",
   "Anti-nuke and its trusted list are owner-only, so a compromised admin can't switch them off first.",
   "AI builds only add channels and roles, new roles get no permissions, and a person approves every plan.",
-  "Message content is never stored. Logs keep who did what, and expire on a schedule you set.",
+  "Message text is kept only for ticket transcripts. Logs keep who did what. Both expire on a schedule.",
   "The dashboard signs in with Discord, keeps no Discord token, and re-checks your permissions on every page.",
 ];
 
@@ -49,7 +72,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "What does Garrison store about my members?",
-    a: "Who did what and when, for cases and logs. Never message content. Logs are kept 30 days by default; you choose anything from 7 to 365.",
+    a: "Who did what and when, for cases and logs, kept 30 days by default (you choose 7 to 365). Tickets keep their transcript, the messages written in them, for 30 days after closing, or 365 on Pro.",
   },
   {
     q: "Can players use it too?",
@@ -463,8 +486,8 @@ export default async function Home() {
               Everything a server needs, in one place
             </h2>
             <p>
-              Eight modules share one dashboard: no second bot for logs, no spreadsheet for raids,
-              no settings commands to remember.
+              {moduleCount} modules share one dashboard: no second bot for logs, no spreadsheet for
+              raids, no settings commands to remember.
             </p>
           </div>
 
@@ -750,7 +773,7 @@ export default async function Home() {
               Everything a server needs to stay safe stays free.
             </p>
             <ul className="lp-price__list">
-              <li>All eight modules</li>
+              <li>All {moduleCount.toLowerCase()} modules</li>
               <li>The dashboard, for every server you manage</li>
               <li>Undo and history on every change</li>
             </ul>

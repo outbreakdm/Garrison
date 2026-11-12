@@ -26,6 +26,14 @@ import { sweepOps } from "./modules/ops/service.js";
 import { ClaudePlanner } from "./modules/quartermaster/planner.js";
 import { sweepRally } from "./modules/rally/service.js";
 import { handleMessage } from "./modules/ranks/service.js";
+import {
+  loadOpenTickets,
+  onTicketChannelDeleted,
+  onTicketDelete,
+  onTicketEdit,
+  onTicketMessage,
+  sweepTickets,
+} from "./modules/tickets/service.js";
 import { welcomeJoin, welcomeLeave } from "./modules/welcome/service.js";
 
 const env = loadEnv();
@@ -50,7 +58,8 @@ if (!ctx.planner) logger.info("Quartermaster is off: set ANTHROPIC_API_KEY to en
 
 // Guild Members is privileged: turn on "Server Members Intent" in the Developer Portal.
 // Gatehouse needs it to see joins, and Guild Moderation (not privileged) for the
-// audit-log stream anti-nuke watches. Automod will need Message Content later.
+// audit-log stream anti-nuke watches. Message Content is privileged too: ticket
+// transcripts, Ledger's deleted and edited text, and the starboard read it.
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -58,8 +67,10 @@ const client = new Client({
     GatewayIntentBits.GuildModeration,
     // Not privileged. Rally needs it to see when a squad voice channel is empty.
     GatewayIntentBits.GuildVoiceStates,
-    // Not privileged, and without Message Content: Ranks only needs who posted and when.
+    // Not privileged. Ranks only needs who posted and when.
     GatewayIntentBits.GuildMessages,
+    // Privileged: turn on "Message Content Intent" in the Developer Portal.
+    GatewayIntentBits.MessageContent,
   ],
   // Never ping from bot messages. Reasons and other user-typed text are echoed
   // back, and must not be able to trigger @everyone, role or user pings.
@@ -77,6 +88,7 @@ let lastHealthSnapshot = 0;
 
 client.once(Events.ClientReady, async (ready) => {
   logger.info(`Online as ${ready.user.tag} in ${ready.guilds.cache.size} servers`);
+  await loadOpenTickets(ctx).catch((error) => logger.error("Could not load tickets", { error }));
   for (const guild of ready.guilds.cache.values()) {
     await ensureGuild(ctx, guild).catch((error) =>
       logger.error("Could not register guild", { guildId: guild.id, error }),
@@ -92,6 +104,7 @@ client.once(Events.ClientReady, async (ready) => {
     await sweepMessages(ctx, ready).catch((error) =>
       logger.error("Scheduled messages failed", { error }),
     );
+    await sweepTickets(ctx, ready).catch((error) => logger.error("Ticket sweep failed", { error }));
     await maybePruneLedger(ctx).catch((error) => logger.error("Ledger prune failed", { error }));
     await refreshOsrs(ctx).catch((error) => logger.error("OSRS refresh failed", { error }));
     await ctx.metrics?.flush(ctx).catch((error) => logger.error("Metrics flush failed", { error }));
@@ -128,6 +141,20 @@ client.on(Events.MessageCreate, (message) => {
   handleMessage(ctx, message).catch((error) =>
     logger.error("Ranks failed", { guildId: message.guildId, error }),
   );
+  onTicketMessage(ctx, message).catch((error) =>
+    logger.error("Ticket transcript failed", { guildId: message.guildId, error }),
+  );
+});
+client.on(Events.MessageUpdate, (_before, after) => {
+  onTicketEdit(ctx, after).catch((error) =>
+    logger.error("Ticket edit failed", { guildId: after.guildId, error }),
+  );
+});
+client.on(Events.ChannelDelete, (channel) => {
+  if (channel.isDMBased()) return;
+  onTicketChannelDeleted(ctx, channel.guild, channel.id).catch((error) =>
+    logger.error("Ticket channel cleanup failed", { guildId: channel.guild.id, error }),
+  );
 });
 
 client.on(Events.GuildMemberAdd, (member) => {
@@ -144,7 +171,12 @@ client.on(Events.GuildMemberRemove, (member) => {
     logger.error("Leave message failed", { guildId: member.guild.id, error }),
   );
 });
-client.on(Events.MessageDelete, (message) => void onMessageDelete(ctx, message));
+client.on(Events.MessageDelete, (message) => {
+  void onMessageDelete(ctx, message);
+  onTicketDelete(ctx, message).catch((error) =>
+    logger.error("Ticket delete failed", { guildId: message.guildId, error }),
+  );
+});
 client.on(Events.VoiceStateUpdate, (before, after) => void onVoiceUpdate(ctx, before, after));
 
 client.on(Events.GuildCreate, async (guild) => {

@@ -7,6 +7,7 @@ import { qm, qmButtons } from "../modules/quartermaster/commands.js";
 import { lfg, rallyButtons } from "../modules/rally/commands.js";
 import { leaderboard, rank, ranks } from "../modules/ranks/commands.js";
 import { roleMenuButtons, roleMenuSelects } from "../modules/roles/handlers.js";
+import { ticket, ticketButtons, ticketModals } from "../modules/tickets/handlers.js";
 import { watchButtons, watchCommands } from "../modules/watch/commands/index.js";
 import type { ButtonHandler, Command, ModalHandler, SelectHandler } from "./types.js";
 
@@ -24,6 +25,7 @@ export const commands: Command[] = [
   link,
   unlink,
   roster,
+  ticket,
 ];
 export const buttons: ButtonHandler[] = [
   ...watchButtons,
@@ -32,8 +34,9 @@ export const buttons: ButtonHandler[] = [
   opsButtons,
   qmButtons,
   roleMenuButtons,
+  ticketButtons,
 ];
 export const selects: SelectHandler[] = [roleMenuSelects];
-export const modals: ModalHandler[] = [opsModals];
+export const modals: ModalHandler[] = [opsModals, ticketModals];
 
 export const commandsByName = new Map(commands.map((c) => [c.data.name, c]));

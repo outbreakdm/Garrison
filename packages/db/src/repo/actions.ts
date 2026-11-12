@@ -17,10 +17,12 @@ import {
   type MoveSignupPayload,
   type PostMessagePayload,
   type PostRoleMenuPayload,
+  type PostTicketPanelPayload,
   type PurgePayload,
   type QmPlanPayload,
   type RaidSignupPayload,
   type RaidWithdrawPayload,
+  type TicketActionPayload,
   type VerifyPanelPayload,
 } from "../schema";
 
@@ -50,7 +52,9 @@ export type QueueInput =
   | { kind: "qm_cancel"; payload: IdPayload }
   | { kind: "post_role_menu"; payload: PostRoleMenuPayload }
   | { kind: "bot_profile"; payload: BotProfilePayload }
-  | { kind: "post_message"; payload: PostMessagePayload };
+  | { kind: "post_message"; payload: PostMessagePayload }
+  | { kind: "post_ticket_panel"; payload: PostTicketPanelPayload }
+  | { kind: "ticket_action"; payload: TicketActionPayload };
 
 /** Per server: at most this many requests waiting at once. */
 export const MAX_PENDING_PER_GUILD = 10;

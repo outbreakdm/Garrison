@@ -96,15 +96,17 @@ Then set `DATABASE_URL` to the pooled connection string with user `garrison_bot.
 
 ## Metrics and the status page
 
-- **Counts, never content:** message counts per server per day, last-posted times per member, hourly command timings and a heartbeat. No message text, and Message Content stays off.
+- **Counts, never content:** message counts per server per day, last-posted times per member, hourly command timings and a heartbeat. Metrics never hold message text.
 - The bot can insert and update only the count and timing columns; the dashboard can only read them; `anon` and `authenticated` have no grants. `bot_status` is held to one row by a check constraint.
 - `/status` is public and shows only Garrison-wide numbers (heartbeat, uptime, p95 across all servers), never per-server data. If the database can't be reached, it says so instead of showing an error.
 - The theme cookie holds only `dark` or `light`. It's set by a Server Action that redirects only to local paths.
 
 ## Discord
 
-- Intents: `Guilds`, `Guild Moderation`, `Guild Voice States`, `Guild Messages` and `Server Members` only. Message Content is not requested: Ranks counts messages by author and time only.
+- Intents: `Guilds`, `Guild Moderation`, `Guild Voice States`, `Guild Messages`, `Server Members` and `Message Content`. Ranks still counts messages by author and time only.
+- **Message text is stored only in ticket transcripts**, for messages written inside an open ticket's channel. A transcript lives as long as its ticket: 30 days after closing on Free, 365 on Pro, fixed at closing. Then the ticket, transcript and staff notes are deleted together. The bot may delete a ticket only once it has expired (RLS); the dashboard can only read tickets and transcripts, and can only add notes.
 - Ledger stores who did what and when, never message content. Partials are enabled only so leave and delete events arrive for uncached members and messages.
+- Transcript text is shown on the dashboard as plain text (never HTML or markdown), and attachment links are shown only when they point at Discord's CDN.
 - Level rewards can never carry moderation or admin permissions. The check runs when a reward is set and again at every grant.
 - Anti-nuke trusts only the owner, Garrison itself and the owner's trusted list. Changing anti-nuke settings and restoring a quarantine are owner/trusted-only, checked in code on every command and click. At the database level `garrison_bot` can update settings; the owner check lives in the bot.
 - Actions taken through Garrison are attributed to the moderator who ran them, not to Garrison, so Garrison can't be used to launder a mass ban.

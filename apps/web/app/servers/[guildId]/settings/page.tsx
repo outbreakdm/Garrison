@@ -50,6 +50,7 @@ function describe(
       : "none";
   if (field === "verifyRoleId" && value)
     return `@${roleNames.get(String(value)) ?? "deleted-role"}`;
+  if (field === "parentId") return value ? "a category" : "the top of the channel list";
   if (field === "templates")
     return Array.isArray(value) && value.length
       ? value.map((t: { name?: string }) => t.name ?? "?").join(", ")
@@ -255,6 +256,11 @@ export default async function SettingsPage({
               name="Role menus"
               value="Roles members pick for themselves"
             />
+            <Place
+              href={`${base}/parley`}
+              name="Tickets"
+              value="Panels, staff roles, where tickets open"
+            />
           </div>
         </nav>
       </div>
@@ -310,8 +316,11 @@ export default async function SettingsPage({
                     {h.revertsChangeId ? <span className="muted">Undo: </span> : null}
                     {Object.entries(h.changes).map(([field, { from, to }]) => (
                       <div key={field}>
-                        {FIELD_LABELS[field] ?? field}:{" "}
-                        {field === "templates" || field === "menus" || field === "messages"
+                        {FIELD_LABELS[`${h.module}.${field}`] ?? FIELD_LABELS[field] ?? field}:{" "}
+                        {field === "templates" ||
+                        field === "menus" ||
+                        field === "messages" ||
+                        field === "panels"
                           ? templatesChangeText(from, to)
                           : `${describe(field, from, names, roleNames)} → ${describe(field, to, names, roleNames)}`}
                       </div>

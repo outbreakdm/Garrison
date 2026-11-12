@@ -26,6 +26,10 @@ packages/
 | Ops           | Events            | **Built** | `/raid`                                                                     |
 | Barracks      | Members           | **Built** | `/link` `/unlink` `/roster`                                                 |
 | Ranks         | Leveling          | **Built** | `/rank` `/leaderboard`                                                      |
+| Insignia      | Role menus        | **Built** | (dashboard)                                                                 |
+| Herald        | Welcome           | **Built** | (dashboard)                                                                 |
+| Dispatch      | Messages          | **Built** | (dashboard)                                                                 |
+| Parley        | Tickets           | **Built** | `/ticket`                                                                   |
 | Quartermaster | AI builder        | **Built** | `/qm`                                                                       |
 
 ### Watch
@@ -95,6 +99,14 @@ After pulling this change, run `pnpm commands:deploy` once: `/lfg create` has a 
 - `/logs settings channel:#mod-log` posts each event there; `/logs search user:@member` shows a member's recent events. The dashboard's Ledger page filters by member and event type, with paging.
 - Events are kept 30 days by default (`keep_days` 7–365). Expired events are removed by a database function that the bot may call but that only deletes rows past retention, and never newer than 7 days, so a compromised bot can't erase recent history.
 
+### Parley (tickets)
+
+- A **panel** (designed on the dashboard with the card editor) has one button per topic. Pressing one opens a private channel, `ticket-0042`, that only the member, the staff roles and people with Manage Server can see. Garrison grants only view, send and read history (and attach files if Garrison itself may).
+- **Claim** and **Close** buttons in the ticket; `/ticket close`, `/ticket claim`, `/ticket add`, `/ticket remove`. The member who opened it can close it; everything else is staff only, checked on every press against the setup as saved now.
+- **Transcripts:** every message written in an open ticket is recorded, with edits (latest text) and deletions (kept, marked deleted). This is why Garrison asks for Message Content. Closed tickets keep their transcript 30 days on Free and 365 on Pro, set when the ticket closes so a later downgrade never shortens it; then the ticket, transcript and notes are deleted. The bot can delete a ticket only once it has expired (row-level security).
+- The dashboard's **Tickets** page has the queue (waiting on staff, waiting on the member, unclaimed, closed), search by number, member or transcript text, each ticket's transcript with staff-only notes, and Claim and Close.
+- Free: 1 panel, 3 topics. Pro: 10 panels of 10 topics, a form of up to 5 questions before a ticket opens, auto-assign to the staff member with the fewest open tickets, and stats.
+
 ### Ranks
 
 - **Off by default.** Turn it on with `/ranks settings enabled:true`. Members then earn 15–25 XP for chatting, at most once a minute. The cooldown is enforced in the database, so spam and multiple bot processes can't farm XP. Only who posted and when is used: no message content.
@@ -113,7 +125,7 @@ The bot keeps a few counts, never content: messages per server per UTC day, when
 
 ### Intents
 
-`Guilds`, `Guild Moderation` (audit log, for anti-nuke), `Guild Voice States` (Rally), `Guild Messages` (Ranks, without Message Content) and **Server Members** (privileged). Turn on _Server Members Intent_ under Bot in the Developer Portal, or login fails with "Used disallowed intents".
+`Guilds`, `Guild Moderation` (audit log, for anti-nuke), `Guild Voice States` (Rally), `Guild Messages` (Ranks, tickets), and two privileged intents: **Server Members** and **Message Content** (ticket transcripts). Turn both on under Bot → Privileged Gateway Intents in the Developer Portal, or login fails with "Used disallowed intents". Past 100 servers, Discord must approve Message Content for the bot.
 
 ## Dashboard
 

@@ -7,20 +7,20 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **Now:** Phases 3 (card editor), 4 (role menus), 5 (bot profile per server), 6 (Welcome)
-  and 8 (message builder) are code done, committed, not pushed or deployed. Phase 7
-  (Tickets) is skipped for now: it needs the owner's decision on storing message content
-  (see Open decisions). **Before deploying:** apply migrations `0023_role_menus`,
-  `0024_welcome` and `0025_messages` to production (`DATABASE_MIGRATION_URL`
-  set, `pnpm db:migrate`, see DEPLOY.md); the bot preflight checks for their tables, so a
-  deploy before them stops at preflight.
+- **Now:** Phases 3 to 8 are code done, committed, not pushed or deployed. **Before
+  deploying:** apply migrations `0023_role_menus`, `0024_welcome`, `0025_messages` and
+  `0026_tickets` to production (`DATABASE_MIGRATION_URL` set, `pnpm db:migrate`, see
+  DEPLOY.md); the bot preflight checks for their tables, so a deploy before them stops at
+  preflight. **Message Content Intent must be on** in the Developer Portal (Bot → Privileged
+  Gateway Intents): the bot now asks for it, and login fails without it.
   After deploying: post a menu on a test server and press its buttons (the one part not
   checked locally, since no bot runs in the local preview), change Garrison's nickname
   from Settings, turn on a welcome card and join on a test account, and schedule a message
-  a few minutes ahead. Garrison's invite now asks for Change Nickname, so existing servers see it
-  in /health until they re-invite or tick it on Garrison's role. Next: Phase 2 (Stripe) once
-  a price is decided, Phase 7 (Tickets) once message content is decided, or Phase 9
-  (custom rank cards).
+  a few minutes ahead, then post a ticket panel, open a ticket on a test account, write in it,
+  claim and close it, and read its transcript on the dashboard. Garrison's invite now asks for
+  Change Nickname, so existing servers see it in /health until they re-invite or tick it on
+  Garrison's role. Next: Phase 9 (custom rank cards), 10 (stream alerts), 11 (giveaways and
+  starboard), and Ledger's message text; Phase 2 (Stripe) once a price is set.
 - **Branch:** `dashboard-first` (everything up to commit `1aed992` is deployed). Later
   commits (roadmap, plan list, staff and comps) are committed but not pushed or deployed.
 - **Before pushing:** `pnpm -r exec tsc --noEmit`, `pnpm test`, `pnpm exec biome check apps packages`.
@@ -40,7 +40,7 @@ then updates **Status** and the **Log** before stopping.
 | 4 | Role menus (first module on the card editor) | **Code done**, not deployed: needs migration 0023 |
 | 5 | Bot profile per server (name, avatar, banner, bio, card colours) | **Code done** (not deployed); card colour and footer defaults moved to later |
 | 6 | Welcome (messages, leave messages, roles on join) | **Code done**, not deployed: needs migration 0024 |
-| 7 | Tickets / modmail | **Waiting on a decision**: transcripts store message content (Open decisions) |
+| 7 | Tickets / modmail | **Code done**, not deployed: needs migration 0026 and the Message Content intent |
 | 8 | Message builder (post now or on a schedule) | **Code done**, not deployed: needs migration 0025 |
 | 9 | Custom rank cards with character details | Not started |
 | 10 | Stream and video alerts (Twitch, YouTube, Kick) | Not started |
@@ -253,6 +253,38 @@ Card accent colour and footer text come from the same settings, read by `lib/car
 - Later: image welcome cards with the member's avatar (needs rendering), roles on join by
   condition (Pro), and checking real joins against a live server after deploy.
 
+### Phase 7: tickets (module "Parley", plain label "Tickets")
+
+- [x] Decision (owner, 2026-11-12): store message content. Garrison now requests the Message
+      Content intent (preflight fails without it). Message text is stored only in ticket
+      transcripts so far; the landing page, README and SECURITY.md say so.
+- [x] Rules (`packages/db/src/tickets.ts`, browser-safe): a panel is a `CustomCard` plus topics
+      (one button each). Free: 1 panel, 3 topics (`tickets.panels`, `tickets.topics`); Pro: 10
+      of 10, a form of up to 5 questions before a ticket opens (`tickets.forms`), auto-assign
+      (`tickets.autoAssign`), stats (`tickets.stats`). Transcripts kept 30 or 365 days after
+      closing (`tickets.historyDays`). Saved Pro values pause on Free; nothing is deleted.
+- [x] Storage (migration `0026_tickets`): `ticket_settings` (one row, Settings history and
+      undo), `ticket_panel_posts`, `tickets` (numbered per server, never reused),
+      `ticket_messages` (the transcript, with edits and deletions marked) and `ticket_notes`
+      (dashboard only). The bot can delete a ticket only once its expiry has passed, and the
+      transcript and notes go with it. Tested under each role's grants.
+- [x] Bot (`apps/bot/src/modules/tickets/`): a press opens `ticket-0042` under the chosen
+      category, visible to the member, the staff roles and Garrison only; the opening card
+      pings the member (and the staff roles if wanted); Claim and Close buttons; `/ticket close
+      | claim | add | remove`. Every press is checked against the setup as saved now. Closing
+      sets the expiry from the plan, posts a summary to the log channel, and deletes the
+      channel 10 s later (the sweep retries if a restart got in the way). A ticket channel
+      deleted by hand closes its ticket.
+- [x] Dashboard (`/servers/:id/parley`, nav "Parley · Tickets"): the queue (waiting on staff,
+      waiting on the member, unclaimed, closed, all), search by number, member or transcript
+      text, Pro stats (opened, closed, median first reply), who handles tickets, and panels on
+      the card editor with Post/Update/Move. Each ticket's page has the transcript, the form
+      answers, staff notes, and Claim and Close. Checked in the local preview (desktop and
+      phone, no sideways scroll): add, Pro refusal of a form and undo, save, setup, queue a
+      post, add a note, queue a claim.
+- Later: modmail (opening a ticket by DMing Garrison), reopening a closed ticket, transcripts
+  as a downloadable file, ticket search in the top search box.
+
 ### Phase 8: message builder (module "Dispatch", plain label "Messages")
 
 - [x] Rules (`packages/db/src/messages.ts`, browser-safe): saved messages (up to 50) are a
@@ -310,13 +342,19 @@ Later phases get their checklists when they start.
 
 ## Open decisions for the owner
 
-- **Price** for Pro per server (Dyno and Carl-bot sit around $5 a month).
-- **Message content in logs:** the Message Content intent is on in the Developer Portal but
-  the bot doesn't request it, and the site promises message content is never stored.
-  Automod can read text without storing it. Storing deleted/edited text in Ledger would
-  change that promise (copy on the landing page, Ledger page, README) and needs Discord's
-  approval for the intent past 100 servers.
-- **Free backups:** is one manual backup enough on Free, given restoring after a nuke is safety?
+- **Price** for Pro per server (Dyno and Carl-bot sit around $5 a month). The structure is
+  set (per server, the table above); the amount isn't recorded anywhere yet.
+
+Decided (2026-11-12, owner):
+
+- **Message content:** store it, and change the promise. Tickets keep transcripts; Ledger's
+  deleted and edited message text and the starboard come next. Discord must approve the
+  Message Content intent once Garrison is in 100 servers.
+- **Free backups:** one manual backup on Free is enough.
+- **Rank cards:** an image-rendering library may be added to the bot.
+- **Stream alerts:** build them; the owner creates the Twitch and YouTube keys.
+- **Module names** Insignia, Herald, Dispatch (and Parley) stay; the landing page counts modules
+  from the module list.
 
 ## Log
 
@@ -351,3 +389,7 @@ Later phases get their checklists when they start.
   are cached 30 s; Change Nickname missing is a /health warning, not a fix; the preview's
   timestamps are drawn in UTC (no hydration mismatch); editors remount when what they edit
   changes; one flash helper (`lib/flash.ts`) and one ID generator (`ids.ts`).
+- 2026-11-12: Owner decisions recorded (Open decisions). Phase 7 code done: tickets with
+  transcripts, migration 0026, Message Content intent requested, the site's message-content
+  promise and module count updated. Type-check, 390 tests and Biome pass; checked in the local
+  preview.

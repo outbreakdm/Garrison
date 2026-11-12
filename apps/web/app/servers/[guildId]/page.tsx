@@ -49,6 +49,8 @@ const REQUEST_PAGE: Record<string, string> = {
   post_role_menu: "/insignia",
   bot_profile: "/settings#profile",
   post_message: "/dispatch",
+  post_ticket_panel: "/parley",
+  ticket_action: "/parley",
   run_health: "#requests",
 };
 

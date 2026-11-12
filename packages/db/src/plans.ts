@@ -16,6 +16,7 @@ type Module =
   | "profile"
   | "roles"
   | "welcome"
+  | "tickets"
   | "rally"
   | "ops"
   | "ranks"
@@ -95,6 +96,42 @@ export const FEATURES = {
     about: "Roles given on join",
     free: 1,
     pro: 5,
+  },
+  "tickets.panels": {
+    module: "tickets",
+    about: "Ticket panels",
+    free: 1,
+    pro: 10,
+  },
+  "tickets.topics": {
+    module: "tickets",
+    about: "Topics on each ticket panel",
+    free: 3,
+    pro: 10,
+  },
+  "tickets.forms": {
+    module: "tickets",
+    about: "Questions a member answers before a ticket opens",
+    free: false,
+    pro: true,
+  },
+  "tickets.autoAssign": {
+    module: "tickets",
+    about: "Hand each new ticket to the staff member with the fewest open",
+    free: false,
+    pro: true,
+  },
+  "tickets.historyDays": {
+    module: "tickets",
+    about: "Days a closed ticket's transcript is kept",
+    free: 30,
+    pro: 365,
+  },
+  "tickets.stats": {
+    module: "tickets",
+    about: "Ticket stats: opened, closed and time to first reply",
+    free: false,
+    pro: true,
   },
   "rally.templates": {
     module: "rally",

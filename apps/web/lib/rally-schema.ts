@@ -67,4 +67,6 @@ export const ACTION_KIND: Record<string, string> = {
   post_role_menu: "Post role menu",
   bot_profile: "Change Garrison's profile",
   post_message: "Post message",
+  post_ticket_panel: "Post ticket panel",
+  ticket_action: "Claim or close ticket",
 };

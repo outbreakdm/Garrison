@@ -49,9 +49,10 @@ async function checkDiscord(token: string, clientId: string) {
     const flags = app.body?.flags ?? 0;
     if (flags & FLAG.members) ok("Server Members Intent is on");
     else fail("Server Members Intent is off. Turn it on under Bot → Privileged Gateway Intents.");
-    if (flags & FLAG.messageContent)
-      ok("Message Content Intent is on (Garrison asks for it only once automod is enabled)");
-    else warn("Message Content Intent is off. Fine for now; automod will need it.");
+    // Garrison asks for Message Content (ticket transcripts, Ledger's message text, the
+    // starboard), so login fails with "Used disallowed intents" while it's off.
+    if (flags & FLAG.messageContent) ok("Message Content Intent is on");
+    else fail("Message Content Intent is off. Turn it on under Bot → Privileged Gateway Intents.");
     if (app.body?.bot_public)
       warn(
         "Public Bot is on: anyone with the invite link can add Garrison. Turn it off while testing.",
@@ -111,6 +112,11 @@ try {
 if (env) {
   // Newest tables first: if these exist with grants, everything older does too.
   const latest = [
+    "ticket_settings",
+    "tickets",
+    "ticket_messages",
+    "ticket_notes",
+    "ticket_panel_posts",
     "message_settings",
     "message_sends",
     "welcome_settings",

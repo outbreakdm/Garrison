@@ -21,6 +21,7 @@ export * from "./repo/ranks";
 export * from "./repo/role-menus";
 export * from "./repo/search";
 export * from "./repo/settings";
+export * from "./repo/tickets";
 export * from "./repo/web";
 export * from "./repo/welcome";
 export * from "./role";
@@ -56,6 +57,7 @@ export type {
   OpsSignup,
   PostMessagePayload,
   PostRoleMenuPayload,
+  PostTicketPanelPayload,
   QmBuild,
   QmCreated,
   QmOperation,
@@ -70,9 +72,17 @@ export type {
   SettingsChange,
   SettingsDiff,
   SettingsModule,
+  Ticket,
+  TicketActionPayload,
+  TicketAnswer,
+  TicketAttachment,
+  TicketMessage,
+  TicketNote,
+  TicketPanelPost,
   WatchSettings,
   WebSession,
 } from "./schema";
 export * as schema from "./schema";
+export * from "./tickets";
 export * from "./time";
 export * from "./welcome";

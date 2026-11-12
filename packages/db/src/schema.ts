@@ -20,6 +20,7 @@ import type { SavedMessage } from "./messages";
 import type { GuildPlan } from "./plans";
 import type { RallyTemplate, RallyWording } from "./rally";
 import type { RoleMenu } from "./role-menus";
+import type { TicketPanel } from "./tickets";
 
 /**
  * Every table enables row-level security with no policies. The bot and the
@@ -427,6 +428,7 @@ export const settingsModule = pgEnum("settings_module", [
   "roles",
   "welcome",
   "messages",
+  "tickets",
 ]);
 
 /** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */
@@ -806,6 +808,8 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "post_role_menu",
   "bot_profile",
   "post_message",
+  "post_ticket_panel",
+  "ticket_action",
 ]);
 export const dashboardActionStatus = pgEnum("dashboard_action_status", [
   "pending",
@@ -865,6 +869,17 @@ export interface BotProfilePayload {
 export interface PostMessagePayload {
   messageId: string;
   channelId: string;
+}
+/** Post a ticket panel, or update the message it was last posted as. */
+export interface PostTicketPanelPayload {
+  panelId: string;
+  channelId: string;
+}
+/** Claim or close a ticket from the dashboard, as the member who asked. */
+export interface TicketActionPayload {
+  ticketId: string;
+  op: "claim" | "close";
+  reason: string | null;
 }
 /** Post a role menu, or update the message it was last posted as. */
 export interface PostRoleMenuPayload {
@@ -1126,3 +1141,172 @@ export const welcomeSettings = pgTable("welcome_settings", {
 }).enableRLS();
 export type RallySettings = typeof rallySettings.$inferSelect;
 export type { GuildPlan };
+
+// ---------------------------------------------------------------------------
+// Tickets (Parley)
+// ---------------------------------------------------------------------------
+
+/** A server's ticket setup, one row, edited on the dashboard with history and undo. */
+export const ticketSettings = pgTable(
+  "ticket_settings",
+  {
+    guildId: text("guild_id")
+      .primaryKey()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    panels: jsonb("panels").$type<TicketPanel[]>().notNull().default(sql`'[]'::jsonb`),
+    staffRoleIds: text("staff_role_ids").array().notNull().default(sql`'{}'::text[]`),
+    parentId: text("parent_id"),
+    logChannelId: text("log_channel_id"),
+    maxOpen: integer("max_open").notNull().default(1),
+    pingStaff: boolean("ping_staff").notNull().default(true),
+    autoAssign: boolean("auto_assign").notNull().default(false),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      "ticket_panels_list",
+      sql`jsonb_typeof(${t.panels}) = 'array' AND jsonb_array_length(${t.panels}) <= 10`,
+    ),
+    check("ticket_max_open", sql`${t.maxOpen} BETWEEN 1 AND 5`),
+  ],
+).enableRLS();
+
+/** Where each panel was last posted, written by the bot. */
+export const ticketPanelPosts = pgTable(
+  "ticket_panel_posts",
+  {
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    panelId: text("panel_id").notNull(),
+    channelId: text("channel_id").notNull(),
+    messageId: text("message_id").notNull(),
+    postedAt: timestamp("posted_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.guildId, t.panelId] })],
+).enableRLS();
+
+export const ticketStatus = pgEnum("ticket_status", ["open", "closed"]);
+
+/** One answer from the form a member filled before the ticket opened. */
+export interface TicketAnswer {
+  question: string;
+  answer: string;
+}
+
+/**
+ * A ticket, opened by the bot when a member presses a panel button. Numbers are
+ * per server and never reused. A closed ticket, transcript and all, is removed
+ * once `expires_at` passes; the plan at closing sets it, so a later downgrade
+ * never shortens what was promised.
+ */
+export const tickets = pgTable(
+  "tickets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    number: integer("number").notNull(),
+    panelId: text("panel_id").notNull(),
+    topicId: text("topic_id").notNull(),
+    topicLabel: text("topic_label").notNull(),
+    openerId: text("opener_id").notNull(),
+    openerName: text("opener_name").notNull(),
+    channelId: text("channel_id").notNull(),
+    status: ticketStatus("status").notNull().default("open"),
+    claimedBy: text("claimed_by"),
+    claimedName: text("claimed_name"),
+    answers: jsonb("answers").$type<TicketAnswer[]>().notNull().default(sql`'[]'::jsonb`),
+    /** Who wrote last: 'member' (the opener or someone added) or 'staff'. */
+    lastFrom: text("last_from"),
+    lastMessageAt: timestamp("last_message_at", { withTimezone: true }),
+    firstResponseAt: timestamp("first_response_at", { withTimezone: true }),
+    messageCount: integer("message_count").notNull().default(0),
+    openedAt: timestamp("opened_at", { withTimezone: true }).notNull().defaultNow(),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    closedBy: text("closed_by"),
+    closedByName: text("closed_by_name"),
+    closeReason: text("close_reason"),
+    /** The Discord channel was deleted after closing. */
+    channelGone: boolean("channel_gone").notNull().default(false),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("tickets_guild_number").on(t.guildId, t.number),
+    index("tickets_guild_status").on(t.guildId, t.status, t.lastMessageAt),
+    index("tickets_channel").on(t.channelId),
+    index("tickets_expires").on(t.expiresAt),
+    check("tickets_last_from", sql`${t.lastFrom} IS NULL OR ${t.lastFrom} IN ('member', 'staff')`),
+  ],
+).enableRLS();
+
+export interface TicketAttachment {
+  name: string;
+  url: string;
+}
+
+/**
+ * A ticket's transcript: what was written in its channel, plus Garrison's own
+ * lines (opened, claimed, closed) with kind 'event'. Removed with the ticket.
+ */
+export const ticketMessages = pgTable(
+  "ticket_messages",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    ticketId: uuid("ticket_id")
+      .notNull()
+      .references(() => tickets.id, { onDelete: "cascade" }),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull().default("message"),
+    discordMessageId: text("discord_message_id"),
+    authorId: text("author_id"),
+    authorName: text("author_name").notNull(),
+    staff: boolean("staff").notNull().default(false),
+    content: text("content").notNull().default(""),
+    attachments: jsonb("attachments")
+      .$type<TicketAttachment[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    editedAt: timestamp("edited_at", { withTimezone: true }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("ticket_messages_ticket").on(t.ticketId, t.id),
+    index("ticket_messages_guild").on(t.guildId, t.id),
+    uniqueIndex("ticket_messages_discord").on(t.discordMessageId),
+    check("ticket_messages_kind", sql`${t.kind} IN ('message', 'event')`),
+    check("ticket_messages_length", sql`length(${t.content}) <= 6000`),
+  ],
+).enableRLS();
+
+/** Staff notes on a ticket, written on the dashboard. The member never sees them. */
+export const ticketNotes = pgTable(
+  "ticket_notes",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    ticketId: uuid("ticket_id")
+      .notNull()
+      .references(() => tickets.id, { onDelete: "cascade" }),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    authorId: text("author_id").notNull(),
+    authorName: text("author_name").notNull(),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("ticket_notes_ticket").on(t.ticketId, t.id),
+    check("ticket_notes_length", sql`length(${t.body}) BETWEEN 1 AND 2000`),
+  ],
+).enableRLS();
+
+export type TicketSettingsRow = typeof ticketSettings.$inferSelect;
+export type TicketPanelPost = typeof ticketPanelPosts.$inferSelect;
+export type Ticket = typeof tickets.$inferSelect;
+export type TicketMessage = typeof ticketMessages.$inferSelect;
+export type TicketNote = typeof ticketNotes.$inferSelect;

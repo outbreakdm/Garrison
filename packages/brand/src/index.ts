@@ -73,6 +73,7 @@ export const modules = {
   insignia: { name: "Insignia", plain: "Role menus" },
   herald: { name: "Herald", plain: "Welcome" },
   dispatch: { name: "Dispatch", plain: "Messages" },
+  parley: { name: "Parley", plain: "Tickets" },
   quartermaster: { name: "Quartermaster", plain: "AI builder" },
 } as const;
 

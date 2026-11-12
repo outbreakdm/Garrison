@@ -15,6 +15,7 @@ import {
   type SettingsDiff,
   type SettingsModule,
   settingsChanges,
+  ticketSettings,
   watchSettings,
   welcomeSettings,
 } from "../schema";
@@ -62,6 +63,16 @@ export const EDITABLE_FIELDS = {
     "dmEnabled",
     "dmCard",
     "joinRoleIds",
+  ],
+  // Panels are checked with checkTicketPanels, the rest with checkTicketOptions.
+  tickets: [
+    "panels",
+    "staffRoleIds",
+    "parentId",
+    "logChannelId",
+    "maxOpen",
+    "pingStaff",
+    "autoAssign",
   ],
 } as const satisfies Record<SettingsModule, readonly string[]>;
 
@@ -177,6 +188,7 @@ const TABLES = {
   roles: roleMenuSettings,
   welcome: welcomeSettings,
   messages: messageSettings,
+  tickets: ticketSettings,
 } as const;
 
 /** Modules whose settings row is created on first use, by the bot or the dashboard. */
@@ -188,6 +200,7 @@ const LAZY = new Set<SettingsModule>([
   "roles",
   "welcome",
   "messages",
+  "tickets",
 ]);
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -286,6 +299,12 @@ async function writeRow(tx: Tx, module: SettingsModule, guildId: string, values:
         .update(welcomeSettings)
         .set(set as Partial<typeof welcomeSettings.$inferInsert>)
         .where(eq(welcomeSettings.guildId, guildId));
+      return;
+    case "tickets":
+      await tx
+        .update(ticketSettings)
+        .set(set as Partial<typeof ticketSettings.$inferInsert>)
+        .where(eq(ticketSettings.guildId, guildId));
       return;
     case "roles":
       await tx

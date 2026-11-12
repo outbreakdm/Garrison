@@ -39,6 +39,7 @@ import { parseSlots } from "../rally/parse.js";
 import { refreshCard } from "../rally/service.js";
 import { menuRoleProblem, menuRoleProblemText, roleMenuMessage } from "../roles/menu.js";
 import { loadMenu, roleFacts } from "../roles/service.js";
+import { doPostTicketPanel, doTicketAction } from "../tickets/dashboard.js";
 import { undoCase } from "../watch/service.js";
 import {
   doCreateLfg,
@@ -458,6 +459,10 @@ export async function runDashboardAction(
       return applyBotProfile(ctx, guild, action.payload);
     case "post_message":
       return postMessageNow(ctx, guild, member, action.payload);
+    case "post_ticket_panel":
+      return doPostTicketPanel(ctx, guild, member, action.payload);
+    case "ticket_action":
+      return doTicketAction(ctx, guild, member, action.payload);
     default:
       return fail("Garrison doesn't know that request.");
   }
