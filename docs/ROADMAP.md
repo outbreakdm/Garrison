@@ -7,11 +7,11 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **Now:** Phases 3 to 8 are code done, committed, not pushed or deployed. **Before
-  deploying:** apply migrations `0023_role_menus`, `0024_welcome`, `0025_messages`,
-  `0026_tickets`, `0027_ledger_text`, `0028_rank_cards`, `0029_alerts`, `0030_giveaways` and
-  `0031_starboard` `0032_giveaway_rerolls` and `0033_ticket_reopen` to production (`DATABASE_MIGRATION_URL` set, `pnpm db:migrate`, see
-  DEPLOY.md); the bot preflight checks for their tables, so a deploy before them stops at
+- **Now:** Phases 1 and 3 to 11, and the follow-ups in the Log, are code done, committed,
+  not pushed or deployed. **Before deploying:** apply every migration from `0023_role_menus`
+  through `0034_test_alert` to production (`DATABASE_MIGRATION_URL` set,
+  `pnpm db:migrate`, see DEPLOY.md); the bot preflight checks for their tables, so a deploy
+  before them stops at
   preflight. **Message Content Intent must be on** in the Developer Portal (Bot → Privileged
   Gateway Intents): the bot now asks for it, and login fails without it.
   After deploying: post a menu on a test server and press its buttons (the one part not
@@ -481,3 +481,5 @@ Decided (2026-11-12, owner):
   now skips everyone drawn before, not just the last draw (migration 0032).
 - 2026-11-12: Follow-ups: a ticket's transcript downloads as a text file; a closed ticket can be
   reopened from the dashboard in a new channel (migration 0033).
+- 2026-11-12: Follow-up: "Send a test alert" on each alert posts a sample in its channel without
+  the ping (migration 0034).

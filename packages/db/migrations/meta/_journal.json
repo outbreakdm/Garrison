@@ -239,6 +239,13 @@
       "when": 1794492732961,
       "tag": "0033_ticket_reopen",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794492871916,
+      "tag": "0034_test_alert",
+      "breakpoints": true
     }
   ]
 }

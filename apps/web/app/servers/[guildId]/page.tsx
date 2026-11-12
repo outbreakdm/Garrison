@@ -53,6 +53,7 @@ const REQUEST_PAGE: Record<string, string> = {
   ticket_action: "/parley",
   start_giveaway: "/spoils",
   giveaway_action: "/spoils",
+  test_alert: "/beacon",
   run_health: "#requests",
 };
 

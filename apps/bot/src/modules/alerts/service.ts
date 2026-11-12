@@ -7,6 +7,7 @@ import {
   type Entitlements,
   entitlements,
   fillAlert,
+  getAlertFeeds,
   getGuildPlan,
   isFeedPaused,
   listAlertSettings,
@@ -21,6 +22,7 @@ import {
   type Client,
   ContainerBuilder,
   type Guild,
+  type GuildMember,
   MediaGalleryBuilder,
   MediaGalleryItemBuilder,
   MessageFlags,
@@ -240,6 +242,55 @@ export async function sweepYoutube(ctx: BotContext, list: Watched[], now = new D
       );
     }
   }
+}
+
+/** "Send a test alert" from the dashboard: a sample in the feed's channel, without its ping. */
+export async function doTestAlert(
+  ctx: BotContext,
+  guild: Guild,
+  member: GuildMember,
+  raw: unknown,
+): Promise<{ ok: boolean; message: string }> {
+  const feedId = (raw as { feedId?: unknown })?.feedId;
+  if (typeof feedId !== "string" || !/^[a-z0-9]{6,16}$/.test(feedId))
+    return { ok: false, message: "That request wasn't valid." };
+  const ent = entitlements(await getGuildPlan(ctx.db, guild.id));
+  const feeds = readAlertFeeds(await getAlertFeeds(ctx.db, guild.id));
+  const index = feeds.findIndex((f) => f.id === feedId);
+  const feed = feeds[index];
+  if (!feed) return { ok: false, message: "That alert was removed. Refresh the page." };
+  if (isFeedPaused(index, ent))
+    return { ok: false, message: "That alert is paused: the server has more than its plan runs." };
+  const channel = guild.channels.cache.get(feed.channelId);
+  if (!channel?.isSendable()) return { ok: false, message: "The alert's channel was deleted." };
+  const needed = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages];
+  if (!channel.permissionsFor(member)?.has(needed))
+    return { ok: false, message: "You can't post in that channel." };
+  const sample: AlertItem =
+    feed.provider === "twitch"
+      ? {
+          id: "test",
+          name: feed.handle,
+          title: "This is a test alert from the dashboard",
+          game: "Just Chatting",
+          url: `https://www.twitch.tv/${feed.handle}`,
+          thumbnail: "",
+        }
+      : {
+          id: "test",
+          name: feed.handle,
+          title: "This is a test alert from the dashboard",
+          game: "",
+          url: "https://www.youtube.com/",
+          thumbnail: "",
+        };
+  const posted = await post(guild, { ...feed, roleId: null }, ent, sample).catch(() => false);
+  return posted
+    ? {
+        ok: true,
+        message: `Posted a test alert in #${"name" in channel ? channel.name : "the channel"}, without the ping.`,
+      }
+    : { ok: false, message: "Garrison can't post in that channel. Check its permissions." };
 }
 
 /** The minute sweep's alert step: each provider on its own cadence. */

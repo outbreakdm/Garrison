@@ -24,6 +24,7 @@ import {
   type RaidSignupPayload,
   type RaidWithdrawPayload,
   type StartGiveawayPayload,
+  type TestAlertPayload,
   type TicketActionPayload,
   type VerifyPanelPayload,
 } from "../schema";
@@ -58,7 +59,8 @@ export type QueueInput =
   | { kind: "post_ticket_panel"; payload: PostTicketPanelPayload }
   | { kind: "ticket_action"; payload: TicketActionPayload }
   | { kind: "start_giveaway"; payload: StartGiveawayPayload }
-  | { kind: "giveaway_action"; payload: GiveawayActionPayload };
+  | { kind: "giveaway_action"; payload: GiveawayActionPayload }
+  | { kind: "test_alert"; payload: TestAlertPayload };
 
 /** Per server: at most this many requests waiting at once. */
 export const MAX_PENDING_PER_GUILD = 10;

@@ -24,6 +24,7 @@ import { z } from "zod";
 import type { BotContext } from "../../commands/types.js";
 import { cardMessage } from "../../lib/card.js";
 import { safeText } from "../../lib/text.js";
+import { doTestAlert } from "../alerts/service.js";
 import { postMessageNow } from "../dispatch/service.js";
 import { restoreQuarantine } from "../gatehouse/anti-nuke.js";
 import { verifyPanel } from "../gatehouse/embeds.js";
@@ -468,6 +469,8 @@ export async function runDashboardAction(
       return doStartGiveaway(ctx, guild, member, action.payload);
     case "giveaway_action":
       return doGiveawayAction(ctx, guild, action.payload);
+    case "test_alert":
+      return doTestAlert(ctx, guild, member, action.payload);
     default:
       return fail("Garrison doesn't know that request.");
   }

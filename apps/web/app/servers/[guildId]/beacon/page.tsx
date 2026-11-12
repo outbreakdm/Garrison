@@ -11,12 +11,14 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { RequestsPanel } from "@/components/RequestsPanel";
 import { FormPanel } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { listNotifiableRoles, listTextChannels } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
 import { requireGuildAccess } from "@/lib/session";
 import { ago } from "../parley/when";
+import { requestAction } from "../requests";
 import { addFeed, removeFeed, saveFeed } from "./actions";
 import { FeedEditor } from "./FeedEditor";
 
@@ -100,6 +102,8 @@ export default async function AlertsPage({
           </span>
         </div>
       ) : null}
+
+      <RequestsPanel guildId={guild.id} kinds={["test_alert"]} query={query} />
 
       <FormPanel
         id="new"
@@ -211,6 +215,7 @@ export default async function AlertsPage({
                 planHref={`/servers/${guild.id}/plan`}
                 saveAction={saveFeed}
                 removeAction={removeFeed}
+                requestAction={requestAction}
               />
             </div>
           </details>

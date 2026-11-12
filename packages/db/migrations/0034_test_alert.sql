@@ -1,0 +1,1 @@
+ALTER TYPE "public"."dashboard_action_kind" ADD VALUE IF NOT EXISTS 'test_alert';

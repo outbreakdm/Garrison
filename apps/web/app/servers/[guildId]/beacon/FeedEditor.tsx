@@ -33,6 +33,7 @@ export function FeedEditor({
   planHref,
   saveAction,
   removeAction,
+  requestAction,
 }: {
   guildId: string;
   saved: AlertFeed;
@@ -42,6 +43,7 @@ export function FeedEditor({
   planHref: string;
   saveAction: Action;
   removeAction: Action;
+  requestAction: Action;
 }) {
   const [feed, setFeed] = useState<AlertFeed>(saved);
   const [handleText, setHandleText] = useState(saved.handle);
@@ -250,6 +252,20 @@ export function FeedEditor({
         </div>
       </form>
       <div className="menu-editor__foot">
+        <form action={requestAction} className="post-form">
+          <input type="hidden" name="guildId" value={guildId} />
+          <input type="hidden" name="page" value="beacon" />
+          <input type="hidden" name="kind" value="test_alert" />
+          <input type="hidden" name="feedId" value={saved.id} />
+          <button type="submit" className="g-btn g-btn--secondary" disabled={dirty}>
+            Send a test alert
+          </button>
+          <span className="g-help">
+            {dirty
+              ? "Save first: the test uses the saved alert."
+              : "A sample in the alert's channel, without the ping."}
+          </span>
+        </form>
         <form action={removeAction}>
           <input type="hidden" name="guildId" value={guildId} />
           <input type="hidden" name="feedId" value={saved.id} />

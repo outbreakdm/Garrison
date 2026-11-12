@@ -842,6 +842,7 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "ticket_action",
   "start_giveaway",
   "giveaway_action",
+  "test_alert",
 ]);
 export const dashboardActionStatus = pgEnum("dashboard_action_status", [
   "pending",
@@ -912,6 +913,10 @@ export interface TicketActionPayload {
   ticketId: string;
   op: "claim" | "close" | "reopen";
   reason: string | null;
+}
+/** Post a sample of one alert, without its ping, so a moderator sees where and how it posts. */
+export interface TestAlertPayload {
+  feedId: string;
 }
 /** Start a giveaway from the dashboard. Checked again by the bot. */
 export interface StartGiveawayPayload {

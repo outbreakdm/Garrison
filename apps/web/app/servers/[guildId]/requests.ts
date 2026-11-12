@@ -5,6 +5,7 @@ import {
   checkProfileRequest,
   countRunningGiveaways,
   entitlements,
+  getAlertFeeds,
   getCase,
   getGiveaway,
   getGuildPlan,
@@ -21,6 +22,7 @@ import {
   isPaused,
   type QueueInput,
   queueDashboardAction,
+  readAlertFeeds,
   readMessages,
   readRoleMenus,
   TICKET_LIMITS,
@@ -50,6 +52,7 @@ const PAGES = new Set([
   "dispatch",
   "parley",
   "spoils",
+  "beacon",
 ]);
 /** A member's page under Watch is the one page with an ID in its path. */
 const MEMBER_PAGE = /^watch\/member\/\d{17,20}$/;
@@ -193,6 +196,12 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       if ((await countRunningGiveaways(db, guildId)) >= ent["giveaways.running"])
         return { ok: false, error: "giveaway_full" };
       return { ok: true, input: { kind, payload: checked.value } };
+    }
+    case "test_alert": {
+      const feedId = field(form, "feedId");
+      const feed = readAlertFeeds(await getAlertFeeds(db, guildId)).find((f) => f.id === feedId);
+      if (!feed) return { ok: false, error: "not_found" };
+      return { ok: true, input: { kind, payload: { feedId: feed.id } } };
     }
     case "giveaway_action": {
       const op = field(form, "op");
