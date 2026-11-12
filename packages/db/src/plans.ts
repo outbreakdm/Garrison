@@ -22,6 +22,7 @@ type Module =
   | "starboard"
   | "automod"
   | "backups"
+  | "ledger"
   | "rally"
   | "ops"
   | "ranks"
@@ -207,6 +208,12 @@ export const FEATURES = {
   "backups.weekly": {
     module: "backups",
     about: "A server backup every week, taken by itself",
+    free: false,
+    pro: true,
+  },
+  "ledger.export": {
+    module: "ledger",
+    about: "Download the event log as a CSV file",
     free: false,
     pro: true,
   },

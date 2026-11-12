@@ -383,8 +383,8 @@ Later phases get their checklists when they start.
   themselves
 - **Gatehouse:** [x] captcha verification on the website · [x] alt-account warning signs ·
   [x] full server backup and restore (channels, roles, permissions)
-- **Ledger:** [ ] invite tracking · [ ] voice joins and leaves · [ ] nickname changes ·
-  [ ] CSV export · [x] the text of deleted and edited messages (off by default, a switch in
+- **Ledger:** [x] invite tracking · [x] voice joins and leaves · [x] nickname changes ·
+  [x] CSV export (Pro) · [x] the text of deleted and edited messages (off by default, a switch in
   Ledger settings; migration `0027_ledger_text`; only for messages Garrison saw since its last
   restart, capped at 1,500 characters, removed with the event)
 - **Rally:** [ ] LFG board on the dashboard for players · [ ] no-show tracking ·
@@ -508,3 +508,6 @@ Decided (2026-11-12, owner):
   avatar), posted to the security alert channel.
 - 2026-11-12: Backlog: server backup and restore (owner-only, additive, idempotent; Free 1 kept,
   Pro 30 and weekly). Migration 0041.
+- 2026-11-12: Backlog: Ledger invite tracking (new intent `GuildInvites`, not privileged; top
+  inviters on the Ledger page) and CSV export on Pro (`ledger.export`). Voice and nickname
+  events were already logged.

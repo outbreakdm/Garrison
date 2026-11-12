@@ -1,4 +1,4 @@
-import { and, desc, eq, lt, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lt, or, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { type LedgerSettings, ledgerEvents, ledgerSettings, type NewLedgerEvent } from "../schema";
 
@@ -77,4 +77,48 @@ export async function pruneLedger(db: Db): Promise<number> {
     ledger_prune: number;
   }[];
   return Number(rows[0]?.ledger_prune ?? 0);
+}
+
+/** Who brought the most members in over the last `days` days, from joins with a known invite. */
+export async function topInviters(db: Db, guildId: string, days = 30, limit = 10) {
+  const since = new Date(Date.now() - days * 86_400_000);
+  const rows = await db
+    .select({
+      inviterId: sql<string>`${ledgerEvents.data}->>'inviterId'`,
+      inviterName: sql<string | null>`max(${ledgerEvents.data}->>'inviterName')`,
+      joins: sql<number>`count(*)::int`,
+    })
+    .from(ledgerEvents)
+    .where(
+      and(
+        eq(ledgerEvents.guildId, guildId),
+        eq(ledgerEvents.type, "member_join"),
+        gte(ledgerEvents.createdAt, since),
+        sql`${ledgerEvents.data} ? 'inviterId' AND ${ledgerEvents.data}->>'inviterId' IS NOT NULL`,
+      ),
+    )
+    .groupBy(sql`${ledgerEvents.data}->>'inviterId'`)
+    .orderBy(sql`count(*) desc`)
+    .limit(limit);
+  return rows;
+}
+
+/** Every event matching the filters, oldest first, for a CSV download (capped). */
+export async function exportLedger(
+  db: Db,
+  q: { guildId: string; userId?: string; type?: string },
+  limit = 20_000,
+) {
+  const conditions = [eq(ledgerEvents.guildId, q.guildId)];
+  if (q.userId)
+    conditions.push(
+      or(eq(ledgerEvents.actorId, q.userId), eq(ledgerEvents.targetId, q.userId)) ?? sql`true`,
+    );
+  if (q.type) conditions.push(eq(ledgerEvents.type, q.type));
+  return db
+    .select()
+    .from(ledgerEvents)
+    .where(and(...conditions))
+    .orderBy(asc(ledgerEvents.id))
+    .limit(limit);
 }

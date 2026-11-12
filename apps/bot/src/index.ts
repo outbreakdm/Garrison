@@ -17,6 +17,7 @@ import { sweepWeeklyBackups } from "./modules/gatehouse/backup.js";
 import { handleMemberJoin, sweepExpiredLockdowns } from "./modules/gatehouse/service.js";
 import { sweepGiveaways } from "./modules/giveaways/service.js";
 import { snapshotAllHealth } from "./modules/health/command.js";
+import { primeInvites } from "./modules/ledger/invites.js";
 import {
   maybePruneLedger,
   onAuditEntry,
@@ -94,6 +95,8 @@ const client = new Client({
     GatewayIntentBits.GuildMessageReactions,
     // Not privileged. Modmail: members message Garrison directly.
     GatewayIntentBits.DirectMessages,
+    // Not privileged. Ledger: which invite each member joined with.
+    GatewayIntentBits.GuildInvites,
   ],
   // Never ping from bot messages. Reasons and other user-typed text are echoed
   // back, and must not be able to trigger @everyone, role or user pings.
@@ -124,6 +127,7 @@ client.once(Events.ClientReady, async (ready) => {
     await ensureGuild(ctx, guild).catch((error) =>
       logger.error("Could not register guild", { guildId: guild.id, error }),
     );
+    await primeInvites(guild).catch(() => null);
   }
   // Lift lockdowns whose time is up, including any that expired while we were offline.
   const sweep = async () => {
@@ -212,6 +216,12 @@ client.on(Events.MessageReactionRemove, (reaction) => {
   onStarReaction(ctx, reaction).catch((error) =>
     logger.warn("Starboard failed", { guildId: reaction.message.guildId, error }),
   );
+});
+client.on(Events.InviteCreate, (invite) => {
+  if (invite.guild && "invites" in invite.guild) void primeInvites(invite.guild).catch(() => null);
+});
+client.on(Events.InviteDelete, (invite) => {
+  if (invite.guild && "invites" in invite.guild) void primeInvites(invite.guild).catch(() => null);
 });
 client.on(Events.ChannelDelete, (channel) => {
   if (channel.isDMBased()) return;

@@ -19,6 +19,7 @@ import { cardMessage } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { safeText } from "../../lib/text.js";
 import { type Change, describeAudit, type LedgerDraft, TYPE_LABELS } from "./describe.js";
+import { inviteForJoin } from "./invites.js";
 
 const SETTINGS_TTL_MS = 60_000;
 const cache = new Map<string, { settings: LedgerSettings; at: number }>();
@@ -109,13 +110,21 @@ export function onAuditEntry(ctx: BotContext, entry: GuildAuditLogsEntry, guild:
   return d ? record(ctx, guild, d) : Promise.resolve();
 }
 
-export function onMemberJoin(ctx: BotContext, member: GuildMember) {
+export async function onMemberJoin(ctx: BotContext, member: GuildMember) {
   const days = Math.floor((Date.now() - member.user.createdTimestamp) / 86_400_000);
+  const invite = await inviteForJoin(member.guild).catch(() => null);
+  const via = invite
+    ? ` · invite ${invite.code}${invite.inviterName ? ` by ${invite.inviterName}` : ""}`
+    : "";
   return record(
     ctx,
     member.guild,
-    draft("member_join", `${member.user.username} joined · account ${days} days old`, {
+    draft("member_join", `${member.user.username} joined · account ${days} days old${via}`, {
       targetId: member.id,
+      actorId: invite?.inviterId ?? null,
+      data: invite
+        ? { invite: invite.code, inviterId: invite.inviterId, inviterName: invite.inviterName }
+        : {},
     }),
   );
 }

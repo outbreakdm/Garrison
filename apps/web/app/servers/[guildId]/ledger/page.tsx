@@ -1,5 +1,11 @@
 import { ledgerTypeLabels } from "@garrison/brand";
-import { getLedgerSettings, searchLedger } from "@garrison/db";
+import {
+  entitlements,
+  getGuildPlan,
+  getLedgerSettings,
+  searchLedger,
+  topInviters,
+} from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Art } from "@/components/Art";
@@ -37,11 +43,15 @@ export default async function LedgerPage({
   const type = q.type && Object.hasOwn(ledgerTypeLabels, q.type) ? q.type : undefined;
   const before = q.before && /^\d{1,15}$/.test(q.before) ? Number(q.before) : undefined;
   const db = await getDb();
-  const [settings, events, channels] = await Promise.all([
+  const [settings, events, channels, inviters, plan] = await Promise.all([
     getLedgerSettings(db, guild.id),
     searchLedger(db, { guildId: guild.id, userId: user, type, before, limit: PAGE }),
     listTextChannels(guild.id).catch(() => []),
+    topInviters(db, guild.id),
+    getGuildPlan(db, guild.id),
   ]);
+  const canExport = entitlements(plan)["ledger.export"];
+  const exportQuery = new URLSearchParams({ ...(user ? { user } : {}), ...(type ? { type } : {}) });
   const ledgerChannel = channels.find((c) => c.id === settings.channelId);
   const last = events.at(-1);
   const older = new URLSearchParams({
@@ -155,6 +165,46 @@ export default async function LedgerPage({
           </Link>
         ) : null}
       </form>
+
+      {inviters.length ? (
+        <section className="g-card card-col" aria-labelledby="inviters-title">
+          <h2 className="card-title" id="inviters-title">
+            Top inviters, last 30 days
+          </h2>
+          <p className="chip-row">
+            {inviters.map((i) => (
+              <Link
+                className="g-badge"
+                key={i.inviterId}
+                href={`/servers/${guild.id}/ledger?user=${i.inviterId}`}
+              >
+                {i.inviterName ?? i.inviterId} · {i.joins}
+              </Link>
+            ))}
+          </p>
+        </section>
+      ) : null}
+
+      <div className="row-between">
+        <span className="g-help">
+          {canExport
+            ? "Download what this filter shows, up to 20,000 events."
+            : "Downloading the log as a spreadsheet is part of Garrison Pro."}
+        </span>
+        {canExport ? (
+          <a
+            className="g-btn g-btn--secondary"
+            href={`/servers/${guild.id}/ledger/export${exportQuery.size ? `?${exportQuery}` : ""}`}
+            download
+          >
+            Download CSV
+          </a>
+        ) : (
+          <Link className="g-btn g-btn--ghost" href={`/servers/${guild.id}/plan`}>
+            See Pro
+          </Link>
+        )}
+      </div>
 
       <div className="g-card table-card">
         <div className="table-wrap">
