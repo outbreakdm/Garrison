@@ -914,6 +914,8 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "backup_create",
   "backup_restore",
   "season_start",
+  "template_save",
+  "template_apply",
 ]);
 export const dashboardActionStatus = pgEnum("dashboard_action_status", [
   "pending",
@@ -1705,6 +1707,28 @@ export const automodSettings = pgTable(
 // ---------------------------------------------------------------------------
 
 export const backupKind = pgEnum("backup_kind", ["manual", "weekly"]);
+
+/**
+ * A server's layout saved by a member to copy into another server they own
+ * (server-templates.ts). Owned by the member, not the server. Written by the bot.
+ */
+export const serverTemplates = pgTable(
+  "server_templates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ownerId: text("owner_id").notNull(),
+    name: text("name").notNull(),
+    sourceGuildId: text("source_guild_id").notNull(),
+    sourceGuildName: text("source_guild_name").notNull().default(""),
+    data: jsonb("data").$type<ServerBackup>().notNull(),
+    roleCount: integer("role_count").notNull().default(0),
+    channelCount: integer("channel_count").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("server_templates_owner").on(t.ownerId, t.createdAt)],
+).enableRLS();
+
+export type ServerTemplate = typeof serverTemplates.$inferSelect;
 
 /** A snapshot of a server's roles, channels and permissions (backups.ts). Written by the bot. */
 export const serverBackups = pgTable(

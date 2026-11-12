@@ -36,6 +36,7 @@ export * from "./repo/role-menus";
 export * from "./repo/search";
 export * from "./repo/settings";
 export * from "./repo/starboard";
+export * from "./repo/templates";
 export * from "./repo/tickets";
 export * from "./repo/web";
 export * from "./repo/welcome";
@@ -105,6 +106,7 @@ export type {
   WebSession,
 } from "./schema";
 export * as schema from "./schema";
+export * from "./server-templates";
 export * from "./starboard";
 export * from "./stat-roles";
 export * from "./tickets";

@@ -241,6 +241,12 @@ export const FEATURES = {
     free: false,
     pro: true,
   },
+  "qm.templates": {
+    module: "qm",
+    about: "Server templates: save a server's layout and copy it into another server you own",
+    free: false,
+    pro: true,
+  },
   "rally.templates": {
     module: "rally",
     about: "LFG templates",

@@ -43,6 +43,7 @@ import { announcePromotion, refreshOpsCard } from "../ops/service.js";
 import { parseWhen } from "../ops/when.js";
 import { applyBotProfile } from "../profile/apply.js";
 import { undoBuild } from "../quartermaster/service.js";
+import { doTemplateApply, doTemplateSave } from "../quartermaster/templates.js";
 import { parseSlots } from "../rally/parse.js";
 import { refreshCard } from "../rally/service.js";
 import { doSeasonStart } from "../ranks/seasons.js";
@@ -504,6 +505,10 @@ export async function runDashboardAction(
       return doBackupRestore(ctx, guild, member, action.payload);
     case "season_start":
       return doSeasonStart(ctx, guild, member, action.payload);
+    case "template_save":
+      return doTemplateSave(ctx, guild, member, action.payload);
+    case "template_apply":
+      return doTemplateApply(ctx, guild, member, action.payload);
     default:
       return fail("Garrison doesn't know that request.");
   }

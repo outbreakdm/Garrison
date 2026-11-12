@@ -9,7 +9,7 @@ then updates **Status** and the **Log** before stopping.
 
 - **Now:** Phases 1 and 3 to 11, and the follow-ups in the Log, are code done, committed,
   not pushed or deployed. **Before deploying:** apply every migration from `0023_role_menus`
-  through `0047_stat_roles` to production (`DATABASE_MIGRATION_URL` set,
+  through `0048_server_templates` to production (`DATABASE_MIGRATION_URL` set,
   `pnpm db:migrate`, see DEPLOY.md); the bot preflight checks for their tables, so a deploy
   before them stops at
   preflight. **Message Content Intent must be on** in the Developer Portal (Bot → Privileged
@@ -394,7 +394,7 @@ Later phases get their checklists when they start.
 - **Ranks:** [x] XP for time in voice · [x] XP boosts by role or channel (Pro `ranks.boosts`; migration `0045_voice_xp_boosts`) · [x] seasons (Pro `ranks.seasons`; migration `0046_rank_seasons`) ·
   [ ] custom rank cards (phase 9)
 - **Barracks:** [x] more game accounts (RuneScape 3, claimed) · [x] roles that follow game stats (Pro `barracks.statRoles`; migration `0047_stat_roles`)
-- **Quartermaster:** [ ] server templates that copy a layout · [x] scheduled backups (shares
+- **Quartermaster:** [x] server templates that copy a layout (Pro `qm.templates`; migration `0048_server_templates`) · [x] scheduled backups (shares
   the Gatehouse backup engine; weekly on Pro)
 
 ## New modules (in build order)
@@ -520,3 +520,4 @@ Weekly groups: `/lfg create repeat_weekly` reposts a group a week on (same local
 Voice XP (10 a minute with company, shared cooldown) and XP boosts on Pro (role, channel or category, ×0 to ×3, max 10, history and undo). Migration 0045.
 Ranks seasons on Pro: a season_start request keeps the top 100 in rank_seasons and resets XP in one transaction; the Ranks page lists past seasons; the leaderboard hides 0 XP. Migration 0046.
 Barracks: `/link rs3` (RuneScape 3 hiscores, claimed) and Pro roles from game stats (up to 10 rules over shared accounts, synced every 30 min and on /link, unsafe roles never given). Needs `pnpm commands:deploy`. Migration 0047.
+Quartermaster server templates on Pro: save a server's layout to your account (5 max) and apply it in another server you own; owner-only, additive by name, permissions masked. Migration 0048.

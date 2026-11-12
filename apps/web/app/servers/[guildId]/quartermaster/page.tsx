@@ -1,13 +1,25 @@
-import { listDashboardActions, listQmBuilds, type QmBuild } from "@garrison/db";
+import {
+  entitlements,
+  getGuildPlan,
+  listDashboardActions,
+  listQmBuilds,
+  listTemplates,
+  type QmBuild,
+  TEMPLATE_NAME_MAX,
+  TEMPLATES_PER_USER,
+} from "@garrison/db";
 import type { Metadata } from "next";
+import { ProTag } from "@/components/cards/CardEditor";
 import { formatTime } from "@/components/format";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { ServerPreview } from "@/components/ServerPreview";
 import { getDb } from "@/lib/db";
-import { getServerLayout } from "@/lib/discord";
+import { getServerLayout, guildOwnerId } from "@/lib/discord";
+import { readFlash } from "@/lib/flash";
 import { addedText, planLines, previewServer } from "@/lib/qm-preview";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
+import { removeTemplate } from "./actions";
 
 export const metadata: Metadata = { title: "Quartermaster" };
 
@@ -49,11 +61,17 @@ export default async function QuartermasterPage({
   const query = await searchParams;
   const { guild, session } = await requireGuildAccess(guildId);
   const db = await getDb();
-  const [builds, actions, layout] = await Promise.all([
+  const [builds, actions, layout, templates, guildPlan, ownerId, flash] = await Promise.all([
     listQmBuilds(db, guild.id, 25),
     listDashboardActions(db, guild.id, 30),
     getServerLayout(guild.id).catch(() => null),
+    listTemplates(db, session.userId),
+    getGuildPlan(db, guild.id),
+    guildOwnerId(guild.id).catch(() => null),
+    readFlash(),
   ]);
+  const ent = entitlements(guildPlan);
+  const isOwner = ownerId === session.userId;
   const now = Date.now();
   const waiting = (b: QmBuild) =>
     b.status === "pending" && now - b.createdAt.getTime() < PLAN_TTL_MS;
@@ -135,7 +153,14 @@ export default async function QuartermasterPage({
 
       <RequestsPanel
         guildId={guild.id}
-        kinds={["qm_plan", "qm_apply", "qm_cancel", "undo_build"]}
+        kinds={[
+          "qm_plan",
+          "qm_apply",
+          "qm_cancel",
+          "undo_build",
+          "template_save",
+          "template_apply",
+        ]}
         query={query}
       />
 
@@ -201,6 +226,107 @@ export default async function QuartermasterPage({
           )}
         </section>
       )}
+
+      <section className="g-card card-col" id="templates" aria-labelledby="templates-title">
+        <div className="queue__head">
+          <h2 className="card-title" id="templates-title">
+            Server templates <ProTag on={ent["qm.templates"]} />
+          </h2>
+          <span className="g-help">
+            {templates.length} of {TEMPLATES_PER_USER}
+          </span>
+        </div>
+        <p className="g-help">
+          Save this server's roles, categories, channels and their role permissions to your account,
+          then copy them into another server you own. Applying only adds what that server doesn't
+          already have by name; it never changes or deletes anything.
+        </p>
+        {flash?.ok ? (
+          <div className="notice notice--ok" role="status">
+            {flash.ok}
+          </div>
+        ) : null}
+        {flash?.error ? (
+          <div className="notice" role="alert">
+            {flash.error}
+          </div>
+        ) : null}
+        {ent["qm.templates"] ? (
+          <form action={requestAction} className="row-between">
+            <input type="hidden" name="guildId" value={guild.id} />
+            <input type="hidden" name="page" value="quartermaster" />
+            <input type="hidden" name="kind" value="template_save" />
+            <input
+              className="g-input"
+              name="name"
+              maxLength={TEMPLATE_NAME_MAX}
+              placeholder={guild.name}
+              aria-label="Template name"
+            />
+            <button
+              type="submit"
+              className="g-btn g-btn--secondary"
+              disabled={templates.length >= TEMPLATES_PER_USER}
+            >
+              Save this server as a template
+            </button>
+          </form>
+        ) : null}
+        {templates.length ? (
+          <ul className="queue__list">
+            {templates.map((t) => (
+              <li key={t.id} className="gw-row">
+                <span className="gw-row__main">
+                  <span className="ticket-row__topic">{t.name}</span>
+                  <span className="ticket-row__who">
+                    From {t.sourceGuildName || "a server"} · {t.roleCount} roles · {t.channelCount}{" "}
+                    channels · {formatTime(t.createdAt)}
+                  </span>
+                </span>
+                <span />
+                <span className="gw-row__actions">
+                  {isOwner && ent["qm.templates"] && t.sourceGuildId !== guild.id ? (
+                    <details className="confirm">
+                      <summary className="confirm__toggle g-btn g-btn--secondary g-btn--sm">
+                        Apply here…
+                      </summary>
+                      <form action={requestAction} className="card-col">
+                        <input type="hidden" name="guildId" value={guild.id} />
+                        <input type="hidden" name="page" value="quartermaster" />
+                        <input type="hidden" name="kind" value="template_apply" />
+                        <input type="hidden" name="templateId" value={t.id} />
+                        <p className="g-help">
+                          Creates the roles, categories and channels from “{t.name}” that this
+                          server doesn't have yet.
+                        </p>
+                        <button type="submit" className="g-btn g-btn--primary g-btn--sm">
+                          Yes, apply it
+                        </button>
+                      </form>
+                    </details>
+                  ) : null}
+                  <form action={removeTemplate}>
+                    <input type="hidden" name="guildId" value={guild.id} />
+                    <input type="hidden" name="templateId" value={t.id} />
+                    <button type="submit" className="g-btn g-btn--ghost g-btn--sm">
+                      Delete
+                    </button>
+                  </form>
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="queue__empty muted">
+            {ent["qm.templates"]
+              ? "No templates yet. Save one here, then apply it in another server you own."
+              : "On Pro: save a server's layout and copy it into another server you own."}
+          </p>
+        )}
+        {templates.length && !isOwner ? (
+          <p className="g-help">Only the server owner can apply a template here.</p>
+        ) : null}
+      </section>
 
       <section className="card-col" aria-label="Builds">
         <h2 className="block-title">Builds</h2>

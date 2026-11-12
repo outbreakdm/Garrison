@@ -107,7 +107,7 @@ export async function doBackupCreate(
 }
 
 /** What Discord accepts when creating; the types that need Community fall back to their plain kind. */
-function createType(type: number, community: boolean) {
+export function createType(type: number, community: boolean) {
   if (type === ChannelType.GuildCategory) return ChannelType.GuildCategory;
   if (type === ChannelType.GuildVoice || type === ChannelType.GuildStageVoice)
     return type === ChannelType.GuildStageVoice && community

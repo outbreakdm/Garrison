@@ -64,7 +64,9 @@ export type QueueInput =
   | { kind: "web_verify"; payload: Record<string, never> }
   | { kind: "backup_create"; payload: Record<string, never> }
   | { kind: "backup_restore"; payload: { backupId: string } }
-  | { kind: "season_start"; payload: { name: string } };
+  | { kind: "season_start"; payload: { name: string } }
+  | { kind: "template_save"; payload: { name: string } }
+  | { kind: "template_apply"; payload: { templateId: string } };
 
 /** Per server: at most this many requests waiting at once. */
 export const MAX_PENDING_PER_GUILD = 10;

@@ -108,6 +108,7 @@ After pulling this change, run `pnpm commands:deploy` once: `/lfg create` has a 
 - **`/qm build request:"A WARDOGS section with ranked and casual LFG, a voice room and a Gold+ role for ranked"`** asks Claude for a plan and shows it as a diff. Nothing changes until the person who asked presses **Apply**.
 - **Additive only:** categories, text and voice channels, and roles. It never edits or deletes anything that exists. New roles get **no permissions**; private channels get only view, send, read history, connect and speak for the listed roles.
 - Every build is versioned (`v15`). **Undo** (or `/qm undo version:15`) removes exactly what that build created and nothing else, even after a partial failure. `/qm history` lists builds; the dashboard shows each plan.
+- **Server templates (Pro):** on the Quartermaster page, save a server's roles, categories, channels and role permissions to your account (5 at most), then apply one in another server you own. Applying creates only what that server lacks by name, trims permissions to what Garrison holds, leaves out member-specific permissions, and is for the server owner only.
 - Limits: 5 builds per server per hour, 20 changes per build, plans expire after 15 minutes. Needs `ANTHROPIC_API_KEY`; uses `claude-opus-5-5` by default (`QM_MODEL`).
 
 ### Ledger

@@ -18,6 +18,7 @@ import {
   getQmBuildByVersion,
   getQuarantine,
   getRoleMenus,
+  getTemplate,
   getTicket,
   getTicketConfig,
   isPanelPaused,
@@ -28,6 +29,7 @@ import {
   readMessages,
   readRoleMenus,
   SEASON_NAME_MAX,
+  TEMPLATE_NAME_MAX,
   TICKET_LIMITS,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
@@ -204,6 +206,25 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
     }
     case "backup_create":
       return { ok: true, input: { kind, payload: {} } };
+    case "template_save": {
+      if (!entitlements(await getGuildPlan(db, guildId))["qm.templates"])
+        return { ok: false, error: "template_pro" };
+      return {
+        ok: true,
+        input: { kind, payload: { name: field(form, "name").slice(0, TEMPLATE_NAME_MAX) } },
+      };
+    }
+    case "template_apply": {
+      if (!entitlements(await getGuildPlan(db, guildId))["qm.templates"])
+        return { ok: false, error: "template_pro" };
+      // Owner only, asked of Discord now; the bot asks again before creating anything.
+      const owner = await guildOwnerId(guildId).catch(() => null);
+      if (!owner || owner !== requesterId) return { ok: false, error: "owner_only_template" };
+      const id = field(form, "templateId");
+      const t = uuid.safeParse(id).success ? await getTemplate(db, requesterId, id) : null;
+      if (!t) return { ok: false, error: "not_found" };
+      return { ok: true, input: { kind, payload: { templateId: t.id } } };
+    }
     case "season_start": {
       if (!entitlements(await getGuildPlan(db, guildId))["ranks.seasons"])
         return { ok: false, error: "season_pro" };
