@@ -9,7 +9,7 @@ then updates **Status** and the **Log** before stopping.
 
 - **Now:** Phases 1 and 3 to 11, and the follow-ups in the Log, are code done, committed,
   not pushed or deployed. **Before deploying:** apply every migration from `0023_role_menus`
-  through `0034_test_alert` to production (`DATABASE_MIGRATION_URL` set,
+  through `0035_giveaway_repeat` to production (`DATABASE_MIGRATION_URL` set,
   `pnpm db:migrate`, see DEPLOY.md); the bot preflight checks for their tables, so a deploy
   before them stops at
   preflight. **Message Content Intent must be on** in the Developer Portal (Bot → Privileged
@@ -483,3 +483,5 @@ Decided (2026-11-12, owner):
   reopened from the dashboard in a new channel (migration 0033).
 - 2026-11-12: Follow-up: "Send a test alert" on each alert posts a sample in its channel without
   the ping (migration 0034).
+- 2026-11-12: Follow-ups: `/giveaway start | end | reroll | cancel` in Discord (Manage Server),
+  and repeating giveaways on Pro: "Run again when it ends" (migration 0035).

@@ -1,0 +1,1 @@
+ALTER TABLE "giveaways" ADD COLUMN "repeat" boolean DEFAULT false NOT NULL;

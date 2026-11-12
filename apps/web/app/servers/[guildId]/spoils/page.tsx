@@ -244,6 +244,16 @@ export default async function GiveawaysPage({
                 </div>
               ))}
             </div>
+            <label className="switch">
+              <input type="checkbox" name="repeat" />
+              <span className="switch__text">
+                <span>Run again when it ends</span>
+                <span className="g-help">
+                  A new one with the same prize and length starts as soon as winners are drawn.
+                  Cancel one to stop.
+                </span>
+              </span>
+            </label>
             <label className="g-field" htmlFor="accent">
               <span>Colour</span>
               <input
@@ -290,6 +300,7 @@ export default async function GiveawaysPage({
                         : g.status === "cancelled"
                           ? " · cancelled"
                           : ""}
+                      {g.repeat && g.status === "running" ? " · runs again when drawn" : ""}
                     </span>
                   </span>
                   <span

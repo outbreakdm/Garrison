@@ -31,7 +31,7 @@ packages/
 | Dispatch      | Messages          | **Built** | (dashboard)                                                                 |
 | Parley        | Tickets           | **Built** | `/ticket`                                                                   |
 | Beacon        | Alerts            | **Built** | (dashboard)                                                                 |
-| Spoils        | Giveaways         | **Built** | (dashboard)                                                                 |
+| Spoils        | Giveaways         | **Built** | `/giveaway`                                                                 |
 | Honors        | Starboard         | **Built** | (dashboard)                                                                 |
 | Quartermaster | AI builder        | **Built** | `/qm`                                                                       |
 
@@ -122,7 +122,8 @@ After pulling this change, run `pnpm commands:deploy` once: `/lfg create` has a 
 
 - Started from the dashboard's Giveaways page: a prize, 1 to 20 winners, 30 minutes to 2 weeks, and a channel. Members press **Enter** (and can leave again); the card's entry count updates within a minute.
 - When time's up the minute sweep draws winners with a secure random draw, each entry weighing as much as its entries, and replies to the card naming them (the only pings). A draw is claimed by a conditional update, so it happens once. **Draw now**, **Cancel** and **Draw again** (new winners, never anyone drawn before) are on the dashboard.
-- Free: 2 running at once, open to everyone. Pro: 20, entry rules (a role, or a level from Ranks), up to 3 bonus-entry roles, and the card's colour.
+- Also from Discord: `/giveaway start`, `end`, `reroll` and `cancel` (Manage Server).
+- Free: 2 running at once, open to everyone. Pro: 20, entry rules (a role, or a level from Ranks), up to 3 bonus-entry roles, repeating ("Run again when it ends") and the card's colour.
 
 ### Honors (starboard)
 

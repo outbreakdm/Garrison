@@ -31,6 +31,10 @@ describe("giveaway rules", () => {
     const rules = { ...base, requiredRoleId: "200000000000000001" };
     expect(checkGiveaway(rules, free).ok).toBe(false);
     expect(checkGiveaway(rules, pro).ok).toBe(true);
+    expect(checkGiveaway({ ...base, repeat: "on" }, free).ok).toBe(false);
+    expect(checkGiveaway({ ...base, repeat: "on" }, pro)).toMatchObject({
+      value: { repeat: true },
+    });
     expect(checkGiveaway({ ...base, winners: "21" }, pro).ok).toBe(false);
     expect(checkGiveaway({ ...base, durationMinutes: "7" }, pro).ok).toBe(false);
     expect(
@@ -107,6 +111,7 @@ describe("giveaway storage, under each role's grants", () => {
       minLevel: null,
       bonusRoles: [],
       accent: null,
+      repeat: false,
     });
     expect(await enterGiveaway(db, g.id, "u1", 1)).toBe(true);
     expect(await enterGiveaway(db, g.id, "u1", 1)).toBe(false);

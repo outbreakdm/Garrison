@@ -38,6 +38,7 @@ describe("command definitions", () => {
       "unlink",
       "roster",
       "ticket",
+      "giveaway",
     ]);
     expect(new Set(names).size).toBe(names.length);
   });

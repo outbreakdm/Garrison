@@ -162,7 +162,7 @@ export const FEATURES = {
   },
   "giveaways.rules": {
     module: "giveaways",
-    about: "Giveaway entry rules (a role or a level), bonus entries and your own colour",
+    about: "Giveaway entry rules (a role or a level), bonus entries, repeating and your own colour",
     free: false,
     pro: true,
   },

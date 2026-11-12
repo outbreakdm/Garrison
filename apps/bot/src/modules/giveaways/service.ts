@@ -74,6 +74,7 @@ export function giveawayMessage(
       ? `**Bonus entries** ${g.bonusRoles.map((b) => `<@&${b.roleId}> +${b.extra}`).join(", ")}`
       : null,
     g.status === "cancelled" ? "**Cancelled.** No winners were drawn." : null,
+    g.repeat && running ? "-# Starts again as soon as it's drawn." : null,
   ].filter((l): l is string => l !== null);
   const card = {
     ...blankCard(safeText(g.prize)),
@@ -138,7 +139,38 @@ export async function drawGiveaway(ctx: BotContext, guild: Guild, g: Giveaway) {
   if (!done) return false;
   await refreshCard(ctx, guild, done, entries.length);
   await announce(guild, done, winners);
+  if (done.repeat) await runAgain(ctx, guild, done);
   return true;
+}
+
+/**
+ * A repeating giveaway starts again as soon as it's drawn: same prize, rules and
+ * length. Only while the server is on Pro, and never past the running limit.
+ */
+async function runAgain(ctx: BotContext, guild: Guild, g: Giveaway) {
+  const ent = entitlements(await getGuildPlan(ctx.db, guild.id));
+  if (!ent["giveaways.rules"]) return;
+  if ((await countRunningGiveaways(ctx.db, guild.id)) >= ent["giveaways.running"]) return;
+  const channel = guild.channels.cache.get(g.channelId);
+  if (!channel?.isSendable()) return;
+  const length = Math.max(30 * 60_000, g.endsAt.getTime() - g.createdAt.getTime());
+  const next = await createGiveaway(ctx.db, {
+    guildId: g.guildId,
+    channelId: g.channelId,
+    prize: g.prize,
+    description: g.description,
+    winners: g.winners,
+    endsAt: new Date(Date.now() + length),
+    hostId: g.hostId,
+    hostName: g.hostName,
+    requiredRoleId: g.requiredRoleId,
+    minLevel: g.minLevel,
+    bonusRoles: g.bonusRoles,
+    accent: g.accent,
+    repeat: true,
+  });
+  const posted = await channel.send(giveawayMessage(next, 0, ent)).catch(() => null);
+  if (posted) await setGiveawayMessage(ctx.db, next.id, posted.id);
 }
 
 /** A member pressed Enter (or Leave). Every rule is checked as saved now. */
@@ -263,6 +295,7 @@ export async function doStartGiveaway(
     minLevel: d.minLevel,
     bonusRoles: d.bonusRoles,
     accent: d.accent,
+    repeat: d.repeat,
   });
   const posted = await channel.send(giveawayMessage(g, 0, ent));
   await setGiveawayMessage(ctx.db, g.id, posted.id);

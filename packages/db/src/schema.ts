@@ -929,6 +929,7 @@ export interface StartGiveawayPayload {
   minLevel: number | null;
   bonusRoles: BonusRole[];
   accent: string | null;
+  repeat: boolean;
 }
 /** End a giveaway now, draw new winners, or cancel it. */
 export interface GiveawayActionPayload {
@@ -1444,6 +1445,8 @@ export const giveaways = pgTable(
     winnerIds: text("winner_ids").array().notNull().default(sql`'{}'::text[]`),
     /** Everyone drawn so far, across rerolls, so "Draw again" never picks someone twice. */
     drawnIds: text("drawn_ids").array().notNull().default(sql`'{}'::text[]`),
+    /** Start the same giveaway again as soon as this one is drawn (Pro). */
+    repeat: boolean("repeat").notNull().default(false),
     /** Entries as last shown on the card, so it's edited only when the count changes. */
     shownEntries: integer("shown_entries").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

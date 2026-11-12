@@ -185,6 +185,7 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
             extra: field(form, `bonusExtra${i}`),
           })),
           accent: field(form, "accent") || null,
+          repeat: field(form, "repeat") === "on",
         },
         ent,
       );

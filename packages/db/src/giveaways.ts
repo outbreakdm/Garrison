@@ -27,6 +27,8 @@ export interface GiveawayDraft {
   minLevel: number | null;
   bonusRoles: BonusRole[];
   accent: string | null;
+  /** Pro: start the same giveaway again as soon as this one is drawn. */
+  repeat: boolean;
 }
 
 export const GIVEAWAY_LIMITS = {
@@ -113,10 +115,11 @@ export function checkGiveaway(
     if (!ACCENT.test(a)) return { ok: false, error: "Pick the colour as #rrggbb." };
     accent = a === STANDARD_ACCENT ? null : a;
   }
-  if (!rules && (requiredRoleId || minLevel || bonusRoles.length || accent))
+  const repeat = raw.repeat === true || raw.repeat === "on";
+  if (!rules && (requiredRoleId || minLevel || bonusRoles.length || accent || repeat))
     return {
       ok: false,
-      error: "Entry rules, bonus entries and your own colour are part of Garrison Pro.",
+      error: "Entry rules, bonus entries, repeating and your own colour are part of Garrison Pro.",
     };
   return {
     ok: true,
@@ -130,6 +133,7 @@ export function checkGiveaway(
       minLevel,
       bonusRoles,
       accent,
+      repeat,
     },
   };
 }
