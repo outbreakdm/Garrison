@@ -10,7 +10,16 @@
 export const PLANS = ["free", "pro"] as const;
 export type GuildPlan = (typeof PLANS)[number];
 
-type Module = "rally" | "ops" | "ranks" | "watch" | "gatehouse" | "ledger" | "barracks" | "qm";
+type Module =
+  | "cards"
+  | "rally"
+  | "ops"
+  | "ranks"
+  | "watch"
+  | "gatehouse"
+  | "ledger"
+  | "barracks"
+  | "qm";
 
 interface Feature<T> {
   module: Module;
@@ -22,6 +31,25 @@ interface Feature<T> {
 
 /** Only gates the code enforces today. Planned ones live in docs/ROADMAP.md until built. */
 export const FEATURES = {
+  // Every card Garrison posts from the card editor (role menus first).
+  "cards.accent": {
+    module: "cards",
+    about: "Your own accent colour on cards",
+    free: false,
+    pro: true,
+  },
+  "cards.images": {
+    module: "cards",
+    about: "Banner images and thumbnails on cards",
+    free: false,
+    pro: true,
+  },
+  "cards.footer": {
+    module: "cards",
+    about: "Your own footer on cards, or none",
+    free: false,
+    pro: true,
+  },
   "rally.templates": {
     module: "rally",
     about: "LFG templates",

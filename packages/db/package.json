@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./cards": "./src/browser.ts",
     "./testing": "./src/testing.ts"
   },
   "scripts": {

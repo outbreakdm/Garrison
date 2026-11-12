@@ -1,16 +1,27 @@
 import { type EmbedTone, embedColors, type ModuleKey, modules } from "@garrison/brand";
 import {
+  type CustomCard,
+  cardForPlan,
+  type Entitlements,
+  STANDARD_ACCENT,
+  STANDARD_FOOTER,
+} from "@garrison/db";
+import {
   ActionRowBuilder,
   type APIMessageTopLevelComponent,
   type ButtonBuilder,
   ContainerBuilder,
   EmbedBuilder,
+  MediaGalleryBuilder,
+  MediaGalleryItemBuilder,
   type Message,
+  type MessageActionRowComponentBuilder,
   MessageFlags,
   SectionBuilder,
   SeparatorBuilder,
   SeparatorSpacingSize,
   TextDisplayBuilder,
+  ThumbnailBuilder,
 } from "discord.js";
 
 /**
@@ -138,6 +149,68 @@ export function cardContainer(card: Card): ContainerBuilder {
 }
 
 const QUIET = { parse: [] } as const;
+
+/**
+ * A card someone designed on the dashboard (`CustomCard`), drawn the same way the
+ * editor's preview draws it: thumbnail beside the title, text and dividers, the
+ * banner image, the module's own rows (a role menu's buttons), then the footer.
+ * Pro values the plan lacks fall back to the standard look.
+ */
+export function customCardContainer(
+  input: CustomCard,
+  ent: Entitlements,
+  rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [],
+): ContainerBuilder {
+  const card = cardForPlan(input, ent);
+  const accent = Number.parseInt((card.accent ?? STANDARD_ACCENT).slice(1), 16);
+  const container = new ContainerBuilder().setAccentColor(accent);
+  let budget = TEXT_MAX;
+  const text = (s: string) => {
+    const clipped = s.length > budget ? `${s.slice(0, Math.max(0, budget - 1))}…` : s;
+    budget -= clipped.length;
+    return new TextDisplayBuilder().setContent(clipped || "​");
+  };
+
+  const head = `### ${card.title}`;
+  if (card.thumbnail) {
+    container.addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents(text(head))
+        .setThumbnailAccessory(new ThumbnailBuilder().setURL(card.thumbnail)),
+    );
+  } else {
+    container.addTextDisplayComponents(text(head));
+  }
+  if (card.blocks.length) container.addSeparatorComponents(rule());
+  for (const block of card.blocks) {
+    if (block.kind === "divider") container.addSeparatorComponents(rule());
+    else container.addTextDisplayComponents(text(block.text));
+  }
+  if (card.image)
+    container.addMediaGalleryComponents(
+      new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(card.image)),
+    );
+  if (rows.length) {
+    container.addSeparatorComponents(rule(false));
+    container.addActionRowComponents(...rows);
+  }
+  const footer = card.footer ?? STANDARD_FOOTER;
+  if (footer) container.addTextDisplayComponents(text(`-# ${footer}`));
+  return container;
+}
+
+/** A custom card as a new channel message, or the edit of one. Mentions never ping. */
+export function customCardMessage(
+  card: CustomCard,
+  ent: Entitlements,
+  rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [],
+) {
+  return {
+    components: [customCardContainer(card, ent, rows)],
+    flags: MessageFlags.IsComponentsV2 as const,
+    allowedMentions: QUIET,
+  };
+}
 
 /** A new channel message, DM or edit of a V2 message. Mentions never ping. */
 export function cardMessage(card: Card) {

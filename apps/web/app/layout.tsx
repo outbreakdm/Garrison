@@ -1,6 +1,7 @@
 import "@garrison/brand/css/tokens.css";
 import "@garrison/brand/css/components.css";
 import "./app.css";
+import "./cards.css";
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Saira_Semi_Condensed } from "next/font/google";
 import { type ReactNode, Suspense } from "react";

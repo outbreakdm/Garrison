@@ -1,4 +1,5 @@
 import { embedColors } from "@garrison/brand";
+import { blankCard, type CustomCard, entitlements } from "@garrison/db";
 import { ButtonBuilder, ButtonStyle, MessageFlags, MessageFlagsBitField } from "discord.js";
 import { describe, expect, it } from "vitest";
 import {
@@ -7,6 +8,7 @@ import {
   cardMessage,
   cardReply,
   cardTexts,
+  customCardMessage,
   legacyMessage,
   patchButton,
 } from "./card.js";
@@ -131,5 +133,37 @@ describe("patchButton", () => {
     ).flatMap((row) => row.components);
     expect(buttons.find((b) => b.custom_id === "a:5")?.disabled).toBe(true);
     expect(buttons.find((b) => b.custom_id === "a:4")?.disabled).toBeUndefined();
+  });
+});
+
+describe("customCardMessage (cards designed on the dashboard)", () => {
+  const designed: CustomCard = {
+    ...blankCard("Welcome"),
+    blocks: [{ kind: "text", text: "Hi" }, { kind: "divider" }, { kind: "text", text: "Rules" }],
+    accent: "#ff0000",
+    thumbnail: "https://cdn.discordapp.com/t.png",
+    image: "https://cdn.discordapp.com/i.png",
+    footer: "",
+  };
+  const kinds = (n: Node): number[] => [
+    n.type,
+    ...(n.components ?? []).flatMap(kinds),
+    ...(n.accessory ? kinds(n.accessory) : []),
+  ];
+
+  it("draws the Pro look on Pro: colour, thumbnail, banner, no footer", () => {
+    const m = customCardMessage(designed, entitlements("pro"));
+    expect(m.flags).toBe(MessageFlags.IsComponentsV2);
+    expect(top(m).accent_color).toBe(0xff0000);
+    expect(kinds(top(m))).toEqual(expect.arrayContaining([9, 11, 12]));
+    expect(cardTexts(m)).toEqual(["### Welcome", "Hi", "Rules"]);
+  });
+
+  it("falls back to the standard look on Free, keeping the text", () => {
+    const m = customCardMessage(designed, entitlements("free"));
+    expect(top(m).accent_color).toBe(embedColors.volt);
+    expect(kinds(top(m))).not.toContain(11);
+    expect(kinds(top(m))).not.toContain(12);
+    expect(cardTexts(m)).toEqual(["### Welcome", "Hi", "Rules", "-# Garrison"]);
   });
 });

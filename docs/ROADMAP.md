@@ -7,11 +7,9 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **Now:** Phase 1 code is done. To finish it: push, apply migration `0022_plans_comps` to
-  production, add your row to `platform_staff` (SQL under Owner bypass), deploy, then try
-  Give Pro free on your own server. After that: Phase 2 (Stripe) or Phase 3 (card editor).
-  The deploy preflight now requires `platform_staff`, so deploying before the migration
-  stops at preflight instead of breaking the server picker. Migrate with
+- **Now:** Phase 3 (shared card editor) is done. Phase 4 (role menus on the editor) is in
+  progress. Migration `0022_plans_comps` and the owner's `platform_staff` row are in
+  production; the Phase 1 code still needs pushing and deploying. Migrate with
   `DATABASE_MIGRATION_URL` set: `pnpm db:migrate` (see DEPLOY.md).
 - **Branch:** `dashboard-first` (everything up to commit `1aed992` is deployed). Later
   commits (roadmap, plan list, staff and comps) are committed but not pushed or deployed.
@@ -26,10 +24,10 @@ then updates **Status** and the **Log** before stopping.
 | Phase | What | State |
 |---|---|---|
 | 0 | This roadmap | **Done** |
-| 1 | Plans foundation: one feature list, one entitlement check, owner bypass, comps, Plan page | **Code done**, not deployed: needs migration 0022 applied and your staff row |
+| 1 | Plans foundation: one feature list, one entitlement check, owner bypass, comps, Plan page | **Done**: migration 0022 and the staff row are in production; code not deployed yet |
 | 2 | Stripe in test mode: Checkout, customer portal, webhook, then live keys | Not started |
-| 3 | Shared card editor (field editor + live preview + Pro-locked styling) | Not started |
-| 4 | Role menus (first module on the card editor) | Not started |
+| 3 | Shared card editor (field editor + live preview + Pro-locked styling) | **Done** (not deployed) |
+| 4 | Role menus (first module on the card editor) | **In progress** |
 | 5 | Bot profile per server (name, avatar, banner, bio, card colours) | Not started |
 | 6 | Welcome (messages, leave messages, roles on join) | Not started |
 | 7 | Tickets / modmail | Not started |
@@ -140,8 +138,8 @@ Card accent colour and footer text come from the same settings, read by `lib/car
       `listServerPlans` in `packages/db/src/repo/plans.ts`, tested against RLS.
       (Replaced the earlier env-secret idea: a personal bypass can't apply to things the
       bot does later with nobody acting, so the bypass is server-level.)
-- [ ] Apply migration `0022_plans_comps` to production and add the owner's row to
-      `platform_staff` (owner runs the SQL; see Owner bypass above).
+- [x] Apply migration `0022_plans_comps` to production and add the owner's row to
+      `platform_staff` (done by the owner, checked 2026-11-11).
 - [x] Dashboard **Plan** page per server (`/servers/:id/plan`, in the nav after Settings):
       current plan, the Free vs Pro table from `FEATURES`, and for staff a "Give this server
       Pro for free" / "Put back on Free" form (`plan/actions.ts`, re-checks access and staff).
@@ -152,11 +150,25 @@ Card accent colour and footer text come from the same settings, read by `lib/car
 
 ### Phase 3: shared card editor
 
-- [ ] Dashboard component: edit a card field by field (title, text blocks, buttons, colour,
-      image), live preview drawn like Discord (dark theme, accent bar, sections, buttons).
-- [ ] Pro-locked controls with a Pro tag; preview shows them, save refuses them on Free.
-- [ ] The saved shape is the `Card` type from `apps/bot/src/lib/card.ts`, moved to a shared
-      package so bot and dashboard use one definition.
+- [x] Dashboard component (`apps/web/components/cards/`): `CardEditor` edits title, text
+      blocks and dividers (reorder, remove), accent colour, thumbnail, banner image and
+      footer; `CardPreview` draws it like Discord (dark theme, accent bar, heading, Discord
+      markdown, mentions by name, image, the module's buttons or dropdown, footer). Styles in
+      `app/cards.css`. Side by side with a sticky preview on desktop, preview first on phones.
+- [x] Pro-locked controls: Pro tag on Free, still usable so the preview shows the look;
+      `ProNotice` explains and offers "Use the standard look". Saving is refused on the server
+      (`lockedCardFields`); values already saved survive a downgrade, and the bot draws the
+      standard look meanwhile (`cardForPlan`). Plan keys: `cards.accent`, `cards.images`,
+      `cards.footer`.
+- [x] One saved shape: `CustomCard` in `packages/db/src/cards.ts` (browser-safe import
+      `@garrison/db/cards`), parsed by `parseCard` on both sides. The bot draws it with
+      `customCardMessage` in `lib/card.ts`. Decision: the bot's own system `Card` type stays in
+      the bot, because it holds discord.js button builders; designed cards are plain data.
+- [x] Tests: `cards.test.ts`, bot `card.test.ts` (Pro and Free look), the preview's markdown
+      (`components/cards/markdown.test.tsx`, including that typed text can't become markup).
+- Limits: the dashboard's CSP only loads images from Discord's CDN, so other image links show
+  a marked stand-in with the host in the preview (Discord itself loads them). Image upload
+  (R2) would remove that; not planned yet.
 
 Later phases get their checklists when they start.
 
@@ -214,3 +226,6 @@ Later phases get their checklists when they start.
 - 2026-11-11: Plan page on the dashboard with the staff comp form. Type-check, 344 tests and
   Biome pass. Committed `fa468d2`; phone-width table fix after it.
 - 2026-11-11: Staff page and staff link on the server picker. All checks pass. Phase 1 code done.
+- 2026-11-12: Phase 3 done: shared card shape, bot renderer, card editor and Discord preview,
+  checked in the local preview at desktop and phone width (no sideways scroll) and with the
+  impeccable detector (only findings are Discord's own anatomy inside the preview).

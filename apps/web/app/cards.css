@@ -1,0 +1,600 @@
+/* --- Card editor ------------------------------------------------------------
+   The shared editor (components/cards): fields on the left, a live Discord
+   preview on the right that stays in view while you scroll the fields. Dashboard
+   world: plates, hairlines, Saira captions. Discord's own colours appear only
+   inside the preview (.dc), which is always Discord's dark theme. */
+
+.editor-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 460px);
+  gap: var(--space-6);
+  align-items: start;
+}
+.editor-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.preview-pane {
+  position: sticky;
+  top: 96px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.preview-pane__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+@media (max-width: 1100px) {
+  .editor-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* On narrow screens the result comes first, then the fields that shape it. */
+  .preview-pane {
+    position: static;
+    order: -1;
+  }
+}
+
+/* A group of fields: a caption, then the fields, ruled off from the group above. */
+.editor-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.editor-group > legend {
+  float: left;
+  width: 100%;
+  margin-bottom: var(--space-1);
+  padding: 0;
+}
+.editor-group + .editor-group {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+.editor-group > .g-help {
+  margin: 0;
+}
+.editor-group .g-help code {
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  font: 400 12px / 18px var(--font-mono);
+  color: var(--text);
+  white-space: nowrap;
+}
+.editor-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.field-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 14px;
+}
+
+.g-btn--sm {
+  padding: 4px 10px;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+/* Pro tag: a quiet marker on controls this plan doesn't include. */
+.pro-tag {
+  padding: 0 6px;
+  line-height: 14px;
+}
+.pro-tag::before {
+  width: 4px;
+  height: 4px;
+}
+
+/* Text and divider blocks, in order, each with its own move and remove tools. */
+.block-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.block-list:empty {
+  display: none;
+}
+.block {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: start;
+  animation: block-in 0.2s var(--ease-out);
+}
+@keyframes block-in {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-0.4 * var(--m-rise)));
+  }
+}
+.block__text {
+  field-sizing: content;
+  min-height: 76px;
+  max-height: 360px;
+  resize: vertical;
+  font-size: 14px;
+  line-height: 20px;
+}
+.block--divider {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  min-height: 36px;
+  padding-left: var(--space-3);
+}
+.block__rule {
+  border-top: 1px dashed var(--text-muted);
+  opacity: 0.6;
+}
+.row-tools {
+  display: flex;
+  gap: 2px;
+}
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.15s var(--ease-out),
+    color 0.15s var(--ease-out);
+}
+.icon-btn svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+.icon-btn:hover:not([disabled]) {
+  background: var(--surface-raised);
+  color: var(--text);
+}
+.icon-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.icon-btn[disabled] {
+  opacity: 0.3;
+  cursor: default;
+}
+.meter {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.meter--near {
+  color: var(--caution);
+}
+
+/* Accent colour: the swatch opens the system picker; the hex field takes a typed value. */
+.colour-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.colour-field__swatch {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  cursor: pointer;
+}
+.colour-field__swatch::-webkit-color-swatch-wrapper {
+  padding: 4px;
+}
+.colour-field__swatch::-webkit-color-swatch {
+  border: 0;
+  border-radius: var(--radius-sm);
+}
+.colour-field__swatch::-moz-color-swatch {
+  border: 0;
+  border-radius: var(--radius-sm);
+}
+.colour-field__swatch:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.colour-field__hex {
+  flex: 0 1 11ch;
+  min-width: 9ch;
+}
+
+/* Segmented choice: real radio buttons, drawn as one control. */
+.footer-field {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.footer-field > legend {
+  padding: 0;
+  margin-bottom: 6px;
+}
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-self: flex-start;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+.segmented__item {
+  position: relative;
+  display: flex;
+}
+.segmented__item input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.segmented__item span {
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--text-muted);
+  transition:
+    background-color 0.15s var(--ease-out),
+    color 0.15s var(--ease-out);
+}
+.segmented__item:hover span {
+  color: var(--text);
+}
+.segmented__item input:checked + span {
+  background: var(--surface-raised);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--text);
+  font-weight: 600;
+}
+.segmented__item input:focus-visible + span {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+/* Pro styling tried on Free: the preview keeps it, the save button won't. */
+.notice--pro {
+  --tone: var(--caution);
+  flex-wrap: wrap;
+  align-items: center;
+}
+.notice--pro > span:first-child {
+  flex: 1 1 260px;
+}
+.notice__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* --- Discord preview (.dc) ----------------------------------------------------
+   Discord's dark theme and Components V2 anatomy: a container with a 4px colour
+   bar, a heading, text, dividers, media, controls, then small grey footer text. */
+.dc {
+  --dc-bg: #313338;
+  --dc-text: #dbdee1;
+  --dc-muted: #949ba4;
+  --dc-container: #2b2d31;
+  --dc-line: rgb(255 255 255 / 0.08);
+  --dc-btn: #4e5058;
+  --dc-btn-hover: #6d6f78;
+  --dc-field: #1e1f22;
+  --dc-link: #00a8fc;
+  --dc-blurple: #5865f2;
+  --dc-accent: #d4ff3a;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--dc-bg);
+  color: var(--dc-text);
+  font-family: var(--font-sans);
+  color-scheme: dark;
+}
+.dc ::selection {
+  background: var(--dc-blurple);
+  color: #fff;
+}
+.dc__channel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 16px;
+  border-bottom: 1px solid rgb(0 0 0 / 0.24);
+  font-size: 14px;
+  font-weight: 600;
+  color: #f2f3f5;
+}
+.dc__hash {
+  color: var(--dc-muted);
+  font-size: 19px;
+  font-weight: 400;
+}
+.dc__msg {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px 16px 18px;
+}
+.dc__avatar {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #0b0d10;
+  color: #d4ff3a;
+}
+.dc__body {
+  min-width: 0;
+}
+.dc__author {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  line-height: 22px;
+}
+.dc__name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #f2f3f5;
+}
+.dc__app {
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--dc-blurple);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 15px;
+  text-transform: uppercase;
+}
+.dc__time {
+  font-size: 12px;
+  color: var(--dc-muted);
+}
+
+/* The Components V2 container */
+.dc-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--dc-line);
+  border-left: 4px solid var(--dc-accent);
+  border-radius: 8px;
+  background: var(--dc-container);
+  font-size: 15px;
+  line-height: 1.375;
+  overflow-wrap: anywhere;
+  transition: border-left-color 0.24s var(--ease-out);
+}
+.dc-card__head--thumb {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 85px;
+  gap: 12px;
+  align-items: start;
+}
+.dc-card__thumb {
+  width: 85px;
+  height: 85px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+.dc-card__image {
+  display: block;
+  width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+.dc-standin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px dashed rgb(255 255 255 / 0.18);
+  background: rgb(0 0 0 / 0.16);
+  color: var(--dc-muted);
+  font: 400 12px / 16px var(--font-mono);
+}
+.dc-card__image.dc-standin {
+  height: 140px;
+}
+.dc-standin__host {
+  max-width: 100%;
+  padding: 0 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dc-card__rule {
+  width: 100%;
+  margin: 2px 0;
+  border: 0;
+  border-top: 1px solid var(--dc-line);
+}
+.dc-card__text {
+  min-width: 0;
+}
+.dc-card__controls {
+  padding-top: 4px;
+}
+
+/* Markdown, Discord's way */
+.dc-h {
+  font-weight: 700;
+  color: #f2f3f5;
+  line-height: 1.375;
+}
+.dc-h1 {
+  font-size: 24px;
+  margin: 4px 0 2px;
+}
+.dc-h2 {
+  font-size: 20px;
+  margin: 4px 0 2px;
+}
+.dc-h3 {
+  font-size: 16px;
+}
+.dc-sub {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--dc-muted);
+}
+.dc-line {
+  min-height: 1.375em;
+}
+.dc-card ul,
+.dc-card ol {
+  margin: 0;
+  padding-left: 22px;
+}
+.dc-quote {
+  margin: 0;
+  padding-left: 12px;
+  border-left: 4px solid var(--dc-btn);
+  border-radius: 2px;
+}
+.dc-inline-code,
+.dc-code {
+  border-radius: 4px;
+  background: var(--dc-field);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+.dc-inline-code {
+  padding: 0.1em 0.3em;
+}
+.dc-code {
+  margin: 2px 0;
+  padding: 8px 10px;
+  border: 1px solid rgb(0 0 0 / 0.3);
+  white-space: pre-wrap;
+}
+.dc-link {
+  color: var(--dc-link);
+}
+.dc-mention {
+  padding: 0 2px;
+  border-radius: 3px;
+  background: rgb(88 101 242 / 0.3);
+  color: #c9cdfb;
+  font-weight: 500;
+}
+.dc-time {
+  padding: 0 2px;
+  border-radius: 3px;
+  background: rgb(255 255 255 / 0.06);
+}
+.dc-spoiler {
+  padding: 0 2px;
+  border-radius: 3px;
+  background: rgb(255 255 255 / 0.1);
+}
+
+/* Controls a module adds under the card */
+.dc-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.dc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  max-width: 100%;
+  padding: 2px 16px;
+  border-radius: 8px;
+  background: var(--dc-btn);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 16px;
+  transition: background-color 0.15s var(--ease-out);
+}
+.dc-btn:hover {
+  background: var(--dc-btn-hover);
+}
+.dc-select {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid rgb(0 0 0 / 0.3);
+  border-radius: 8px;
+  background: var(--dc-field);
+  color: var(--dc-muted);
+  font-size: 14px;
+}
+.dc-select__cue {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid #b5bac1;
+  border-bottom: 2px solid #b5bac1;
+  transform: translateY(-2px) rotate(45deg);
+}
+.dc-empty {
+  padding: 8px 12px;
+  border: 1px dashed rgb(255 255 255 / 0.18);
+  border-radius: 8px;
+  color: var(--dc-muted);
+  font-size: 13px;
+}
+
+/* Phones: paired fields stack, and a text block's tools sit on a row above it. */
+@media (max-width: 520px) {
+  .editor-group .field-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .block:not(.block--divider) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .block:not(.block--divider) > .row-tools {
+    order: -1;
+    justify-self: end;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block {
+    animation: none;
+  }
+}
