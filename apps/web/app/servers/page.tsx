@@ -1,5 +1,5 @@
 import { inviteUrl } from "@garrison/brand";
-import { listActiveGuilds } from "@garrison/db";
+import { isStaff, listActiveGuilds } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ViewTransition } from "react";
@@ -53,6 +53,7 @@ export default async function ServersPage() {
   const installed = known.filter((g) => active.has(g.id));
   const available = known.filter((g) => !active.has(g.id));
   const clientId = env().DISCORD_CLIENT_ID;
+  const staff = await isStaff(db, session.userId);
 
   return (
     <>
@@ -64,6 +65,11 @@ export default async function ServersPage() {
             Servers where you have Manage Server. Open one to run it from here, or add Garrison to
             one it isn't guarding yet.
           </p>
+          {staff ? (
+            <p>
+              <a href="/staff">Staff: every server's plan</a>
+            </p>
+          ) : null}
         </div>
 
         <section className="block" aria-labelledby="with-garrison">

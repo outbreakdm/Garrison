@@ -7,8 +7,9 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **Now:** Phase 1, plans foundation. Next: the staff page (every server's plan in one
-  list, `listServerPlans()` is ready), then push, apply migration 0022, add your staff row.
+- **Now:** Phase 1 code is done. To finish it: push, apply migration `0022_plans_comps` to
+  production, add your row to `platform_staff` (SQL under Owner bypass), deploy, then try
+  Give Pro free on your own server. After that: Phase 2 (Stripe) or Phase 3 (card editor).
 - **Branch:** `dashboard-first` (everything up to commit `1aed992` is deployed). Later
   commits (roadmap, plan list, staff and comps) are committed but not pushed or deployed.
 - **Before pushing:** `pnpm -r exec tsc --noEmit`, `pnpm test`, `pnpm exec biome check apps packages`.
@@ -22,7 +23,7 @@ then updates **Status** and the **Log** before stopping.
 | Phase | What | State |
 |---|---|---|
 | 0 | This roadmap | **Done** |
-| 1 | Plans foundation: one feature list, one entitlement check, owner bypass, comps, Plan page | **Started** |
+| 1 | Plans foundation: one feature list, one entitlement check, owner bypass, comps, Plan page | **Code done**, not deployed: needs migration 0022 applied and your staff row |
 | 2 | Stripe in test mode: Checkout, customer portal, webhook, then live keys | Not started |
 | 3 | Shared card editor (field editor + live preview + Pro-locked styling) | Not started |
 | 4 | Role menus (first module on the card editor) | Not started |
@@ -142,7 +143,9 @@ Card accent colour and footer text come from the same settings, read by `lib/car
       current plan, the Free vs Pro table from `FEATURES`, and for staff a "Give this server
       Pro for free" / "Put back on Free" form (`plan/actions.ts`, re-checks access and staff).
       Checked in the local preview at desktop and phone width (no sideways scroll).
-- [ ] Staff admin page: every server's plan; give or remove a comp.
+- [x] Staff page (`/staff`, 404 for everyone else): every server's plan with paid/free-Pro
+      counts, and Give Pro free / Put back on Free per server. Staff see a link to it on the
+      server picker. Checked in the local preview.
 
 ### Phase 3: shared card editor
 
@@ -207,3 +210,4 @@ Later phases get their checklists when they start.
   Committed `2a3141d`.
 - 2026-11-11: Plan page on the dashboard with the staff comp form. Type-check, 344 tests and
   Biome pass. Committed `fa468d2`; phone-width table fix after it.
+- 2026-11-11: Staff page and staff link on the server picker. All checks pass. Phase 1 code done.
