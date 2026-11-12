@@ -40,22 +40,12 @@ export type FeatureKey = keyof typeof FEATURES;
 export type Entitlements = { [K in FeatureKey]: (typeof FEATURES)[K]["free"] };
 
 /**
- * What a server can do. `staff` is the owner bypass (Discord user IDs in the
- * GARRISON_STAFF_IDS secret): staff get Pro everywhere, whatever the server pays for.
+ * What a server on this plan can do. Plans belong to servers, not people: the
+ * owner bypass is staff giving a server Pro for free (plan_set_comp), so the bot
+ * and dashboard always agree on what a server has.
  */
-export function entitlements(plan: GuildPlan, opts: { staff?: boolean } = {}): Entitlements {
-  const tier: GuildPlan = opts.staff ? "pro" : plan;
+export function entitlements(plan: GuildPlan): Entitlements {
   return Object.fromEntries(
-    Object.entries(FEATURES).map(([key, feature]) => [key, feature[tier]]),
+    Object.entries(FEATURES).map(([key, feature]) => [key, feature[plan]]),
   ) as Entitlements;
-}
-
-/** Parse the comma-separated GARRISON_STAFF_IDS value into a set of Discord user IDs. */
-export function parseStaffIds(raw: string | undefined): ReadonlySet<string> {
-  return new Set(
-    (raw ?? "")
-      .split(",")
-      .map((id) => id.trim())
-      .filter((id) => /^\d{17,20}$/.test(id)),
-  );
 }

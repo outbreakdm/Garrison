@@ -7,9 +7,9 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **Now:** Phase 1, plans foundation. Next: wire the staff bypass (third Phase 1 box).
-- **Branch:** `dashboard-first` (everything up to commit `1aed992` is deployed). The
-  roadmap and `plans.ts` work after it are not committed yet.
+- **Now:** Phase 1, plans foundation. Next: the dashboard **Plan** page, then the staff page.
+- **Branch:** `dashboard-first` (everything up to commit `1aed992` is deployed). Later
+  commits (roadmap, plan list, staff and comps) are committed but not pushed or deployed.
 - **Before pushing:** `pnpm -r exec tsc --noEmit`, `pnpm test`, `pnpm exec biome check apps packages`.
 - **Deploying:** "deploy" means commit, push, then
   `gh workflow run deploy-cloudflare.yml --repo outbreakdm/Garrison --ref <branch> -f target=everything -f register_commands=true`.
@@ -95,10 +95,13 @@ Card accent colour and footer text come from the same settings, read by `lib/car
 ### Owner bypass (staff)
 
 - Not a Discord role: roles belong to each server and any admin can make one called
-  "Owner". Staff are Discord user IDs in the `GARRISON_STAFF_IDS` secret (comma-separated),
-  set in GitHub secrets and the bot and dashboard environments.
-- Staff get Pro limits in every server they act in, and can give any server Pro for free
-  (a "complimentary" plan, recorded with who gave it and why).
+  "Owner". Staff are Discord user IDs in the `platform_staff` table, which only the
+  database owner can write. **One-time setup (owner):** in the Supabase SQL editor run
+  `INSERT INTO platform_staff (user_id) VALUES ('<your Discord user ID>');`
+  (migration `0022_plans_comps` must be applied first).
+- Plans belong to servers, not people, so the bot and dashboard always agree. The bypass is
+  staff giving any server Pro for free (a "complimentary" plan, recorded with who gave it
+  and why) through `plan_set_comp()`, which refuses non-staff and never touches a paid plan.
 - A staff-only admin page lists every server's plan, subscription status and comps.
   Every bypass and comp is logged.
 
@@ -126,11 +129,14 @@ Card accent colour and footer text come from the same settings, read by `lib/car
       `entitlements()`. Rally's `PLAN_LIMITS` is now derived from it (callers unchanged).
 - [x] Test (`plans.test.ts`): Free never exceeds Pro, Rally stays in step, staff get Pro.
       Keys used in code are checked by TypeScript (`FeatureKey`).
-- [ ] Staff bypass: `parseStaffIds()` exists in `plans.ts`. Still to do: read
-      `GARRISON_STAFF_IDS` in the bot (`ctx`) and dashboard (`lib/env.ts`), add `isStaff(userId)`,
-      pass `{ staff }` to `entitlements()` where a person acts (Rally template save first),
-      and add the secret to the deploy workflow's "every secret is set" check.
-- [ ] Comps: `guild_plans` gains `source`, `granted_by`, `note` (migration). Staff can set them.
+- [x] Staff and comps in the database (migration `0022_plans_comps`): `platform_staff`,
+      `guild_plans.source` (`stripe` | `comp`), `granted_by`, `note`, and
+      `plan_set_comp(actor, guild, comp, why)`. Repo: `isStaff`, `setComp`, `getPlanDetails`,
+      `listServerPlans` in `packages/db/src/repo/plans.ts`, tested against RLS.
+      (Replaced the earlier env-secret idea: a personal bypass can't apply to things the
+      bot does later with nobody acting, so the bypass is server-level.)
+- [ ] Apply migration `0022_plans_comps` to production and add the owner's row to
+      `platform_staff` (owner runs the SQL; see Owner bypass above).
 - [ ] Dashboard **Plan** page per server: current plan, the Free vs Pro table from the list.
 - [ ] Staff admin page: every server's plan; give or remove a comp.
 
@@ -192,4 +198,5 @@ Later phases get their checklists when they start.
 - 2026-11-11: Roadmap written. Discord messages moved to Components V2 and deployed
   (commit `1aed992`). Phase 1 started.
 - 2026-11-11: Plan feature list (`packages/db/src/plans.ts`) and tests added; Rally reads its
-  limits from it. Type-check, all tests and Biome pass. Not committed.
+  limits from it. Type-check, all tests and Biome pass. Committed `6504bbf`.
+- 2026-11-11: Staff and complimentary plans in the database (migration 0022, repo, tests).

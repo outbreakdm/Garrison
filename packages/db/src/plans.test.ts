@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { entitlements, FEATURES, parseStaffIds } from "./plans";
+import { entitlements, FEATURES } from "./plans";
 import { PLAN_LIMITS, TEMPLATE_HARD_MAX } from "./rally";
 
 describe("plans", () => {
@@ -13,20 +13,13 @@ describe("plans", () => {
     }
   });
 
-  it("reads limits per plan, and gives staff Pro everywhere", () => {
+  it("reads limits per plan", () => {
     expect(entitlements("free")["rally.templates"]).toBe(3);
     expect(entitlements("pro")["rally.notifyRole"]).toBe(true);
-    expect(entitlements("free", { staff: true })).toEqual(entitlements("pro"));
   });
 
   it("keeps Rally's limits in step with the list", () => {
     expect(PLAN_LIMITS.free.templates).toBe(FEATURES["rally.templates"].free);
     expect(TEMPLATE_HARD_MAX).toBe(FEATURES["rally.templates"].pro);
-  });
-
-  it("parses staff IDs and drops anything that isn't a Discord ID", () => {
-    const ids = parseStaffIds(" 123456789012345678, nope ,,98765432109876543 ");
-    expect([...ids]).toEqual(["123456789012345678", "98765432109876543"]);
-    expect(parseStaffIds(undefined).size).toBe(0);
   });
 });

@@ -9,6 +9,7 @@ export * from "./repo/guilds";
 export * from "./repo/ledger";
 export * from "./repo/metrics";
 export * from "./repo/ops";
+export * from "./repo/plans";
 export * from "./repo/quartermaster";
 export * from "./repo/rally";
 export * from "./repo/ranks";

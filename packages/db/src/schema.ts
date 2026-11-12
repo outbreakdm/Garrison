@@ -954,16 +954,35 @@ export const rallySettings = pgTable(
 
 export const guildPlan = pgEnum("guild_plan", ["free", "pro"]);
 
+/** Where a server's plan came from: a Stripe subscription, or given free by staff. */
+export const planSource = pgEnum("plan_source", ["stripe", "comp"]);
+
 /**
  * Which plan a server is on. No row means free. Neither the bot nor the
- * dashboard can write here: only billing (the database owner) changes plans.
+ * dashboard can write here: billing (the database owner) changes paid plans,
+ * and staff give or remove free Pro only through plan_set_comp().
  */
 export const guildPlans = pgTable("guild_plans", {
   guildId: text("guild_id")
     .primaryKey()
     .references(() => guilds.id, { onDelete: "cascade" }),
   plan: guildPlan("plan").notNull().default("free"),
+  source: planSource("source").notNull().default("stripe"),
+  /** Staff member (Discord user ID) who gave a complimentary plan. */
+  grantedBy: text("granted_by"),
+  /** Why a complimentary plan was given, for the staff page. */
+  note: text("note"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
+
+/**
+ * Garrison staff: the owner bypass. Discord user IDs, added only by the database
+ * owner (one SQL insert, never in the repo). Staff see the staff page and can give
+ * any server Pro for free. The dashboard reads it; nothing can write it.
+ */
+export const platformStaff = pgTable("platform_staff", {
+  userId: text("user_id").primaryKey(),
+  addedAt: timestamp("added_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
 
 export type RallySettings = typeof rallySettings.$inferSelect;
