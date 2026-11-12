@@ -97,7 +97,10 @@ export default async function TicketPage({
             </h2>
             <span className="g-help">
               {ticket.messageCount} {ticket.messageCount === 1 ? "message" : "messages"}
-              {ticket.expiresAt ? ` · kept until ${when(ticket.expiresAt)}` : ""}
+              {ticket.expiresAt ? ` · kept until ${when(ticket.expiresAt)}` : ""} ·{" "}
+              <a href={`/servers/${guild.id}/parley/${ticket.number}/transcript`} download>
+                Download as text
+              </a>
             </span>
           </div>
           {ticket.answers.length ? (
