@@ -66,4 +66,5 @@ export const ACTION_KIND: Record<string, string> = {
   qm_cancel: "Discard plan",
   post_role_menu: "Post role menu",
   bot_profile: "Change Garrison's profile",
+  post_message: "Post message",
 };

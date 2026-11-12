@@ -1,5 +1,6 @@
 export * from "./cards";
 export * from "./client";
+export * from "./messages";
 export * from "./plans";
 export * from "./profile";
 export * from "./rally";
@@ -9,6 +10,7 @@ export * from "./repo/cases";
 export * from "./repo/gatehouse";
 export * from "./repo/guilds";
 export * from "./repo/ledger";
+export * from "./repo/messages";
 export * from "./repo/metrics";
 export * from "./repo/ops";
 export * from "./repo/plans";
@@ -43,6 +45,7 @@ export type {
   Lockdown,
   LockdownSnapshotEntry,
   MemberXp,
+  MessageSend,
   ModCase,
   MoveSignupPayload,
   NewLedgerEvent,
@@ -50,6 +53,7 @@ export type {
   OpsEvent,
   OpsSettings,
   OpsSignup,
+  PostMessagePayload,
   PostRoleMenuPayload,
   QmBuild,
   QmCreated,

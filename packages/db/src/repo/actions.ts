@@ -15,6 +15,7 @@ import {
   type LockdownStartPayload,
   type ModActionPayload,
   type MoveSignupPayload,
+  type PostMessagePayload,
   type PostRoleMenuPayload,
   type PurgePayload,
   type QmPlanPayload,
@@ -48,7 +49,8 @@ export type QueueInput =
   | { kind: "qm_apply"; payload: IdPayload }
   | { kind: "qm_cancel"; payload: IdPayload }
   | { kind: "post_role_menu"; payload: PostRoleMenuPayload }
-  | { kind: "bot_profile"; payload: BotProfilePayload };
+  | { kind: "bot_profile"; payload: BotProfilePayload }
+  | { kind: "post_message"; payload: PostMessagePayload };
 
 /** Per server: at most this many requests waiting at once. */
 export const MAX_PENDING_PER_GUILD = 10;

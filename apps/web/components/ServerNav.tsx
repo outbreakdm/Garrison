@@ -16,6 +16,12 @@ const ITEMS = [
   { group: null, href: "/insignia", name: modules.insignia.name, plain: modules.insignia.plain },
   { group: null, href: "/herald", name: modules.herald.name, plain: modules.herald.plain },
   {
+    group: null,
+    href: "/dispatch",
+    name: modules.dispatch.name,
+    plain: modules.dispatch.plain,
+  },
+  {
     group: "Configure",
     href: "/quartermaster",
     name: modules.quartermaster.name,

@@ -10,6 +10,7 @@ import { createLogger } from "./lib/logger.js";
 import { Metrics } from "./lib/metrics.js";
 import { refreshOsrs } from "./modules/barracks/refresh.js";
 import { processDashboardActions } from "./modules/dashboard/actions.js";
+import { sweepMessages } from "./modules/dispatch/service.js";
 import { handleAuditLogEntry } from "./modules/gatehouse/anti-nuke.js";
 import { handleMemberJoin, sweepExpiredLockdowns } from "./modules/gatehouse/service.js";
 import { snapshotAllHealth } from "./modules/health/command.js";
@@ -88,6 +89,9 @@ client.once(Events.ClientReady, async (ready) => {
     );
     await sweepRally(ctx, ready).catch((error) => logger.error("Rally sweep failed", { error }));
     await sweepOps(ctx, ready).catch((error) => logger.error("Ops sweep failed", { error }));
+    await sweepMessages(ctx, ready).catch((error) =>
+      logger.error("Scheduled messages failed", { error }),
+    );
     await maybePruneLedger(ctx).catch((error) => logger.error("Ledger prune failed", { error }));
     await refreshOsrs(ctx).catch((error) => logger.error("OSRS refresh failed", { error }));
     await ctx.metrics?.flush(ctx).catch((error) => logger.error("Metrics flush failed", { error }));

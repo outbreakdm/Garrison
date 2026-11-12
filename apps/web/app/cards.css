@@ -315,6 +315,9 @@
   align-items: center;
   animation: block-in 0.2s var(--ease-out);
 }
+.option--link {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) auto;
+}
 .option__emoji {
   text-align: center;
   padding-inline: 4px;
@@ -414,6 +417,13 @@
   }
   .option__role {
     grid-column: 1 / -1;
+  }
+  .option--link {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .option--link > input[type="url"] {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
   .option__desc,
   .option__note {

@@ -147,6 +147,28 @@ export function PreviewButtons({ labels }: { labels: { label: string; emoji: str
   );
 }
 
+/** Link buttons, drawn like Discord's: grey, with the external-link mark. */
+export function PreviewLinkButtons({ labels }: { labels: string[] }) {
+  return (
+    <div className="dc-buttons">
+      {labels.map((label, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: labels can repeat while typing
+        <span className="dc-btn" key={i}>
+          {label || "Label"}
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+            <path
+              d="M9 3h4v4M13 3 7.5 8.5M11 9.5V13H3V5h3.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+          </svg>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 /** A role menu's dropdown, closed, as Discord draws it. */
 export function PreviewDropdown({ placeholder }: { placeholder: string }) {
   return (

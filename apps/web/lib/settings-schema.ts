@@ -228,6 +228,7 @@ export const FIELD_LABELS: Record<string, string> = {
   rules: "Escalation ladder",
   templates: "LFG templates",
   menus: "Role menus",
+  messages: "Messages",
   joinEnabled: "Welcome card",
   joinChannelId: "Welcome channel",
   joinCard: "Welcome card text",

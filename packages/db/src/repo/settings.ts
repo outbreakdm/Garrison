@@ -5,6 +5,7 @@ import {
   escalationRules,
   gatehouseSettings,
   ledgerSettings,
+  messageSettings,
   opsSettings,
   rallySettings,
   rankRewards,
@@ -48,6 +49,8 @@ export const EDITABLE_FIELDS = {
   rewards: ["rewards"],
   // Role menus are checked with checkRoleMenus before they get here.
   roles: ["menus"],
+  // Saved messages are checked with checkMessages before they get here.
+  messages: ["messages"],
   // Cards are checked with checkWelcome before they get here.
   welcome: [
     "joinEnabled",
@@ -173,10 +176,19 @@ const TABLES = {
   rally: rallySettings,
   roles: roleMenuSettings,
   welcome: welcomeSettings,
+  messages: messageSettings,
 } as const;
 
 /** Modules whose settings row is created on first use, by the bot or the dashboard. */
-const LAZY = new Set<SettingsModule>(["ops", "ranks", "ledger", "rally", "roles", "welcome"]);
+const LAZY = new Set<SettingsModule>([
+  "ops",
+  "ranks",
+  "ledger",
+  "rally",
+  "roles",
+  "welcome",
+  "messages",
+]);
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 type Row = Record<string, unknown>;
@@ -262,6 +274,12 @@ async function writeRow(tx: Tx, module: SettingsModule, guildId: string, values:
         .update(rallySettings)
         .set(set as Partial<typeof rallySettings.$inferInsert>)
         .where(eq(rallySettings.guildId, guildId));
+      return;
+    case "messages":
+      await tx
+        .update(messageSettings)
+        .set(set as Partial<typeof messageSettings.$inferInsert>)
+        .where(eq(messageSettings.guildId, guildId));
       return;
     case "welcome":
       await tx

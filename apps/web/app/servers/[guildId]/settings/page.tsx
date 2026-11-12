@@ -241,6 +241,11 @@ export default async function SettingsPage({
               value="Roles and wording per game"
             />
             <Place
+              href={`${base}/dispatch`}
+              name="Messages"
+              value="Cards posted now or on a schedule"
+            />
+            <Place
               href={`${base}/herald`}
               name="Welcome"
               value="Join and leave cards, roles on join"
@@ -306,7 +311,7 @@ export default async function SettingsPage({
                     {Object.entries(h.changes).map(([field, { from, to }]) => (
                       <div key={field}>
                         {FIELD_LABELS[field] ?? field}:{" "}
-                        {field === "templates" || field === "menus"
+                        {field === "templates" || field === "menus" || field === "messages"
                           ? templatesChangeText(from, to)
                           : `${describe(field, from, names, roleNames)} → ${describe(field, to, names, roleNames)}`}
                       </div>

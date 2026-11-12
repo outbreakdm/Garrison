@@ -24,6 +24,7 @@ import { z } from "zod";
 import type { BotContext } from "../../commands/types.js";
 import { cardMessage } from "../../lib/card.js";
 import { safeText } from "../../lib/text.js";
+import { postMessageNow } from "../dispatch/service.js";
 import { restoreQuarantine } from "../gatehouse/anti-nuke.js";
 import { verifyPanel } from "../gatehouse/embeds.js";
 import { invalidateGatehouseSettings, lockGuild, unlockGuild } from "../gatehouse/service.js";
@@ -455,6 +456,8 @@ export async function runDashboardAction(
       return doPostRoleMenu(ctx, guild, member, action.payload);
     case "bot_profile":
       return applyBotProfile(ctx, guild, action.payload);
+    case "post_message":
+      return postMessageNow(ctx, guild, member, action.payload);
     default:
       return fail("Garrison doesn't know that request.");
   }

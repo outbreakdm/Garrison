@@ -111,6 +111,8 @@ try {
 if (env) {
   // Newest tables first: if these exist with grants, everything older does too.
   const latest = [
+    "message_settings",
+    "message_sends",
     "welcome_settings",
     "role_menu_settings",
     "role_menu_posts",

@@ -7,16 +7,20 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **Now:** Phases 3 (card editor), 4 (role menus), 5 (bot profile per server) and 6
-  (Welcome) are code done, committed, not pushed or deployed. **Before deploying:** apply
-  migrations `0023_role_menus` and `0024_welcome` to production (`DATABASE_MIGRATION_URL`
+- **Now:** Phases 3 (card editor), 4 (role menus), 5 (bot profile per server), 6 (Welcome)
+  and 8 (message builder) are code done, committed, not pushed or deployed. Phase 7
+  (Tickets) is skipped for now: it needs the owner's decision on storing message content
+  (see Open decisions). **Before deploying:** apply migrations `0023_role_menus`,
+  `0024_welcome` and `0025_messages` to production (`DATABASE_MIGRATION_URL`
   set, `pnpm db:migrate`, see DEPLOY.md); the bot preflight checks for their tables, so a
   deploy before them stops at preflight.
   After deploying: post a menu on a test server and press its buttons (the one part not
   checked locally, since no bot runs in the local preview), change Garrison's nickname
-  from Settings, and turn on a welcome card and join on a test account. Garrison's invite now asks for Change Nickname, so existing servers see it
+  from Settings, turn on a welcome card and join on a test account, and schedule a message
+  a few minutes ahead. Garrison's invite now asks for Change Nickname, so existing servers see it
   in /health until they re-invite or tick it on Garrison's role. Next: Phase 2 (Stripe) once
-  a price is decided, or Phase 7 (Tickets / modmail).
+  a price is decided, Phase 7 (Tickets) once message content is decided, or Phase 9
+  (custom rank cards).
 - **Branch:** `dashboard-first` (everything up to commit `1aed992` is deployed). Later
   commits (roadmap, plan list, staff and comps) are committed but not pushed or deployed.
 - **Before pushing:** `pnpm -r exec tsc --noEmit`, `pnpm test`, `pnpm exec biome check apps packages`.
@@ -36,8 +40,8 @@ then updates **Status** and the **Log** before stopping.
 | 4 | Role menus (first module on the card editor) | **Code done**, not deployed: needs migration 0023 |
 | 5 | Bot profile per server (name, avatar, banner, bio, card colours) | **Code done** (not deployed); card colour and footer defaults moved to later |
 | 6 | Welcome (messages, leave messages, roles on join) | **Code done**, not deployed: needs migration 0024 |
-| 7 | Tickets / modmail | Not started |
-| 8 | Message builder (post now or on a schedule) | Not started |
+| 7 | Tickets / modmail | **Waiting on a decision**: transcripts store message content (Open decisions) |
+| 8 | Message builder (post now or on a schedule) | **Code done**, not deployed: needs migration 0025 |
 | 9 | Custom rank cards with character details | Not started |
 | 10 | Stream and video alerts (Twitch, YouTube, Kick) | Not started |
 | 11 | Giveaways and starboard | Not started |
@@ -249,6 +253,26 @@ Card accent colour and footer text come from the same settings, read by `lib/car
 - Later: image welcome cards with the member's avatar (needs rendering), roles on join by
   condition (Pro), and checking real joins against a live server after deploy.
 
+### Phase 8: message builder (module "Dispatch", plain label "Messages")
+
+- [x] Rules (`packages/db/src/messages.ts`, browser-safe): saved messages (up to 50) are a
+      card, up to 5 link buttons (Pro, `messages.extras`), a channel and a schedule: once,
+      daily or weekly (repeats are Pro). Free schedules 3, Pro 50 (`messages.scheduled`);
+      extra schedules pause after a downgrade, saved repeats and buttons pause too.
+      Times are wall-clock times in the server's time zone (Settings → Server), so weekly
+      sends keep their hour across daylight saving (tested). A send missed by over an hour
+      (bot offline) is skipped, not sent late.
+- [x] Storage: migration `0025_messages`: `message_settings` (the list, Settings history and
+      undo) and `message_sends` (written by the bot; each send is claimed before posting, so
+      nothing goes out twice). Request kind `post_message` for "Post now".
+- [x] Bot (`apps/bot/src/modules/dispatch/`): the minute sweep posts what's due; "Post now"
+      checks the requester can post in the channel.
+- [x] Dashboard (`/servers/:id/dispatch`, nav "Dispatch · Messages"): starting points
+      (Announcement, Rules, Weekly reminder, blank), the card editor, link buttons, where and
+      when, next and last send, Post now. Checked in the local preview.
+- Later: role pings on a scheduled message (needs a mention-safe design), editing a message
+  already posted, a calendar of upcoming sends.
+
 Later phases get their checklists when they start.
 
 ## Depth for current modules (backlog)
@@ -315,4 +339,8 @@ Later phases get their checklists when they start.
 - 2026-11-12: Phase 5 code done: Garrison's nickname, avatar, banner and bio per server.
   Type-check, 368 tests and Biome pass; checked in the local preview. Committed `cf6d1a1`.
 - 2026-11-12: Phase 6 code done: Welcome (join, leave and DM cards, roles on join), migration
-  0024. Type-check, 373 tests and Biome pass; checked in the local preview.
+  0024. Type-check, 373 tests and Biome pass; checked in the local preview. Committed
+  `4c08fe0`, plus a warning when roles on join could get ahead of verification (`560bb43`).
+- 2026-11-12: Phase 7 skipped pending the message-content decision. Phase 8 code done:
+  message builder with schedules, migration 0025. Type-check, 380 tests and Biome pass;
+  checked in the local preview.

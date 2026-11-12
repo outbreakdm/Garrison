@@ -16,6 +16,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { CustomCard } from "./cards";
+import type { SavedMessage } from "./messages";
 import type { GuildPlan } from "./plans";
 import type { RallyTemplate, RallyWording } from "./rally";
 import type { RoleMenu } from "./role-menus";
@@ -425,6 +426,7 @@ export const settingsModule = pgEnum("settings_module", [
   "rewards",
   "roles",
   "welcome",
+  "messages",
 ]);
 
 /** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */
@@ -803,6 +805,7 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "qm_cancel",
   "post_role_menu",
   "bot_profile",
+  "post_message",
 ]);
 export const dashboardActionStatus = pgEnum("dashboard_action_status", [
   "pending",
@@ -857,6 +860,11 @@ export interface BotProfilePayload {
   bio?: string | null;
   avatar?: string | null;
   banner?: string | null;
+}
+/** Post a saved message now. */
+export interface PostMessagePayload {
+  messageId: string;
+  channelId: string;
 }
 /** Post a role menu, or update the message it was last posted as. */
 export interface PostRoleMenuPayload {
@@ -1048,6 +1056,50 @@ export const roleMenuPosts = pgTable(
 ).enableRLS();
 
 export type RoleMenuPost = typeof roleMenuPosts.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Message builder (Dispatch)
+// ---------------------------------------------------------------------------
+
+/** A server's saved messages, edited on the dashboard as one value (with history and undo). */
+export const messageSettings = pgTable(
+  "message_settings",
+  {
+    guildId: text("guild_id")
+      .primaryKey()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    messages: jsonb("messages").$type<SavedMessage[]>().notNull().default(sql`'[]'::jsonb`),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      "messages_list",
+      sql`jsonb_typeof(${t.messages}) = 'array' AND jsonb_array_length(${t.messages}) <= 50`,
+    ),
+  ],
+).enableRLS();
+
+/**
+ * Every send of a saved message, written by the bot. A scheduled send is claimed
+ * (inserted) before it's posted, so the same occurrence can never go out twice.
+ */
+export const messageSends = pgTable(
+  "message_sends",
+  {
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    messageId: text("message_id").notNull(),
+    /** The scheduled time this send is for; the time of the request for "post now". */
+    occurrence: timestamp("occurrence", { withTimezone: true }).notNull(),
+    channelId: text("channel_id").notNull(),
+    discordMessageId: text("discord_message_id"),
+    sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.guildId, t.messageId, t.occurrence] })],
+).enableRLS();
+
+export type MessageSend = typeof messageSends.$inferSelect;
 
 // ---------------------------------------------------------------------------
 // Welcome (Herald)

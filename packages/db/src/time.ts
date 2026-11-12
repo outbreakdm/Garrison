@@ -73,3 +73,19 @@ export function addWeeksInZone(date: Date, weeks: number, tz: string): Date {
     tz,
   );
 }
+
+/** Same local time, `days` days later, in `tz`. */
+export function addDaysInZone(date: Date, days: number, tz: string): Date {
+  const w = wallTimeIn(date, tz);
+  const shifted = new Date(Date.UTC(w.year, w.month - 1, w.day + days));
+  return zonedToUtc(
+    {
+      year: shifted.getUTCFullYear(),
+      month: shifted.getUTCMonth() + 1,
+      day: shifted.getUTCDate(),
+      hour: w.hour,
+      minute: w.minute,
+    },
+    tz,
+  );
+}

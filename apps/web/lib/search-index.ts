@@ -81,6 +81,12 @@ export const SEARCH_INDEX: SearchEntry[] = [
     "welcome join leave goodbye greet dm autorole roles on join new members card",
   ),
   page(
+    "/dispatch",
+    modules.dispatch.name,
+    modules.dispatch.plain,
+    "message builder announcement embed card schedule post rules reminder repeat",
+  ),
+  page(
     "/quartermaster",
     modules.quartermaster.name,
     modules.quartermaster.plain,

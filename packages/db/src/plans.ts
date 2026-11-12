@@ -12,6 +12,7 @@ export type GuildPlan = (typeof PLANS)[number];
 
 type Module =
   | "cards"
+  | "messages"
   | "profile"
   | "roles"
   | "welcome"
@@ -50,6 +51,18 @@ export const FEATURES = {
   "cards.footer": {
     module: "cards",
     about: "Your own footer on cards, or none",
+    free: false,
+    pro: true,
+  },
+  "messages.scheduled": {
+    module: "messages",
+    about: "Scheduled messages",
+    free: 3,
+    pro: 50,
+  },
+  "messages.extras": {
+    module: "messages",
+    about: "Repeating schedules and link buttons on messages",
     free: false,
     pro: true,
   },

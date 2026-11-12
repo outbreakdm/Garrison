@@ -72,6 +72,7 @@ export const modules = {
   ranks: { name: "Ranks", plain: "Leveling" },
   insignia: { name: "Insignia", plain: "Role menus" },
   herald: { name: "Herald", plain: "Welcome" },
+  dispatch: { name: "Dispatch", plain: "Messages" },
   quartermaster: { name: "Quartermaster", plain: "AI builder" },
 } as const;
 

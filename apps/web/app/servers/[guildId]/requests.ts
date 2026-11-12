@@ -6,6 +6,7 @@ import {
   getCase,
   getGuildPlan,
   getLfgPost,
+  getMessages,
   getOpsEvent,
   getQmBuild,
   getQmBuildByVersion,
@@ -14,6 +15,7 @@ import {
   isPaused,
   type QueueInput,
   queueDashboardAction,
+  readMessages,
   readRoleMenus,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
@@ -30,7 +32,16 @@ import { checkGuildAccess } from "@/lib/session";
  * the requester's own Discord permissions.
  */
 
-const PAGES = new Set(["", "gatehouse", "watch", "rally", "quartermaster", "insignia", "settings"]);
+const PAGES = new Set([
+  "",
+  "gatehouse",
+  "watch",
+  "rally",
+  "quartermaster",
+  "insignia",
+  "settings",
+  "dispatch",
+]);
 /** A member's page under Watch is the one page with an ID in its path. */
 const MEMBER_PAGE = /^watch\/member\/\d{17,20}$/;
 const SNOWFLAKE = /^\d{17,20}$/;
@@ -127,6 +138,15 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       if (!menu.options.length) return { ok: false, error: "menu_empty" };
       if (!channels.some((c) => c.id === channelId)) return { ok: false, error: "channel" };
       return { ok: true, input: { kind, payload: { menuId: menu.id, channelId } } };
+    }
+    case "post_message": {
+      const messageId = field(form, "messageId");
+      const channelId = field(form, "channelId");
+      const m = readMessages(await getMessages(db, guildId)).find((x) => x.id === messageId);
+      if (!m) return { ok: false, error: "not_found" };
+      const channels = await listTextChannels(guildId).catch(() => []);
+      if (!channels.some((c) => c.id === channelId)) return { ok: false, error: "channel" };
+      return { ok: true, input: { kind, payload: { messageId: m.id, channelId } } };
     }
     case "bot_profile": {
       let raw: unknown;
