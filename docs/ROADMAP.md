@@ -7,12 +7,12 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **Now:** Phases 1 and 3 to 11 and the depth backlog are **deployed** (2026-11-12, run
-  43328874352). Migrations through `0048_server_templates` are applied in production and
-  recorded in `drizzle.__drizzle_migrations` (0021 and 0022 had been applied by hand), so
-  `pnpm db:migrate` starts from 0049. Slash commands are registered (26). **Not yet in
-  production:** `0049_ai_usage` and the Quartermaster credits (committed; apply and deploy
-  before setting `ANTHROPIC_API_KEY`).
+- **Now:** Phases 1 and 3 to 11, the depth backlog and the Quartermaster cost controls are
+  **deployed** (2026-11-12, run 43331916135). Migrations through `0049_ai_usage` are applied
+  in production and recorded in `drizzle.__drizzle_migrations` (0021 and 0022 had been
+  applied by hand), so `pnpm db:migrate` starts from 0050. Slash commands are registered
+  (26). Quartermaster stays off until `ANTHROPIC_API_KEY` is set as a GitHub secret; it's
+  safe to set now (Haiku, daily credits, $5/day cap).
   Still to check on a test server: post a role menu and press its buttons, change Garrison's
   nickname from Settings, a welcome card on join, a scheduled message, a ticket from open to
   transcript, `/rank` drawing on the real host, a giveaway and a starred message.
@@ -21,7 +21,7 @@ then updates **Status** and the **Log** before stopping.
   server template then applying it in a second server you own. The calendar feed link should
   open in a calendar app. Next: Phase 2 (Stripe) once a price is set. The depth backlog is
   done; what's left needs the owner (Kick alerts, YouTube live, uploaded backgrounds).
-- **Branch:** `dashboard-first`, pushed; everything through commit `506f9d0` is deployed.
+- **Branch:** `dashboard-first`, pushed; everything through commit `c1c5995` is deployed.
 - **Before pushing:** `pnpm -r exec tsc --noEmit`, `pnpm test`, `pnpm exec biome check apps packages`.
 - **Deploying:** "deploy" means commit, push, then
   `gh workflow run deploy-cloudflare.yml --repo outbreakdm/Garrison --ref <branch> -f target=everything -f register_commands=true`.
@@ -419,7 +419,7 @@ Later phases get their checklists when they start.
   5.5 called directly through Anthropic, daily credits (Free 3, Pro 15), 10 attempts an hour,
   output capped at 4,000 tokens, a $5/day global spend cap (`QM_DAILY_BUDGET_USD`). Worst
   case $1.17 a month per Pro server against $4.02 net. Needs migration `0049_ai_usage` in
-  production before `ANTHROPIC_API_KEY` is set.
+  production (applied 2026-11-12).
 - **Rank card uploads:** stored in Cloudflare R2 (`garrison-media`, served at
   `media.garrisonbot.com`); the owner enables R2 in the Cloudflare dashboard first. Default
   backgrounds ship in the repo. Plan and image prompts: `docs/rank-card-backgrounds.md`.
@@ -551,4 +551,4 @@ Decided (2026-11-12, owner):
 - 2026-11-12: Quartermaster moved to Claude Haiku 5.5 (direct Anthropic) with daily credits
   (Free 3, Pro 15, refunded on failure), 10 attempts an hour, a 4,000-token output cap, a global
   daily spend cap (QM_DAILY_BUDGET_USD, $5) and an ai_usage ledger of every call's tokens and
-  cost. Migration 0049. Not deployed.
+  cost. Migration 0049. Deployed.
