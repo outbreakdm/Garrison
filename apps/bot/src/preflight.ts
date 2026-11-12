@@ -114,7 +114,11 @@ if (env) {
   await checkDiscord(env.DISCORD_TOKEN, env.DISCORD_CLIENT_ID);
   await checkDb("Database (bot)", env.DATABASE_URL, "garrison_bot", latest);
   if (process.env.WEB_DATABASE_URL)
-    await checkDb("Database (dashboard)", process.env.WEB_DATABASE_URL, "garrison_web", latest);
+    // platform_staff (0022) is the dashboard's newest table; the bot has no grant on it.
+    await checkDb("Database (dashboard)", process.env.WEB_DATABASE_URL, "garrison_web", [
+      "platform_staff",
+      ...latest,
+    ]);
   console.log("Dashboard");
   const app = process.env.APP_URL;
   if (!app) warn("APP_URL isn't set: the dashboard won't start.");

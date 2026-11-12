@@ -10,6 +10,9 @@ then updates **Status** and the **Log** before stopping.
 - **Now:** Phase 1 code is done. To finish it: push, apply migration `0022_plans_comps` to
   production, add your row to `platform_staff` (SQL under Owner bypass), deploy, then try
   Give Pro free on your own server. After that: Phase 2 (Stripe) or Phase 3 (card editor).
+  The deploy preflight now requires `platform_staff`, so deploying before the migration
+  stops at preflight instead of breaking the server picker. Migrate with
+  `DATABASE_MIGRATION_URL` set: `pnpm db:migrate` (see DEPLOY.md).
 - **Branch:** `dashboard-first` (everything up to commit `1aed992` is deployed). Later
   commits (roadmap, plan list, staff and comps) are committed but not pushed or deployed.
 - **Before pushing:** `pnpm -r exec tsc --noEmit`, `pnpm test`, `pnpm exec biome check apps packages`.
