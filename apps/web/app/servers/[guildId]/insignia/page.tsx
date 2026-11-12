@@ -14,7 +14,7 @@ import Link from "next/link";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { FormPanel } from "@/components/settings";
 import { getDb } from "@/lib/db";
-import { botTopPosition, listGuildRoles, listTextChannels } from "@/lib/discord";
+import { botTopPosition, listGuildEmojis, listGuildRoles, listTextChannels } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
 import { isDangerousRole } from "@/lib/permissions";
 import { requireGuildAccess } from "@/lib/session";
@@ -37,13 +37,14 @@ export default async function RoleMenusPage({
   const { guild } = await requireGuildAccess(guildId);
   const query = await searchParams;
   const db = await getDb();
-  const [raw, plan, posts, channels, roles, botTop] = await Promise.all([
+  const [raw, plan, posts, channels, roles, botTop, serverEmoji] = await Promise.all([
     getRoleMenus(db, guild.id),
     getGuildPlan(db, guild.id),
     listRoleMenuPosts(db, guild.id),
     listTextChannels(guild.id).catch(() => []),
     listGuildRoles(guild.id).catch(() => []),
     botTopPosition(guild.id),
+    listGuildEmojis(guild.id).catch(() => []),
   ]);
   const ent = entitlements(plan);
   const menus = readRoleMenus(raw);
@@ -198,6 +199,7 @@ export default async function RoleMenusPage({
                 saveAction={saveMenu}
                 removeAction={removeMenu}
                 requestAction={requestAction}
+                serverEmoji={serverEmoji}
               />
             </div>
           </details>

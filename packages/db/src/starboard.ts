@@ -5,9 +5,9 @@
  */
 
 import { ACCENT, STANDARD_ACCENT } from "./cards";
+import { isCustomEmoji, isEmoji } from "./emoji";
 import type { Entitlements } from "./plans";
 import type { Parsed } from "./rally";
-import { isOneEmoji } from "./role-menus";
 
 export interface StarboardConfig {
   enabled: boolean;
@@ -44,7 +44,7 @@ export function readStarboard(raw: Partial<Record<keyof StarboardConfig, unknown
     enabled: raw.enabled === true,
     channelId:
       typeof raw.channelId === "string" && SNOWFLAKE.test(raw.channelId) ? raw.channelId : null,
-    emoji: typeof raw.emoji === "string" && isOneEmoji(raw.emoji) ? raw.emoji : "⭐",
+    emoji: typeof raw.emoji === "string" && isEmoji(raw.emoji) ? raw.emoji : "⭐",
     threshold:
       Number.isInteger(threshold) && threshold >= 1 && threshold <= STARBOARD_LIMITS.threshold
         ? threshold
@@ -70,8 +70,13 @@ export function checkStarboard(
   if (enabled && !channelId)
     return { ok: false, error: "Pick the channel starred messages go to." };
   const emoji = typeof raw.emoji === "string" ? raw.emoji.trim() : "";
-  if (!isOneEmoji(emoji))
-    return { ok: false, error: "The emoji must be one standard emoji, like ⭐." };
+  if (!isEmoji(emoji))
+    return {
+      ok: false,
+      error: "The emoji must be one emoji, like ⭐, or one of this server's emoji.",
+    };
+  if (isCustomEmoji(emoji) && !ent["emoji.custom"] && emoji !== before.emoji)
+    return { ok: false, error: "Server emoji are part of Garrison Pro." };
   const threshold = Number(raw.threshold);
   if (!Number.isInteger(threshold) || threshold < 1 || threshold > STARBOARD_LIMITS.threshold)
     return {

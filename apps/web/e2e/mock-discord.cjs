@@ -97,6 +97,11 @@ http
       if (p) return json(200, person(p));
       return g.members[m[3]] ? json(200, { roles: g.members[m[3]] }) : json(404, {});
     }
-    return json(200, { id: m[1], owner_id: g.owner_id, roles: g.roles });
+    return json(200, {
+      id: m[1],
+      owner_id: g.owner_id,
+      roles: g.roles,
+      emojis: [{ id: "320000000000000001", name: "raid", animated: false }],
+    });
   })
   .listen(4100);

@@ -3,8 +3,10 @@
 import {
   CARD_PRO_FIELDS,
   type Entitlements,
-  isOneEmoji,
+  isCustomEmoji,
+  isEmoji,
   lockedCardFields,
+  newCustomEmoji,
   newId,
   TICKET_LIMITS,
   type TicketPanel,
@@ -13,6 +15,7 @@ import {
 import { useMemo, useState } from "react";
 import { CardEditor, move, ProNotice, ProTag, RowTools } from "@/components/cards/CardEditor";
 import { CardPreview, PreviewButtons } from "@/components/cards/CardPreview";
+import { EmojiInput, type ServerEmojiChoice } from "@/components/cards/EmojiInput";
 
 type Action = (form: FormData) => Promise<void>;
 
@@ -35,6 +38,7 @@ export function TicketPanelEditor({
   saveAction,
   removeAction,
   requestAction,
+  serverEmoji,
 }: {
   guildId: string;
   saved: TicketPanel;
@@ -47,6 +51,7 @@ export function TicketPanelEditor({
   saveAction: Action;
   removeAction: Action;
   requestAction: Action;
+  serverEmoji: ServerEmojiChoice[];
 }) {
   const [panel, setPanel] = useState<TicketPanel>(saved);
   const [channelId, setChannelId] = useState(postedIn ?? channels[0]?.id ?? "");
@@ -70,11 +75,18 @@ export function TicketPanelEditor({
       const was = saved.topics.find((s) => s.id === t.id);
       return t.questions.length > 0 && !sameQuestions(t.questions, was?.questions ?? []);
     });
+  const emojiLocked =
+    !ent["emoji.custom"] &&
+    newCustomEmoji(
+      panel.topics.map((t) => t.emoji),
+      saved.topics.map((t) => t.emoji),
+    ).length > 0;
   const topicsLocked = panel.topics.length > limit && panel.topics.length > saved.topics.length;
   const locked = [
     ...lockedCard.map((f) => f.label),
     ...(formLocked ? ["A form before a ticket opens"] : []),
     ...(topicsLocked ? [`More than ${limit} topics`] : []),
+    ...(emojiLocked ? ["A server emoji"] : []),
   ];
   const undoPro = () =>
     setPanel((p) => {
@@ -84,13 +96,16 @@ export function TicketPanelEditor({
       const topics = p.topics
         .map((t) => {
           const was = saved.topics.find((s) => s.id === t.id);
-          return formLocked ? { ...t, questions: was?.questions ?? [] } : t;
+          const kept = formLocked ? { ...t, questions: was?.questions ?? [] } : t;
+          return emojiLocked && isCustomEmoji(kept.emoji)
+            ? { ...kept, emoji: was?.emoji ?? null }
+            : kept;
         })
         .slice(0, topicsLocked ? Math.max(limit, saved.topics.length) : undefined);
       return { ...p, card, topics };
     });
 
-  const badEmoji = panel.topics.some((t) => t.emoji && !isOneEmoji(t.emoji));
+  const badEmoji = panel.topics.some((t) => t.emoji && !isEmoji(t.emoji));
   const longQuestion = panel.topics.some((t) =>
     t.questions.some((q) => q.length > TICKET_LIMITS.question),
   );
@@ -156,7 +171,7 @@ export function TicketPanelEditor({
               </p>
               <div className="option-list">
                 {panel.topics.map((t, i) => {
-                  const emojiOk = !t.emoji || isOneEmoji(t.emoji);
+                  const emojiOk = !t.emoji || isEmoji(t.emoji);
                   const update = (patch: Partial<TicketTopic>) =>
                     setTopics(panel.topics.map((x, j) => (j === i ? { ...x, ...patch } : x)));
                   return (
@@ -170,14 +185,11 @@ export function TicketPanelEditor({
                         required
                         onChange={(e) => update({ label: e.target.value })}
                       />
-                      <input
-                        className={`g-input option__emoji${emojiOk ? "" : " g-input--invalid"}`}
-                        aria-label={`Emoji for topic ${i + 1}`}
-                        aria-invalid={!emojiOk}
-                        placeholder="Emoji"
-                        value={t.emoji ?? ""}
-                        maxLength={16}
-                        onChange={(e) => update({ emoji: e.target.value.trim() || null })}
+                      <EmojiInput
+                        label={`Emoji for topic ${i + 1}`}
+                        value={t.emoji}
+                        serverEmoji={serverEmoji}
+                        onChange={(emoji) => update({ emoji })}
                       />
                       <RowTools
                         index={i}
@@ -216,7 +228,7 @@ export function TicketPanelEditor({
                       ) : null}
                       {!emojiOk ? (
                         <p className="g-help g-help--error option__note">
-                          Use one standard emoji, like 🎫.
+                          Use one emoji, like 🎫, or type one of this server's as :name:.
                         </p>
                       ) : null}
                       {t.questions.some((q) => q.length > TICKET_LIMITS.question) ? (

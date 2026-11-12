@@ -1377,3 +1377,10 @@
     grid-column: 1 / -1;
   }
 }
+
+/* A server emoji in a preview, at Discord's button size. */
+.dc-emoji {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}

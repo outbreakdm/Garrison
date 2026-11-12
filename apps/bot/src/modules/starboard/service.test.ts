@@ -29,3 +29,15 @@ describe("starboard reposts", () => {
     expect(json).toContain("Jump to message");
   });
 });
+
+describe("starboard emoji", () => {
+  it("matches server emoji by ID and standard ones by character", async () => {
+    const { sameEmoji } = await import("./service.js");
+    expect(sameEmoji("⭐", { id: null, name: "⭐" })).toBe(true);
+    expect(sameEmoji("⭐", { id: "1", name: "⭐" })).toBe(false);
+    expect(sameEmoji("<:gold:320000000000000001>", { id: "320000000000000001", name: "x" })).toBe(
+      true,
+    );
+    expect(sameEmoji("<:gold:320000000000000001>", { id: null, name: "gold" })).toBe(false);
+  });
+});

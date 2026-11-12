@@ -485,3 +485,5 @@ Decided (2026-11-12, owner):
   the ping (migration 0034).
 - 2026-11-12: Follow-ups: `/giveaway start | end | reroll | cancel` in Discord (Manage Server),
   and repeating giveaways on Pro: "Run again when it ends" (migration 0035).
+- 2026-11-12: Follow-up: server emoji (Pro, `emoji.custom`) in role menus, ticket topics and the
+  starboard. Type :name: on the dashboard; previews draw the emoji; each must be this server's.

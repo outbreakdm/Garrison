@@ -58,6 +58,12 @@ export const FEATURES = {
     free: false,
     pro: true,
   },
+  "emoji.custom": {
+    module: "cards",
+    about: "Your server's own emoji in role menus, ticket panels and the starboard",
+    free: false,
+    pro: true,
+  },
   "messages.scheduled": {
     module: "messages",
     about: "Scheduled messages",

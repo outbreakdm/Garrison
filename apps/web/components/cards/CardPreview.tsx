@@ -2,6 +2,8 @@
 
 import {
   type CustomCard,
+  customEmojiUrl,
+  parseEmoji,
   previewableImage,
   STANDARD_ACCENT,
   STANDARD_FOOTER,
@@ -131,6 +133,15 @@ function PreviewImage({
   );
 }
 
+/** One emoji in a preview: a server emoji as its image from Discord's CDN. */
+export function PreviewEmoji({ emoji }: { emoji: string }) {
+  const e = parseEmoji(emoji);
+  if (e?.kind === "custom")
+    // biome-ignore lint/performance/noImgElement: a 20px emoji from Discord's CDN, not page art
+    return <img className="dc-emoji" src={customEmojiUrl(e)} alt="" width={20} height={20} />;
+  return <span aria-hidden="true">{emoji}</span>;
+}
+
 /** A role menu's buttons, drawn like Discord's grey buttons. */
 export function PreviewButtons({ labels }: { labels: { label: string; emoji: string | null }[] }) {
   if (!labels.length) return <div className="dc-empty">Buttons appear here as you add roles.</div>;
@@ -139,7 +150,7 @@ export function PreviewButtons({ labels }: { labels: { label: string; emoji: str
       {labels.map((b, i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: labels can repeat while typing
         <span className="dc-btn" key={i}>
-          {b.emoji ? <span aria-hidden="true">{b.emoji}</span> : null}
+          {b.emoji ? <PreviewEmoji emoji={b.emoji} /> : null}
           {b.label || "Label"}
         </span>
       ))}

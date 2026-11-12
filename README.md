@@ -130,7 +130,8 @@ After pulling this change, run `pnpm commands:deploy` once: `/lfg create` has a 
 - When a message collects the server's emoji (⭐ by default) as many times as it asks (3 by default), Garrison reposts it to the starboard channel: the count, who wrote it and where, their text and first image, and a Jump button. Later reactions update the count. Mentions in the repost never ping.
 - The author's own reaction doesn't count unless the server says so; bots' messages, the board itself and ignored channels never reach it; messages from age-restricted channels only go to an age-restricted board.
 - Only the message's IDs and its star count are stored, never its text. A repost is claimed before it's posted, so a message reaches the board once.
-- Free: everything. Pro: the board's colour. Set up on the dashboard's Starboard page.
+- Free: everything. Pro: the board's colour and one of the server's own emoji. Set up on the dashboard's Starboard page.
+- Role menus and ticket topics can use the server's own emoji on Pro too: type `:name:` on the dashboard.
 
 ### Ranks
 

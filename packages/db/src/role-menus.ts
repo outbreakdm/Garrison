@@ -10,6 +10,7 @@
  */
 
 import { blankCard, type CustomCard, lockedCardFields, parseCard } from "./cards";
+import { isEmoji, newCustomEmoji } from "./emoji";
 import { type Entitlements, FEATURES } from "./plans";
 import type { Parsed } from "./rally";
 
@@ -139,8 +140,11 @@ function parseOption(raw: unknown, where: string): Parsed<RoleMenuOption> {
   if (label.length > ROLE_MENU_LIMITS.label)
     return { ok: false, error: `Labels can be ${ROLE_MENU_LIMITS.label} characters at most.` };
   const emoji = line(r.emoji) || null;
-  if (emoji && !isOneEmoji(emoji))
-    return { ok: false, error: `${label}: the emoji must be one standard emoji, like 🎮.` };
+  if (emoji && !isEmoji(emoji))
+    return {
+      ok: false,
+      error: `${label}: the emoji must be one emoji, like 🎮, or one of this server's emoji.`,
+    };
   const description = line(r.description) || null;
   if (description && description.length > ROLE_MENU_LIMITS.description)
     return {
@@ -235,6 +239,14 @@ export function menuPlanProblems(
   const out = lockedCardFields(menu.card, ent, before?.card).map(
     (f) => `${f.label} is part of Garrison Pro.`,
   );
+  if (
+    !ent["emoji.custom"] &&
+    newCustomEmoji(
+      menu.options.map((o) => o.emoji),
+      (before?.options ?? []).map((o) => o.emoji),
+    ).length
+  )
+    out.push("Server emoji are part of Garrison Pro.");
   if (!ent["roles.limits"]) {
     if (menu.maxPicks !== null && menu.maxPicks > 1 && menu.maxPicks !== before?.maxPicks)
       out.push(

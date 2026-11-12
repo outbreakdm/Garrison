@@ -6,10 +6,12 @@ import {
   entitlements,
   getGuildPlan,
   getStarboard,
+  parseEmoji,
+  resolveEmoji,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
-import { listTextChannels } from "@/lib/discord";
+import { listGuildEmojis, listTextChannels } from "@/lib/discord";
 import { flashBack } from "@/lib/flash";
 import { checkGuildAccess } from "@/lib/session";
 
@@ -24,16 +26,18 @@ export async function saveStarboard(form: FormData) {
   const back = (outcome: { ok: string } | { error: string }) =>
     flashBack(`/servers/${guild.id}/honors`, outcome);
   const db = await getDb();
-  const [before, plan, channels] = await Promise.all([
+  const [before, plan, channels, serverEmoji] = await Promise.all([
     getStarboard(db, guild.id),
     getGuildPlan(db, guild.id),
     listTextChannels(guild.id).catch(() => null),
+    listGuildEmojis(guild.id).catch(() => []),
   ]);
   if (!channels) return back({ error: "Discord didn't answer. Try again." });
   const raw = {
     enabled: form.get("enabled") === "on",
     channelId: String(form.get("channelId") ?? ""),
-    emoji: String(form.get("emoji") ?? ""),
+    // ":name:" is one of this server's emoji; anything else is kept as typed.
+    emoji: resolveEmoji(String(form.get("emoji") ?? ""), serverEmoji),
     threshold: Number(form.get("threshold")),
     selfStar: form.get("selfStar") === "on",
     ignoredChannelIds: form.getAll("ignoredChannelIds").map(String),
@@ -45,6 +49,9 @@ export async function saveStarboard(form: FormData) {
     !raw.ignoredChannelIds.every((id) => known.has(id))
   )
     return back({ error: "Pick channels from this server's list." });
+  const custom = parseEmoji(raw.emoji);
+  if (custom?.kind === "custom" && !serverEmoji.some((e) => e.id === custom.id))
+    return back({ error: "Use an emoji from this server." });
   const checked = checkStarboard(raw, entitlements(plan), before);
   if (!checked.ok) return back({ error: checked.error });
   const result = await applySettingsChange(db, {

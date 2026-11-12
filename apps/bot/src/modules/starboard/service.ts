@@ -5,6 +5,7 @@ import {
   getGuildPlan,
   getStarboard,
   getStarPost,
+  parseEmoji,
   reachesBoard,
   releaseStarPost,
   type StarboardConfig,
@@ -43,6 +44,13 @@ async function config(ctx: BotContext, guildId: string) {
   const value = await getStarboard(ctx.db, guildId);
   cache.set(guildId, { at: Date.now(), value });
   return value;
+}
+
+/** Is this reaction the board's emoji? Server emoji match by ID, standard ones by character. */
+export function sameEmoji(stored: string, e: { id: string | null; name: string | null }) {
+  const want = parseEmoji(stored);
+  if (!want) return false;
+  return want.kind === "custom" ? e.id === want.id : !e.id && e.name === want.name;
 }
 
 const TEXT_MAX = 1500;
@@ -96,7 +104,7 @@ export async function onStarReaction(
     : reaction.message;
   if (!message?.inGuild() || message.author.bot || message.system) return;
   const cfg = await config(ctx, message.guildId);
-  if (!cfg.enabled || !cfg.channelId || reaction.emoji.name !== cfg.emoji) return;
+  if (!cfg.enabled || !cfg.channelId || !sameEmoji(cfg.emoji, reaction.emoji)) return;
   if (message.channelId === cfg.channelId || cfg.ignoredChannelIds.includes(message.channelId))
     return;
   const board = message.guild.channels.cache.get(cfg.channelId);

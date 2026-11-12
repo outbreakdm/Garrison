@@ -1,4 +1,5 @@
 import {
+  emojiLabel,
   entitlements,
   getGuildPlan,
   getStarboard,
@@ -104,10 +105,14 @@ export default async function StarboardPage({ params }: { params: Promise<{ guil
                   className="g-input option__emoji"
                   id="emoji"
                   name="emoji"
-                  defaultValue={config.emoji}
-                  maxLength={16}
+                  defaultValue={emojiLabel(config.emoji)}
+                  maxLength={40}
                   required
                 />
+                <span className="g-help">
+                  One emoji, or type one of this server's as :name:
+                  {ent["emoji.custom"] ? "" : " (Pro)"}.
+                </span>
               </label>
               <label className="g-field" htmlFor="threshold">
                 <span>Reactions needed</span>

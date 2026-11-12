@@ -18,6 +18,7 @@ import {
   TextInputStyle,
 } from "discord.js";
 import { type Card, customCardMessage } from "../../lib/card.js";
+import { componentEmoji } from "../../lib/emoji.js";
 import { safeText } from "../../lib/text.js";
 
 /**
@@ -68,7 +69,8 @@ export function panelRows(
             .setCustomId(openId(panel.id, t.id))
             .setLabel(t.label)
             .setStyle(ButtonStyle.Secondary);
-          if (t.emoji) button.setEmoji({ name: t.emoji });
+          const emoji = t.emoji ? componentEmoji(t.emoji) : null;
+          if (emoji) button.setEmoji(emoji);
           return button;
         }),
       ),

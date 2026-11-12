@@ -11,10 +11,10 @@
  */
 
 import { blankCard, type CustomCard, lockedCardFields, parseCard } from "./cards";
+import { isEmoji, newCustomEmoji } from "./emoji";
 import type { Entitlements } from "./plans";
 import { FEATURES } from "./plans";
 import type { Parsed } from "./rally";
-import { isOneEmoji } from "./role-menus";
 
 export interface TicketTopic {
   /** Stable ID, in the button's custom ID, so posted panels keep working after edits. */
@@ -130,8 +130,11 @@ function parseTopic(raw: unknown, where: string): Parsed<TicketTopic> {
   if (label.length > TICKET_LIMITS.label)
     return { ok: false, error: `Topic labels can be ${TICKET_LIMITS.label} characters at most.` };
   const emoji = line(r.emoji) || null;
-  if (emoji && !isOneEmoji(emoji))
-    return { ok: false, error: `${label}: the emoji must be one standard emoji, like 🎫.` };
+  if (emoji && !isEmoji(emoji))
+    return {
+      ok: false,
+      error: `${label}: the emoji must be one emoji, like 🎫, or one of this server's emoji.`,
+    };
   const rawQuestions = Array.isArray(r.questions) ? r.questions : [];
   const questions = rawQuestions.map(line).filter(Boolean);
   if (questions.length > TICKET_LIMITS.questions)
@@ -180,6 +183,14 @@ export function panelPlanProblems(
   const out = lockedCardFields(panel.card, ent, before?.card).map(
     (f) => `${f.label} is part of Garrison Pro.`,
   );
+  if (
+    !ent["emoji.custom"] &&
+    newCustomEmoji(
+      panel.topics.map((t) => t.emoji),
+      (before?.topics ?? []).map((t) => t.emoji),
+    ).length
+  )
+    out.push("Server emoji are part of Garrison Pro.");
   const limit = topicLimit(ent);
   if (panel.topics.length > limit && panel.topics.length > (before?.topics.length ?? 0))
     out.push(`Free panels have ${limit} topics. Garrison Pro allows ${TOPIC_HARD_MAX}.`);

@@ -12,13 +12,14 @@ import {
   getTicketConfig,
   getTicketPanelPost,
   newId,
+  parseEmoji,
   TICKET_LIMITS,
   TICKET_PANEL_PRESETS,
   type TicketPanel,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
-import { getServerLayout, listGuildRoles, listTextChannels } from "@/lib/discord";
+import { getServerLayout, listGuildEmojis, listGuildRoles, listTextChannels } from "@/lib/discord";
 import { flashBack } from "@/lib/flash";
 import { checkGuildAccess } from "@/lib/session";
 
@@ -104,6 +105,12 @@ export async function savePanel(form: FormData) {
   const id = typeof panel?.id === "string" ? panel.id : "";
   if (!ctx.config.panels.some((p) => p.id === id))
     return back(ctx.guild.id, { error: "That panel was removed. Refresh and try again." });
+  const emojiIds = new Set((await listGuildEmojis(ctx.guild.id).catch(() => [])).map((e) => e.id));
+  for (const t of Array.isArray(panel.topics) ? panel.topics : []) {
+    const e = typeof t?.emoji === "string" ? parseEmoji(t.emoji) : null;
+    if (e?.kind === "custom" && !emojiIds.has(e.id))
+      return back(ctx.guild.id, { error: "Use emoji from this server." }, id);
+  }
   const next = ctx.config.panels.map((p) => (p.id === id ? panel : p));
   const name = typeof panel.name === "string" ? panel.name.trim() : "the panel";
   const posted = await getTicketPanelPost(await getDb(), ctx.guild.id, id);

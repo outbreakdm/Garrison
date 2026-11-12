@@ -1,6 +1,7 @@
 export * from "./alerts";
 export * from "./cards";
 export * from "./client";
+export * from "./emoji";
 export * from "./giveaways";
 export * from "./ids";
 export * from "./messages";

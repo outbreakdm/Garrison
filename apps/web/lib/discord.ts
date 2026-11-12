@@ -158,11 +158,25 @@ export interface GuildRole {
   permissions: string;
 }
 
-const roleCache = new Map<string, { roles: GuildRole[]; ownerId: string; at: number }>();
+const roleCache = new Map<
+  string,
+  { roles: GuildRole[]; emojis: ServerEmoji[]; ownerId: string; at: number }
+>();
 
 /** Every role except @everyone, highest first, as Discord shows them. Cached 30 s. */
 export async function listGuildRoles(guildId: string): Promise<GuildRole[]> {
   return (await guildInfo(guildId)).roles;
+}
+
+export interface ServerEmoji {
+  id: string;
+  name: string;
+  animated: boolean;
+}
+
+/** The server's own emoji, for role menus, ticket topics and the starboard. Cached 30 s. */
+export async function listGuildEmojis(guildId: string): Promise<ServerEmoji[]> {
+  return (await guildInfo(guildId)).emojis;
 }
 
 /** The server's owner, asked of Discord (cached 30 s). Anti-nuke controls are theirs alone. */
@@ -184,6 +198,7 @@ async function guildInfo(guildId: string) {
       mentionable?: boolean;
       permissions?: string;
     }[];
+    emojis?: { id: string | null; name: string | null; animated?: boolean; available?: boolean }[];
   }>(`/guilds/${guildId}`, { headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` } });
   const roles = guild.roles
     .filter((r) => r.id !== guild.id)
@@ -196,7 +211,12 @@ async function guildInfo(guildId: string) {
       mentionable: r.mentionable === true,
       permissions: r.permissions ?? "0",
     }));
-  const entry = { roles, ownerId: guild.owner_id, at: Date.now() };
+  const emojis = (guild.emojis ?? []).flatMap((e) =>
+    e.id && e.name && e.available !== false
+      ? [{ id: e.id, name: e.name, animated: e.animated === true }]
+      : [],
+  );
+  const entry = { roles, emojis, ownerId: guild.owner_id, at: Date.now() };
   roleCache.set(guildId, entry);
   return entry;
 }

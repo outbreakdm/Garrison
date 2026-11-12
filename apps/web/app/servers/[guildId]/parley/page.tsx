@@ -21,7 +21,7 @@ import Link from "next/link";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { FormFoot, FormPanel, SettingsPanel } from "@/components/settings";
 import { getDb } from "@/lib/db";
-import { getServerLayout, listGuildRoles, listTextChannels } from "@/lib/discord";
+import { getServerLayout, listGuildEmojis, listGuildRoles, listTextChannels } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
@@ -62,16 +62,18 @@ export default async function TicketsPage({
   const q = cleanQuery(query.q);
   const db = await getDb();
   const since = new Date(Date.now() - 30 * 86_400_000);
-  const [config, plan, posts, counts, list, channels, roles, layout] = await Promise.all([
-    getTicketConfig(db, guild.id),
-    getGuildPlan(db, guild.id),
-    listTicketPanelPosts(db, guild.id),
-    ticketQueueCounts(db, guild.id),
-    listTickets(db, guild.id, { view: q ? "all" : view, q, limit: 50 }),
-    listTextChannels(guild.id).catch(() => []),
-    listGuildRoles(guild.id).catch(() => []),
-    getServerLayout(guild.id).catch(() => null),
-  ]);
+  const [config, plan, posts, counts, list, channels, roles, layout, serverEmoji] =
+    await Promise.all([
+      getTicketConfig(db, guild.id),
+      getGuildPlan(db, guild.id),
+      listTicketPanelPosts(db, guild.id),
+      ticketQueueCounts(db, guild.id),
+      listTickets(db, guild.id, { view: q ? "all" : view, q, limit: 50 }),
+      listTextChannels(guild.id).catch(() => []),
+      listGuildRoles(guild.id).catch(() => []),
+      getServerLayout(guild.id).catch(() => null),
+      listGuildEmojis(guild.id).catch(() => []),
+    ]);
   const ent = entitlements(plan);
   const stats = ent["tickets.stats"] ? await ticketStats(db, guild.id, since) : null;
   const limit = panelLimit(ent);
@@ -469,6 +471,7 @@ export default async function TicketsPage({
                 saveAction={savePanel}
                 removeAction={removePanel}
                 requestAction={requestAction}
+                serverEmoji={serverEmoji}
               />
             </div>
           </details>

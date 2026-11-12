@@ -8,6 +8,7 @@ import {
   StringSelectMenuOptionBuilder,
 } from "discord.js";
 import { customCardMessage } from "../../lib/card.js";
+import { componentEmoji } from "../../lib/emoji.js";
 import { DANGEROUS_PERMISSIONS } from "../gatehouse/nuke.js";
 import type { RoleFacts } from "../ranks/rules.js";
 
@@ -40,7 +41,8 @@ export function menuRows(menu: RoleMenu): ActionRowBuilder<MessageActionRowCompo
         menu.options.map((o) => {
           const option = new StringSelectMenuOptionBuilder().setLabel(o.label).setValue(o.roleId);
           if (o.description) option.setDescription(o.description);
-          if (o.emoji) option.setEmoji({ name: o.emoji });
+          const emoji = o.emoji ? componentEmoji(o.emoji) : null;
+          if (emoji) option.setEmoji(emoji);
           return option;
         }),
       );
@@ -55,7 +57,8 @@ export function menuRows(menu: RoleMenu): ActionRowBuilder<MessageActionRowCompo
             .setCustomId(buttonId(menu.id, o.roleId))
             .setLabel(o.label)
             .setStyle(ButtonStyle.Secondary);
-          if (o.emoji) button.setEmoji({ name: o.emoji });
+          const emoji = o.emoji ? componentEmoji(o.emoji) : null;
+          if (emoji) button.setEmoji(emoji);
           return button;
         }),
       ),

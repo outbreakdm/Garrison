@@ -4,8 +4,10 @@ import {
   CARD_PRO_FIELDS,
   DEFAULT_PLACEHOLDER,
   type Entitlements,
-  isOneEmoji,
+  isCustomEmoji,
+  isEmoji,
   lockedCardFields,
+  newCustomEmoji,
   optionLimit,
   ROLE_MENU_LIMITS,
   type RoleMenu,
@@ -14,6 +16,7 @@ import {
 import { useMemo, useState } from "react";
 import { CardEditor, move, ProNotice, ProTag, RowTools } from "@/components/cards/CardEditor";
 import { CardPreview, PreviewButtons, PreviewDropdown } from "@/components/cards/CardPreview";
+import { EmojiInput, type ServerEmojiChoice } from "@/components/cards/EmojiInput";
 
 export interface RoleChoice {
   id: string;
@@ -50,6 +53,7 @@ export function RoleMenuEditor({
   saveAction,
   removeAction,
   requestAction,
+  serverEmoji,
 }: {
   guildId: string;
   saved: RoleMenu;
@@ -63,6 +67,7 @@ export function RoleMenuEditor({
   saveAction: Action;
   removeAction: Action;
   requestAction: Action;
+  serverEmoji: ServerEmojiChoice[];
 }) {
   const [menu, setMenu] = useState<RoleMenu>(saved);
   const [channelId, setChannelId] = useState(postedIn ?? channels[0]?.id ?? "");
@@ -91,10 +96,17 @@ export function RoleMenuEditor({
     !ent["roles.limits"] &&
     Boolean(menu.requiredRoleId) &&
     menu.requiredRoleId !== saved.requiredRoleId;
+  const emojiLocked =
+    !ent["emoji.custom"] &&
+    newCustomEmoji(
+      menu.options.map((o) => o.emoji),
+      saved.options.map((o) => o.emoji),
+    ).length > 0;
   const locked = [
     ...lockedCard.map((f) => f.label),
     ...(pickLocked ? [`"Up to ${menu.maxPicks}" picks`] : []),
     ...(needLocked ? ["A needed role"] : []),
+    ...(emojiLocked ? ["A server emoji"] : []),
   ];
   const undoPro = () =>
     setMenu((m) => {
@@ -106,12 +118,18 @@ export function RoleMenuEditor({
         card,
         maxPicks: pickLocked ? saved.maxPicks : m.maxPicks,
         requiredRoleId: needLocked ? saved.requiredRoleId : m.requiredRoleId,
+        options: emojiLocked
+          ? m.options.map((o) => {
+              const was = saved.options.find((s) => s.roleId === o.roleId);
+              return isCustomEmoji(o.emoji) ? { ...o, emoji: was?.emoji ?? null } : o;
+            })
+          : m.options,
       };
     });
 
   const max = optionLimit(menu.style);
   const overStyle = menu.options.length > max;
-  const badEmoji = menu.options.some((o) => o.emoji && !isOneEmoji(o.emoji));
+  const badEmoji = menu.options.some((o) => o.emoji && !isEmoji(o.emoji));
   // Caught here so a refused save never throws away unsaved edits; the server checks again.
   const blocked = locked.length
     ? "Undo the Pro changes to save, or upgrade."
@@ -212,7 +230,7 @@ export function RoleMenuEditor({
               <div className="option-list">
                 {menu.options.map((o, i) => {
                   const role = give.find((r) => r.id === o.roleId);
-                  const emojiOk = !o.emoji || isOneEmoji(o.emoji);
+                  const emojiOk = !o.emoji || isEmoji(o.emoji);
                   const update = (patch: Partial<RoleMenuOption>) =>
                     setOptions(menu.options.map((x, j) => (j === i ? { ...x, ...patch } : x)));
                   return (
@@ -258,14 +276,11 @@ export function RoleMenuEditor({
                         required
                         onChange={(e) => update({ label: e.target.value })}
                       />
-                      <input
-                        className={`g-input option__emoji${emojiOk ? "" : " g-input--invalid"}`}
-                        aria-label={`Emoji for role ${i + 1}`}
-                        aria-invalid={!emojiOk}
-                        placeholder="Emoji"
-                        value={o.emoji ?? ""}
-                        maxLength={16}
-                        onChange={(e) => update({ emoji: e.target.value.trim() || null })}
+                      <EmojiInput
+                        label={`Emoji for role ${i + 1}`}
+                        value={o.emoji}
+                        serverEmoji={serverEmoji}
+                        onChange={(emoji) => update({ emoji })}
                       />
                       <RowTools
                         index={i}
@@ -292,7 +307,7 @@ export function RoleMenuEditor({
                       ) : null}
                       {!emojiOk ? (
                         <p className="g-help g-help--error option__note">
-                          Use one standard emoji, like 🎮. Server emoji aren't supported yet.
+                          Use one emoji, like 🎮, or type one of this server's as :name:.
                         </p>
                       ) : null}
                     </div>

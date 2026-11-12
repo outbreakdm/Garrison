@@ -9,13 +9,14 @@ import {
   getRoleMenuPost,
   getRoleMenus,
   newId,
+  parseEmoji,
   ROLE_MENU_PRESETS,
   type RoleMenu,
   readRoleMenus,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
-import { listGuildRoles } from "@/lib/discord";
+import { listGuildEmojis, listGuildRoles } from "@/lib/discord";
 import { flashBack } from "@/lib/flash";
 import { isDangerousRole } from "@/lib/permissions";
 import { checkGuildAccess } from "@/lib/session";
@@ -119,6 +120,12 @@ export async function saveMenu(form: FormData) {
     );
   if (menu.requiredRoleId && !roles.need.has(String(menu.requiredRoleId)))
     return back(ctx.guild.id, { error: "Pick the needed role from this server's list." }, id);
+  const emojiIds = new Set((await listGuildEmojis(ctx.guild.id).catch(() => [])).map((e) => e.id));
+  for (const o of options) {
+    const e = typeof o?.emoji === "string" ? parseEmoji(o.emoji) : null;
+    if (e?.kind === "custom" && !emojiIds.has(e.id))
+      return back(ctx.guild.id, { error: "Use emoji from this server." }, id);
+  }
   const next = ctx.menus.map((m) => (m.id === id ? menu : m));
   const name = typeof menu.name === "string" ? menu.name.trim() : "the menu";
   const posted = await getRoleMenuPost(await getDb(), ctx.guild.id, id);
