@@ -66,6 +66,23 @@ export async function countActiveWarnings(db: Db, guildId: string, targetId: str
 /** How long a temporary ban can last: the choices /ban and the dashboard offer. */
 export const BAN_LENGTHS = [3600, 86_400, 259_200, 604_800, 2_592_000, 7_776_000] as const;
 
+/** Bans in force from the last `days` days, newest first: what an alt check compares against. */
+export async function listRecentBans(db: Db, guildId: string, days = 90) {
+  return db
+    .select()
+    .from(modCases)
+    .where(
+      and(
+        eq(modCases.guildId, guildId),
+        eq(modCases.action, "ban"),
+        isNull(modCases.revokedAt),
+        gte(modCases.createdAt, new Date(Date.now() - days * 86_400_000)),
+      ),
+    )
+    .orderBy(desc(modCases.createdAt))
+    .limit(200);
+}
+
 /** Temporary bans whose time is up and that nobody has lifted yet. */
 export async function listExpiredBans(db: Db, now = new Date()) {
   return db

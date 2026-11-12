@@ -7,6 +7,7 @@ import {
   type Lockdown,
   type LockdownSnapshotEntry,
   listExpiredLockdowns,
+  listRecentBans,
   saveLockdownSnapshot,
   startLockdown,
 } from "@garrison/db";
@@ -21,7 +22,9 @@ import {
 import type { BotContext } from "../../commands/types.js";
 import { type Card, cardMessage } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
+import { altSignals } from "./alts.js";
 import {
+  altWarningCard,
   lockdownEndedCard,
   lockdownStartedCard,
   newAccountFlagCard,
@@ -293,6 +296,24 @@ export async function handleMemberJoin(ctx: BotContext, member: GuildMember) {
       }
       return;
     }
+  }
+
+  // Alt warning signs: someone who looks like a recent ban. During a raid, stay quiet.
+  if (!inCooldown) {
+    const bans = await listRecentBans(ctx.db, guild.id).catch(() => []);
+    const match = bans.length
+      ? altSignals(
+          {
+            username: member.user.username,
+            displayName: member.displayName,
+            hasAvatar: Boolean(member.user.avatar),
+            ageDays: accountAgeDays(member.user.createdTimestamp, now),
+          },
+          bans,
+          Math.max(30, settings.flagAccountAgeDays),
+        )
+      : null;
+    if (match) await sendAlert(ctx, guild, altWarningCard(member.user, match));
   }
 
   // During a raid one summary beats a flag per account.

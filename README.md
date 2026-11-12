@@ -59,6 +59,7 @@ packages/
 - Anti-nuke settings and the trusted list (`/security anti_nuke`, `trusted_add`…) are **owner-only**, so a compromised admin can't switch it off first. Keep Garrison's role at the top of the role list, or it can't strip roles above it.
 - Alerts go to `/security alert_channel`, or to the Watch log channel if none is set.
 
+- **Alt-account warnings:** when someone joins with the same name as a member banned here in the last 90 days (ignoring case, symbols and trailing numbers), or a very similar name plus a young account or no avatar, the alert channel gets a warning naming the ban's case. Nothing is done to the member.
 - **Website verification:** with *Verify on the website* on, the Verify button links to `/verify/<server ID>`: the member signs in with Discord (which a bot can't), passes a Cloudflare Turnstile captcha when the host has `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET`, and Garrison gives the role through a request, checking the account age again.
 ### Rally
 

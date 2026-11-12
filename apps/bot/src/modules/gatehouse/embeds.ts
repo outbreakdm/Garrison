@@ -101,6 +101,27 @@ export function newAccountFlagCard(
   };
 }
 
+/** A joiner who looks like someone banned here recently. A hint for staff, nothing more. */
+export function altWarningCard(
+  member: { id: string; username: string },
+  match: {
+    ban: { caseNumber: number; targetId: string | null; targetTag: string | null };
+    reasons: string[];
+  },
+): Card {
+  return {
+    tone: "caution",
+    title: "Possible alt of a banned member",
+    blocks: [
+      {
+        text: `<@${member.id}> joined with ${match.reasons.join(", ")}, like **${match.ban.targetTag ?? "a banned member"}** (case #${match.ban.caseNumber}). Worth a look; nothing was done to them.`,
+      },
+    ],
+    facts: [{ label: "Member", value: `<@${member.id}> · \`${member.id}\`` }],
+    module: "gatehouse",
+  };
+}
+
 /** The panel members press to get the verified role. Posted once; the button answers privately. */
 export function verifyPanel(
   settings: Pick<GatehouseSettings, "verifyRoleId" | "verifyMinAccountAgeDays">,

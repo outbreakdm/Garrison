@@ -381,7 +381,7 @@ Later phases get their checklists when they start.
 - **Watch:** [x] automod (spam, invite links, mass mentions, word lists; AI moderation on Pro) · [x] mod notes on
   members · [x] appeals form on the dashboard feeding a queue · [x] temporary bans that lift
   themselves
-- **Gatehouse:** [x] captcha verification on the website · [ ] alt-account warning signs ·
+- **Gatehouse:** [x] captcha verification on the website · [x] alt-account warning signs ·
   [ ] full server backup and restore (channels, roles, permissions)
 - **Ledger:** [ ] invite tracking · [ ] voice joins and leaves · [ ] nickname changes ·
   [ ] CSV export · [x] the text of deleted and edited messages (off by default, a switch in
@@ -504,3 +504,5 @@ Decided (2026-11-12, owner):
 - 2026-11-12: Backlog: verification on the website (sign in with Discord, optional Turnstile captcha
   via `TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET`); the bot now gets `APP_URL` for its links.
   Migration 0040.
+- 2026-11-12: Backlog: alt-account warnings (joins that look like a recent ban: name, account age,
+  avatar), posted to the security alert channel.
