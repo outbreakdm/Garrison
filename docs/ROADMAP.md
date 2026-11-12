@@ -9,7 +9,7 @@ then updates **Status** and the **Log** before stopping.
 
 - **Now:** Phases 1 and 3 to 11, and the follow-ups in the Log, are code done, committed,
   not pushed or deployed. **Before deploying:** apply every migration from `0023_role_menus`
-  through `0036_welcome_image` to production (`DATABASE_MIGRATION_URL` set,
+  through `0037_modmail` to production (`DATABASE_MIGRATION_URL` set,
   `pnpm db:migrate`, see DEPLOY.md); the bot preflight checks for their tables, so a deploy
   before them stops at
   preflight. **Message Content Intent must be on** in the Developer Portal (Bot → Privileged
@@ -491,3 +491,7 @@ Decided (2026-11-12, owner):
   by the bot; Welcome → Welcome image), and members filling their rank card details on their
   Account page as well as with /rankcard (migration 0036). Next: modmail by DM, then the
   depth backlog from the top (Watch).
+- 2026-11-12: Follow-up: modmail. Members DM Garrison, pick the server, and a staff-only ticket
+  opens; messages are relayed both ways (`//` keeps a staff line internal). New intent
+  `DirectMessages` (not privileged). Migration 0037. All follow-ups are done except Kick alerts
+  and YouTube live (both need keys or an app review) and uploading backgrounds (needs storage).

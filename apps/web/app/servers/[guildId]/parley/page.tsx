@@ -193,6 +193,7 @@ export default async function TicketsPage({
                       <span className="ticket-row__topic">{t.topicLabel}</span>
                       <span className="ticket-row__who">
                         {t.openerName}
+                        {t.viaDm ? " · by DM" : ""}
                         {t.claimedName ? ` · claimed by ${t.claimedName}` : " · unclaimed"}
                       </span>
                     </span>
@@ -354,6 +355,16 @@ export default async function TicketsPage({
             <span className="switch__text">
               <span>Ping the staff roles when a ticket opens</span>
               <span className="g-help">The only ping a ticket makes besides the member's own.</span>
+            </span>
+          </label>
+          <label className="switch">
+            <input type="checkbox" name="modmail" defaultChecked={config.modmail} />
+            <span className="switch__text">
+              <span>Members can open a ticket by DMing Garrison</span>
+              <span className="g-help">
+                They pick this server, and a staff-only ticket opens. What staff write there goes to
+                their DMs; start a line with // to keep it in the channel.
+              </span>
             </span>
           </label>
           <label className="switch">

@@ -109,6 +109,7 @@ After pulling this change, run `pnpm commands:deploy` once: `/lfg create` has a 
 - **Claim** and **Close** buttons in the ticket; `/ticket close`, `/ticket claim`, `/ticket add`, `/ticket remove`. The member who opened it can close it; everything else is staff only, checked on every press against the setup as saved now.
 - **Transcripts:** every message written in an open ticket is recorded, with edits (latest text) and deletions (kept, marked deleted). This is why Garrison asks for Message Content. Closed tickets keep their transcript 30 days on Free and 365 on Pro, set when the ticket closes so a later downgrade never shortens it; then the ticket, transcript and notes are deleted. The bot can delete a ticket only once it has expired (row-level security).
 - The dashboard's **Tickets** page has the queue (waiting on staff, waiting on the member, unclaimed, closed), search by number, member or transcript text, each ticket's transcript with staff-only notes, and Claim and Close.
+- **Modmail:** with *Members can open a ticket by DMing Garrison* on, a member DMs Garrison, picks the server, and a staff-only ticket opens. Their DMs are relayed in (and kept in the transcript); what staff write goes to their DMs, except lines starting with `//`. Closing tells them.
 - Free: 1 panel, 3 topics. Pro: 10 panels of 10 topics, a form of up to 5 questions before a ticket opens, auto-assign to the staff member with the fewest open tickets, and stats.
 
 ### Beacon (stream alerts)
@@ -152,7 +153,7 @@ The bot keeps a few counts, never content: messages per server per UTC day, when
 
 ### Intents
 
-`Guilds`, `Guild Moderation` (audit log, for anti-nuke), `Guild Voice States` (Rally), `Guild Messages` (Ranks, tickets), `Guild Message Reactions` (the starboard), and two privileged intents: **Server Members** and **Message Content** (ticket transcripts). Turn both on under Bot → Privileged Gateway Intents in the Developer Portal, or login fails with "Used disallowed intents". Past 100 servers, Discord must approve Message Content for the bot.
+`Guilds`, `Guild Moderation` (audit log, for anti-nuke), `Guild Voice States` (Rally), `Guild Messages` (Ranks, tickets), `Guild Message Reactions` (the starboard), `Direct Messages` (modmail), and two privileged intents: **Server Members** and **Message Content** (ticket transcripts). Turn both on under Bot → Privileged Gateway Intents in the Developer Portal, or login fails with "Used disallowed intents". Past 100 servers, Discord must approve Message Content for the bot.
 
 ## Dashboard
 

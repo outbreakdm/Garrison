@@ -68,12 +68,27 @@ export async function ticketConfig(ctx: BotContext, guildId: string) {
 }
 
 /** Open ticket channels, so a message is matched to its ticket without a query. */
-const open = new Map<string, { ticketId: string; guildId: string; openerId: string }>();
+export interface OpenTicketRef {
+  ticketId: string;
+  guildId: string;
+  openerId: string;
+  /** Opened by DM: the member isn't in the channel, and staff replies go to their DMs. */
+  viaDm: boolean;
+}
+const open = new Map<string, OpenTicketRef>();
+
+/** Remember an open ticket's channel (modmail opens tickets too). */
+export const trackOpenTicket = (channelId: string, ref: OpenTicketRef) => open.set(channelId, ref);
 
 export async function loadOpenTickets(ctx: BotContext) {
   open.clear();
   for (const t of await listOpenTicketChannels(ctx.db))
-    open.set(t.channelId, { ticketId: t.id, guildId: t.guildId, openerId: t.openerId });
+    open.set(t.channelId, {
+      ticketId: t.id,
+      guildId: t.guildId,
+      openerId: t.openerId,
+      viaDm: t.viaDm,
+    });
 }
 
 export const ticketInChannel = (channelId: string) => open.get(channelId) ?? null;
@@ -156,13 +171,14 @@ const TALK = [
 ];
 
 /** A private channel for one ticket: the member, the staff roles and Garrison only. */
-function ticketChannel(
+export function ticketChannel(
   guild: Guild,
   me: GuildMember,
   config: TicketConfig,
-  member: GuildMember,
+  member: GuildMember | null,
   number: number,
   topic: string,
+  who: string = member?.user.username ?? "a member",
 ) {
   const parent = config.parentId ? guild.channels.cache.get(config.parentId) : null;
   // Members may attach screenshots only if Garrison itself may (Discord's rule for overwrites).
@@ -171,7 +187,7 @@ function ticketChannel(
     : TALK;
   const overwrites: OverwriteResolvable[] = [
     { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-    { id: member.id, allow: memberAllow },
+    ...(member ? [{ id: member.id, allow: memberAllow }] : []),
     { id: me.id, allow: [...TALK, PermissionFlagsBits.EmbedLinks] },
     ...config.staffRoleIds
       .filter((id) => guild.roles.cache.has(id))
@@ -182,8 +198,8 @@ function ticketChannel(
     type: ChannelType.GuildText,
     parent: parent?.type === ChannelType.GuildCategory ? parent.id : null,
     permissionOverwrites: overwrites,
-    topic: `Ticket #${number} · ${topic} · opened by ${member.user.username}`,
-    reason: `Ticket #${number} for ${member.user.username}`,
+    topic: `Ticket #${number} · ${topic} · opened by ${who}`,
+    reason: `Ticket #${number} for ${who}`,
   });
 }
 
@@ -203,13 +219,26 @@ export async function reopenClosedTicket(
     return { ok: false, message: "Garrison needs the Manage Channels permission to open tickets." };
   const opener = await guild.members.fetch(ticket.openerId).catch(() => null);
   if (!opener) return { ok: false, message: `${ticket.openerName} isn't in the server any more.` };
-  const channel = await ticketChannel(guild, me, config, opener, ticket.number, ticket.topicLabel);
+  const channel = await ticketChannel(
+    guild,
+    me,
+    config,
+    ticket.viaDm ? null : opener,
+    ticket.number,
+    ticket.topicLabel,
+    opener.user.username,
+  );
   const row = await reopenTicket(ctx.db, ticket.id, channel.id);
   if (!row) {
     await channel.delete("Ticket was already open").catch(() => null);
     return { ok: false, message: `Ticket #${ticket.number} is already open.` };
   }
-  open.set(channel.id, { ticketId: row.id, guildId: guild.id, openerId: row.openerId });
+  open.set(channel.id, {
+    ticketId: row.id,
+    guildId: guild.id,
+    openerId: row.openerId,
+    viaDm: row.viaDm,
+  });
   await recordTicketEvent(ctx.db, {
     ticketId: row.id,
     guildId: guild.id,
@@ -267,7 +296,12 @@ export async function createTicket(
     await channel.delete("Ticket could not be recorded").catch(() => null);
     throw error;
   }
-  open.set(channel.id, { ticketId: ticket.id, guildId: guild.id, openerId: member.id });
+  open.set(channel.id, {
+    ticketId: ticket.id,
+    guildId: guild.id,
+    openerId: member.id,
+    viaDm: false,
+  });
   await recordTicketEvent(ctx.db, {
     ticketId: ticket.id,
     guildId: guild.id,
@@ -366,6 +400,15 @@ export async function closeAndArchive(
     guildId: guild.id,
     text: `${by.name} closed this ticket${reason ? `: ${reason}` : "."}`,
   });
+  if (ticket.viaDm) {
+    const user = await guild.client.users.fetch(ticket.openerId).catch(() => null);
+    await user
+      ?.send({
+        content: `Your conversation with the staff of **${safeText(guild.name)}** was closed${reason ? `: ${safeText(reason)}` : "."} Message me again any time.`,
+        allowedMentions: { parse: [] },
+      })
+      .catch(() => null);
+  }
   const days = ent["tickets.historyDays"];
   const channel = guild.channels.cache.get(ticket.channelId);
   if (channel?.isSendable())
@@ -480,7 +523,9 @@ export async function onTicketMessage(ctx: BotContext, message: Message) {
   if (!t) return;
   const member = message.member ?? (await message.guild.members.fetch(message.author.id));
   const staff =
-    member.id !== t.openerId && isTicketStaff(member, await ticketConfig(ctx, t.guildId));
+    t.viaDm ||
+    (member.id !== t.openerId && isTicketStaff(member, await ticketConfig(ctx, t.guildId)));
+  if (t.viaDm) await relayToMember(message, t, member.displayName);
   await recordTicketMessage(ctx.db, {
     ticketId: t.ticketId,
     guildId: t.guildId,
@@ -492,6 +537,28 @@ export async function onTicketMessage(ctx: BotContext, message: Message) {
     attachments: attachmentsOf(message.attachments),
     createdAt: message.createdAt,
   });
+}
+
+/**
+ * Staff wrote in a DM ticket: send it to the member's DMs, with the server and the
+ * writer's name. Lines starting with // stay in the channel (an internal note).
+ */
+async function relayToMember(message: Message<true>, t: OpenTicketRef, name: string) {
+  if (message.content.startsWith("//")) return;
+  const files = [...message.attachments.values()].map((a) => a.url);
+  const text = [message.content, ...files].filter(Boolean).join("\n");
+  if (!text) return;
+  const user = await message.client.users.fetch(t.openerId).catch(() => null);
+  const sent = await user
+    ?.send({
+      content: `**${safeText(message.guild.name)} staff · ${safeText(name)}:** ${text}`.slice(
+        0,
+        2000,
+      ),
+      allowedMentions: { parse: [] },
+    })
+    .catch(() => null);
+  if (!sent) await message.react("⚠️").catch(() => null);
 }
 
 /** An edit in an open ticket: the transcript keeps the latest text. */

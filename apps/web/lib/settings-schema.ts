@@ -254,6 +254,7 @@ export const FIELD_LABELS: Record<string, string> = {
   "tickets.logChannelId": "Ticket log channel",
   parentId: "Tickets open in",
   maxOpen: "Open tickets per member",
+  modmail: "Tickets by DM",
   pingStaff: "Ping staff on new tickets",
   autoAssign: "Auto-assign tickets",
 };

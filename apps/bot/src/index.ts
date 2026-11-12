@@ -30,6 +30,7 @@ import { ClaudePlanner } from "./modules/quartermaster/planner.js";
 import { sweepRally } from "./modules/rally/service.js";
 import { handleMessage } from "./modules/ranks/service.js";
 import { onStarReaction } from "./modules/starboard/service.js";
+import { onDirectMessage } from "./modules/tickets/modmail.js";
 import {
   loadOpenTickets,
   onTicketChannelDeleted,
@@ -85,13 +86,22 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     // Not privileged. The starboard counts reactions.
     GatewayIntentBits.GuildMessageReactions,
+    // Not privileged. Modmail: members message Garrison directly.
+    GatewayIntentBits.DirectMessages,
   ],
   // Never ping from bot messages. Reasons and other user-typed text are echoed
   // back, and must not be able to trigger @everyone, role or user pings.
   allowedMentions: { parse: [], repliedUser: false },
   // Ledger needs leave and delete events for members and messages that aren't cached.
   // The starboard needs reactions on messages from before the last restart.
-  partials: [Partials.GuildMember, Partials.Message, Partials.Reaction, Partials.User],
+  // Channel: DMs arrive on channels Garrison hasn't cached (modmail).
+  partials: [
+    Partials.GuildMember,
+    Partials.Message,
+    Partials.Reaction,
+    Partials.User,
+    Partials.Channel,
+  ],
 });
 
 const SWEEP_INTERVAL_MS = 60_000;
@@ -162,6 +172,10 @@ client.on(Events.MessageCreate, (message) => {
   handleMessage(ctx, message).catch((error) =>
     logger.error("Ranks failed", { guildId: message.guildId, error }),
   );
+  if (!message.inGuild() && client.isReady())
+    onDirectMessage(ctx, client, message).catch((error) =>
+      logger.error("Modmail failed", { error }),
+    );
   onTicketMessage(ctx, message).catch((error) =>
     logger.error("Ticket transcript failed", { guildId: message.guildId, error }),
   );

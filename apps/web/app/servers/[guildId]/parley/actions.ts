@@ -151,6 +151,7 @@ export async function saveTicketOptions(form: FormData) {
     maxOpen: Number(form.get("maxOpen")),
     pingStaff: form.get("pingStaff") === "on",
     autoAssign: form.get("autoAssign") === "on",
+    modmail: form.get("modmail") === "on",
   };
   const roleIds = new Set(roles.filter((r) => !r.managed).map((r) => r.id));
   if (!raw.staffRoleIds.every((id) => roleIds.has(id)))

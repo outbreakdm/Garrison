@@ -1217,6 +1217,8 @@ export const ticketSettings = pgTable(
     maxOpen: integer("max_open").notNull().default(1),
     pingStaff: boolean("ping_staff").notNull().default(true),
     autoAssign: boolean("auto_assign").notNull().default(false),
+    /** Members can open a ticket by DMing Garrison (modmail). */
+    modmail: boolean("modmail").notNull().default(false),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -1285,6 +1287,8 @@ export const tickets = pgTable(
     closedBy: text("closed_by"),
     closedByName: text("closed_by_name"),
     closeReason: text("close_reason"),
+    /** Opened by DMing Garrison: the member isn't in the channel, messages are relayed. */
+    viaDm: boolean("via_dm").notNull().default(false),
     /** The Discord channel was deleted after closing. */
     channelGone: boolean("channel_gone").notNull().default(false),
     expiresAt: timestamp("expires_at", { withTimezone: true }),

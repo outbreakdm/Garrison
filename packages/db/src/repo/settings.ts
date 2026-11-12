@@ -89,6 +89,7 @@ export const EDITABLE_FIELDS = {
     "maxOpen",
     "pingStaff",
     "autoAssign",
+    "modmail",
   ],
 } as const satisfies Record<SettingsModule, readonly string[]>;
 

@@ -10,7 +10,9 @@ import {
   closeTicket,
   countOpenTickets,
   editTicketMessage,
+  getOpenDmTicket,
   getTicketConfig,
+  listModmailGuildIds,
   listOpenTicketChannels,
   listTicketMessages,
   listTickets,
@@ -182,6 +184,9 @@ describe("ticket storage, under each role's grants", () => {
     });
     expect(second.number).toBe(2);
     expect(await countOpenTickets(db, G, "100000000000000001")).toBe(2);
+    // No DM ticket yet: modmail tickets are marked when opened.
+    expect(await getOpenDmTicket(db, "100000000000000001")).toBeNull();
+    expect(await listModmailGuildIds(db)).toEqual([]);
     expect((await listOpenTicketChannels(db)).map((t) => t.channelId).sort()).toEqual([
       "300000000000000001",
       "300000000000000002",

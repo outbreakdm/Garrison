@@ -1,6 +1,7 @@
 import { type Interaction, MessageFlags } from "discord.js";
 import { buttons, commandsByName, modals, selects } from "./commands/index.js";
 import type { BotContext } from "./commands/types.js";
+import { onModmailPick } from "./modules/tickets/modmail.js";
 
 const FAILURE = "Something went wrong on my side. Try again in a moment.";
 
@@ -23,6 +24,14 @@ export async function handleInteraction(interaction: Interaction, ctx: BotContex
     !interaction.isModalSubmit()
   )
     return;
+
+  // Modmail's server picker is the one button that lives in DMs.
+  if (interaction.isButton() && interaction.customId.startsWith("mm:")) {
+    await onModmailPick(ctx, interaction).catch((error: unknown) =>
+      ctx.logger.error("Modmail failed", { error }),
+    );
+    return;
+  }
 
   if (!interaction.inCachedGuild()) {
     if (interaction.isRepliable()) {

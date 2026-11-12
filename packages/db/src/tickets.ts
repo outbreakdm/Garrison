@@ -48,6 +48,8 @@ export interface TicketConfig {
   pingStaff: boolean;
   /** Pro: hand each new ticket to the staff member with the fewest open ones. */
   autoAssign: boolean;
+  /** Members can open a ticket by DMing Garrison (modmail). */
+  modmail: boolean;
 }
 
 export const TICKET_LIMITS = {
@@ -73,6 +75,7 @@ export const DEFAULT_TICKETS: TicketConfig = {
   maxOpen: 1,
   pingStaff: true,
   autoAssign: false,
+  modmail: false,
 };
 
 const ID = /^[a-z0-9]{6,16}$/;
@@ -270,6 +273,7 @@ export function readTicketConfig(
       Number.isInteger(maxOpen) && maxOpen >= 1 && maxOpen <= TICKET_LIMITS.maxOpen ? maxOpen : 1,
     pingStaff: raw.pingStaff !== false,
     autoAssign: raw.autoAssign === true,
+    modmail: raw.modmail === true,
   };
 }
 
@@ -306,6 +310,7 @@ export function checkTicketOptions(
       maxOpen,
       pingStaff: raw.pingStaff === true,
       autoAssign,
+      modmail: raw.modmail === true,
     },
   };
 }

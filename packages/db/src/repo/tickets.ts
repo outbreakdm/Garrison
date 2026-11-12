@@ -68,6 +68,7 @@ export interface OpenTicketInput {
   answers: TicketAnswer[];
   claimedBy?: string | null;
   claimedName?: string | null;
+  viaDm?: boolean;
 }
 
 /** The next ticket number for a server. Numbers are never reused. */
@@ -95,6 +96,7 @@ export async function openTicket(db: Db, input: OpenTicketInput & { number: numb
     answers: input.answers,
     claimedBy: input.claimedBy ?? null,
     claimedName: input.claimedName ?? null,
+    viaDm: input.viaDm ?? false,
   };
   for (let attempt = 0; attempt < 5; attempt++) {
     const number = attempt === 0 ? input.number : await nextTicketNumber(db, input.guildId);
@@ -116,6 +118,7 @@ export async function listOpenTicketChannels(db: Db) {
       guildId: tickets.guildId,
       channelId: tickets.channelId,
       openerId: tickets.openerId,
+      viaDm: tickets.viaDm,
     })
     .from(tickets)
     .where(eq(tickets.status, "open"));
@@ -135,6 +138,26 @@ export async function getOpenTicketByChannel(db: Db, channelId: string): Promise
     .from(tickets)
     .where(and(eq(tickets.channelId, channelId), eq(tickets.status, "open")));
   return row ?? null;
+}
+
+/** The member's open DM ticket (modmail), newest first if somehow more than one. */
+export async function getOpenDmTicket(db: Db, userId: string): Promise<Ticket | null> {
+  const [row] = await db
+    .select()
+    .from(tickets)
+    .where(and(eq(tickets.openerId, userId), eq(tickets.status, "open"), eq(tickets.viaDm, true)))
+    .orderBy(desc(tickets.openedAt))
+    .limit(1);
+  return row ?? null;
+}
+
+/** Servers that take tickets by DM. */
+export async function listModmailGuildIds(db: Db): Promise<string[]> {
+  const rows = await db
+    .select({ guildId: ticketSettings.guildId })
+    .from(ticketSettings)
+    .where(eq(ticketSettings.modmail, true));
+  return rows.map((r) => r.guildId);
 }
 
 /** How many tickets this member has open in this server. */
