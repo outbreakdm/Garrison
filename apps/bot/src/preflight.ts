@@ -112,8 +112,11 @@ try {
 if (env) {
   // Newest tables first: if these exist with grants, everything older does too.
   const latest = [
+    "server_templates",
+    "barracks_settings",
+    "rank_seasons",
+    "server_backups",
     "automod_settings",
-    "appeals",
     "member_notes",
     "alert_settings",
     "alert_state",
@@ -121,7 +124,6 @@ if (env) {
     "ticket_settings",
     "tickets",
     "ticket_messages",
-    "ticket_notes",
     "ticket_panel_posts",
     "message_settings",
     "message_sends",
@@ -136,9 +138,12 @@ if (env) {
   await checkDiscord(env.DISCORD_TOKEN, env.DISCORD_CLIENT_ID);
   await checkDb("Database (bot)", env.DATABASE_URL, "garrison_bot", latest);
   if (process.env.WEB_DATABASE_URL)
-    // platform_staff (0022) is the dashboard's newest table; the bot has no grant on it.
+    // The dashboard also reads tables the bot never touches: staff (0022), ticket notes
+    // (0026) and appeals (0038).
     await checkDb("Database (dashboard)", process.env.WEB_DATABASE_URL, "garrison_web", [
       "platform_staff",
+      "ticket_notes",
+      "appeals",
       ...latest,
     ]);
   console.log("Dashboard");
