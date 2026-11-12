@@ -1,6 +1,7 @@
 export * from "./alerts";
 export * from "./cards";
 export * from "./client";
+export * from "./giveaways";
 export * from "./ids";
 export * from "./messages";
 export * from "./plans";
@@ -12,6 +13,7 @@ export * from "./repo/alerts";
 export * from "./repo/barracks";
 export * from "./repo/cases";
 export * from "./repo/gatehouse";
+export * from "./repo/giveaways";
 export * from "./repo/guilds";
 export * from "./repo/ledger";
 export * from "./repo/messages";
@@ -39,6 +41,8 @@ export type {
   EscalationAction,
   EscalationRule,
   GatehouseSettings,
+  Giveaway,
+  GiveawayActionPayload,
   Guild,
   HealthSnapshot,
   LedgerEvent,
@@ -76,6 +80,7 @@ export type {
   SettingsChange,
   SettingsDiff,
   SettingsModule,
+  StartGiveawayPayload,
   Ticket,
   TicketActionPayload,
   TicketAnswer,

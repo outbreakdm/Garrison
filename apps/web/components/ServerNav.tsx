@@ -17,6 +17,7 @@ const ITEMS = [
   { group: null, href: "/herald", name: modules.herald.name, plain: modules.herald.plain },
   { group: null, href: "/parley", name: modules.parley.name, plain: modules.parley.plain },
   { group: null, href: "/beacon", name: modules.beacon.name, plain: modules.beacon.plain },
+  { group: null, href: "/spoils", name: modules.spoils.name, plain: modules.spoils.plain },
   {
     group: null,
     href: "/dispatch",

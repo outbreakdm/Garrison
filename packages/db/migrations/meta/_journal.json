@@ -211,6 +211,13 @@
       "when": 1794489327464,
       "tag": "0029_alerts",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1794489764283,
+      "tag": "0030_giveaways",
+      "breakpoints": true
     }
   ]
 }

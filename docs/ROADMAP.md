@@ -9,7 +9,8 @@ then updates **Status** and the **Log** before stopping.
 
 - **Now:** Phases 3 to 8 are code done, committed, not pushed or deployed. **Before
   deploying:** apply migrations `0023_role_menus`, `0024_welcome`, `0025_messages`,
-  `0026_tickets`, `0027_ledger_text`, `0028_rank_cards` and `0029_alerts` to production (`DATABASE_MIGRATION_URL` set, `pnpm db:migrate`, see
+  `0026_tickets`, `0027_ledger_text`, `0028_rank_cards`, `0029_alerts` and `0030_giveaways`
+  to production (`DATABASE_MIGRATION_URL` set, `pnpm db:migrate`, see
   DEPLOY.md); the bot preflight checks for their tables, so a deploy before them stops at
   preflight. **Message Content Intent must be on** in the Developer Portal (Bot → Privileged
   Gateway Intents): the bot now asks for it, and login fails without it.
@@ -47,7 +48,7 @@ then updates **Status** and the **Log** before stopping.
 | 8 | Message builder (post now or on a schedule) | **Code done**, not deployed: needs migration 0025 |
 | 9 | Custom rank cards with character details | **Code done**, not deployed: needs migration 0028 |
 | 10 | Stream and video alerts (Twitch, YouTube, Kick) | **Code done**, not deployed: needs migration 0029; Twitch needs the owner's keys; Kick later |
-| 11 | Giveaways and starboard | Not started |
+| 11 | Giveaways and starboard | **Giveaways code done** (migration 0030); starboard in progress |
 | — | Depth for current modules (backlog below), slotted between phases | Not started |
 
 ## How plans work
@@ -328,6 +329,21 @@ Card accent colour and footer text come from the same settings, read by `lib/car
       Checked in the local preview (add from links, Pro refusal, statuses, phone width).
 - Later: Kick (its public API needs an app review), YouTube live streams (needs the YouTube
   Data API key), a "send a test alert" button.
+
+### Phase 11: giveaways (module "Spoils", plain label "Giveaways") and starboard
+
+- [x] Giveaway rules (`packages/db/src/giveaways.ts`): prize, 1 to 20 winners, set lengths from 30
+      minutes to 2 weeks. Free 2 running (`giveaways.running`), Pro 20 with entry rules, bonus
+      entries and colour (`giveaways.rules`). Weighted draw without repeats, tested for fairness.
+- [x] Storage (migration `0030_giveaways`): `giveaways` and `giveaway_entries`, written by the bot
+      only; the dashboard asks through `start_giveaway` and `giveaway_action` requests.
+- [x] Bot (`apps/bot/src/modules/giveaways/`): posts the card, Enter and Leave (rules checked on
+      every press), the minute sweep draws what's due (claimed once) and keeps entry counts
+      current, Draw now / Cancel / Draw again from the dashboard.
+- [x] Dashboard (`/servers/:id/spoils`, nav "Spoils · Giveaways"): start one (Pro rules shown
+      locked on Free), recent giveaways with entries, winners by name and their actions. Checked
+      in the local preview (the form, the queued request's payload, the list).
+- [ ] Starboard.
 
 ### Phase 8: message builder (module "Dispatch", plain label "Messages")
 

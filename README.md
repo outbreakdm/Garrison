@@ -31,6 +31,7 @@ packages/
 | Dispatch      | Messages          | **Built** | (dashboard)                                                                 |
 | Parley        | Tickets           | **Built** | `/ticket`                                                                   |
 | Beacon        | Alerts            | **Built** | (dashboard)                                                                 |
+| Spoils        | Giveaways         | **Built** | (dashboard)                                                                 |
 | Quartermaster | AI builder        | **Built** | `/qm`                                                                       |
 
 ### Watch
@@ -115,6 +116,12 @@ After pulling this change, run `pnpm commands:deploy` once: `/lfg create` has a 
 - YouTube uses the channel's public feed (no key). Twitch needs a Twitch app: set `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` (dev.twitch.tv/console); without them Twitch alerts stay off and the dashboard says so.
 - Twitch is checked every 2 minutes and YouTube every 5, once per watched channel however many servers watch it. Every request has a timeout; provider text is made inert before it's posted.
 - Free: 3 alerts with the standard look. Pro: 25, with your own message (`{name}`, `{title}`, `{game}`, `{url}`) and colour. Set up on the dashboard's Alerts page with a live preview.
+
+### Spoils (giveaways)
+
+- Started from the dashboard's Giveaways page: a prize, 1 to 20 winners, 30 minutes to 2 weeks, and a channel. Members press **Enter** (and can leave again); the card's entry count updates within a minute.
+- When time's up the minute sweep draws winners with a secure random draw, each entry weighing as much as its entries, and replies to the card naming them (the only pings). A draw is claimed by a conditional update, so it happens once. **Draw now**, **Cancel** and **Draw again** (new winners, never the same people) are on the dashboard.
+- Free: 2 running at once, open to everyone. Pro: 20, entry rules (a role, or a level from Ranks), up to 3 bonus-entry roles, and the card's colour.
 
 ### Ranks
 

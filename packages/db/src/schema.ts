@@ -17,6 +17,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { AlertFeed } from "./alerts";
 import type { CustomCard } from "./cards";
+import type { BonusRole } from "./giveaways";
 import type { SavedMessage } from "./messages";
 import type { GuildPlan } from "./plans";
 import type { RallyTemplate, RallyWording } from "./rally";
@@ -838,6 +839,8 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "post_message",
   "post_ticket_panel",
   "ticket_action",
+  "start_giveaway",
+  "giveaway_action",
 ]);
 export const dashboardActionStatus = pgEnum("dashboard_action_status", [
   "pending",
@@ -908,6 +911,23 @@ export interface TicketActionPayload {
   ticketId: string;
   op: "claim" | "close";
   reason: string | null;
+}
+/** Start a giveaway from the dashboard. Checked again by the bot. */
+export interface StartGiveawayPayload {
+  channelId: string;
+  prize: string;
+  description: string | null;
+  winners: number;
+  durationMinutes: number;
+  requiredRoleId: string | null;
+  minLevel: number | null;
+  bonusRoles: BonusRole[];
+  accent: string | null;
+}
+/** End a giveaway now, draw new winners, or cancel it. */
+export interface GiveawayActionPayload {
+  giveawayId: string;
+  op: "end" | "reroll" | "cancel";
 }
 /** Post a role menu, or update the message it was last posted as. */
 export interface PostRoleMenuPayload {
@@ -1386,3 +1406,63 @@ export const alertState = pgTable(
 ).enableRLS();
 
 export type AlertStateRow = typeof alertState.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Giveaways (Spoils)
+// ---------------------------------------------------------------------------
+
+export const giveawayStatus = pgEnum("giveaway_status", ["running", "ended", "cancelled"]);
+
+/** A giveaway, started from the dashboard and run by the bot. */
+export const giveaways = pgTable(
+  "giveaways",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    channelId: text("channel_id").notNull(),
+    /** The card in Discord. Null until it's posted. */
+    messageId: text("message_id"),
+    prize: text("prize").notNull(),
+    description: text("description"),
+    winners: integer("winners").notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    status: giveawayStatus("status").notNull().default("running"),
+    hostId: text("host_id").notNull(),
+    hostName: text("host_name").notNull(),
+    requiredRoleId: text("required_role_id"),
+    minLevel: integer("min_level"),
+    bonusRoles: jsonb("bonus_roles").$type<BonusRole[]>().notNull().default(sql`'[]'::jsonb`),
+    accent: text("accent"),
+    winnerIds: text("winner_ids").array().notNull().default(sql`'{}'::text[]`),
+    /** Entries as last shown on the card, so it's edited only when the count changes. */
+    shownEntries: integer("shown_entries").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("giveaways_guild").on(t.guildId, t.createdAt),
+    index("giveaways_due").on(t.status, t.endsAt),
+    check("giveaways_winners", sql`${t.winners} BETWEEN 1 AND 20`),
+  ],
+).enableRLS();
+
+/** Who entered, and with how many entries (bonus roles add more). */
+export const giveawayEntries = pgTable(
+  "giveaway_entries",
+  {
+    giveawayId: uuid("giveaway_id")
+      .notNull()
+      .references(() => giveaways.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    weight: integer("weight").notNull().default(1),
+    enteredAt: timestamp("entered_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.giveawayId, t.userId] }),
+    check("giveaway_entries_weight", sql`${t.weight} BETWEEN 1 AND 31`),
+  ],
+).enableRLS();
+
+export type Giveaway = typeof giveaways.$inferSelect;

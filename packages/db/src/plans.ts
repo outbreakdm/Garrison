@@ -18,6 +18,7 @@ type Module =
   | "welcome"
   | "tickets"
   | "alerts"
+  | "giveaways"
   | "rally"
   | "ops"
   | "ranks"
@@ -149,6 +150,18 @@ export const FEATURES = {
   "alerts.custom": {
     module: "alerts",
     about: "Your own alert message and colour",
+    free: false,
+    pro: true,
+  },
+  "giveaways.running": {
+    module: "giveaways",
+    about: "Giveaways running at once",
+    free: 2,
+    pro: 20,
+  },
+  "giveaways.rules": {
+    module: "giveaways",
+    about: "Giveaway entry rules (a role or a level), bonus entries and your own colour",
     free: false,
     pro: true,
   },

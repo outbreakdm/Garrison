@@ -21,6 +21,10 @@ const ERRORS: Record<string, string> = {
   menu_paused: "This menu is paused: the server has more menus than its plan runs.",
   panel_empty: "Add a topic and save the panel before posting it.",
   panel_paused: "This panel is paused: the server has more panels than its plan runs.",
+  giveaway:
+    "Some giveaway details weren't valid: a prize, 1 to 20 winners and a length. Nothing was queued.",
+  giveaway_pro: "Entry rules, bonus entries and your own colour are part of Garrison Pro.",
+  giveaway_full: "This server runs as many giveaways at once as its plan allows. End one first.",
   ticket_closed: "That ticket is already closed.",
   qm_not_yours: "Only the person who asked for a plan can apply it. You can discard it.",
 };

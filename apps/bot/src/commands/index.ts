@@ -1,5 +1,6 @@
 import { link, roster, unlink } from "../modules/barracks/commands.js";
 import { gatehouseButtons, gatehouseCommands } from "../modules/gatehouse/commands/index.js";
+import { giveawayButtons } from "../modules/giveaways/handlers.js";
 import { health } from "../modules/health/command.js";
 import { logs } from "../modules/ledger/commands.js";
 import { opsButtons, opsModals, raid } from "../modules/ops/commands.js";
@@ -36,6 +37,7 @@ export const buttons: ButtonHandler[] = [
   qmButtons,
   roleMenuButtons,
   ticketButtons,
+  giveawayButtons,
 ];
 export const selects: SelectHandler[] = [roleMenuSelects];
 export const modals: ModalHandler[] = [opsModals, ticketModals, rankcardModals];

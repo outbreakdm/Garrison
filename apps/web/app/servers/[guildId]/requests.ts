@@ -1,9 +1,12 @@
 "use server";
 
 import {
+  checkGiveaway,
   checkProfileRequest,
+  countRunningGiveaways,
   entitlements,
   getCase,
+  getGiveaway,
   getGuildPlan,
   getLfgPost,
   getMessages,
@@ -46,6 +49,7 @@ const PAGES = new Set([
   "settings",
   "dispatch",
   "parley",
+  "spoils",
 ]);
 /** A member's page under Watch is the one page with an ID in its path. */
 const MEMBER_PAGE = /^watch\/member\/\d{17,20}$/;
@@ -161,6 +165,43 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       if (!panel.topics.length) return { ok: false, error: "panel_empty" };
       if (!channels.some((c) => c.id === channelId)) return { ok: false, error: "channel" };
       return { ok: true, input: { kind, payload: { panelId: panel.id, channelId } } };
+    }
+    case "start_giveaway": {
+      const ent = entitlements(await getGuildPlan(db, guildId));
+      const checked = checkGiveaway(
+        {
+          channelId: field(form, "channelId"),
+          prize: field(form, "prize"),
+          description: String(form.get("description") ?? ""),
+          winners: field(form, "winners"),
+          durationMinutes: field(form, "durationMinutes"),
+          requiredRoleId: field(form, "requiredRoleId") || null,
+          minLevel: field(form, "minLevel") || null,
+          bonusRoles: [0, 1, 2].map((i) => ({
+            roleId: field(form, `bonusRole${i}`),
+            extra: field(form, `bonusExtra${i}`),
+          })),
+          accent: field(form, "accent") || null,
+        },
+        ent,
+      );
+      if (!checked.ok)
+        return { ok: false, error: /Pro/.test(checked.error) ? "giveaway_pro" : "giveaway" };
+      const channels = await listTextChannels(guildId).catch(() => []);
+      if (!channels.some((c) => c.id === checked.value.channelId))
+        return { ok: false, error: "channel" };
+      if ((await countRunningGiveaways(db, guildId)) >= ent["giveaways.running"])
+        return { ok: false, error: "giveaway_full" };
+      return { ok: true, input: { kind, payload: checked.value } };
+    }
+    case "giveaway_action": {
+      const op = field(form, "op");
+      if (op !== "end" && op !== "reroll" && op !== "cancel")
+        return { ok: false, error: "invalid" };
+      const id = field(form, "giveawayId");
+      const g = uuid.safeParse(id).success ? await getGiveaway(db, guildId, id) : null;
+      if (!g) return { ok: false, error: "not_found" };
+      return { ok: true, input: { kind, payload: { giveawayId: g.id, op } } };
     }
     case "ticket_action": {
       const op = field(form, "op");

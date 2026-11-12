@@ -69,4 +69,6 @@ export const ACTION_KIND: Record<string, string> = {
   post_message: "Post message",
   post_ticket_panel: "Post ticket panel",
   ticket_action: "Claim or close ticket",
+  start_giveaway: "Start giveaway",
+  giveaway_action: "Giveaway",
 };

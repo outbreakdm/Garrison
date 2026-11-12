@@ -28,6 +28,7 @@ import { postMessageNow } from "../dispatch/service.js";
 import { restoreQuarantine } from "../gatehouse/anti-nuke.js";
 import { verifyPanel } from "../gatehouse/embeds.js";
 import { invalidateGatehouseSettings, lockGuild, unlockGuild } from "../gatehouse/service.js";
+import { doGiveawayAction, doStartGiveaway } from "../giveaways/service.js";
 import { healthFor } from "../health/command.js";
 import { opsCard, shortages } from "../ops/card.js";
 import { MAX_SCHEDULED } from "../ops/commands.js";
@@ -463,6 +464,10 @@ export async function runDashboardAction(
       return doPostTicketPanel(ctx, guild, member, action.payload);
     case "ticket_action":
       return doTicketAction(ctx, guild, member, action.payload);
+    case "start_giveaway":
+      return doStartGiveaway(ctx, guild, member, action.payload);
+    case "giveaway_action":
+      return doGiveawayAction(ctx, guild, action.payload);
     default:
       return fail("Garrison doesn't know that request.");
   }

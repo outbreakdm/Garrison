@@ -10,6 +10,7 @@ import {
   type CreateRaidPayload,
   type DashboardAction,
   dashboardActions,
+  type GiveawayActionPayload,
   type IdPayload,
   type LfgJoinPayload,
   type LockdownStartPayload,
@@ -22,6 +23,7 @@ import {
   type QmPlanPayload,
   type RaidSignupPayload,
   type RaidWithdrawPayload,
+  type StartGiveawayPayload,
   type TicketActionPayload,
   type VerifyPanelPayload,
 } from "../schema";
@@ -54,7 +56,9 @@ export type QueueInput =
   | { kind: "bot_profile"; payload: BotProfilePayload }
   | { kind: "post_message"; payload: PostMessagePayload }
   | { kind: "post_ticket_panel"; payload: PostTicketPanelPayload }
-  | { kind: "ticket_action"; payload: TicketActionPayload };
+  | { kind: "ticket_action"; payload: TicketActionPayload }
+  | { kind: "start_giveaway"; payload: StartGiveawayPayload }
+  | { kind: "giveaway_action"; payload: GiveawayActionPayload };
 
 /** Per server: at most this many requests waiting at once. */
 export const MAX_PENDING_PER_GUILD = 10;
