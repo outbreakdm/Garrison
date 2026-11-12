@@ -413,6 +413,10 @@ Later phases get their checklists when they start.
   $7/mo; Sesh about $5–6.99/mo; Raid-Helper €25/yr (its own page). Garrison Pro covers what
   takes three or four of those. Proposed: **$5.99/mo or $49.99/yr per server**, with a
   founders' discount at launch. Waiting on the owner.
+- **Quartermaster AI costs** (`docs/ai-costs.md`): proposed Claude Haiku 5.5 through
+  OpenRouter (GPT-6 Luna fallback), daily credits (Free 3, Pro 15), output capped at 4,000
+  tokens, a $5/day global spend cap. Worst case $1.23 a month per Pro server against $4.02
+  net. Keep `ANTHROPIC_API_KEY` unset in production until this is built.
 - **Rank card uploads:** stored in Cloudflare R2 (`garrison-media`, served at
   `media.garrisonbot.com`); the owner enables R2 in the Cloudflare dashboard first. Default
   backgrounds ship in the repo. Plan and image prompts: `docs/rank-card-backgrounds.md`.
