@@ -387,10 +387,10 @@ Later phases get their checklists when they start.
   [x] CSV export (Pro) · [x] the text of deleted and edited messages (off by default, a switch in
   Ledger settings; migration `0027_ledger_text`; only for messages Garrison saw since its last
   restart, capped at 1,500 characters, removed with the event)
-- **Rally:** [ ] LFG board on the dashboard for players · [ ] no-show tracking ·
+- **Rally:** [x] LFG board on the dashboard for players (`/play/<server id>`, any member) · [ ] no-show tracking ·
   [ ] squads that repeat
 - **Ops:** [ ] calendar view · [ ] calendar feed (ICS) · [ ] attendance history per member ·
-  [ ] signing up from the web
+  [x] signing up from the web (the same player page)
 - **Ranks:** [ ] XP for time in voice · [ ] XP boosts by role or channel · [ ] seasons ·
   [ ] custom rank cards (phase 9)
 - **Barracks:** [ ] more game accounts · [ ] roles that follow game stats
@@ -511,3 +511,4 @@ Decided (2026-11-12, owner):
 - 2026-11-12: Backlog: Ledger invite tracking (new intent `GuildInvites`, not privileged; top
   inviters on the Ledger page) and CSV export on Pro (`ledger.export`). Voice and nickname
   events were already logged.
+Player page `/play/<server id>`: any member joins or leaves groups and signs up for raids from the web; the bot accepts lfg_join/lfg_leave/raid_signup/raid_withdraw without Manage Server, acting only on the requester.

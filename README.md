@@ -88,6 +88,7 @@ After pulling this change, run `pnpm commands:deploy` once: `/lfg create` has a 
 - **Reminders** 24 h and 30 min before ping only the players signed up, never the bench or anyone else.
 - Weekly raids repost themselves after each run at the same local time, across daylight-saving changes.
 - `/raid list` shows what's coming up. The host or anyone with Manage Events can cancel. A server can hold 25 scheduled raids.
+- **From the website:** any member can join or leave groups and sign up for or leave raids at `/play/<server id>` (the player page, linked from Rally on the dashboard). It asks Garrison to do it, so the cards in Discord stay the source of truth.
 
 ### Barracks
 

@@ -88,7 +88,10 @@ export default async function RallyPage({
       <div className="page-head">
         <div>
           <h1>Rally and Ops</h1>
-          <p>Post groups, schedule raids, and join or sign up without leaving the dashboard.</p>
+          <p>
+            Post groups, schedule raids, and join or sign up without leaving the dashboard. Members
+            without Manage Server join on the <a href={`/play/${guild.id}`}>player page</a>.
+          </p>
         </div>
         <div className="row-between">
           <a className="g-btn g-btn--secondary" href={`/servers/${guild.id}/rally/templates`}>

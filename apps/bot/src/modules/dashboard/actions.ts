@@ -113,6 +113,9 @@ export function plainOutcome(text: string) {
     .slice(0, 300);
 }
 
+/** Requests that only change the requester's own place in a group or raid. */
+const SELF_SERVICE = new Set(["lfg_join", "lfg_leave", "raid_signup", "raid_withdraw"]);
+
 async function requester(guild: Guild, userId: string): Promise<GuildMember | null> {
   const member = await guild.members.fetch(userId).catch(() => null);
   if (!member) return null;
@@ -425,7 +428,11 @@ export async function runDashboardAction(
   if (!guild) return fail("Garrison isn't in that server any more.");
   // Website verification is asked for by the member themself, not a manager.
   if (action.kind === "web_verify") return doWebVerify(ctx, guild, action.requestedById);
-  const member = await requester(guild, action.requestedById);
+  // Joining and leaving groups and raids act only on the person asking: any member may.
+  const member = SELF_SERVICE.has(action.kind)
+    ? await guild.members.fetch(action.requestedById).catch(() => null)
+    : await requester(guild, action.requestedById);
+  if (!member && SELF_SERVICE.has(action.kind)) return fail("You're not in that server any more.");
   if (!member) return fail("You no longer have Manage Server in this server.");
   switch (action.kind) {
     case "create_raid":
