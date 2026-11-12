@@ -234,11 +234,12 @@ export default async function AccountPage({
               ) : null}
               <div className="link-option">
                 <span className="link-option__title">
-                  Old School RuneScape <span className="g-badge g-badge--caution">Claimed</span>
+                  RuneScape and Old School RuneScape{" "}
+                  <span className="g-badge g-badge--caution">Claimed</span>
                 </span>
                 <p>
-                  Use /link osrs in Discord. OSRS can't prove an account is yours, so it shows as
-                  claimed.
+                  Use /link rs3 or /link osrs in Discord. RuneScape can't prove an account is yours,
+                  so these show as claimed.
                 </p>
               </div>
             </section>

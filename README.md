@@ -99,6 +99,8 @@ After pulling this change, run `pnpm commands:deploy` once: `/lfg create` has a 
 - **Verified, from Discord Connections:** `/link accounts` opens the Account page, where **Link from Discord Connections** imports the verified game accounts in Discord → Settings → Connections (Steam, Battle.net, Riot, Xbox, PlayStation, Epic, Bungie, Roblox). Only this flow asks Discord for `connections`; ordinary sign-in never does.
 - **Verified, World of Warcraft:** Battle.net sign-in imports characters with level, class and realm. Turns on when `BNET_CLIENT_ID` and `BNET_CLIENT_SECRET` are set; register `APP_URL/auth/battlenet/callback` as the redirect.
 - **Claimed, Old School RuneScape:** `/link osrs name:Zezima` shows total and combat level from the public hiscores, refreshed every 6 h. OSRS can't prove ownership, so it's labelled claimed.
+- **Claimed, RuneScape 3:** `/link rs3 name:` shows total level from the public hiscores, refreshed every 6 h with OSRS.
+- **Roles from game stats (Pro):** on the dashboard's Barracks page, up to 10 rules like "OSRS total level 2000+ → @Maxed" (also OSRS combat level, RuneScape total level and WoW character level). Members get the role while an account they share with the server meets a rule and lose it when none does or they stop sharing; checked every 30 minutes and right after `/link`. Roles with admin or moderation powers are never given. Claimed accounts count, so these are for flair, not access.
 - `/roster [game]` lists what members shared; the dashboard's Barracks page shows the same with verified or claimed badges. No Discord or Battle.net token is ever stored.
 
 ### Quartermaster

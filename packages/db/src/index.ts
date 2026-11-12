@@ -106,6 +106,7 @@ export type {
 } from "./schema";
 export * as schema from "./schema";
 export * from "./starboard";
+export * from "./stat-roles";
 export * from "./tickets";
 export * from "./time";
 export * from "./welcome";

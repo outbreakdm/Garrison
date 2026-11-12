@@ -224,6 +224,7 @@ export const FIELD_LABELS: Record<string, string> = {
   trackAttendance: "Track attendance",
   voiceXp: "XP for voice",
   boosts: "XP boosts",
+  statRoles: "Roles from game stats",
   staffRoleIds: "Staff roles",
   verifyRoleId: "Verified role",
   verifyMinAccountAgeDays: "Verify: min account age (days)",

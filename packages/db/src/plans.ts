@@ -235,6 +235,12 @@ export const FEATURES = {
     free: false,
     pro: true,
   },
+  "barracks.statRoles": {
+    module: "barracks",
+    about: "Roles that follow game stats, like OSRS total level or WoW character level",
+    free: false,
+    pro: true,
+  },
   "rally.templates": {
     module: "rally",
     about: "LFG templates",

@@ -1,6 +1,12 @@
-import { and, asc, eq, inArray, isNull, notInArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, notInArray, sql } from "drizzle-orm";
 import type { Db } from "../client";
-import { guilds, type LinkedAccount, linkedAccounts, rosterShares } from "../schema";
+import {
+  barracksSettings,
+  guilds,
+  type LinkedAccount,
+  linkedAccounts,
+  rosterShares,
+} from "../schema";
 
 export interface LinkInput {
   userId: string;
@@ -229,4 +235,40 @@ export async function getSharedLinks(db: Db, guildId: string, userId: string) {
     .from(linkedAccounts)
     .where(and(eq(linkedAccounts.userId, userId), isNull(linkedAccounts.removedAt)))
     .orderBy(asc(linkedAccounts.provider));
+}
+
+export async function getStatRoles(db: Db, guildId: string) {
+  const [row] = await db
+    .select({ statRoles: barracksSettings.statRoles })
+    .from(barracksSettings)
+    .where(eq(barracksSettings.guildId, guildId));
+  return row?.statRoles ?? [];
+}
+
+/** Servers with stat-role rules, for the bot's sweep. */
+export async function listStatRoleGuilds(db: Db) {
+  return db
+    .select({ guildId: barracksSettings.guildId, statRoles: barracksSettings.statRoles })
+    .from(barracksSettings)
+    .where(sql`jsonb_array_length(${barracksSettings.statRoles}) > 0`);
+}
+
+/** Members sharing with this server, and their shared accounts' stats. */
+export async function listSharedStats(db: Db, guildId: string, limit = 500) {
+  const rows = await db
+    .select({
+      userId: rosterShares.userId,
+      provider: linkedAccounts.provider,
+      details: linkedAccounts.details,
+    })
+    .from(rosterShares)
+    .innerJoin(
+      linkedAccounts,
+      and(eq(linkedAccounts.userId, rosterShares.userId), isNull(linkedAccounts.removedAt)),
+    )
+    .where(and(eq(rosterShares.guildId, guildId), isNull(rosterShares.removedAt)))
+    .limit(limit * 10);
+  const byUser = new Map<string, { provider: string; details: Record<string, unknown> }[]>();
+  for (const r of rows) byUser.set(r.userId, [...(byUser.get(r.userId) ?? []), r]);
+  return [...byUser.entries()].slice(0, limit).map(([userId, links]) => ({ userId, links }));
 }

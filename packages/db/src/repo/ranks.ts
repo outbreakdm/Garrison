@@ -127,13 +127,15 @@ export async function getMemberRank(db: Db, guildId: string, userId: string) {
 }
 
 export async function getLeaderboard(db: Db, guildId: string, limit = 10) {
-  return db
-    .select()
-    .from(memberXp)
-    // Nobody with 0 XP: after a new season starts, the board fills up again as people earn.
-    .where(and(eq(memberXp.guildId, guildId), gt(memberXp.xp, 0)))
-    .orderBy(desc(memberXp.xp), asc(memberXp.userId))
-    .limit(limit);
+  return (
+    db
+      .select()
+      .from(memberXp)
+      // Nobody with 0 XP: after a new season starts, the board fills up again as people earn.
+      .where(and(eq(memberXp.guildId, guildId), gt(memberXp.xp, 0)))
+      .orderBy(desc(memberXp.xp), asc(memberXp.userId))
+      .limit(limit)
+  );
 }
 
 export async function setRankReward(db: Db, guildId: string, level: number, roleId: string | null) {

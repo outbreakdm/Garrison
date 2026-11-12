@@ -13,6 +13,8 @@ import { ensureGuild } from "../../lib/guild-registry.js";
 import { safeText } from "../../lib/text.js";
 import { describeLink, providerLabel } from "./format.js";
 import { fetchHiscores, isValidRsn, normalizeRsn } from "./osrs.js";
+import { fetchRs3Hiscores } from "./rs3.js";
+import { syncStatRolesFor } from "./stat-roles.js";
 
 const PROVIDER_CHOICES = Object.entries(linkProviders).map(([value, p]) => ({
   name: p.label,
@@ -46,6 +48,20 @@ export const link: Command = {
         .setName("osrs")
         .setDescription(
           "Link an Old School RuneScape account (shown as claimed: OSRS can't prove ownership)",
+        )
+        .addStringOption((o) =>
+          o
+            .setName("name")
+            .setDescription("Your RuneScape name")
+            .setRequired(true)
+            .setMaxLength(12),
+        ),
+    )
+    .addSubcommand((s) =>
+      s
+        .setName("rs3")
+        .setDescription(
+          "Link a RuneScape 3 account (shown as claimed: RuneScape can't prove ownership)",
         )
         .addStringOption((o) =>
           o
@@ -91,6 +107,7 @@ export const link: Command = {
     if (sub === "share") {
       const visible = interaction.options.getBoolean("visible", true);
       await setRosterShare(ctx.db, interaction.guild.id, user.id, user.username, visible);
+      await syncStatRolesFor(ctx, interaction.guild, user.id);
       await interaction.reply({
         content: visible
           ? "Your linked accounts now show in this server's roster."
@@ -107,7 +124,7 @@ export const link: Command = {
           title: "Your linked accounts",
           lead: links.length
             ? undefined
-            : "Nothing linked yet. Try `/link accounts` or `/link osrs`.",
+            : "Nothing linked yet. Try `/link accounts`, `/link osrs` or `/link rs3`.",
           blocks: links.length
             ? [{ text: links.map((l) => `- ${describeLink(l)}`).join("\n") }]
             : [],
@@ -118,7 +135,7 @@ export const link: Command = {
       return;
     }
 
-    // osrs
+    // osrs or rs3
     if (rateLimited(user.id)) {
       await interaction.reply({ content: "One lookup every 10 s.", ...ephemeral });
       return;
@@ -132,6 +149,32 @@ export const link: Command = {
       return;
     }
     await interaction.deferReply(ephemeral);
+    if (sub === "rs3") {
+      const rs3 = await fetchRs3Hiscores(name);
+      if (!rs3.ok) {
+        await interaction.editReply(
+          rs3.reason === "not_found"
+            ? `I can't find ${safeText(name)} on the RuneScape hiscores. Check the spelling: accounts need some training before they appear.`
+            : "The RuneScape hiscores aren't answering. Try again in a minute.",
+        );
+        return;
+      }
+      await upsertLink(ctx.db, {
+        userId: user.id,
+        provider: "rs3",
+        accountId: normalizeRsn(rs3.name),
+        displayName: rs3.name,
+        verified: false,
+        source: "claimed",
+        details: { ...rs3.stats },
+      });
+      await setRosterShare(ctx.db, interaction.guild.id, user.id, user.username, true);
+      await syncStatRolesFor(ctx, interaction.guild, user.id);
+      await interaction.editReply(
+        `Linked ${safeText(rs3.name)}: total level ${rs3.stats.totalLevel}. It shows as claimed, because RuneScape has no way to prove an account is yours. It's visible in this server's roster; hide it with \`/link share visible:false\`.`,
+      );
+      return;
+    }
     const result = await fetchHiscores(name);
     if (!result.ok) {
       await interaction.editReply(
@@ -151,6 +194,7 @@ export const link: Command = {
       details: { ...result.stats },
     });
     await setRosterShare(ctx.db, interaction.guild.id, user.id, user.username, true);
+    await syncStatRolesFor(ctx, interaction.guild, user.id);
     await interaction.editReply(
       `Linked ${safeText(result.name)}: total ${result.stats.totalLevel}, combat ${result.stats.combatLevel}. It shows as claimed, because OSRS has no way to prove an account is yours. It's visible in this server's roster; hide it with \`/link share visible:false\`.`,
     );
@@ -171,6 +215,8 @@ export const unlink: Command = {
     const provider = interaction.options.getString("game", true);
     if (!Object.hasOwn(linkProviders, provider)) return;
     const n = await removeProviderLinks(ctx.db, interaction.user.id, provider);
+    if (interaction.inGuild() && interaction.guild)
+      await syncStatRolesFor(ctx, interaction.guild, interaction.user.id);
     const note = discordConnectionProviders.includes(provider)
       ? " It came from your Discord Connections, so it comes back if you link accounts again while it's still connected in Discord."
       : "";

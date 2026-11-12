@@ -7,6 +7,7 @@ import {
   getRanksSettings,
   listSettingsChanges,
   type SettingsChange,
+  STAT_SOURCES,
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -62,6 +63,15 @@ function describe(
   if (field === "ignoredChannelIds" || field === "exemptChannelIds")
     return Array.isArray(value) && value.length
       ? value.map((id) => `#${channels.get(String(id)) ?? "deleted-channel"}`).join(", ")
+      : "none";
+  if (field === "statRoles")
+    return Array.isArray(value) && value.length
+      ? value
+          .map(
+            (r: { source: string; min: number; roleId: string }) =>
+              `${STAT_SOURCES[r.source as keyof typeof STAT_SOURCES]?.label ?? r.source} ${r.min}+ → @${roleNames.get(r.roleId) ?? "deleted-role"}`,
+          )
+          .join(", ")
       : "none";
   if (field === "boosts")
     return Array.isArray(value) && value.length

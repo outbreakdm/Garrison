@@ -12,6 +12,7 @@ export function plainLink(l: LinkFacts, opts: { proof?: boolean } = {}) {
   const d = l.details as Record<string, unknown>;
   if (l.provider === "osrs" && typeof d.totalLevel === "number")
     parts.push(`total ${d.totalLevel}`, `combat ${d.combatLevel}`);
+  if (l.provider === "rs3" && typeof d.totalLevel === "number") parts.push(`total ${d.totalLevel}`);
   if (l.provider === "wow" && typeof d.level === "number") {
     parts.push(`${d.level} ${typeof d.className === "string" ? d.className : ""}`.trim());
     if (typeof d.realm === "string") parts.push(d.realm);

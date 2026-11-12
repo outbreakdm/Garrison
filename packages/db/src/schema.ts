@@ -25,6 +25,7 @@ import type { RallyTemplate, RallyWording } from "./rally";
 import type { RankBoost } from "./rank-boosts";
 import type { RankCardStyle } from "./rank-cards";
 import type { RoleMenu } from "./role-menus";
+import type { StatRole } from "./stat-roles";
 import type { TicketPanel } from "./tickets";
 
 /**
@@ -455,6 +456,7 @@ export const settingsModule = pgEnum("settings_module", [
   "alerts",
   "starboard",
   "automod",
+  "barracks",
 ]);
 
 /** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */
@@ -782,6 +784,16 @@ export const rosterShares = pgTable(
   (t) => [primaryKey({ columns: [t.guildId, t.userId] }), index("roster_shares_user").on(t.userId)],
 ).enableRLS();
 
+/** Barracks settings: roles that follow game stats (Pro, stat-roles.ts). */
+export const barracksSettings = pgTable("barracks_settings", {
+  guildId: text("guild_id")
+    .primaryKey()
+    .references(() => guilds.id, { onDelete: "cascade" }),
+  statRoles: jsonb("stat_roles").$type<StatRole[]>().notNull().default(sql`'[]'::jsonb`),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
+
+export type BarracksSettings = typeof barracksSettings.$inferSelect;
 export type LinkedAccount = typeof linkedAccounts.$inferSelect;
 export type RosterShare = typeof rosterShares.$inferSelect;
 

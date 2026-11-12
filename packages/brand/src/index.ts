@@ -177,6 +177,7 @@ export const linkProviders = {
   bungie: { label: "Bungie", via: "discord" },
   roblox: { label: "Roblox", via: "discord" },
   osrs: { label: "Old School RuneScape", via: "claimed" },
+  rs3: { label: "RuneScape", via: "claimed" },
   wow: { label: "World of Warcraft", via: "battlenet" },
 } as const;
 

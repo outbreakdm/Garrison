@@ -10,6 +10,7 @@ import { createLogger } from "./lib/logger.js";
 import { Metrics } from "./lib/metrics.js";
 import { sweepAlerts } from "./modules/alerts/service.js";
 import { refreshOsrs } from "./modules/barracks/refresh.js";
+import { sweepStatRoles } from "./modules/barracks/stat-roles.js";
 import { processDashboardActions } from "./modules/dashboard/actions.js";
 import { sweepMessages } from "./modules/dispatch/service.js";
 import { handleAuditLogEntry } from "./modules/gatehouse/anti-nuke.js";
@@ -138,6 +139,7 @@ client.once(Events.ClientReady, async (ready) => {
     await sweepRally(ctx, ready).catch((error) => logger.error("Rally sweep failed", { error }));
     await sweepOps(ctx, ready).catch((error) => logger.error("Ops sweep failed", { error }));
     await sweepVoiceXp(ctx, ready).catch((error) => logger.error("Voice XP failed", { error }));
+    await sweepStatRoles(ctx, ready).catch((error) => logger.error("Stat roles failed", { error }));
     await sweepMessages(ctx, ready).catch((error) =>
       logger.error("Scheduled messages failed", { error }),
     );

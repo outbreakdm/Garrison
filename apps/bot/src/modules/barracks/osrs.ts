@@ -48,7 +48,8 @@ export function summarize(skills: OsrsSkill[]): OsrsStats {
 }
 
 let nextSlot = 0;
-async function politely() {
+/** Space out hiscore requests (OSRS and RS3 share Jagex's host). */
+export async function politely() {
   const now = Date.now();
   const wait = Math.max(0, nextSlot - now);
   nextSlot = Math.max(now, nextSlot) + MIN_GAP_MS;

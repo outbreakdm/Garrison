@@ -12,6 +12,7 @@ const MARKS: Record<string, string> = {
   bungie: "BG",
   roblox: "RB",
   osrs: "OS",
+  rs3: "RS",
   wow: "WoW",
 };
 
@@ -28,7 +29,10 @@ export function GameMark({ provider, small = false }: { provider: string; small?
 
 /** Game details a link carries: OSRS levels, or a WoW character's level, class and realm. */
 export function linkDetail(d: Record<string, unknown>) {
-  if (typeof d.totalLevel === "number") return `total ${d.totalLevel} · combat ${d.combatLevel}`;
+  if (typeof d.totalLevel === "number")
+    return typeof d.combatLevel === "number"
+      ? `total ${d.totalLevel} · combat ${d.combatLevel}`
+      : `total ${d.totalLevel}`;
   if (typeof d.level === "number")
     return [d.level, d.className, d.realm].filter(Boolean).join(" · ");
   return "";

@@ -65,7 +65,7 @@ export const SEARCH_INDEX: SearchEntry[] = [
     "/barracks",
     modules.barracks.name,
     modules.barracks.plain,
-    "roster linked accounts games steam osrs wow",
+    "roster linked accounts games steam osrs rs3 runescape wow",
   ),
   page("/ranks", modules.ranks.name, modules.ranks.plain, "xp level leaderboard rewards"),
   page(

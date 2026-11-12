@@ -3,6 +3,7 @@ import type { Db } from "../client";
 import {
   alertSettings,
   automodSettings,
+  barracksSettings,
   type EscalationRule,
   escalationRules,
   gatehouseSettings,
@@ -75,6 +76,8 @@ export const EDITABLE_FIELDS = {
   // Panels are checked with checkTicketPanels, the rest with checkTicketOptions.
   // Feeds are checked with checkAlertFeeds before they get here.
   alerts: ["feeds"],
+  // Checked with checkStatRoles before it gets here.
+  barracks: ["statRoles"],
   // Checked with checkAutomod before it gets here.
   automod: [
     "enabled",
@@ -229,6 +232,7 @@ const TABLES = {
   alerts: alertSettings,
   starboard: starboardSettings,
   automod: automodSettings,
+  barracks: barracksSettings,
 } as const;
 
 /** Modules whose settings row is created on first use, by the bot or the dashboard. */
@@ -244,6 +248,7 @@ const LAZY = new Set<SettingsModule>([
   "alerts",
   "starboard",
   "automod",
+  "barracks",
 ]);
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -348,6 +353,12 @@ async function writeRow(tx: Tx, module: SettingsModule, guildId: string, values:
         .update(automodSettings)
         .set(set as Partial<typeof automodSettings.$inferInsert>)
         .where(eq(automodSettings.guildId, guildId));
+      return;
+    case "barracks":
+      await tx
+        .update(barracksSettings)
+        .set(set as Partial<typeof barracksSettings.$inferInsert>)
+        .where(eq(barracksSettings.guildId, guildId));
       return;
     case "starboard":
       await tx
