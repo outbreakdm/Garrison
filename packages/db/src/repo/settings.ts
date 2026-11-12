@@ -2,6 +2,7 @@ import { and, asc, desc, eq, isNotNull, notInArray, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import {
   alertSettings,
+  automodSettings,
   type EscalationRule,
   escalationRules,
   gatehouseSettings,
@@ -71,6 +72,22 @@ export const EDITABLE_FIELDS = {
   // Panels are checked with checkTicketPanels, the rest with checkTicketOptions.
   // Feeds are checked with checkAlertFeeds before they get here.
   alerts: ["feeds"],
+  // Checked with checkAutomod before it gets here.
+  automod: [
+    "enabled",
+    "invites",
+    "mentionLimit",
+    "spamCount",
+    "spamSeconds",
+    "words",
+    "action",
+    "timeoutMinutes",
+    "exemptRoleIds",
+    "exemptChannelIds",
+    "aiEnabled",
+    "aiCategories",
+    "aiStrictness",
+  ],
   // Checked with checkStarboard before it gets here.
   starboard: [
     "enabled",
@@ -208,6 +225,7 @@ const TABLES = {
   tickets: ticketSettings,
   alerts: alertSettings,
   starboard: starboardSettings,
+  automod: automodSettings,
 } as const;
 
 /** Modules whose settings row is created on first use, by the bot or the dashboard. */
@@ -222,6 +240,7 @@ const LAZY = new Set<SettingsModule>([
   "tickets",
   "alerts",
   "starboard",
+  "automod",
 ]);
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -320,6 +339,12 @@ async function writeRow(tx: Tx, module: SettingsModule, guildId: string, values:
         .update(welcomeSettings)
         .set(set as Partial<typeof welcomeSettings.$inferInsert>)
         .where(eq(welcomeSettings.guildId, guildId));
+      return;
+    case "automod":
+      await tx
+        .update(automodSettings)
+        .set(set as Partial<typeof automodSettings.$inferInsert>)
+        .where(eq(automodSettings.guildId, guildId));
       return;
     case "starboard":
       await tx

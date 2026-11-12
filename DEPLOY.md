@@ -298,6 +298,7 @@ npx wrangler secret put DATABASE_URL        # the bot's string from Step 3.4 (po
 npx wrangler secret put ANTHROPIC_API_KEY   # optional: only if you want /qm build
 npx wrangler secret put TWITCH_CLIENT_ID     # optional: Twitch live alerts (dev.twitch.tv/console)
 npx wrangler secret put TWITCH_CLIENT_SECRET # optional: the same Twitch app's secret
+npx wrangler secret put OPENAI_API_KEY       # optional: AI moderation (Pro); the moderation endpoint is free
 cd ../..
 ```
 

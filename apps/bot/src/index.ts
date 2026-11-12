@@ -39,6 +39,7 @@ import {
   onTicketMessage,
   sweepTickets,
 } from "./modules/tickets/service.js";
+import { onAutomodMessage } from "./modules/watch/automod.js";
 import { liftExpiredBans } from "./modules/watch/service.js";
 import { welcomeJoin, welcomeLeave } from "./modules/welcome/service.js";
 
@@ -67,6 +68,8 @@ const alertKeys = {
       ? { clientId: env.TWITCH_CLIENT_ID, secret: env.TWITCH_CLIENT_SECRET }
       : null,
 };
+const automodKeys = { openai: env.OPENAI_API_KEY ?? null };
+if (!automodKeys.openai) logger.info("AI moderation is off: set OPENAI_API_KEY to enable it");
 if (!alertKeys.twitch)
   logger.info("Twitch alerts are off: set TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET");
 
@@ -180,6 +183,9 @@ client.on(Events.MessageCreate, (message) => {
     onDirectMessage(ctx, client, message).catch((error) =>
       logger.error("Modmail failed", { error }),
     );
+  onAutomodMessage(ctx, message, automodKeys).catch((error) =>
+    logger.warn("Automod failed", { guildId: message.guildId, error }),
+  );
   onTicketMessage(ctx, message).catch((error) =>
     logger.error("Ticket transcript failed", { guildId: message.guildId, error }),
   );

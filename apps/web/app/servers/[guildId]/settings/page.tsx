@@ -52,7 +52,14 @@ function describe(
     return `@${roleNames.get(String(value)) ?? "deleted-role"}`;
   if (field === "parentId") return value ? "a category" : "the top of the channel list";
   if (field === "card") return value ? "a custom card" : "the standard card";
-  if (field === "ignoredChannelIds")
+  if (field === "words") return Array.isArray(value) ? `${value.length} words` : "none";
+  if (field === "aiCategories")
+    return Array.isArray(value) && value.length ? value.join(", ") : "none";
+  if (field === "exemptRoleIds")
+    return Array.isArray(value) && value.length
+      ? value.map((id) => `@${roleNames.get(String(id)) ?? "deleted-role"}`).join(", ")
+      : "none";
+  if (field === "ignoredChannelIds" || field === "exemptChannelIds")
     return Array.isArray(value) && value.length
       ? value.map((id) => `#${channels.get(String(id)) ?? "deleted-channel"}`).join(", ")
       : "none";

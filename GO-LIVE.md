@@ -148,6 +148,7 @@ github.com/outbreakdm/Garrison → **Settings** (top tab) → left menu
 | `ANTHROPIC_API_KEY`     | optional: only if you want `/qm build` (Quartermaster) |
 | `TWITCH_CLIENT_ID`      | optional: Twitch live alerts (a Twitch app's client ID) |
 | `TWITCH_CLIENT_SECRET`  | optional: the same Twitch app's client secret           |
+| `OPENAI_API_KEY`        | optional: AI moderation on Pro (free moderation endpoint) |
 
 **Variables** tab → **New repository variable**:
 

@@ -2,15 +2,21 @@
 
 import {
   addMemberNote,
+  applySettingsChange,
+  checkAutomod,
   decideAppeal,
+  entitlements,
   getAppeal,
+  getAutomod,
   getCase,
+  getGuildPlan,
   NOTE_MAX,
   queueDashboardAction,
   removeMemberNote,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
+import { listGuildRoles, listTextChannels } from "@/lib/discord";
 import { flashBack } from "@/lib/flash";
 import { checkGuildAccess } from "@/lib/session";
 
@@ -99,4 +105,55 @@ export async function decide(form: FormData) {
   return back({
     ok: `${status === "accepted" ? "Accepted" : "Denied"} ${appeal.username}'s appeal. They see it on the appeal page.${undo}`,
   });
+}
+
+/** Automod rules. Roles and channels must be this server's; the plan is checked like the bot does. */
+export async function saveAutomod(form: FormData) {
+  const { guild, session } = await access(form);
+  const back = (o: { ok: string } | { error: string }) =>
+    flashBack(`/servers/${guild.id}/watch`, o, "?edit=automod#automod");
+  const db = await getDb();
+  const [before, plan, roles, channels] = await Promise.all([
+    getAutomod(db, guild.id),
+    getGuildPlan(db, guild.id),
+    listGuildRoles(guild.id).catch(() => null),
+    listTextChannels(guild.id).catch(() => null),
+  ]);
+  if (!roles || !channels) return back({ error: "Discord didn't answer. Try again." });
+  const raw = {
+    enabled: form.get("enabled") === "on",
+    invites: form.get("invites") === "on",
+    mentionLimit: Number(form.get("mentionLimit")),
+    spamCount: Number(form.get("spamCount")),
+    spamSeconds: Number(form.get("spamSeconds")),
+    words: String(form.get("words") ?? ""),
+    action: String(form.get("action") ?? ""),
+    timeoutMinutes: Number(form.get("timeoutMinutes")),
+    exemptRoleIds: form.getAll("exemptRoleIds").map(String),
+    exemptChannelIds: form.getAll("exemptChannelIds").map(String),
+    aiEnabled: form.get("aiEnabled") === "on",
+    aiCategories: form.getAll("aiCategories").map(String),
+    aiStrictness: String(form.get("aiStrictness") ?? "medium"),
+  };
+  const roleIds = new Set(roles.map((r) => r.id));
+  const channelIds = new Set(channels.map((c) => c.id));
+  if (
+    !raw.exemptRoleIds.every((id) => roleIds.has(id)) ||
+    !raw.exemptChannelIds.every((id) => channelIds.has(id))
+  )
+    return back({ error: "Pick roles and channels from this server's lists." });
+  const checked = checkAutomod(raw, entitlements(plan), before);
+  if (!checked.ok) return back({ error: checked.error });
+  const result = await applySettingsChange(db, {
+    guildId: guild.id,
+    module: "automod",
+    patch: { ...checked.value },
+    userId: session.userId,
+    username: session.username,
+  });
+  if (!result.ok)
+    return back({
+      error: result.reason === "unchanged" ? "Nothing changed." : "Try again in a minute.",
+    });
+  return back({ ok: checked.value.enabled ? "Saved. Automod is on." : "Saved. Automod is off." });
 }

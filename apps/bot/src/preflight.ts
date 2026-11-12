@@ -112,6 +112,9 @@ try {
 if (env) {
   // Newest tables first: if these exist with grants, everything older does too.
   const latest = [
+    "automod_settings",
+    "appeals",
+    "member_notes",
     "alert_settings",
     "alert_state",
     "rank_profiles",
@@ -149,6 +152,8 @@ if (env) {
   console.log("Optional");
   if (env.ANTHROPIC_API_KEY) ok("Quartermaster is on");
   else warn("ANTHROPIC_API_KEY isn't set: /qm build stays off.");
+  if (env.OPENAI_API_KEY) ok("AI moderation is available (OpenAI key set)");
+  else warn("OPENAI_API_KEY isn't set: AI moderation stays off.");
   if (env.TWITCH_CLIENT_ID && env.TWITCH_CLIENT_SECRET) ok("Twitch alerts are on");
   else warn("TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET aren't both set: Twitch alerts stay off.");
 }

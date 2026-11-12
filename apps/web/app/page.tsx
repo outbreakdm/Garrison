@@ -72,7 +72,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "What does Garrison store about my members?",
-    a: "Who did what and when, for cases and logs, kept 30 days by default (you choose 7 to 365). Logs keep the text of deleted and edited messages only if you turn that on. Tickets keep their transcript for 30 days after closing, or 365 on Pro.",
+    a: "Who did what and when, for cases and logs, kept 30 days by default (you choose 7 to 365). Logs keep the text of deleted and edited messages only if you turn that on. Tickets keep their transcript for 30 days after closing, or 365 on Pro. With AI moderation on (Pro), OpenAI's moderation model checks messages; Garrison keeps none of that.",
   },
   {
     q: "Can players use it too?",

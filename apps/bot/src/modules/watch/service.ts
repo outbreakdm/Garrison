@@ -97,7 +97,7 @@ export interface MemberActionRequest {
   reason: string | null;
   durationSeconds?: number | null;
   deleteMessageSeconds?: number;
-  source?: "manual" | "escalation";
+  source?: "manual" | "escalation" | "automod";
 }
 
 export type MemberActionResult =

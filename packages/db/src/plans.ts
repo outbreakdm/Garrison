@@ -20,6 +20,7 @@ type Module =
   | "alerts"
   | "giveaways"
   | "starboard"
+  | "automod"
   | "rally"
   | "ops"
   | "ranks"
@@ -181,6 +182,18 @@ export const FEATURES = {
   "starboard.look": {
     module: "starboard",
     about: "Your own starboard colour",
+    free: false,
+    pro: true,
+  },
+  "automod.words": {
+    module: "automod",
+    about: "Blocked words in automod",
+    free: 25,
+    pro: 250,
+  },
+  "automod.ai": {
+    module: "automod",
+    about: "AI moderation: OpenAI's moderation model reads messages for harassment, hate and more",
     free: false,
     pro: true,
   },

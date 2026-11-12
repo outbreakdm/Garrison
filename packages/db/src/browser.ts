@@ -3,6 +3,7 @@
  * no database code. The dashboard's client components import `@garrison/db/cards`.
  */
 export * from "./alerts";
+export * from "./automod";
 export * from "./cards";
 export * from "./emoji";
 export * from "./giveaways";

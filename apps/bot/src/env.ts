@@ -36,6 +36,12 @@ const schema = z.object({
     .min(1)
     .optional()
     .or(z.literal("").transform(() => undefined)),
+  /** OpenAI key for AI moderation (Pro). Its moderation endpoint is free; without a key AI moderation stays off. */
+  OPENAI_API_KEY: z
+    .string()
+    .min(1)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
   /** Model Quartermaster plans with. */
   QM_MODEL: z.string().min(1).default("claude-opus-5-5"),
 });

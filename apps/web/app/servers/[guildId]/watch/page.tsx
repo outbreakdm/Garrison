@@ -1,15 +1,23 @@
 import {
+  AI_CATEGORIES,
+  type AiCategory,
+  AUTOMOD_LIMITS,
   appealsOpen,
   cleanQuery,
+  entitlements,
+  getAutomod,
+  getGuildPlan,
   getOverview,
   listAppeals,
   listEscalationRules,
   listRecentCases,
   searchCases,
+  WORDS_HARD_MAX,
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Art } from "@/components/Art";
+import { ProTag } from "@/components/cards/CardEditor";
 import { ActionBadge, formatDuration, plainMentions } from "@/components/format";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { RequestsPanel } from "@/components/RequestsPanel";
@@ -24,7 +32,7 @@ import {
   Switch,
 } from "@/components/settings";
 import { getDb } from "@/lib/db";
-import { listTextChannels, searchMembers } from "@/lib/discord";
+import { listGuildRoles, listTextChannels, searchMembers } from "@/lib/discord";
 import { env } from "@/lib/env";
 import { readFlash } from "@/lib/flash";
 import { requireGuildAccess } from "@/lib/session";
@@ -38,7 +46,7 @@ import {
 import { ago } from "../parley/when";
 import { requestAction } from "../requests";
 import { saveLadder, saveWatch } from "../settings/actions";
-import { decide } from "./actions";
+import { decide, saveAutomod } from "./actions";
 
 export const metadata: Metadata = { title: "Watch" };
 
@@ -65,7 +73,7 @@ export default async function WatchPage({
   const q = cleanQuery(query.q);
   const memberQuery = typeof query.member === "string" ? query.member.trim().slice(0, 32) : "";
   const db = await getDb();
-  const [cases, rules, { watch: w }, channels, found, appealsOn, appeals, flash] =
+  const [cases, rules, { watch: w }, channels, found, appealsOn, appeals, flash, am, plan, roles] =
     await Promise.all([
       q ? searchCases(db, guild.id, q, 50) : listRecentCases(db, guild.id, 50),
       listEscalationRules(db, guild.id),
@@ -76,7 +84,11 @@ export default async function WatchPage({
       appealsOpen(db, guild.id),
       listAppeals(db, guild.id),
       readFlash(),
+      getAutomod(db, guild.id),
+      getGuildPlan(db, guild.id),
+      listGuildRoles(guild.id).catch(() => []),
     ]);
+  const ent = entitlements(plan);
   const appealUrl = `${env().APP_URL}/appeal/${guild.id}`;
   const first = rules[0]?.warnCount ?? 0;
   const logChannel = channels.find((c) => c.id === w?.logChannelId);
@@ -325,6 +337,205 @@ export default async function WatchPage({
 
       {/* Keyed by last update: after a save or undo the form re-mounts with the stored
           values, instead of keeping stale browser state that a later save would re-apply. */}
+      <SettingsPanel
+        id="automod"
+        title="Automod"
+        open={isEditing(query, "automod")}
+        facts={[
+          { label: "Status", value: am.enabled ? "On" : "Off" },
+          { label: "Blocked words", value: String(am.words.length) },
+          {
+            label: "Then",
+            value:
+              am.action === "delete"
+                ? "Remove"
+                : am.action === "warn"
+                  ? "Remove and warn"
+                  : `Remove and time out ${am.timeoutMinutes} min`,
+          },
+          {
+            label: "AI",
+            value: am.aiEnabled ? (ent["automod.ai"] ? "On" : "Paused on Free") : "Off",
+          },
+        ]}
+      >
+        <form action={saveAutomod} className="settings-form" key={JSON.stringify(am)}>
+          <input type="hidden" name="guildId" value={guild.id} />
+          <Switch
+            name="enabled"
+            defaultChecked={am.enabled}
+            label="Automod on"
+            help="Staff with Manage Messages are never checked."
+          />
+          <div className="settings-grid">
+            <div className="card-col">
+              <label className="g-field" htmlFor="words">
+                <span>Blocked words and phrases</span>
+                <textarea
+                  className="g-input"
+                  id="words"
+                  name="words"
+                  rows={5}
+                  defaultValue={am.words.join("\n")}
+                  placeholder="One per line. Whole words, any case."
+                />
+                <span className="g-help">
+                  {am.words.length} of {ent["automod.words"]}
+                  {ent["automod.words"] < WORDS_HARD_MAX ? ` (Pro: ${WORDS_HARD_MAX})` : ""}.
+                </span>
+              </label>
+              <Switch
+                name="invites"
+                defaultChecked={am.invites}
+                label="Remove invites to other servers"
+              />
+            </div>
+            <div className="card-col">
+              <label className="g-field" htmlFor="mentionLimit">
+                <span>Most mentions in one message</span>
+                <input
+                  className="g-input"
+                  id="mentionLimit"
+                  name="mentionLimit"
+                  type="number"
+                  min={0}
+                  max={AUTOMOD_LIMITS.mentionLimit}
+                  defaultValue={am.mentionLimit}
+                />
+                <span className="g-help">0 turns it off.</span>
+              </label>
+              <div className="field-row">
+                <label className="g-field" htmlFor="spamCount">
+                  <span>Spam: more than</span>
+                  <input
+                    className="g-input"
+                    id="spamCount"
+                    name="spamCount"
+                    type="number"
+                    min={0}
+                    max={AUTOMOD_LIMITS.spamCount}
+                    defaultValue={am.spamCount}
+                  />
+                </label>
+                <label className="g-field" htmlFor="spamSeconds">
+                  <span>messages in (seconds)</span>
+                  <input
+                    className="g-input"
+                    id="spamSeconds"
+                    name="spamSeconds"
+                    type="number"
+                    min={2}
+                    max={AUTOMOD_LIMITS.spamSeconds}
+                    defaultValue={am.spamSeconds}
+                  />
+                </label>
+              </div>
+              <div className="field-row">
+                <label className="g-field" htmlFor="automodAction">
+                  <span>After removing the message</span>
+                  <select
+                    className="g-input"
+                    id="automodAction"
+                    name="action"
+                    defaultValue={am.action}
+                  >
+                    <option value="delete">Nothing more</option>
+                    <option value="warn">Warn (counts toward the ladder)</option>
+                    <option value="timeout">Time out</option>
+                  </select>
+                </label>
+                <label className="g-field" htmlFor="timeoutMinutes">
+                  <span>Timeout (minutes)</span>
+                  <input
+                    className="g-input"
+                    id="timeoutMinutes"
+                    name="timeoutMinutes"
+                    type="number"
+                    min={1}
+                    max={AUTOMOD_LIMITS.timeoutMinutes}
+                    defaultValue={am.timeoutMinutes}
+                  />
+                </label>
+              </div>
+            </div>
+            <label className="g-field" htmlFor="exemptRoleIds">
+              <span>Never check these roles</span>
+              <select
+                className="g-input"
+                id="exemptRoleIds"
+                name="exemptRoleIds"
+                multiple
+                size={4}
+                defaultValue={am.exemptRoleIds}
+              >
+                {roles
+                  .filter((r) => !r.managed)
+                  .map((r) => (
+                    <option key={r.id} value={r.id}>
+                      @{r.name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label className="g-field" htmlFor="exemptChannelIds">
+              <span>Never check these channels</span>
+              <select
+                className="g-input"
+                id="exemptChannelIds"
+                name="exemptChannelIds"
+                multiple
+                size={4}
+                defaultValue={am.exemptChannelIds}
+              >
+                {channels.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    #{c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <fieldset className="editor-group" disabled={!ent["automod.ai"] && !am.aiEnabled}>
+            <legend className="g-label">
+              AI moderation <ProTag on={ent["automod.ai"]} />
+            </legend>
+            <Switch
+              name="aiEnabled"
+              defaultChecked={am.aiEnabled}
+              label="Let AI read messages for what rules can't catch"
+              help="Message text is sent to OpenAI's moderation model to be scored, and isn't kept by Garrison. Runs once Garrison's host has an OpenAI key."
+            />
+            <div className="chip-row">
+              {(Object.keys(AI_CATEGORIES) as AiCategory[]).map((c) => (
+                <label className="check" key={c}>
+                  <input
+                    type="checkbox"
+                    name="aiCategories"
+                    value={c}
+                    defaultChecked={am.aiCategories.includes(c)}
+                  />
+                  <span>{AI_CATEGORIES[c].label}</span>
+                </label>
+              ))}
+            </div>
+            <label className="g-field" htmlFor="aiStrictness">
+              <span>How strict</span>
+              <select
+                className="g-input"
+                id="aiStrictness"
+                name="aiStrictness"
+                defaultValue={am.aiStrictness}
+              >
+                <option value="low">Only clear cases</option>
+                <option value="medium">Balanced</option>
+                <option value="high">Strict (more false alarms)</option>
+              </select>
+            </label>
+          </fieldset>
+          <FormFoot label="Save automod" guildId={guild.id} />
+        </form>
+      </SettingsPanel>
+
       <SettingsPanel
         title="Watch settings"
         open={isEditing(query, "settings")}

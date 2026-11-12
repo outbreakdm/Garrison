@@ -436,6 +436,7 @@ export const settingsModule = pgEnum("settings_module", [
   "tickets",
   "alerts",
   "starboard",
+  "automod",
 ]);
 
 /** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */
@@ -1594,3 +1595,39 @@ export const appeals = pgTable(
 
 export type MemberNote = typeof memberNotes.$inferSelect;
 export type Appeal = typeof appeals.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Automod
+// ---------------------------------------------------------------------------
+
+/** A server's automod rules, one row, edited on the dashboard with history and undo. */
+export const automodSettings = pgTable(
+  "automod_settings",
+  {
+    guildId: text("guild_id")
+      .primaryKey()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    enabled: boolean("enabled").notNull().default(false),
+    invites: boolean("invites").notNull().default(true),
+    mentionLimit: integer("mention_limit").notNull().default(5),
+    spamCount: integer("spam_count").notNull().default(6),
+    spamSeconds: integer("spam_seconds").notNull().default(8),
+    words: text("words").array().notNull().default(sql`'{}'::text[]`),
+    action: text("action").notNull().default("delete"),
+    timeoutMinutes: integer("timeout_minutes").notNull().default(10),
+    exemptRoleIds: text("exempt_role_ids").array().notNull().default(sql`'{}'::text[]`),
+    exemptChannelIds: text("exempt_channel_ids").array().notNull().default(sql`'{}'::text[]`),
+    aiEnabled: boolean("ai_enabled").notNull().default(false),
+    aiCategories: text("ai_categories")
+      .array()
+      .notNull()
+      .default(sql`'{harassment,hate,sexual,selfharm}'::text[]`),
+    aiStrictness: text("ai_strictness").notNull().default("medium"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check("automod_action", sql`${t.action} IN ('delete', 'warn', 'timeout')`),
+    check("automod_strictness", sql`${t.aiStrictness} IN ('low', 'medium', 'high')`),
+    check("automod_words", sql`cardinality(${t.words}) <= 250`),
+  ],
+).enableRLS();

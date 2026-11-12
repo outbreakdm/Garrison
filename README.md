@@ -44,6 +44,8 @@ packages/
 - Members get a neutral DM with the reason and how to appeal (`/moderation dm_members` and `appeal_text`).
 - `/moderation log_channel:#mod-log` posts every case to a channel.
 
+- **Automod** (Watch → Automod on the dashboard): blocked words and phrases (whole words, any case, through zero-width tricks; 25 on Free, 250 on Pro), invites to other servers, too many mentions, and message spam. A hit removes the message, then does nothing more, warns (which counts toward the ladder) or times out; at most one case per member every 30 s. Staff with Manage Messages, exempt roles and exempt channels are never checked.
+- **AI moderation (Pro):** OpenAI's free moderation model (`omni-moderation-latest`) scores each message for the categories the server picks, at its strictness. Needs `OPENAI_API_KEY` on the bot; capped at 60 checks per server per minute. Self-harm is never punished: Garrison only alerts the staff in the Watch log so someone can check on the person.
 - **Staff notes:** `/note add` and `/note list`, and the Notes section on a member's dashboard page. Members never see them; removed notes are kept, marked removed.
 - **Appeals:** with *Take appeals on a page of their own* on (Watch settings), anyone with an active case can appeal at `/appeal/<server ID>` after signing in with Discord: one open appeal at a time, a week's wait after a denial. Appeals queue on the Watch page; staff accept (optionally undoing the case) or deny, with a reply the member reads on the appeal page. With the appeal text blank, moderation DMs link to the page.
 - **Temporary bans:** `/ban length:` (1 hour to 90 days) or the dashboard's ban form. The minute sweep lifts them when their time is up, marks the case undone by Garrison and says so in the log.
