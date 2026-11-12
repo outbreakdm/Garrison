@@ -16,6 +16,8 @@ export interface BotContext {
   logger: Logger;
   /** Quartermaster's planner. Absent when no Claude API key is configured. */
   planner?: Planner;
+  /** Quartermaster's spend cap for all servers per UTC day, in dollars. Absent: no cap (tests). */
+  qmDailyBudgetUsd?: number;
   /** Activity and response-time counters. Absent in tests. */
   metrics?: Metrics;
   /** The dashboard's address, for links Garrison posts. */

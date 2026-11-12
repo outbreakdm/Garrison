@@ -247,6 +247,12 @@ export const FEATURES = {
     free: false,
     pro: true,
   },
+  "qm.dailyCredits": {
+    module: "qm",
+    about: "Quartermaster plans a day (each plan or change asked for uses one)",
+    free: 3,
+    pro: 15,
+  },
   "rally.templates": {
     module: "rally",
     about: "LFG templates",

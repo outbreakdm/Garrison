@@ -700,6 +700,39 @@ export interface QmCreated {
   name: string;
 }
 
+/**
+ * One row per AI call (ai-usage.ts): reserved before the call, filled in after.
+ * Daily credits, the hourly attempt limit and the global daily budget all count
+ * these. Written only by the bot.
+ */
+export const aiUsage = pgTable(
+  "ai_usage",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    feature: text("feature").notNull(),
+    requestedBy: text("requested_by").notNull(),
+    model: text("model").notNull(),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    /** Held against the day's budget until the real cost is known. */
+    reservedMicros: integer("reserved_micros").notNull(),
+    /** Millionths of a dollar. Null while the call runs. */
+    costMicros: integer("cost_micros"),
+    /** True: used a credit. False: failed, credit given back. Null: running. */
+    ok: boolean("ok"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("ai_usage_guild_day").on(t.guildId, t.feature, t.createdAt),
+    index("ai_usage_day").on(t.createdAt),
+  ],
+).enableRLS();
+
+export type AiUsage = typeof aiUsage.$inferSelect;
+
 export const qmBuilds = pgTable(
   "qm_builds",
   {

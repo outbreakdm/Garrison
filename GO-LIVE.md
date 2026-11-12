@@ -145,7 +145,7 @@ github.com/outbreakdm/Garrison → **Settings** (top tab) → left menu
 | `DISCORD_CLIENT_SECRET` | **[7]**                                                |
 | `DATABASE_URL`          | **[11]** (the garrison_**bot** one)                    |
 | `WEB_DATABASE_URL`      | **[12]** (the garrison_**web** one)                    |
-| `ANTHROPIC_API_KEY`     | optional: only if you want `/qm build` (Quartermaster) |
+| `ANTHROPIC_API_KEY`     | optional: only if you want `/qm build` (Quartermaster). Spend is capped at $5 a day for all servers; change it with the `QM_DAILY_BUDGET_USD` var |
 | `TWITCH_CLIENT_ID`      | optional: Twitch live alerts (a Twitch app's client ID) |
 | `TWITCH_CLIENT_SECRET`  | optional: the same Twitch app's client secret           |
 | `OPENAI_API_KEY`        | optional: AI moderation on Pro (free moderation endpoint) |

@@ -109,7 +109,8 @@ After pulling this change, run `pnpm commands:deploy` once: `/lfg create` has a 
 - **Additive only:** categories, text and voice channels, and roles. It never edits or deletes anything that exists. New roles get **no permissions**; private channels get only view, send, read history, connect and speak for the listed roles.
 - Every build is versioned (`v15`). **Undo** (or `/qm undo version:15`) removes exactly what that build created and nothing else, even after a partial failure. `/qm history` lists builds; the dashboard shows each plan.
 - **Server templates (Pro):** on the Quartermaster page, save a server's roles, categories, channels and role permissions to your account (5 at most), then apply one in another server you own. Applying creates only what that server lacks by name, trims permissions to what Garrison holds, leaves out member-specific permissions, and is for the server owner only.
-- Limits: 5 builds per server per hour, 20 changes per build, plans expire after 15 minutes. Needs `ANTHROPIC_API_KEY`; uses `claude-opus-5-5` by default (`QM_MODEL`).
+- **Limits:** a plan uses a credit. Free servers get 3 a day and Pro servers 15, reset at midnight UTC; a plan that fails gives its credit back. Every server is also held to 10 attempts an hour, failures included. A build is at most 20 changes, and plans expire after 15 minutes.
+- **Cost:** needs `ANTHROPIC_API_KEY`. Uses Claude Haiku 5.5 by default (`QM_MODEL`), at about $0.0014 a plan. `QM_DAILY_BUDGET_USD` (default $5) caps spend for all servers together each day; Quartermaster pauses until midnight UTC when it's reached. Every call's tokens and cost are recorded in `ai_usage`. See `docs/ai-costs.md`.
 
 ### Ledger
 

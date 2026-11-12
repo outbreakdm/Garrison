@@ -1,7 +1,13 @@
 # AI costs
 
-What Garrison spends on AI, which model Quartermaster should use, and a daily credit
-allowance that keeps AI well inside what Pro brings in. Prices are OpenRouter's public list
+What Garrison spends on AI, which model Quartermaster uses, and the daily credit
+allowance that keeps AI well inside what Pro brings in.
+
+> **Decided 2026-11-12 and built:** Claude Haiku 5.5, called **directly through Anthropic**
+> (no OpenRouter fee), with the credits and limits below. Without OpenRouter's 5.5% fee, the
+> figures below are about 5% lower: a typical plan costs $0.0013, and a Pro server that
+> uses every credit every day costs at most **$1.17 a month**. Anthropic has no server-side
+> refusal fallback for Haiku, so a refusal fails the plan and the credit is given back. Prices are OpenRouter's public list
 on 2026-11-12 (per 1M tokens); check them again before switching.
 
 ## Where Garrison uses AI
@@ -12,9 +18,8 @@ on 2026-11-12 (per 1M tokens); check them again before switching.
 | **AI automod** (Pro) | OpenAI `omni-moderation-latest` | Free. OpenAI rate-limits it by account tier, so at scale it needs a back-off. |
 
 Production has no `ANTHROPIC_API_KEY` today, so Quartermaster is off and costs nothing.
-**Turn it on only after the changes below.** As built, every server (Free included) can run 5
-Opus builds an hour with no ceiling, which can cost hundreds of dollars a month for a
-single server.
+Before these changes, every server (Free included) could run 5 Opus builds an hour with no
+ceiling. Apply migration `0049_ai_usage` in production before setting the key.
 
 ## How big one build is
 

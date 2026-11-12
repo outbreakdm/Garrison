@@ -48,8 +48,10 @@ const schema = z.object({
     .url()
     .optional()
     .or(z.literal("").transform(() => undefined)),
-  /** Model Quartermaster plans with. */
-  QM_MODEL: z.string().min(1).default("claude-opus-5-5"),
+  /** Model Quartermaster plans with (docs/ai-costs.md). */
+  QM_MODEL: z.string().min(1).default("claude-haiku-5-5"),
+  /** Quartermaster's spend cap for all servers together, in dollars per UTC day. */
+  QM_DAILY_BUDGET_USD: z.coerce.number().positive().max(1000).default(5),
 });
 
 export type Env = z.infer<typeof schema>;

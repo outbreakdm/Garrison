@@ -21,7 +21,12 @@ const button = (id: string, label: string, style: ButtonStyle) =>
   new ButtonBuilder().setCustomId(id).setLabel(label).setStyle(style);
 
 /** The plan to review: the summary, every change as a diff, what was left out, and Apply. */
-export function planCard(build: QmBuild, server: ServerSnapshot, notes: string): Card {
+export function planCard(
+  build: QmBuild,
+  server: ServerSnapshot,
+  notes: string,
+  creditsLeft?: number,
+): Card {
   const lines = describePlan(build.plan, server).map((l) => safeText(l));
   const expires = new Date(build.createdAt.getTime() + PLAN_TTL_MS);
   return {
@@ -41,7 +46,10 @@ export function planCard(build: QmBuild, server: ServerSnapshot, notes: string):
       button(`${QM_PREFIX}:cancel:${build.id}`, "Discard", ButtonStyle.Secondary),
     ],
     module: "quartermaster",
-    ref: `plan v${build.version}`,
+    ref:
+      creditsLeft === undefined
+        ? `plan v${build.version}`
+        : `plan v${build.version} · ${creditsLeft} ${creditsLeft === 1 ? "plan" : "plans"} left today`,
   };
 }
 
@@ -156,7 +164,7 @@ export const qm: Command = {
       return;
     }
     await interaction.editReply(
-      cardMessage(planCard(outcome.build, outcome.server, outcome.notes)),
+      cardMessage(planCard(outcome.build, outcome.server, outcome.notes, outcome.creditsLeft)),
     );
   },
 };

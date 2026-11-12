@@ -1,3 +1,4 @@
+export * from "./ai-usage";
 export * from "./alerts";
 export * from "./automod";
 export * from "./backups";
@@ -14,6 +15,7 @@ export * from "./rally";
 export * from "./rank-boosts";
 export * from "./rank-cards";
 export * from "./repo/actions";
+export * from "./repo/ai-usage";
 export * from "./repo/alerts";
 export * from "./repo/attendance";
 export * from "./repo/automod";

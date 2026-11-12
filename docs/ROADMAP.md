@@ -10,7 +10,9 @@ then updates **Status** and the **Log** before stopping.
 - **Now:** Phases 1 and 3 to 11 and the depth backlog are **deployed** (2026-11-12, run
   43328874352). Migrations through `0048_server_templates` are applied in production and
   recorded in `drizzle.__drizzle_migrations` (0021 and 0022 had been applied by hand), so
-  `pnpm db:migrate` starts from 0049. Slash commands are registered (26).
+  `pnpm db:migrate` starts from 0049. Slash commands are registered (26). **Not yet in
+  production:** `0049_ai_usage` and the Quartermaster credits (committed; apply and deploy
+  before setting `ANTHROPIC_API_KEY`).
   Still to check on a test server: post a role menu and press its buttons, change Garrison's
   nickname from Settings, a welcome card on join, a scheduled message, a ticket from open to
   transcript, `/rank` drawing on the real host, a giveaway and a starred message.
@@ -90,7 +92,7 @@ member (the owner bypass) gets Pro limits everywhere.
 | Gatehouse (safety) | Everything: anti-raid, anti-nuke, verification, web captcha, alt warnings, 1 manual backup | Scheduled backups, 30 backups kept |
 | Ledger | 30 days, invite tracking, voice and nickname events | Up to 365 days, CSV export |
 | Barracks | Link accounts, roster | Roles that follow game stats |
-| Quartermaster | 5 builds an hour (exists) | 20 builds an hour, server templates |
+| Quartermaster | 3 plans a day | 15 plans a day, server templates |
 
 **Custom rank cards (Pro).** Players fill in character details on their own card: in-game
 name, class or main, server/realm, a short bio, and anything linked in Barracks (OSRS
@@ -413,10 +415,11 @@ Later phases get their checklists when they start.
   $7/mo; Sesh about $5–6.99/mo; Raid-Helper €25/yr (its own page). Garrison Pro covers what
   takes three or four of those. Proposed: **$5.99/mo or $49.99/yr per server**, with a
   founders' discount at launch. Waiting on the owner.
-- **Quartermaster AI costs** (`docs/ai-costs.md`): proposed Claude Haiku 5.5 through
-  OpenRouter (GPT-6 Luna fallback), daily credits (Free 3, Pro 15), output capped at 4,000
-  tokens, a $5/day global spend cap. Worst case $1.23 a month per Pro server against $4.02
-  net. Keep `ANTHROPIC_API_KEY` unset in production until this is built.
+- **Quartermaster AI costs** (`docs/ai-costs.md`): decided 2026-11-12, built: Claude Haiku
+  5.5 called directly through Anthropic, daily credits (Free 3, Pro 15), 10 attempts an hour,
+  output capped at 4,000 tokens, a $5/day global spend cap (`QM_DAILY_BUDGET_USD`). Worst
+  case $1.17 a month per Pro server against $4.02 net. Needs migration `0049_ai_usage` in
+  production before `ANTHROPIC_API_KEY` is set.
 - **Rank card uploads:** stored in Cloudflare R2 (`garrison-media`, served at
   `media.garrisonbot.com`); the owner enables R2 in the Cloudflare dashboard first. Default
   backgrounds ship in the repo. Plan and image prompts: `docs/rank-card-backgrounds.md`.
@@ -545,3 +548,7 @@ Decided (2026-11-12, owner):
   connection (no local .env), and 0021-0048 recorded for drizzle. The first run stopped at
   preflight, which wrongly expected the bot to read appeals and ticket notes; fixed the lists
   (506f9d0) and redeployed.
+- 2026-11-12: Quartermaster moved to Claude Haiku 5.5 (direct Anthropic) with daily credits
+  (Free 3, Pro 15, refunded on failure), 10 attempts an hour, a 4,000-token output cap, a global
+  daily spend cap (QM_DAILY_BUDGET_USD, $5) and an ai_usage ledger of every call's tokens and
+  cost. Migration 0049. Not deployed.

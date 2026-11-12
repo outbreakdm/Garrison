@@ -1,18 +1,25 @@
 import {
-  countRecentQmBuilds,
+  costMicros,
   createQmPlan,
+  entitlements,
+  FEATURES,
+  finishAiCall,
+  getGuildPlan,
+  nextUtcDayStart,
+  QM_ATTEMPTS_PER_HOUR,
   type QmBuild,
   type QmCreated,
+  qmReserveMicros,
   recordQmCreated,
+  reserveAiCall,
   transitionQmBuild,
 } from "@garrison/db";
 import { ChannelType, type Guild, type OverwriteResolvable, PermissionFlagsBits } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { rollbackOrder, type ServerSnapshot, validatePlan } from "./plan.js";
-import type { Planner, PlannerInput } from "./planner.js";
+import { DEFAULT_MODEL, type Planner, type PlannerInput } from "./planner.js";
 
-export const BUILDS_PER_HOUR = 5;
 export const PLAN_TTL_MS = 15 * 60_000;
 export const REQUEST_MAX = 500;
 
@@ -56,7 +63,14 @@ export function snapshot(guild: Guild): {
 }
 
 export type PlanOutcome =
-  | { ok: true; build: QmBuild; server: ServerSnapshot; notes: string }
+  | {
+      ok: true;
+      build: QmBuild;
+      server: ServerSnapshot;
+      notes: string;
+      /** Plans left today, after this one. */
+      creditsLeft: number;
+    }
   | { ok: false; error: string };
 
 export async function planBuild(
@@ -67,39 +81,82 @@ export async function planBuild(
   request: string,
 ): Promise<PlanOutcome> {
   await ensureGuild(ctx, guild);
-  if (
-    (await countRecentQmBuilds(ctx.db, guild.id, new Date(Date.now() - 3_600_000))) >=
-    BUILDS_PER_HOUR
-  ) {
-    return {
-      ok: false,
-      error: `This server has used its ${BUILDS_PER_HOUR} builds for this hour. Try again later.`,
-    };
-  }
-  const snap = snapshot(guild);
-  const result = await planner.plan({ request, ...snap });
-  if (!result.ok) return result;
-  const checked = validatePlan(result.plan, snap.server);
-  if (!checked.ok) {
-    ctx.logger.info("Quartermaster plan rejected", { guildId: guild.id, errors: checked.errors });
-    return {
-      ok: false,
-      error: `I couldn't make a safe plan from that:\n${checked.errors
-        .slice(0, 5)
-        .map((e) => `- ${e}`)
-        .join("\n")}`,
-    };
-  }
-  const build = await createQmPlan(ctx.db, {
+  const ent = entitlements(await getGuildPlan(ctx.db, guild.id));
+  const model = planner.model ?? DEFAULT_MODEL;
+  const reserved = await reserveAiCall(ctx.db, {
     guildId: guild.id,
-    requestedById: requester.id,
-    requestedByTag: requester.tag,
-    prompt: request,
-    summary: checked.summary,
-    plan: checked.operations,
-    model: result.model,
+    feature: "qm",
+    requestedBy: requester.id,
+    model,
+    dailyCredits: ent["qm.dailyCredits"],
+    attemptsPerHour: QM_ATTEMPTS_PER_HOUR,
+    dailyBudgetMicros:
+      ctx.qmDailyBudgetUsd === undefined ? null : Math.round(ctx.qmDailyBudgetUsd * 1e6),
+    reserveMicros: qmReserveMicros(model),
   });
-  return { ok: true, build, server: snap.server, notes: checked.notes };
+  if (!reserved.ok)
+    return { ok: false, error: limitMessage(reserved.reason, ent["qm.dailyCredits"]) };
+
+  // Whatever happens below, record what the call used. Only a valid plan keeps the credit.
+  let keptCredit = false;
+  let usage: { model: string; inputTokens: number; outputTokens: number } | undefined;
+  try {
+    const snap = snapshot(guild);
+    const result = await planner.plan({ request, ...snap });
+    usage = result.usage;
+    if (!result.ok) return result;
+    const checked = validatePlan(result.plan, snap.server);
+    if (!checked.ok) {
+      ctx.logger.info("Quartermaster plan rejected", { guildId: guild.id, errors: checked.errors });
+      return {
+        ok: false,
+        error: `I couldn't make a safe plan from that:\n${checked.errors
+          .slice(0, 5)
+          .map((e) => `- ${e}`)
+          .join("\n")}`,
+      };
+    }
+    const build = await createQmPlan(ctx.db, {
+      guildId: guild.id,
+      requestedById: requester.id,
+      requestedByTag: requester.tag,
+      prompt: request,
+      summary: checked.summary,
+      plan: checked.operations,
+      model: result.model,
+    });
+    keptCredit = true;
+    return {
+      ok: true,
+      build,
+      server: snap.server,
+      notes: checked.notes,
+      creditsLeft: Math.max(0, ent["qm.dailyCredits"] - reserved.used),
+    };
+  } finally {
+    await finishAiCall(ctx.db, reserved.id, {
+      model: usage?.model ?? model,
+      inputTokens: usage?.inputTokens ?? 0,
+      outputTokens: usage?.outputTokens ?? 0,
+      costMicros: usage ? costMicros(usage.model, usage.inputTokens, usage.outputTokens) : 0,
+      ok: keptCredit,
+    }).catch((error: unknown) =>
+      ctx.logger.warn("Couldn't record a Quartermaster call", { guildId: guild.id, error }),
+    );
+  }
+}
+
+const PRO_DAILY = FEATURES["qm.dailyCredits"].pro;
+
+/** Why a plan can't start, in plain words. */
+export function limitMessage(reason: "credits" | "hourly" | "budget", daily: number) {
+  const reset = `<t:${Math.floor(nextUtcDayStart().getTime() / 1000)}:R>`;
+  if (reason === "credits")
+    return `This server has used today's ${daily} Quartermaster plans. They come back ${reset}.${
+      daily < PRO_DAILY ? ` Garrison Pro gives ${PRO_DAILY} a day.` : ""
+    }`;
+  if (reason === "hourly") return "That's a lot of plans in one hour. Try again in a little while.";
+  return `Quartermaster has reached its limit for today across all servers. It's back ${reset}.`;
 }
 
 export type ApplyOutcome =

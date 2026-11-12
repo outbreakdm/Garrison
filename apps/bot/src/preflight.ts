@@ -112,6 +112,7 @@ try {
 if (env) {
   // Newest tables first: if these exist with grants, everything older does too.
   const latest = [
+    "ai_usage",
     "server_templates",
     "barracks_settings",
     "rank_seasons",

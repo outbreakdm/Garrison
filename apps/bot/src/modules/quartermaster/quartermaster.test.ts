@@ -1,3 +1,11 @@
+import {
+  aiCreditsUsedToday,
+  aiSpendSince,
+  costMicros,
+  qmReserveMicros,
+  schema,
+  upsertGuild,
+} from "@garrison/db";
 import { createTestDb } from "@garrison/db/testing";
 import { ChannelType, Collection, type Guild, PermissionFlagsBits } from "discord.js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -189,12 +197,63 @@ describe("Quartermaster end to end", () => {
     });
   });
 
-  it("caps builds per server per hour", async () => {
+  it("gives a Free server 3 plans a day, and says when they come back", async () => {
     const f = fakeGuild("q4");
-    for (let i = 0; i < 5; i++)
+    for (let i = 0; i < 3; i++)
       expect((await planBuild(ctx, stub(sectionPlan), f.guild, taner, "x")).ok).toBe(true);
-    expect(await planBuild(ctx, stub(sectionPlan), f.guild, taner, "x")).toMatchObject({
-      ok: false,
-    });
+    const fourth = await planBuild(ctx, stub(sectionPlan), f.guild, taner, "x");
+    expect(fourth).toMatchObject({ ok: false });
+    expect(!fourth.ok && fourth.error).toMatch(
+      /today's 3 Quartermaster plans.*Garrison Pro gives 15/,
+    );
+  });
+
+  it("lets a Pro server past Free's 3, up to 10 an hour", async () => {
+    const f = fakeGuild("q5");
+    await upsertGuild(ctx.db, { id: "q5", name: "q5" });
+    await ctx.db.insert(schema.guildPlans).values({ guildId: "q5", plan: "pro" });
+    for (let i = 0; i < 10; i++)
+      expect((await planBuild(ctx, stub(sectionPlan), f.guild, taner, "x")).ok).toBe(true);
+    const eleventh = await planBuild(ctx, stub(sectionPlan), f.guild, taner, "x");
+    expect(!eleventh.ok && eleventh.error).toMatch(/lot of plans in one hour/);
+  });
+
+  it("gives the credit back when a plan fails, but caps attempts per hour", async () => {
+    const f = fakeGuild("q6");
+    const failing: Planner = {
+      plan: async () => ({
+        ok: false,
+        error: "declined",
+        usage: { model: "claude-haiku-5-5", inputTokens: 3000, outputTokens: 500 },
+      }),
+    };
+    for (let i = 0; i < 9; i++)
+      expect(await planBuild(ctx, failing, f.guild, taner, "x")).toMatchObject({ ok: false });
+    // Failures used no credits.
+    expect(await aiCreditsUsedToday(ctx.db, "q6", "qm")).toBe(0);
+    expect((await planBuild(ctx, stub(sectionPlan), f.guild, taner, "x")).ok).toBe(true);
+    expect(await aiCreditsUsedToday(ctx.db, "q6", "qm")).toBe(1);
+    // But every attempt counts toward 10 an hour, and failures' cost is kept.
+    const blocked = await planBuild(ctx, stub(sectionPlan), f.guild, taner, "x");
+    expect(!blocked.ok && blocked.error).toMatch(/lot of plans in one hour/);
+    const spend = await aiSpendSince(ctx.db, new Date(Date.now() - 60_000));
+    expect(spend.dollars).toBeCloseTo(9 * 0.00055, 6);
+  });
+
+  it("stops every server once the day's budget is spent", async () => {
+    const f = fakeGuild("q7");
+    const capped = { ...ctx, qmDailyBudgetUsd: 0.000001 };
+    const outcome = await planBuild(capped, stub(sectionPlan), f.guild, taner, "x");
+    expect(!outcome.ok && outcome.error).toMatch(/limit for today across all servers/);
+  });
+});
+
+describe("AI costs", () => {
+  it("prices calls from the model's list price, and unknown models as the dearest", () => {
+    // 3,400 in and 2,000 out on Haiku: $0.00034 + $0.001.
+    expect(costMicros("claude-haiku-5-5", 3400, 2000)).toBe(1340);
+    expect(costMicros("claude-opus-5-5", 1000, 1000)).toBe(24000);
+    expect(costMicros("some-new-model", 1000, 1000)).toBe(24000);
+    expect(qmReserveMicros("claude-haiku-5-5")).toBe(2600);
   });
 });

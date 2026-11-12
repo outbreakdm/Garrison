@@ -28,6 +28,7 @@ interface Env {
   DISCORD_CLIENT_ID: string;
   APP_URL?: string;
   QM_MODEL?: string;
+  QM_DAILY_BUDGET_USD?: string;
   LOG_LEVEL?: string;
 }
 
@@ -52,6 +53,7 @@ export class GarrisonBot extends Container<Env> {
     if (env.TWITCH_CLIENT_SECRET) vars.TWITCH_CLIENT_SECRET = env.TWITCH_CLIENT_SECRET;
     if (env.OPENAI_API_KEY) vars.OPENAI_API_KEY = env.OPENAI_API_KEY;
     if (env.QM_MODEL) vars.QM_MODEL = env.QM_MODEL;
+    if (env.QM_DAILY_BUDGET_USD) vars.QM_DAILY_BUDGET_USD = env.QM_DAILY_BUDGET_USD;
     if (env.APP_URL) vars.APP_URL = env.APP_URL;
     this.envVars = vars;
   }

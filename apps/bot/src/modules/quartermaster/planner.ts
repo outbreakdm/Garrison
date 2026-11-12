@@ -1,8 +1,17 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
+import { QM_MAX_OUTPUT_TOKENS } from "@garrison/db";
 import { type AiPlan, AiPlanSchema, MAX_OPERATIONS, type ServerSnapshot } from "./plan.js";
 
-export const DEFAULT_MODEL = "claude-opus-5-5";
+/**
+ * Haiku: a plan is a small structured list that Garrison validates and a person
+ * approves, so the small model does the job at a fraction of the cost
+ * (docs/ai-costs.md). QM_MODEL overrides it.
+ */
+export const DEFAULT_MODEL = "claude-haiku-5-5";
+
+/** Models with a server-side refusal fallback. Haiku has none; sending one there is a 400. */
+const hasFallback = (model: string) => /^claude-(opus|sonnet|fable)-/.test(model);
 
 export interface PlannerInput {
   request: string;
@@ -11,12 +20,22 @@ export interface PlannerInput {
   channels: { name: string; type: "text" | "voice" | "other"; category: string | null }[];
 }
 
-export type PlannerResult =
+/** What a call used, for its cost. Absent when no request reached the model. */
+export interface PlannerUsage {
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+}
+
+export type PlannerResult = (
   | { ok: true; plan: AiPlan; model: string }
-  | { ok: false; error: string };
+  | { ok: false; error: string }
+) & { usage?: PlannerUsage };
 
 /** Anything that turns a request into a plan. The Claude-backed one is below; tests use a stub. */
 export interface Planner {
+  /** The model it calls, for pricing the call before it runs. */
+  readonly model?: string;
   plan(input: PlannerInput): Promise<PlannerResult>;
 }
 
@@ -38,7 +57,7 @@ export class ClaudePlanner implements Planner {
 
   constructor(
     apiKey: string,
-    private model = DEFAULT_MODEL,
+    readonly model = DEFAULT_MODEL,
   ) {
     this.client = new Anthropic({ apiKey, maxRetries: 2, timeout: 90_000 });
   }
@@ -54,10 +73,12 @@ export class ClaudePlanner implements Planner {
     try {
       const response = await this.client.beta.messages.parse({
         model: this.model,
-        max_tokens: 16000,
-        // If the model declines, the API retries on a fallback model inside the same call.
-        betas: ["server-side-fallback-2026-07-01"],
-        fallbacks: "default",
+        // A full 20-change plan is ~1,400 tokens; the rest is room to think.
+        max_tokens: QM_MAX_OUTPUT_TOKENS,
+        // Where the model has one, a declined request is retried on a fallback inside the call.
+        ...(hasFallback(this.model)
+          ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }
+          : {}),
         output_config: { effort: "medium", format: betaZodOutputFormat(AiPlanSchema) },
         system: SYSTEM,
         messages: [
@@ -74,25 +95,33 @@ export class ClaudePlanner implements Planner {
         ],
       });
 
+      const usage: PlannerUsage = {
+        model: response.model,
+        inputTokens: response.usage.input_tokens,
+        outputTokens: response.usage.output_tokens,
+      };
       if (response.stop_reason === "refusal") {
         return {
           ok: false,
           error: "Claude declined to plan that. Try describing the channels and roles you want.",
+          usage,
         };
       }
       if (response.stop_reason === "max_tokens") {
         return {
           ok: false,
           error: "That build is too big to plan in one go. Ask for fewer changes.",
+          usage,
         };
       }
       if (!response.parsed_output) {
         return {
           ok: false,
           error: "Claude's plan didn't come back in the right shape. Try again.",
+          usage,
         };
       }
-      return { ok: true, plan: response.parsed_output, model: response.model };
+      return { ok: true, plan: response.parsed_output, model: response.model, usage };
     } catch (error) {
       if (error instanceof Anthropic.RateLimitError)
         return { ok: false, error: "Quartermaster is busy. Try again in a minute." };

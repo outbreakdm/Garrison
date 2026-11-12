@@ -1,4 +1,5 @@
 import {
+  aiCreditsUsedToday,
   entitlements,
   getGuildPlan,
   listDashboardActions,
@@ -61,16 +62,19 @@ export default async function QuartermasterPage({
   const query = await searchParams;
   const { guild, session } = await requireGuildAccess(guildId);
   const db = await getDb();
-  const [builds, actions, layout, templates, guildPlan, ownerId, flash] = await Promise.all([
-    listQmBuilds(db, guild.id, 25),
-    listDashboardActions(db, guild.id, 30),
-    getServerLayout(guild.id).catch(() => null),
-    listTemplates(db, session.userId),
-    getGuildPlan(db, guild.id),
-    guildOwnerId(guild.id).catch(() => null),
-    readFlash(),
-  ]);
+  const [builds, actions, layout, templates, guildPlan, ownerId, flash, creditsUsed] =
+    await Promise.all([
+      listQmBuilds(db, guild.id, 25),
+      listDashboardActions(db, guild.id, 30),
+      getServerLayout(guild.id).catch(() => null),
+      listTemplates(db, session.userId),
+      getGuildPlan(db, guild.id),
+      guildOwnerId(guild.id).catch(() => null),
+      readFlash(),
+      aiCreditsUsedToday(db, guild.id, "qm"),
+    ]);
   const ent = entitlements(guildPlan);
+  const creditsLeft = Math.max(0, ent["qm.dailyCredits"] - creditsUsed);
   const isOwner = ownerId === session.userId;
   const now = Date.now();
   const waiting = (b: QmBuild) =>
@@ -138,15 +142,26 @@ export default async function QuartermasterPage({
                 </a>
               ))}
             </div>
-            <button type="submit" className="g-btn g-btn--primary" disabled={planning}>
-              {planning ? "Planning…" : "Draw up a plan"}
+            <button
+              type="submit"
+              className="g-btn g-btn--primary"
+              disabled={planning || creditsLeft === 0}
+            >
+              {planning
+                ? "Planning…"
+                : creditsLeft === 0
+                  ? "No plans left today"
+                  : "Draw up a plan"}
             </button>
           </div>
           <ul className="qm-rules">
             <li>Adds only: nothing you have is edited or deleted</li>
             <li>New roles get no permissions</li>
             <li>Nothing is built until you approve the plan</li>
-            <li>5 plans an hour, 20 changes a plan</li>
+            <li>
+              {creditsLeft} of {ent["qm.dailyCredits"]} plans left today (back at midnight UTC), 20
+              changes a plan
+            </li>
           </ul>
         </form>
       </section>

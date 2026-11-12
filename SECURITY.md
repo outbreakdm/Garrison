@@ -96,7 +96,7 @@ Then set `DATABASE_URL` to the pooled connection string with user `garrison_bot.
 - **Prompt injection:** server names reach the model inside `<server_snapshot>` and are described as data. Even if a name steers the model, its output still has to pass validation and a human review.
 - **Human in the loop:** only the requester can Apply, and Manage Server is re-checked on every click. Plans expire after 15 minutes and are claimed before running, so a double click applies once.
 - **Reversible:** each created object is recorded the moment it exists; Undo deletes only those IDs.
-- **Cost and abuse:** 5 builds per server per hour, 500-character requests, `max_tokens` 16000. The API key is server-side only; the model's answers and errors are never echoed raw.
+- **Cost and abuse:** daily credits per server (3 Free, 15 Pro), 10 attempts an hour including failures, a global daily spend cap (`QM_DAILY_BUDGET_USD`), 500-character requests, `max_tokens` 4000. A credit is reserved under a per-server lock before the call and its real cost recorded after, so concurrent requests can't overspend. `ai_usage` is written only by the bot; the dashboard can only read it. The API key is server-side only; the model's answers and errors are never echoed raw.
 - **Refusals:** server-side fallback (`fallbacks: "default"`) retries a declined request on another model inside the same call; a final refusal is reported plainly.
 
 ## Metrics and the status page
