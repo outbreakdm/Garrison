@@ -1,4 +1,14 @@
-import { getLeaderboard, getRanksSettings, levelForXp, listRankRewards } from "@garrison/db";
+import {
+  entitlements,
+  getGuildPlan,
+  getLeaderboard,
+  getRanksSettings,
+  isPresetBackground,
+  levelForXp,
+  listRankRewards,
+  RANK_BACKGROUNDS,
+  readRankCard,
+} from "@garrison/db";
 import type { Metadata } from "next";
 import { Art } from "@/components/Art";
 import { MemberAvatar } from "@/components/MemberAvatar";
@@ -13,10 +23,13 @@ import {
 } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { listGuildRoles, listTextChannels } from "@/lib/discord";
+import { contentKey, readFlash } from "@/lib/flash";
 import { isDangerousRole } from "@/lib/permissions";
 import { requireGuildAccess } from "@/lib/session";
 import { REWARD_ROWS } from "@/lib/settings-schema";
 import { saveRanks, saveRewards } from "../settings/actions";
+import { saveRankCard } from "./actions";
+import { RankCardEditor } from "./RankCardEditor";
 
 const ANNOUNCE: Record<string, string> = {
   off: "Off",
@@ -34,16 +47,37 @@ export default async function RanksPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { guildId } = await params;
-  const { guild } = await requireGuildAccess(guildId);
+  const { guild, session } = await requireGuildAccess(guildId);
   const query = await searchParams;
   const db = await getDb();
-  const [settings, top, rewards, roles, channels] = await Promise.all([
+  const [settings, top, rewards, roles, channels, plan, flash] = await Promise.all([
     getRanksSettings(db, guild.id),
     getLeaderboard(db, guild.id, 25),
     listRankRewards(db, guild.id),
     listGuildRoles(guild.id).catch(() => []),
     listTextChannels(guild.id).catch(() => []),
+    getGuildPlan(db, guild.id),
+    readFlash(),
   ]);
+  const ent = entitlements(plan);
+  const card = readRankCard(settings.card);
+  const cardFacts = [
+    {
+      label: "Background",
+      value: isPresetBackground(card.background)
+        ? (RANK_BACKGROUNDS[card.background]?.label ?? "Garrison")
+        : "Your image",
+    },
+    {
+      label: "Details",
+      value: card.fields.length ? card.fields.map((f) => f.label).join(", ") : "None",
+    },
+    ...(card.background !== "garrison" || card.accent || card.fields.length || card.showLinked
+      ? ent["ranks.cards"]
+        ? []
+        : [{ label: "Pro look", value: "Paused on Free" }]
+      : []),
+  ];
   const roleName = new Map(roles.map((r) => [r.id, r.name]));
   const grantable = roles.filter((r) => !r.managed && !isDangerousRole(r.permissions));
   const announceChannel = channels.find((c) => c.id === settings.announceChannelId);
@@ -65,6 +99,16 @@ export default async function RanksPage({
         </a>
       </div>
       <SettingsNotice query={query} />
+      {flash?.ok ? (
+        <div className="notice notice--ok" role="status">
+          {flash.ok}
+        </div>
+      ) : null}
+      {flash?.error ? (
+        <div className="notice" role="alert">
+          {flash.error}
+        </div>
+      ) : null}
 
       <SettingsPanel
         title="Ranks settings"
@@ -117,6 +161,18 @@ export default async function RanksPage({
           </div>
           <FormFoot label="Save Ranks settings" guildId={guild.id} />
         </form>
+      </SettingsPanel>
+
+      <SettingsPanel id="card" title="Rank card" open={isEditing(query, "card")} facts={cardFacts}>
+        <RankCardEditor
+          key={contentKey(card)}
+          guildId={guild.id}
+          saved={card}
+          ent={ent}
+          sampleName={session.username}
+          planHref={`/servers/${guild.id}/plan`}
+          action={saveRankCard}
+        />
       </SettingsPanel>
 
       <div className="ranks-layout">

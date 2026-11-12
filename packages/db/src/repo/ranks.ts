@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, gt, isNotNull, lt, sql } from "drizzle-orm";
 import type { Db } from "../client";
-import { memberXp, type RanksSettings, rankRewards, ranksSettings } from "../schema";
+import { memberXp, type RanksSettings, rankProfiles, rankRewards, ranksSettings } from "../schema";
 
 /** XP needed to go from `level` to `level + 1`. A common, gently rising curve. */
 export const xpForNextLevel = (level: number) => 5 * level * level + 50 * level + 100;
@@ -24,6 +24,7 @@ export async function getRanksSettings(db: Db, guildId: string): Promise<RanksSe
       enabled: false,
       announce: "same_channel",
       announceChannelId: null,
+      card: null,
       updatedAt: new Date(0),
     }
   );
@@ -130,4 +131,33 @@ export async function listRankRewards(db: Db, guildId: string) {
     .from(rankRewards)
     .where(and(eq(rankRewards.guildId, guildId), isNotNull(rankRewards.roleId)))
     .orderBy(asc(rankRewards.level));
+}
+
+/** What a member wrote on their rank card in this server. */
+export async function getRankDetails(
+  db: Db,
+  guildId: string,
+  userId: string,
+): Promise<Record<string, string>> {
+  const [row] = await db
+    .select({ details: rankProfiles.details })
+    .from(rankProfiles)
+    .where(and(eq(rankProfiles.guildId, guildId), eq(rankProfiles.userId, userId)));
+  return row?.details && typeof row.details === "object" ? row.details : {};
+}
+
+/** Bot side: save a member's answers (already cleaned with cleanRankDetails). */
+export async function saveRankDetails(
+  db: Db,
+  guildId: string,
+  userId: string,
+  details: Record<string, string>,
+) {
+  await db
+    .insert(rankProfiles)
+    .values({ guildId, userId, details })
+    .onConflictDoUpdate({
+      target: [rankProfiles.guildId, rankProfiles.userId],
+      set: { details, updatedAt: new Date() },
+    });
 }

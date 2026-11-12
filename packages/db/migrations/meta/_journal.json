@@ -197,6 +197,13 @@
       "when": 1794488415567,
       "tag": "0027_ledger_text",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1794488775521,
+      "tag": "0028_rank_cards",
+      "breakpoints": true
     }
   ]
 }

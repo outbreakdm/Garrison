@@ -133,6 +133,12 @@ export const FEATURES = {
     free: false,
     pro: true,
   },
+  "ranks.cards": {
+    module: "ranks",
+    about: "Rank cards with your background, colour, and details members fill in",
+    free: false,
+    pro: true,
+  },
   "rally.templates": {
     module: "rally",
     about: "LFG templates",

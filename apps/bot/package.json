@@ -13,8 +13,11 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0",
+    "@expo-google-fonts/inter": "^0.4.2",
+    "@expo-google-fonts/saira-semi-condensed": "^0.4.2",
     "@garrison/brand": "workspace:*",
     "@garrison/db": "workspace:*",
+    "@napi-rs/canvas": "^1.1.1",
     "discord.js": "^14.28.1",
     "zod": "^4.6.7"
   },

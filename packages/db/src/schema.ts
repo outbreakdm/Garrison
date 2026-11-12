@@ -19,6 +19,7 @@ import type { CustomCard } from "./cards";
 import type { SavedMessage } from "./messages";
 import type { GuildPlan } from "./plans";
 import type { RallyTemplate, RallyWording } from "./rally";
+import type { RankCardStyle } from "./rank-cards";
 import type { RoleMenu } from "./role-menus";
 import type { TicketPanel } from "./tickets";
 
@@ -479,8 +480,27 @@ export const ranksSettings = pgTable("ranks_settings", {
   enabled: boolean("enabled").notNull().default(false),
   announce: announceMode("announce").notNull().default("same_channel"),
   announceChannelId: text("announce_channel_id"),
+  /** The rank card's look and detail fields (rank-cards.ts). Null: Garrison's standard card. */
+  card: jsonb("card").$type<RankCardStyle>(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
+
+/** What a member wrote on their rank card, keyed by the server's field IDs. */
+export const rankProfiles = pgTable(
+  "rank_profiles",
+  {
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    details: jsonb("details").$type<Record<string, string>>().notNull().default(sql`'{}'::jsonb`),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.guildId, t.userId] }),
+    check("rank_profiles_object", sql`jsonb_typeof(${t.details}) = 'object'`),
+  ],
+).enableRLS();
 
 /** Role given at a level. A removed reward keeps its row with `roleId` null, so the bot needs no DELETE. */
 export const rankRewards = pgTable(

@@ -1,17 +1,38 @@
 import {
+  cleanRankDetails,
+  entitlements,
+  getGuildPlan,
   getLeaderboard,
   getMemberRank,
+  getRankDetails,
+  getSharedLinks,
   levelForXp,
   listRankRewards,
+  RANK_CARD_LIMITS,
+  rankCardForPlan,
+  readRankCard,
+  saveRankDetails,
   setRankReward,
   updateRanksSettings,
 } from "@garrison/db";
-import { ChannelType, PermissionFlagsBits } from "discord.js";
+import {
+  ActionRowBuilder,
+  AttachmentBuilder,
+  ChannelType,
+  type GuildMember,
+  ModalBuilder,
+  PermissionFlagsBits,
+  TextInputBuilder,
+  TextInputStyle,
+  type User,
+} from "discord.js";
 import { ephemeral, guildCommand } from "../../commands/builders.js";
-import type { Command } from "../../commands/types.js";
+import type { BotContext, Command, ModalHandler } from "../../commands/types.js";
 import { cardReply } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { safeText } from "../../lib/text.js";
+import { plainLink } from "../barracks/format.js";
+import { rankCardPng } from "./render.js";
 import { progressBar, rewardProblem, rewardProblemText } from "./rules.js";
 import { cachedRanksSettings, invalidateRanksSettings } from "./service.js";
 
@@ -48,7 +69,32 @@ export const rank: Command = {
       return;
     }
     const { intoLevel, needed } = levelForXp(r.xp);
-    await interaction.reply(
+    await interaction.deferReply();
+    const member = await interaction.guild.members.fetch(user.id).catch(() => null);
+    const png = await rankImage(ctx, interaction.guild.id, user, member, {
+      level: r.level,
+      position: r.position,
+      xpInto: intoLevel,
+      xpNeeded: needed,
+      totalXp: r.xp,
+    }).catch((error: unknown) => {
+      ctx.logger.warn("Rank card failed to draw", { guildId: interaction.guild.id, error });
+      return null;
+    });
+    if (png) {
+      await interaction.editReply({
+        files: [
+          new AttachmentBuilder(png, {
+            name: "rank.png",
+            description: `${user.username}'s rank card`,
+          }),
+        ],
+        allowedMentions: { parse: [] },
+      });
+      return;
+    }
+    // The text card, if drawing failed.
+    await interaction.editReply(
       cardReply(
         {
           title: safeText(user.username),
@@ -67,6 +113,106 @@ export const rank: Command = {
         { ephemeral: false },
       ),
     );
+  },
+};
+
+/** Everything drawn on a member's rank card, by this server's plan and setup. */
+async function rankImage(
+  ctx: BotContext,
+  guildId: string,
+  user: User,
+  member: GuildMember | null,
+  numbers: { level: number; position: number; xpInto: number; xpNeeded: number; totalXp: number },
+) {
+  const [settings, plan] = await Promise.all([
+    cachedRanksSettings(ctx, guildId),
+    getGuildPlan(ctx.db, guildId),
+  ]);
+  const style = rankCardForPlan(readRankCard(settings.card), entitlements(plan));
+  const [answers, links] = await Promise.all([
+    style.fields.length
+      ? getRankDetails(ctx.db, guildId, user.id)
+      : Promise.resolve<Record<string, string>>({}),
+    style.showLinked ? getSharedLinks(ctx.db, guildId, user.id) : Promise.resolve([]),
+  ]);
+  return rankCardPng({
+    style,
+    name: member?.displayName ?? user.displayName,
+    avatarUrl: (member ?? user).displayAvatarURL({ extension: "png", size: 256 }),
+    ...numbers,
+    details: style.fields.flatMap((f) =>
+      answers[f.id] ? [{ label: f.label, value: answers[f.id] as string }] : [],
+    ),
+    linked: links.map((l) => plainLink(l, { proof: false })),
+  });
+}
+
+/** /rankcard: a member fills in the details their server's rank card shows (Pro). */
+export const rankcard: Command = {
+  data: guildCommand("rankcard", "Fill in the details on your rank card.", null).toJSON(),
+  async execute(interaction, ctx) {
+    const [settings, plan] = await Promise.all([
+      cachedRanksSettings(ctx, interaction.guild.id),
+      getGuildPlan(ctx.db, interaction.guild.id),
+    ]);
+    if (!settings.enabled) {
+      await interaction.reply({ content: OFF, ...ephemeral });
+      return;
+    }
+    const style = rankCardForPlan(readRankCard(settings.card), entitlements(plan));
+    if (!style.fields.length) {
+      await interaction.reply({
+        content: "This server's rank cards have no details to fill in.",
+        ...ephemeral,
+      });
+      return;
+    }
+    const answers = await getRankDetails(ctx.db, interaction.guild.id, interaction.user.id);
+    await interaction.showModal(
+      new ModalBuilder()
+        .setCustomId("rankcard:edit")
+        .setTitle("Your rank card")
+        .addComponents(
+          style.fields.map((f) =>
+            new ActionRowBuilder<TextInputBuilder>().addComponents(
+              new TextInputBuilder()
+                .setCustomId(f.id)
+                .setLabel(f.label)
+                .setStyle(TextInputStyle.Short)
+                .setMaxLength(RANK_CARD_LIMITS.value)
+                .setRequired(false)
+                .setValue(answers[f.id] ?? ""),
+            ),
+          ),
+        ),
+    );
+  },
+};
+
+export const rankcardModals: ModalHandler = {
+  prefix: "rankcard",
+  async execute(interaction, ctx) {
+    const settings = await cachedRanksSettings(ctx, interaction.guild.id);
+    const style = readRankCard(settings.card);
+    // Checked against the fields saved now: answers for removed fields are dropped.
+    const raw = Object.fromEntries(
+      style.fields.map((f) => {
+        let v = "";
+        try {
+          v = interaction.fields.getTextInputValue(f.id);
+        } catch {
+          v = "";
+        }
+        return [f.id, v];
+      }),
+    );
+    await saveRankDetails(
+      ctx.db,
+      interaction.guild.id,
+      interaction.user.id,
+      cleanRankDetails(style.fields, raw),
+    );
+    await interaction.reply({ content: "Saved. Your card shows them on `/rank`.", ...ephemeral });
   },
 };
 

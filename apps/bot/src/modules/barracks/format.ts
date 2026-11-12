@@ -4,18 +4,21 @@ import { safeText } from "../../lib/text.js";
 
 export const providerLabel = (p: string) => linkProviders[p as LinkProvider]?.label ?? p;
 
-/** One account, as a roster line: "OSRS · Zezima · total 2277 · combat 126 · claimed". */
-export function describeLink(
-  l: Pick<LinkedAccount, "provider" | "displayName" | "verified" | "details">,
-) {
-  const parts = [providerLabel(l.provider), safeText(l.displayName)];
+type LinkFacts = Pick<LinkedAccount, "provider" | "displayName" | "verified" | "details">;
+
+/** One account in plain words, for drawn images: "OSRS · Zezima · total 2277 · combat 126". */
+export function plainLink(l: LinkFacts, opts: { proof?: boolean } = {}) {
+  const parts = [providerLabel(l.provider), l.displayName];
   const d = l.details as Record<string, unknown>;
   if (l.provider === "osrs" && typeof d.totalLevel === "number")
     parts.push(`total ${d.totalLevel}`, `combat ${d.combatLevel}`);
   if (l.provider === "wow" && typeof d.level === "number") {
-    parts.push(`${d.level} ${typeof d.className === "string" ? safeText(d.className) : ""}`.trim());
-    if (typeof d.realm === "string") parts.push(safeText(d.realm));
+    parts.push(`${d.level} ${typeof d.className === "string" ? d.className : ""}`.trim());
+    if (typeof d.realm === "string") parts.push(d.realm);
   }
-  parts.push(l.verified ? "verified" : "claimed");
+  if (opts.proof !== false) parts.push(l.verified ? "verified" : "claimed");
   return parts.join(" · ");
 }
+
+/** One account, as a roster line: "OSRS · Zezima · total 2277 · combat 126 · claimed". */
+export const describeLink = (l: LinkFacts) => safeText(plainLink(l));

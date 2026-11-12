@@ -115,7 +115,7 @@ export function RowTools({
 }
 
 /** A #rrggbb field that lets you type freely and only reports whole colours. */
-function HexInput({
+export function HexInput({
   id,
   value,
   onChange,

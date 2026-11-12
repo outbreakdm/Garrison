@@ -7,6 +7,7 @@ export * from "./ids";
 export * from "./messages";
 export * from "./plans";
 export * from "./profile";
+export * from "./rank-cards";
 export * from "./role-menus";
 export type { BotProfilePayload } from "./schema";
 export * from "./tickets";

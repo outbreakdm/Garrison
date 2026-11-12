@@ -9,7 +9,7 @@ then updates **Status** and the **Log** before stopping.
 
 - **Now:** Phases 3 to 8 are code done, committed, not pushed or deployed. **Before
   deploying:** apply migrations `0023_role_menus`, `0024_welcome`, `0025_messages`,
-  `0026_tickets` and `0027_ledger_text` to production (`DATABASE_MIGRATION_URL` set, `pnpm db:migrate`, see
+  `0026_tickets`, `0027_ledger_text` and `0028_rank_cards` to production (`DATABASE_MIGRATION_URL` set, `pnpm db:migrate`, see
   DEPLOY.md); the bot preflight checks for their tables, so a deploy before them stops at
   preflight. **Message Content Intent must be on** in the Developer Portal (Bot → Privileged
   Gateway Intents): the bot now asks for it, and login fails without it.
@@ -19,8 +19,9 @@ then updates **Status** and the **Log** before stopping.
   a few minutes ahead, then post a ticket panel, open a ticket on a test account, write in it,
   claim and close it, and read its transcript on the dashboard. Garrison's invite now asks for
   Change Nickname, so existing servers see it in /health until they re-invite or tick it on
-  Garrison's role. Next: Phase 9 (custom rank cards), 10 (stream alerts), 11 (giveaways and
-  starboard); Phase 2 (Stripe) once a price is set.
+  Garrison's role. Check `/rank` draws its image on the real host (the canvas module's Alpine
+  binary). Next: Phase 10 (stream alerts), 11 (giveaways and starboard); Phase 2 (Stripe) once
+  a price is set.
 - **Branch:** `dashboard-first` (everything up to commit `1aed992` is deployed). Later
   commits (roadmap, plan list, staff and comps) are committed but not pushed or deployed.
 - **Before pushing:** `pnpm -r exec tsc --noEmit`, `pnpm test`, `pnpm exec biome check apps packages`.
@@ -42,7 +43,7 @@ then updates **Status** and the **Log** before stopping.
 | 6 | Welcome (messages, leave messages, roles on join) | **Code done**, not deployed: needs migration 0024 |
 | 7 | Tickets / modmail | **Code done**, not deployed: needs migration 0026 and the Message Content intent |
 | 8 | Message builder (post now or on a schedule) | **Code done**, not deployed: needs migration 0025 |
-| 9 | Custom rank cards with character details | Not started |
+| 9 | Custom rank cards with character details | **Code done**, not deployed: needs migration 0028 |
 | 10 | Stream and video alerts (Twitch, YouTube, Kick) | Not started |
 | 11 | Giveaways and starboard | Not started |
 | — | Depth for current modules (backlog below), slotted between phases | Not started |
@@ -285,6 +286,26 @@ Card accent colour and footer text come from the same settings, read by `lib/car
 - Later: modmail (opening a ticket by DMing Garrison), reopening a closed ticket, transcripts
   as a downloadable file, ticket search in the top search box.
 
+### Phase 9: rank cards
+
+- [x] Decision (owner, 2026-11-12): add an image-rendering library. `@napi-rs/canvas` (prebuilt,
+      including Alpine/musl) plus the brand fonts from `@expo-google-fonts/*` (TTF files; the
+      container has no fonts).
+- [x] Rules (`packages/db/src/rank-cards.ts`, browser-safe): the standard card is free; Pro
+      (`ranks.cards`) picks a background (6 presets, or an image on Discord's CDN), an accent
+      colour, up to 4 details members fill in, and shared game accounts. Saved Pro looks pause on
+      Free. Stored in `ranks_settings.card` (Settings history and undo); members' answers in
+      `rank_profiles` (migration `0028_rank_cards`), written by the bot only.
+- [x] Bot: `/rank` posts the card as a PNG (`modules/ranks/render.ts`), falling back to the
+      text card if drawing fails; images only from Discord's CDN, capped at 4 MB and 5 s; cards
+      cached (200) by everything drawn on them. `/rankcard` opens a form with the server's
+      details. Game accounts show only if the member shares them with this server's roster.
+- [x] Dashboard: Ranks → Rank card, with presets, image link, accent, details and a live
+      preview drawn to the image's proportions. Checked in the local preview (Free refusal,
+      Pro save, paused on Free, history, phone width) and the drawn PNGs by eye.
+- Later: members filling details on the dashboard, a season badge, uploading a background
+  instead of pasting a Discord link.
+
 ### Phase 8: message builder (module "Dispatch", plain label "Messages")
 
 - [x] Rules (`packages/db/src/messages.ts`, browser-safe): saved messages (up to 50) are a
@@ -397,4 +418,6 @@ Decided (2026-11-12, owner):
   preview. Committed `28c3151`.
 - 2026-11-12: Ledger keeps the text of deleted and edited messages when a server turns it on
   (migration 0027); the site's copy says so. Type-check, 392 tests and Biome pass; checked in
-  the local preview.
+  the local preview. Committed `8f66ecc`.
+- 2026-11-12: Phase 9 code done: rank cards drawn as images, Pro styling and details,
+  `/rankcard`, migration 0028. Type-check, 399 tests and Biome pass; checked in the local preview.

@@ -5,6 +5,7 @@ export * from "./messages";
 export * from "./plans";
 export * from "./profile";
 export * from "./rally";
+export * from "./rank-cards";
 export * from "./repo/actions";
 export * from "./repo/barracks";
 export * from "./repo/cases";

@@ -51,6 +51,7 @@ function describe(
   if (field === "verifyRoleId" && value)
     return `@${roleNames.get(String(value)) ?? "deleted-role"}`;
   if (field === "parentId") return value ? "a category" : "the top of the channel list";
+  if (field === "card") return value ? "a custom card" : "the standard card";
   if (field === "templates")
     return Array.isArray(value) && value.length
       ? value.map((t: { name?: string }) => t.name ?? "?").join(", ")

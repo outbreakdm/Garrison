@@ -71,7 +71,7 @@ export const blankCard = (title = "New card"): CustomCard => ({
   footer: null,
 });
 
-const ACCENT = /^#[0-9a-f]{6}$/;
+export const ACCENT = /^#[0-9a-f]{6}$/;
 
 /** A Pro field holding a value other than the standard look. */
 const usesPro = (card: CustomCard, key: CardProField) => card[key] !== null;

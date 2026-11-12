@@ -31,6 +31,7 @@ describe("command definitions", () => {
       "rank",
       "leaderboard",
       "ranks",
+      "rankcard",
       "logs",
       "qm",
       "link",
@@ -51,6 +52,7 @@ describe("command definitions", () => {
       "unlink",
       "roster",
       "ticket",
+      "rankcard",
     ]);
     for (const { data } of commands) {
       expect(data.contexts).toEqual([0]);

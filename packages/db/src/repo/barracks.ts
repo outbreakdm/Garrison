@@ -210,3 +210,23 @@ export async function listLinksToRefresh(db: Db, provider: string, olderThan: Da
     .limit(limit)
     .then((rows) => rows.filter((r) => r.refreshedAt < olderThan));
 }
+
+/** A member's links, only if they share them with this server's roster. */
+export async function getSharedLinks(db: Db, guildId: string, userId: string) {
+  const [share] = await db
+    .select({ userId: rosterShares.userId })
+    .from(rosterShares)
+    .where(
+      and(
+        eq(rosterShares.guildId, guildId),
+        eq(rosterShares.userId, userId),
+        isNull(rosterShares.removedAt),
+      ),
+    );
+  if (!share) return [];
+  return db
+    .select()
+    .from(linkedAccounts)
+    .where(and(eq(linkedAccounts.userId, userId), isNull(linkedAccounts.removedAt)))
+    .orderBy(asc(linkedAccounts.provider));
+}

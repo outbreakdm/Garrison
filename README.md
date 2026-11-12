@@ -111,7 +111,8 @@ After pulling this change, run `pnpm commands:deploy` once: `/lfg create` has a 
 ### Ranks
 
 - **Off by default.** Turn it on with `/ranks settings enabled:true`. Members then earn 15–25 XP for chatting, at most once a minute. The cooldown is enforced in the database, so spam and multiple bot processes can't farm XP. Only who posted and when is used: no message content.
-- **`/rank [user]`** shows level, progress, rank, total XP and messages. **`/leaderboard`** shows the top 10. Both are open to everyone, one lookup per person every 10 s.
+- **`/rank [user]`** posts a rank card image: avatar, name, rank, level and the XP bar. **`/leaderboard`** shows the top 10. Both are open to everyone, one lookup per person every 10 s.
+- **Rank cards** are drawn by the bot with `@napi-rs/canvas` and the brand's fonts (bundled from npm, since the container has none), and cached until something on the card changes. On Pro a server picks a background (a preset, or an image uploaded to Discord: the bot fetches images only from Discord's CDN, 4 MB and 5 s at most), an accent colour, up to 4 details members fill in with **`/rankcard`**, and the game accounts members share with the roster. Set it on the dashboard's Ranks page, with a live preview.
 - **Level-ups** are announced where the member leveled up, in one channel, or not at all, and never ping.
 - **Rewards:** `/ranks reward level:10 role:@Veteran` gives a role at a level (`unreward`, `rewards` to manage). Roles with moderation or admin powers, integration roles and roles above Garrison are refused when set _and_ skipped at grant time, so editing a reward role later can't hand out power.
 - The dashboard has a Ranks page with the leaderboard and rewards.

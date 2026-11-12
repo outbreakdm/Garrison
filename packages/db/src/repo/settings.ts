@@ -40,7 +40,8 @@ export const EDITABLE_FIELDS = {
     "verifyMinAccountAgeDays",
   ],
   ops: ["timezone"],
-  ranks: ["enabled", "announce", "announceChannelId"],
+  // The rank card is checked with checkRankCard before it gets here.
+  ranks: ["enabled", "announce", "announceChannelId", "card"],
   ledger: ["channelId", "retentionDays", "keepMessageText"],
   // The whole ladder is one value, so history and undo treat it as a unit.
   escalation: ["rules"],
