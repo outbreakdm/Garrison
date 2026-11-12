@@ -44,7 +44,7 @@ export const EDITABLE_FIELDS = {
     "verifyWeb",
     "backupWeekly",
   ],
-  ops: ["timezone"],
+  ops: ["timezone", "trackAttendance"],
   // The rank card is checked with checkRankCard before it gets here.
   ranks: ["enabled", "announce", "announceChannelId", "card"],
   ledger: ["channelId", "retentionDays", "keepMessageText"],

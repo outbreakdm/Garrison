@@ -11,6 +11,7 @@ import type { Client, Guild } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
 import { cardEdit, cardMessage } from "../../lib/card.js";
 import { safeText } from "../../lib/text.js";
+import { sweepAttendance } from "./attendance.js";
 import { opsCard, shortages } from "./card.js";
 
 export async function refreshOpsCard(
@@ -74,6 +75,9 @@ async function sendReminders(ctx: BotContext, client: Client<true>, kind: Remind
 export async function sweepOps(ctx: BotContext, client: Client<true>) {
   await sendReminders(ctx, client, "24h");
   await sendReminders(ctx, client, "30m");
+  await sweepAttendance(ctx, client).catch((error: unknown) =>
+    ctx.logger.warn("Attendance sweep failed", { error }),
+  );
 
   const { done, next } = await finishPastEvents(ctx.db);
   for (const event of done) {

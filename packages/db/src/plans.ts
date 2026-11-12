@@ -217,6 +217,12 @@ export const FEATURES = {
     free: false,
     pro: true,
   },
+  "ops.attendance": {
+    module: "ops",
+    about: "Attendance: who showed up to raids and groups, and each member's reliability",
+    free: false,
+    pro: true,
+  },
   "rally.templates": {
     module: "rally",
     about: "LFG templates",

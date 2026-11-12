@@ -313,6 +313,8 @@ export const lfgMembers = pgTable(
     slotName: text("slot_name").notNull(),
     joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
     leftAt: timestamp("left_at", { withTimezone: true }),
+    /** Showed up (seen in voice). Null: not tracked or not decided yet. */
+    attended: boolean("attended"),
   },
   (t) => [primaryKey({ columns: [t.postId, t.userId] })],
 ).enableRLS();
@@ -335,6 +337,8 @@ export const opsSettings = pgTable("ops_settings", {
   timezone: text("timezone").notNull().default("UTC"),
   /** The secret in the calendar feed's link (ICS). Null: no feed. Reset to cut off old links. */
   calendarToken: text("calendar_token"),
+  /** Pro: mark who showed up to raids and groups by whether they were in voice. */
+  trackAttendance: boolean("track_attendance").notNull().default(false),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
 
@@ -384,6 +388,8 @@ export const opsSignups = pgTable(
     bench: boolean("bench").notNull().default(false),
     signedUpAt: timestamp("signed_up_at", { withTimezone: true }).notNull().defaultNow(),
     leftAt: timestamp("left_at", { withTimezone: true }),
+    /** Showed up (seen in voice, or marked by staff). Null: not tracked or not decided yet. */
+    attended: boolean("attended"),
   },
   (t) => [primaryKey({ columns: [t.eventId, t.userId] })],
 ).enableRLS();

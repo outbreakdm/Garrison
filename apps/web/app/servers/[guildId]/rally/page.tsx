@@ -1,6 +1,9 @@
 import {
+  attendanceSummary,
+  attendanceTracked,
   capacity,
   checkTemplates,
+  entitlements,
   getCalendarToken,
   getGuildPlan,
   getOpsTimezone,
@@ -12,9 +15,11 @@ import {
   listSignups,
   listUpcomingOps,
   memberNames,
+  recentRaidAttendance,
 } from "@garrison/db";
 import type { Metadata } from "next";
 import { AutoRefresh } from "@/components/AutoRefresh";
+import { ProTag } from "@/components/cards/CardEditor";
 import { formatTime } from "@/components/format";
 import { OpsCalendar } from "@/components/OpsCalendar";
 import { FormPanel } from "@/components/settings";
@@ -25,9 +30,11 @@ import { ACTION_KIND, ACTION_STATUS } from "@/lib/rally-schema";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
 import {
+  markAttendance,
   requestCallSignups,
   requestCreateRaid,
   requestMoveSignup,
+  saveAttendance,
   setCalendarFeed,
 } from "./actions";
 
@@ -50,6 +57,11 @@ const ERRORS: Record<string, string> = {
   busy: "Garrison has 10 requests waiting for this server. Try again shortly.",
   too_fast: "That's a lot of requests at once. Wait a minute and try again.",
   cooldown: "A call for signups for this raid went out in the last hour.",
+  pro: "Attendance is part of Garrison Pro. Nothing was saved.",
+};
+const ATTENDANCE: Record<string, string> = {
+  saved: "Saved.",
+  marked: "Attendance updated.",
 };
 
 export const metadata: Metadata = { title: "Rally" };
@@ -78,6 +90,14 @@ export default async function RallyPage({
       getCalendarToken(db, guild.id),
     ]);
   const feedUrl = feed ? `${env().APP_URL}/calendar/${guild.id}/${feed}.ics` : null;
+  const ent = entitlements(plan);
+  const [tracking, reliability, recentRaids] = await Promise.all([
+    attendanceTracked(db, guild.id),
+    ent["ops.attendance"]
+      ? attendanceSummary(db, guild.id, new Date(Date.now() - 90 * 86_400_000), 25)
+      : [],
+    ent["ops.attendance"] ? recentRaidAttendance(db, guild.id) : [],
+  ]);
   const checked = checkTemplates(rawTemplates, plan);
   const templates = checked.ok ? checked.value : [];
   const defaultTemplate = templates.find((t) => t.isDefault);
@@ -88,6 +108,8 @@ export default async function RallyPage({
   const names = await memberNames(db, guild.id, [
     ...raidSignups.flat().map((s) => s.userId),
     ...postMembers.flat().map((m) => m.userId),
+    ...reliability.map((r) => r.userId),
+    ...recentRaids.flatMap((r) => r.signups.map((s) => s.userId)),
   ]);
   const nameOf = (id: string) => names.get(id) ?? `Member ${id.slice(-4)}`;
   // Only what was asked from this page: moderation and builds show on their own pages.
@@ -95,6 +117,8 @@ export default async function RallyPage({
   const working = recent.some((a) => a.status === "pending" || a.status === "running");
   const queued = typeof query.queued === "string" ? QUEUED[query.queued] : undefined;
   const error = typeof query.error === "string" ? ERRORS[query.error] : undefined;
+  const attendanceNote =
+    typeof query.attendance === "string" ? ATTENDANCE[query.attendance] : undefined;
 
   return (
     <>
@@ -119,9 +143,9 @@ export default async function RallyPage({
         </div>
       </div>
       {working ? <AutoRefresh /> : null}
-      {queued ? (
+      {queued || attendanceNote ? (
         <div className="notice notice--ok" role="status">
-          {queued}
+          {queued ?? attendanceNote}
         </div>
       ) : null}
       {error ? (
@@ -691,6 +715,153 @@ export default async function RallyPage({
             </form>
           )}
         </div>
+      </section>
+
+      <section className="g-card card-col" id="attendance" aria-labelledby="attendance-title">
+        <div className="queue__head">
+          <h2 className="card-title" id="attendance-title">
+            Attendance <ProTag on={ent["ops.attendance"]} />
+          </h2>
+        </div>
+        <p className="g-help">
+          Garrison counts someone as there if they're in any voice channel in this server from 10
+          minutes before a raid or group starts to 45 minutes after. Anyone not seen by then is a
+          no-show. Bench players and people who left before the start don't count.
+        </p>
+        <form action={saveAttendance} className="row-between">
+          <input type="hidden" name="guildId" value={guild.id} />
+          <label className="switch">
+            <input
+              type="checkbox"
+              name="trackAttendance"
+              defaultChecked={tracking}
+              disabled={!ent["ops.attendance"] && !tracking}
+            />
+            <span className="switch__text">
+              <span className="field-label">Track attendance from voice</span>
+              {tracking && !ent["ops.attendance"] ? (
+                <span className="g-help">Paused while this server is on Free.</span>
+              ) : null}
+            </span>
+          </label>
+          <button
+            type="submit"
+            className="g-btn g-btn--secondary g-btn--sm"
+            disabled={!ent["ops.attendance"] && !tracking}
+          >
+            Save
+          </button>
+        </form>
+        {ent["ops.attendance"] ? (
+          <>
+            <h3 className="field-label">Reliability, last 90 days</h3>
+            {reliability.length ? (
+              <div className="table-wrap">
+                <table className="g-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Member</th>
+                      <th scope="col">Raids</th>
+                      <th scope="col">Groups</th>
+                      <th scope="col">No-shows</th>
+                      <th scope="col">Showed up</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reliability.map((r) => (
+                      <tr key={r.userId}>
+                        <td>{nameOf(r.userId)}</td>
+                        <td className="mono">
+                          {r.raidsShown}/{r.raidsShown + r.raidsMissed}
+                        </td>
+                        <td className="mono">
+                          {r.groupsShown}/{r.groupsShown + r.groupsMissed}
+                        </td>
+                        <td className="mono">{r.raidsMissed + r.groupsMissed}</td>
+                        <td>
+                          <span
+                            className={`g-badge ${
+                              (r.reliability ?? 0) >= 80
+                                ? "g-badge--go"
+                                : (r.reliability ?? 0) >= 50
+                                  ? "g-badge--caution"
+                                  : "g-badge--alert"
+                            }`}
+                          >
+                            {r.reliability ?? 0}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="queue__empty muted">
+                {tracking
+                  ? "Nothing yet. Marks appear once a tracked raid or group has started."
+                  : "Turn tracking on to start counting."}
+              </p>
+            )}
+            {recentRaids.some((r) => r.signups.length) ? (
+              <>
+                <h3 className="field-label">Recent raids</h3>
+                <p className="g-help">
+                  Correct a mark if someone was there but not in voice, or the other way round.
+                </p>
+                <ul className="queue__list">
+                  {recentRaids.flatMap((r) =>
+                    r.signups.map((s) => (
+                      <li key={`${r.event.id}-${s.userId}`} className="gw-row">
+                        <span className="gw-row__main">
+                          <span className="ticket-row__topic">{nameOf(s.userId)}</span>
+                          <span className="ticket-row__who">
+                            {r.event.title} · {formatTime(r.event.startsAt, r.event.timezone)}
+                          </span>
+                        </span>
+                        <span
+                          className={`g-badge ${
+                            s.attended === true
+                              ? "g-badge--go"
+                              : s.attended === false
+                                ? "g-badge--alert"
+                                : ""
+                          }`}
+                        >
+                          {s.attended === true
+                            ? "Showed up"
+                            : s.attended === false
+                              ? "No-show"
+                              : "Not marked"}
+                        </span>
+                        <span className="gw-row__actions">
+                          <form action={markAttendance}>
+                            <input type="hidden" name="guildId" value={guild.id} />
+                            <input type="hidden" name="eventId" value={r.event.id} />
+                            <input type="hidden" name="userId" value={s.userId} />
+                            <input
+                              type="hidden"
+                              name="mark"
+                              value={s.attended === true ? "no" : "yes"}
+                            />
+                            <button type="submit" className="g-btn g-btn--ghost g-btn--sm">
+                              {s.attended === true ? "Mark no-show" : "Mark there"}
+                            </button>
+                          </form>
+                        </span>
+                      </li>
+                    )),
+                  )}
+                </ul>
+              </>
+            ) : null}
+          </>
+        ) : (
+          <p className="g-help">
+            On Pro: each member's record over 90 days, and the marks on recent raids, which staff
+            can correct.
+          </p>
+        )}
       </section>
 
       {recent.length ? (

@@ -2,16 +2,21 @@
 
 import { randomBytes } from "node:crypto";
 import {
+  applySettingsChange,
+  entitlements,
+  getGuildPlan,
   getOpsEvent,
   listSignups,
   type QueueInput,
   queueDashboardAction,
   setCalendarToken,
+  setRaidAttendance,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { listTextChannels } from "@/lib/discord";
 import { callSignupsForm, createRaidForm, moveSignupForm } from "@/lib/rally-schema";
+import { isSnowflake } from "@/lib/security";
 import { checkGuildAccess } from "@/lib/session";
 import { pick } from "@/lib/settings-schema";
 
@@ -61,6 +66,44 @@ export async function setCalendarFeed(form: FormData) {
     on ? randomBytes(24).toString("base64url") : null,
   );
   redirect(`/servers/${guild.id}/rally?calendar=${on ? "on" : "off"}#calendar`);
+}
+
+const toAttendance = (guildId: string, query: Record<string, string>) =>
+  redirect(`/servers/${guildId}/rally?${new URLSearchParams(query)}#attendance`);
+
+/** Track attendance from voice (Pro). A server back on Free can still turn it off. */
+export async function saveAttendance(form: FormData) {
+  const { session, guild } = await authorize(form);
+  const db = await getDb();
+  const on = form.get("trackAttendance") === "on";
+  if (on && !entitlements(await getGuildPlan(db, guild.id))["ops.attendance"])
+    toAttendance(guild.id, { error: "pro" });
+  const result = await applySettingsChange(db, {
+    guildId: guild.id,
+    module: "ops",
+    patch: { trackAttendance: on },
+    userId: session.userId,
+    username: session.username,
+  });
+  toAttendance(guild.id, result.ok ? { attendance: "saved" } : { error: "invalid" });
+}
+
+/** Staff correct one mark on a raid that has started (Pro). */
+export async function markAttendance(form: FormData) {
+  const { guild } = await authorize(form);
+  const db = await getDb();
+  if (!entitlements(await getGuildPlan(db, guild.id))["ops.attendance"])
+    toAttendance(guild.id, { error: "pro" });
+  const eventId = String(form.get("eventId") ?? "");
+  const userId = String(form.get("userId") ?? "");
+  const mark = String(form.get("mark") ?? "");
+  const value = mark === "yes" ? true : mark === "no" ? false : undefined;
+  const ok =
+    value !== undefined &&
+    /^[0-9a-f-]{36}$/.test(eventId) &&
+    isSnowflake(userId) &&
+    (await setRaidAttendance(db, guild.id, eventId, userId, value));
+  toAttendance(guild.id, ok ? { attendance: "marked" } : { error: "not_found" });
 }
 
 export async function requestCreateRaid(form: FormData) {

@@ -90,6 +90,7 @@ After pulling this change, run `pnpm commands:deploy` once: `/lfg create` has a 
 - `/raid list` shows what's coming up. The host or anyone with Manage Events can cancel. A server can hold 25 scheduled raids.
 - **From the website:** any member can join or leave groups and sign up for or leave raids at `/play/<server id>` (the player page, linked from Rally on the dashboard). It asks Garrison to do it, so the cards in Discord stay the source of truth.
 - **Calendar:** Rally on the dashboard and the player page show five weeks of raids in the server's time zone, weekly raids included. **Make a link** under Calendar feed gives an ICS link for Google, Apple or Outlook calendars (`/calendar/<server id>/<secret>.ics`): raid names, times and notes only, never who signed up. **New link** cuts off the old one.
+- **Attendance (Pro):** turn on **Track attendance from voice** under Rally → Attendance. Anyone signed up for a raid (not the bench) or in a group who is in a voice channel in the server from 10 minutes before the start to 45 minutes after counts as there; the rest are no-shows. The dashboard shows each member's record over 90 days and lets staff correct marks on recent raids. On Free the setting is kept but tracking pauses.
 
 ### Barracks
 

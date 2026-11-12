@@ -32,6 +32,7 @@ const s = (userId: string, role: string, spec: string | null, bench = false): Op
   bench,
   signedUpAt: new Date(),
   leftAt: null,
+  attended: null,
 });
 
 describe("opsCard", () => {

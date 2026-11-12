@@ -43,6 +43,7 @@ const member = (userId: string, slotName: string): LfgMember => ({
   slotName,
   joinedAt: new Date(),
   leftAt: null,
+  attended: null,
 });
 
 describe("lfgCard", () => {

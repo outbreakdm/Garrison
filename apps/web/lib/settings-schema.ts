@@ -220,6 +220,7 @@ export const FIELD_LABELS: Record<string, string> = {
   autoUnlockMinutes: "Auto-unlock (min)",
   flagAccountAgeDays: "Flag accounts under (days)",
   timezone: "Time zone",
+  trackAttendance: "Track attendance",
   staffRoleIds: "Staff roles",
   verifyRoleId: "Verified role",
   verifyMinAccountAgeDays: "Verify: min account age (days)",

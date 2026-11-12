@@ -14,6 +14,7 @@ export * from "./rally";
 export * from "./rank-cards";
 export * from "./repo/actions";
 export * from "./repo/alerts";
+export * from "./repo/attendance";
 export * from "./repo/automod";
 export * from "./repo/backups";
 export * from "./repo/barracks";
