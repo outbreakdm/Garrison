@@ -15,6 +15,7 @@ import {
   type SettingsModule,
   settingsChanges,
   watchSettings,
+  welcomeSettings,
 } from "../schema";
 
 /**
@@ -47,6 +48,18 @@ export const EDITABLE_FIELDS = {
   rewards: ["rewards"],
   // Role menus are checked with checkRoleMenus before they get here.
   roles: ["menus"],
+  // Cards are checked with checkWelcome before they get here.
+  welcome: [
+    "joinEnabled",
+    "joinChannelId",
+    "joinCard",
+    "leaveEnabled",
+    "leaveChannelId",
+    "leaveCard",
+    "dmEnabled",
+    "dmCard",
+    "joinRoleIds",
+  ],
 } as const satisfies Record<SettingsModule, readonly string[]>;
 
 /** One step of the escalation ladder, as the dashboard edits it and history stores it. */
@@ -159,10 +172,11 @@ const TABLES = {
   ledger: ledgerSettings,
   rally: rallySettings,
   roles: roleMenuSettings,
+  welcome: welcomeSettings,
 } as const;
 
 /** Modules whose settings row is created on first use, by the bot or the dashboard. */
-const LAZY = new Set<SettingsModule>(["ops", "ranks", "ledger", "rally", "roles"]);
+const LAZY = new Set<SettingsModule>(["ops", "ranks", "ledger", "rally", "roles", "welcome"]);
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 type Row = Record<string, unknown>;
@@ -248,6 +262,12 @@ async function writeRow(tx: Tx, module: SettingsModule, guildId: string, values:
         .update(rallySettings)
         .set(set as Partial<typeof rallySettings.$inferInsert>)
         .where(eq(rallySettings.guildId, guildId));
+      return;
+    case "welcome":
+      await tx
+        .update(welcomeSettings)
+        .set(set as Partial<typeof welcomeSettings.$inferInsert>)
+        .where(eq(welcomeSettings.guildId, guildId));
       return;
     case "roles":
       await tx

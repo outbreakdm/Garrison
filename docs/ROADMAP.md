@@ -7,15 +7,16 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **Now:** Phases 3 (card editor), 4 (role menus) and 5 (bot profile per server) are code
-  done, committed, not pushed or deployed. **Before deploying:** apply migration `0023_role_menus` to production
-  (`DATABASE_MIGRATION_URL` set, `pnpm db:migrate`, see DEPLOY.md); the bot preflight checks
-  for `role_menu_settings` and `role_menu_posts`, so a deploy before it stops at preflight.
+- **Now:** Phases 3 (card editor), 4 (role menus), 5 (bot profile per server) and 6
+  (Welcome) are code done, committed, not pushed or deployed. **Before deploying:** apply
+  migrations `0023_role_menus` and `0024_welcome` to production (`DATABASE_MIGRATION_URL`
+  set, `pnpm db:migrate`, see DEPLOY.md); the bot preflight checks for their tables, so a
+  deploy before them stops at preflight.
   After deploying: post a menu on a test server and press its buttons (the one part not
-  checked locally, since no bot runs in the local preview), and change Garrison's nickname
-  from Settings. Garrison's invite now asks for Change Nickname, so existing servers see it
+  checked locally, since no bot runs in the local preview), change Garrison's nickname
+  from Settings, and turn on a welcome card and join on a test account. Garrison's invite now asks for Change Nickname, so existing servers see it
   in /health until they re-invite or tick it on Garrison's role. Next: Phase 2 (Stripe) once
-  a price is decided, or Phase 6 (Welcome).
+  a price is decided, or Phase 7 (Tickets / modmail).
 - **Branch:** `dashboard-first` (everything up to commit `1aed992` is deployed). Later
   commits (roadmap, plan list, staff and comps) are committed but not pushed or deployed.
 - **Before pushing:** `pnpm -r exec tsc --noEmit`, `pnpm test`, `pnpm exec biome check apps packages`.
@@ -34,7 +35,7 @@ then updates **Status** and the **Log** before stopping.
 | 3 | Shared card editor (field editor + live preview + Pro-locked styling) | **Done** (not deployed) |
 | 4 | Role menus (first module on the card editor) | **Code done**, not deployed: needs migration 0023 |
 | 5 | Bot profile per server (name, avatar, banner, bio, card colours) | **Code done** (not deployed); card colour and footer defaults moved to later |
-| 6 | Welcome (messages, leave messages, roles on join) | Not started |
+| 6 | Welcome (messages, leave messages, roles on join) | **Code done**, not deployed: needs migration 0024 |
 | 7 | Tickets / modmail | Not started |
 | 8 | Message builder (post now or on a schedule) | Not started |
 | 9 | Custom rank cards with character details | Not started |
@@ -228,6 +229,26 @@ Card accent colour and footer text come from the same settings, read by `lib/car
 - Later: server-wide card accent colour and footer defaults (they must never recolour
   moderation and alert cards, whose colours report state).
 
+### Phase 6: welcome (module "Herald", plain label "Welcome")
+
+- [x] Rules (`packages/db/src/welcome.ts`, browser-safe): a welcome card in a channel, a leave
+      card, a welcome DM (Pro, `welcome.dm`), and roles on join (1 on Free, 5 on Pro,
+      `welcome.roles`). Placeholders `{user}` (mentions them; the only ping a welcome makes),
+      `{name}`, `{server}`, `{count}`; on the leave card `{user}` becomes their name. Saved Pro
+      values survive a downgrade and pause.
+- [x] Storage: migration `0024_welcome`, `welcome_settings` (one row, per-field Settings
+      history and undo; the bot only reads).
+- [x] Bot (`apps/bot/src/modules/welcome/`): runs after Gatehouse has judged the join; nothing
+      is posted or given during a raid or an active lockdown; at most 10 cards a minute per
+      server; roles on join skip anything @everyone, managed, powerful or above Garrison;
+      closed DMs are skipped quietly; bots are ignored.
+- [x] Dashboard (`/servers/:id/herald`, nav "Herald · Welcome"): welcome card, roles on join,
+      leave card and welcome DM, each a panel with the card editor and a preview filled as if
+      you had just joined. Settings history reads "Roles on join: none → @Raiders". Checked
+      in the local preview (save, Pro refusal of the DM, roles, phone width).
+- Later: image welcome cards with the member's avatar (needs rendering), roles on join by
+  condition (Pro), and checking real joins against a live server after deploy.
+
 Later phases get their checklists when they start.
 
 ## Depth for current modules (backlog)
@@ -292,4 +313,6 @@ Later phases get their checklists when they start.
   dashboard page). Type-check, 365 tests and Biome pass; checked in the local preview.
   Committed `bdc94ad`.
 - 2026-11-12: Phase 5 code done: Garrison's nickname, avatar, banner and bio per server.
-  Type-check, 368 tests and Biome pass; checked in the local preview.
+  Type-check, 368 tests and Biome pass; checked in the local preview. Committed `cf6d1a1`.
+- 2026-11-12: Phase 6 code done: Welcome (join, leave and DM cards, roles on join), migration
+  0024. Type-check, 373 tests and Biome pass; checked in the local preview.

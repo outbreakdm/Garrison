@@ -169,6 +169,13 @@
       "when": 1794462426997,
       "tag": "0023_role_menus",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794464121982,
+      "tag": "0024_welcome",
+      "breakpoints": true
     }
   ]
 }

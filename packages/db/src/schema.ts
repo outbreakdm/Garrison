@@ -15,6 +15,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { CustomCard } from "./cards";
 import type { GuildPlan } from "./plans";
 import type { RallyTemplate, RallyWording } from "./rally";
 import type { RoleMenu } from "./role-menus";
@@ -423,6 +424,7 @@ export const settingsModule = pgEnum("settings_module", [
   "rally",
   "rewards",
   "roles",
+  "welcome",
 ]);
 
 /** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */
@@ -1046,5 +1048,29 @@ export const roleMenuPosts = pgTable(
 ).enableRLS();
 
 export type RoleMenuPost = typeof roleMenuPosts.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Welcome (Herald)
+// ---------------------------------------------------------------------------
+
+/**
+ * A server's welcome settings, one row, edited on the dashboard with history and
+ * undo; the bot only reads it. Null cards use the defaults in welcome.ts.
+ */
+export const welcomeSettings = pgTable("welcome_settings", {
+  guildId: text("guild_id")
+    .primaryKey()
+    .references(() => guilds.id, { onDelete: "cascade" }),
+  joinEnabled: boolean("join_enabled").notNull().default(false),
+  joinChannelId: text("join_channel_id"),
+  joinCard: jsonb("join_card").$type<CustomCard>(),
+  leaveEnabled: boolean("leave_enabled").notNull().default(false),
+  leaveChannelId: text("leave_channel_id"),
+  leaveCard: jsonb("leave_card").$type<CustomCard>(),
+  dmEnabled: boolean("dm_enabled").notNull().default(false),
+  dmCard: jsonb("dm_card").$type<CustomCard>(),
+  joinRoleIds: text("join_role_ids").array().notNull().default(sql`'{}'::text[]`),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
 export type RallySettings = typeof rallySettings.$inferSelect;
 export type { GuildPlan };

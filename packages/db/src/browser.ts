@@ -7,3 +7,4 @@ export * from "./plans";
 export * from "./profile";
 export * from "./role-menus";
 export type { BotProfilePayload } from "./schema";
+export * from "./welcome";

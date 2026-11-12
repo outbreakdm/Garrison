@@ -75,6 +75,12 @@ export const SEARCH_INDEX: SearchEntry[] = [
     "role menu reaction roles self assign buttons dropdown colours pings card",
   ),
   page(
+    "/herald",
+    modules.herald.name,
+    modules.herald.plain,
+    "welcome join leave goodbye greet dm autorole roles on join new members card",
+  ),
+  page(
     "/quartermaster",
     modules.quartermaster.name,
     modules.quartermaster.plain,

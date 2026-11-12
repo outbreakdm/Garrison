@@ -40,7 +40,11 @@ function describe(
           )
           .join("; ")
       : "none";
-  if (field === "staffRoleIds")
+  if (/Card$/.test(field))
+    return value && typeof value === "object" && "title" in value
+      ? `“${String((value as { title: unknown }).title)}”`
+      : "the standard card";
+  if (field === "staffRoleIds" || field === "joinRoleIds")
     return Array.isArray(value) && value.length
       ? value.map((id) => `@${roleNames.get(String(id)) ?? "deleted-role"}`).join(", ")
       : "none";
@@ -235,6 +239,11 @@ export default async function SettingsPage({
               href={`${base}/rally/templates`}
               name="LFG templates"
               value="Roles and wording per game"
+            />
+            <Place
+              href={`${base}/herald`}
+              name="Welcome"
+              value="Join and leave cards, roles on join"
             />
             <Place
               href={`${base}/insignia`}

@@ -257,6 +257,10 @@ const tracker = new JoinRateTracker();
 const RAID_COOLDOWN_MS = 5 * 60_000;
 const raidCooldownUntil = new Map<string, number>();
 
+/** Is a raid being handled in this server right now? Welcomes stay quiet while it is. */
+export const raidUnderway = (guildId: string, now = Date.now()) =>
+  (raidCooldownUntil.get(guildId) ?? 0) > now;
+
 export async function handleMemberJoin(ctx: BotContext, member: GuildMember) {
   const { guild } = member;
   const settings = await cachedGatehouseSettings(ctx, guild.id);

@@ -228,6 +228,15 @@ export const FIELD_LABELS: Record<string, string> = {
   rules: "Escalation ladder",
   templates: "LFG templates",
   menus: "Role menus",
+  joinEnabled: "Welcome card",
+  joinChannelId: "Welcome channel",
+  joinCard: "Welcome card text",
+  leaveEnabled: "Leave card",
+  leaveChannelId: "Leave channel",
+  leaveCard: "Leave card text",
+  dmEnabled: "Welcome DM",
+  dmCard: "Welcome DM text",
+  joinRoleIds: "Roles on join",
 };
 
 type NamedTemplate = { id?: string; name?: string };

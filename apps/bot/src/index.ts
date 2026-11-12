@@ -25,6 +25,7 @@ import { sweepOps } from "./modules/ops/service.js";
 import { ClaudePlanner } from "./modules/quartermaster/planner.js";
 import { sweepRally } from "./modules/rally/service.js";
 import { handleMessage } from "./modules/ranks/service.js";
+import { welcomeJoin, welcomeLeave } from "./modules/welcome/service.js";
 
 const env = loadEnv();
 const logger = createLogger(env.LOG_LEVEL);
@@ -126,12 +127,19 @@ client.on(Events.MessageCreate, (message) => {
 });
 
 client.on(Events.GuildMemberAdd, (member) => {
-  handleMemberJoin(ctx, member).catch((error) =>
-    logger.error("Join handling failed", { guildId: member.guild.id, error }),
-  );
+  // Gatehouse decides first whether this join is part of a raid; welcomes wait for it.
+  handleMemberJoin(ctx, member)
+    .catch((error) => logger.error("Join handling failed", { guildId: member.guild.id, error }))
+    .then(() => welcomeJoin(ctx, member))
+    .catch((error) => logger.error("Welcome failed", { guildId: member.guild.id, error }));
   void onMemberJoin(ctx, member);
 });
-client.on(Events.GuildMemberRemove, (member) => void onMemberLeave(ctx, member));
+client.on(Events.GuildMemberRemove, (member) => {
+  void onMemberLeave(ctx, member);
+  welcomeLeave(ctx, member).catch((error) =>
+    logger.error("Leave message failed", { guildId: member.guild.id, error }),
+  );
+});
 client.on(Events.MessageDelete, (message) => void onMessageDelete(ctx, message));
 client.on(Events.VoiceStateUpdate, (before, after) => void onVoiceUpdate(ctx, before, after));
 

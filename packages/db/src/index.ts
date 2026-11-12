@@ -19,6 +19,7 @@ export * from "./repo/role-menus";
 export * from "./repo/search";
 export * from "./repo/settings";
 export * from "./repo/web";
+export * from "./repo/welcome";
 export * from "./role";
 export * from "./role-menus";
 export type {
@@ -69,3 +70,4 @@ export type {
 } from "./schema";
 export * as schema from "./schema";
 export * from "./time";
+export * from "./welcome";

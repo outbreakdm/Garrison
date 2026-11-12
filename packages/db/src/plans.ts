@@ -14,6 +14,7 @@ type Module =
   | "cards"
   | "profile"
   | "roles"
+  | "welcome"
   | "rally"
   | "ops"
   | "ranks"
@@ -69,6 +70,18 @@ export const FEATURES = {
     about: "Limit picks per menu (up to 2, 3…) and require a role to use a menu",
     free: false,
     pro: true,
+  },
+  "welcome.dm": {
+    module: "welcome",
+    about: "A welcome DM to each new member",
+    free: false,
+    pro: true,
+  },
+  "welcome.roles": {
+    module: "welcome",
+    about: "Roles given on join",
+    free: 1,
+    pro: 5,
   },
   "rally.templates": {
     module: "rally",
