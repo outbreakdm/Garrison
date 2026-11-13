@@ -10,6 +10,7 @@ import type { Metadata } from "next";
 import { ProTag } from "@/components/cards/CardEditor";
 import { DurationBar, untilText } from "@/components/DurationBar";
 import { formatTime } from "@/components/format";
+import { ListField } from "@/components/ListField";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import {
   ChannelSelect,
@@ -434,20 +435,22 @@ export default async function GatehousePage({
                       />
                     </label>
                   </div>
-                  <label className="g-field">
-                    <span>Trusted user IDs (never acted on)</span>
-                    <textarea
-                      className="g-input"
+                  <fieldset className="g-field checklist">
+                    <legend className="checklist__legend">Trusted user IDs (never acted on)</legend>
+                    <ListField
                       name="trustedIds"
-                      rows={2}
-                      defaultValue={g?.antiNukeTrustedIds.join(", ") ?? ""}
-                      placeholder="Up to 10 user IDs, separated by commas"
+                      noun="user ID"
+                      defaultItems={g?.antiNukeTrustedIds ?? []}
+                      max={10}
+                      maxLength={20}
+                      inputMode="numeric"
+                      placeholder="123456789012345678"
                     />
                     <span className="g-help">
                       In Discord: Settings → Advanced → Developer Mode, then right-click a member →
                       Copy User ID.
                     </span>
-                  </label>
+                  </fieldset>
                   <button type="submit" className="g-btn g-btn--primary">
                     Save anti-nuke
                   </button>

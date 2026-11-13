@@ -3837,3 +3837,81 @@ main:target,
 #content:focus {
   outline: none;
 }
+
+/* --- Lists typed one item per box (ListField, SlotRows) ----------------------------------
+   Questions, blocked words, trusted IDs and raid roles: each its own numbered box with a
+   remove button, Enter opens the next one, and the count says how many more fit. */
+.list-rows {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.list-rows__list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.list-rows__row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 32px;
+  gap: var(--space-2);
+  align-items: center;
+}
+.list-rows__row--slot {
+  grid-template-columns: minmax(0, 1fr) 76px 32px;
+}
+.list-rows__num {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.list-rows__count {
+  text-align: center;
+}
+.list-rows__remove {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+button.list-rows__remove:hover {
+  border-color: color-mix(in srgb, var(--alert) 45%, var(--line));
+  color: var(--alert);
+}
+button.list-rows__remove:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.list-rows__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding-left: 32px;
+}
+.list-rows__row--slot ~ * .list-rows__foot,
+.list-rows:has(.list-rows__row--slot) .list-rows__foot {
+  padding-left: 0;
+}
+@media (hover: none) {
+  .list-rows__remove {
+    width: 40px;
+    height: 40px;
+  }
+  .list-rows__row {
+    grid-template-columns: 20px minmax(0, 1fr) 40px;
+  }
+  .list-rows__row--slot {
+    grid-template-columns: minmax(0, 1fr) 72px 40px;
+  }
+}

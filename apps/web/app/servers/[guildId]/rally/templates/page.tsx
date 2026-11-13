@@ -11,11 +11,13 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SlotRows } from "@/components/ListField";
 import { CheckList } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { listNotifiableRoles, listTextChannels } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
 import { requireGuildAccess } from "@/lib/session";
+import { slotsFromText } from "@/lib/slots";
 import { addTemplate, removeTemplate, saveTemplate } from "./actions";
 
 export const metadata: Metadata = { title: "LFG templates" };
@@ -192,16 +194,10 @@ export default async function RallyTemplatesPage({
                 </label>
               </div>
               <div className="field-row">
-                <label className="g-field">
-                  <span>Roles and counts</span>
-                  <input
-                    className="g-input"
-                    name="roles"
-                    maxLength={120}
-                    defaultValue={t.roles ?? ""}
-                    placeholder="Tank 1, Healer 1, DPS 3"
-                  />
-                </label>
+                <fieldset className="g-field checklist">
+                  <legend className="checklist__legend">Roles and counts</legend>
+                  <SlotRows defaultSlots={slotsFromText(t.roles)} />
+                </fieldset>
                 <label className="g-field">
                   <span>Or a size (no roles)</span>
                   <input

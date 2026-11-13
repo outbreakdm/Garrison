@@ -22,6 +22,7 @@ import { AutoRefresh } from "@/components/AutoRefresh";
 import { ProTag } from "@/components/cards/CardEditor";
 import { EmptyState } from "@/components/EmptyState";
 import { formatTime } from "@/components/format";
+import { SlotRows } from "@/components/ListField";
 import { OpsCalendar } from "@/components/OpsCalendar";
 import { FormPanel } from "@/components/settings";
 import { getDb } from "@/lib/db";
@@ -221,18 +222,13 @@ export default async function RallyPage({
             </label>
           </div>
           <div className="field-row">
-            <label className="g-field">
-              <span>Roles and caps</span>
-              <input
-                className="g-input"
-                name="roles"
-                maxLength={120}
-                placeholder="Tank 1, Healer 1, DPS 3"
-              />
+            <fieldset className="g-field checklist">
+              <legend className="checklist__legend">Roles and caps</legend>
+              <SlotRows defaultSlots={[]} />
               <span className="g-help">
-                Leave blank for a plain group, or to use the template's.
+                Leave the role empty for a plain group, or to use the template's.
               </span>
-            </label>
+            </fieldset>
             <label className="g-field">
               <span>Or just a size</span>
               <input
@@ -308,17 +304,18 @@ export default async function RallyPage({
               <input className="g-input" name="time" type="time" required />
             </label>
           </div>
-          <label className="g-field">
-            <span>Roles and caps</span>
-            <input
-              className="g-input"
-              name="roles"
-              maxLength={120}
+          <fieldset className="g-field checklist">
+            <legend className="checklist__legend">Roles and caps</legend>
+            <SlotRows
               required
-              defaultValue="Tank 2, Healer 4, DPS 14"
+              defaultSlots={[
+                { name: "Tank", count: "2" },
+                { name: "Healer", count: "4" },
+                { name: "DPS", count: "14" },
+              ]}
             />
-            <span className="g-help">Role names and how many of each.</span>
-          </label>
+            <span className="g-help">Each role and how many of it the raid takes.</span>
+          </fieldset>
           <label className="g-field">
             <span>Note</span>
             <input className="g-input" name="note" maxLength={200} placeholder="Requirements" />

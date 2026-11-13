@@ -20,6 +20,7 @@ import { callSignupsForm, createRaidForm, moveSignupForm } from "@/lib/rally-sch
 import { isSnowflake } from "@/lib/security";
 import { checkGuildAccess } from "@/lib/session";
 import { pick } from "@/lib/settings-schema";
+import { slotsText } from "@/lib/slots";
 
 /**
  * Rally requests from the dashboard. These only queue work: the bot does it,
@@ -111,7 +112,10 @@ export async function markAttendance(form: FormData) {
 export async function requestCreateRaid(form: FormData) {
   const { guild } = await authorize(form);
   const keys = ["channelId", "title", "date", "time", "roles", "note", "repeatWeekly"];
-  const parsed = createRaidForm.safeParse(pick(form, keys));
+  // Roles arrive as one row per role (slotName, slotCount); join them for the parser.
+  const fields = pick(form, keys);
+  const roles = slotsText(form);
+  const parsed = createRaidForm.safeParse(roles === null ? fields : { ...fields, roles });
   if (!parsed.success) back(guild.id, { error: "invalid" });
   else {
     const channels = await listTextChannels(guild.id).catch(() => []);

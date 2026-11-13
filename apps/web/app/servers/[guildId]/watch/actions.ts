@@ -128,7 +128,8 @@ export async function saveAutomod(form: FormData) {
     mentionLimit: Number(form.get("mentionLimit")),
     spamCount: Number(form.get("spamCount")),
     spamSeconds: Number(form.get("spamSeconds")),
-    words: String(form.get("words") ?? ""),
+    // One box per word; an older one-per-line value still splits the same way.
+    words: form.getAll("words").map(String),
     action: String(form.get("action") ?? ""),
     timeoutMinutes: Number(form.get("timeoutMinutes")),
     exemptRoleIds: form.getAll("exemptRoleIds").map(String),

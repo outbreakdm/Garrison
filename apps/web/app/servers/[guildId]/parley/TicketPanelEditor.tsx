@@ -16,6 +16,7 @@ import { useMemo, useState } from "react";
 import { CardEditor, move, ProNotice, ProTag, RowTools } from "@/components/cards/CardEditor";
 import { CardPreview, PreviewButtons } from "@/components/cards/CardPreview";
 import { EmojiInput, type ServerEmojiChoice } from "@/components/cards/EmojiInput";
+import { ListRows } from "@/components/ListField";
 
 type Action = (form: FormData) => Promise<void>;
 
@@ -197,29 +198,26 @@ export function TicketPanelEditor({
                         onMove={(to) => setTopics(move(panel.topics, i, to))}
                         onRemove={() => setTopics(panel.topics.filter((_, j) => j !== i))}
                       />
-                      <label className="g-field option__desc" htmlFor={id(`q-${t.id}`)}>
-                        <span className="field-label">
+                      <fieldset className="g-field option__desc checklist">
+                        <legend className="field-label">
                           Questions before it opens <ProTag on={ent["tickets.forms"]} />
-                        </span>
-                        <textarea
-                          className="g-input"
-                          id={id(`q-${t.id}`)}
-                          rows={2}
-                          placeholder="One per line, up to 5. Leave empty to open straight away."
-                          value={t.questions.join("\n")}
-                          onChange={(e) =>
-                            update({
-                              questions: e.target.value
-                                .split("\n")
-                                .slice(0, TICKET_LIMITS.questions)
-                                .map((q) => q.slice(0, 60)),
-                            })
-                          }
-                          onBlur={() =>
-                            update({ questions: t.questions.map((q) => q.trim()).filter(Boolean) })
+                        </legend>
+                        <ListRows
+                          noun="question"
+                          items={t.questions}
+                          max={TICKET_LIMITS.questions}
+                          maxLength={TICKET_LIMITS.question}
+                          placeholder="e.g. What's your in-game name?"
+                          onChange={(questions) => update({ questions })}
+                          onDone={(rows) =>
+                            update({ questions: rows.map((q) => q.trim()).filter(Boolean) })
                           }
                         />
-                      </label>
+                        <span className="g-help">
+                          One box per question, asked in a form when the member presses the button.
+                          Leave it empty to open the ticket straight away.
+                        </span>
+                      </fieldset>
                       {i >= limit ? (
                         <p className="g-help g-help--warn option__note">
                           Free panels show {limit} topics, so this one is paused.

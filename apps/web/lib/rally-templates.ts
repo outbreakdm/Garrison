@@ -1,4 +1,5 @@
 import { DEFAULT_WORDING, type RallyTemplate, type RallyWording } from "@garrison/db";
+import { slotsText } from "./slots";
 
 /**
  * Turn the template form into a template object. Shapes only: the result goes
@@ -15,7 +16,7 @@ export function templateFromForm(form: FormData): Record<string, unknown> {
     const v = text(`w_${key}`).trim();
     wording[key] = v || (key === "requirement" ? null : DEFAULT_WORDING[key]);
   }
-  const roles = text("roles").trim();
+  const roles = (slotsText(form) ?? text("roles")).trim();
   return {
     id: text("templateId"),
     name: text("name"),

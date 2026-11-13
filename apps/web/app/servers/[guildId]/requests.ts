@@ -38,6 +38,7 @@ import { wakeBot } from "@/lib/bot";
 import { getDb } from "@/lib/db";
 import { guildOwnerId, listTextChannels } from "@/lib/discord";
 import { checkGuildAccess } from "@/lib/session";
+import { slotsText } from "@/lib/slots";
 
 /**
  * Dashboard buttons that ask Garrison to do something in Discord. Each request
@@ -298,7 +299,10 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       if (!owner || owner !== requesterId) return { ok: false, error: "owner_only" };
       const trustedIds = [
         ...new Set(
-          field(form, "trustedIds")
+          form
+            .getAll("trustedIds")
+            .map(String)
+            .join(",")
             .split(/[\s,]+/)
             .filter(Boolean),
         ),
@@ -385,7 +389,7 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
     case "create_lfg": {
       const channelId = field(form, "channelId");
       const title = field(form, "title");
-      const roles = field(form, "roles");
+      const roles = slotsText(form) ?? field(form, "roles");
       const size = Number(field(form, "size") || "0");
       const starts = field(form, "starts") || "now";
       const channels = await listTextChannels(guildId).catch(() => []);

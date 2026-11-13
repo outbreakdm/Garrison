@@ -20,6 +20,7 @@ import { CopyButton } from "@/components/CopyButton";
 import { ProTag } from "@/components/cards/CardEditor";
 import { EmptyState } from "@/components/EmptyState";
 import { ActionBadge, formatDuration, formatTime, plainMentions } from "@/components/format";
+import { ListField } from "@/components/ListField";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import {
@@ -369,21 +370,21 @@ export default async function WatchPage({
           />
           <div className="settings-grid">
             <div className="card-col">
-              <label className="g-field" htmlFor="words">
-                <span>Blocked words and phrases</span>
-                <textarea
-                  className="g-input"
-                  id="words"
+              <fieldset className="g-field checklist">
+                <legend className="checklist__legend">Blocked words and phrases</legend>
+                <ListField
                   name="words"
-                  rows={5}
-                  defaultValue={am.words.join("\n")}
-                  placeholder="One per line. Whole words, any case."
+                  noun="word"
+                  defaultItems={am.words}
+                  max={ent["automod.words"]}
+                  maxLength={AUTOMOD_LIMITS.word}
+                  placeholder="A word or phrase"
                 />
                 <span className="g-help">
-                  {am.words.length} of {ent["automod.words"]}
-                  {ent["automod.words"] < WORDS_HARD_MAX ? ` (Pro: ${WORDS_HARD_MAX})` : ""}.
+                  Whole words, any case. Press Enter for the next one.
+                  {ent["automod.words"] < WORDS_HARD_MAX ? ` Pro holds ${WORDS_HARD_MAX}.` : ""}
                 </span>
-              </label>
+              </fieldset>
               <Switch
                 name="invites"
                 defaultChecked={am.invites}
