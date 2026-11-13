@@ -61,7 +61,7 @@ export default async function PlanPage({
   const outcome = done ? DONE[done] : undefined;
 
   const where = !pro
-    ? "This server is on Free. Nothing you set up is lost when you upgrade or go back to Free."
+    ? "Nothing you set up is lost when you upgrade, or when you come back to Free later."
     : source === "comp"
       ? `Garrison staff gave this server Pro for free${details.note ? `: ${details.note}` : "."}`
       : source === "bundle"
@@ -96,7 +96,9 @@ export default async function PlanPage({
           Use a seat on this server
         </button>
         <span className="g-help tier__note">
-          {plan.seats - used} of {plan.seats} seats free
+          {used === 0
+            ? `All ${plan.seats} seats free`
+            : `${plan.seats - used} of ${plan.seats} seats free`}
         </span>
       </form>
     )
@@ -120,12 +122,21 @@ export default async function PlanPage({
       ) : null}
 
       <section className="g-card plan-now" aria-labelledby="now">
-        <div>
+        <div className="plan-now__text">
           <h2 className="card-title" id="now">
-            {current === "free" ? "Free" : current === "agency" ? "Pro, from Agency" : "Pro"}{" "}
-            <span className={`g-badge ${pro ? "g-badge--go" : "g-badge--off"}`}>
-              {pro ? (source === "comp" ? "Complimentary" : "Active") : "No paid plan"}
-            </span>
+            {current === "free"
+              ? "This server is on Free"
+              : current === "agency"
+                ? "This server has Pro, from an Agency seat"
+                : "This server has Pro"}
+            {pro ? (
+              <>
+                {" "}
+                <span className="g-badge g-badge--go">
+                  {source === "comp" ? "Complimentary" : "Active"}
+                </span>
+              </>
+            ) : null}
           </h2>
           <p className="card-sub">{where}</p>
         </div>
@@ -133,14 +144,14 @@ export default async function PlanPage({
       </section>
 
       <section className="block" aria-labelledby="plans">
-        <div className="card-head">
+        <div className="block-head">
           <h2 className="block-title" id="plans">
             Plans
           </h2>
           <p>
             {PAID_PLANS_LIVE
-              ? "Prices in US dollars, before tax. Cancel any time."
-              : "Garrison is free during early access. These are the prices at launch; nothing costs money until they go live."}
+              ? "Prices in US dollars, before tax. Cancel any time; nothing is deleted."
+              : "Garrison is free during early access. These are the prices at launch, and nothing costs money before then."}
           </p>
         </div>
         <PlanCards current={current} />

@@ -11,6 +11,7 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PlansLink } from "@/components/ProUpsell";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { FormPanel } from "@/components/settings";
 import { getDb } from "@/lib/db";
@@ -98,8 +99,8 @@ export default async function RoleMenusPage({
           <span>
             This server has {menus.length} menus and its plan runs {limit}, so the last{" "}
             {plural(pausedCount, "menu is", "menus are")} paused: still saved, buttons resting.
-            Remove a menu or <Link href={`/servers/${guild.id}/plan`}>upgrade to Pro</Link> to bring{" "}
-            {pausedCount === 1 ? "it" : "them"} back.
+            Remove a menu, or a paid plan brings {pausedCount === 1 ? "it" : "them"} back.{" "}
+            <PlansLink guildId={guild.id} className="" />
           </span>
         </div>
       ) : null}

@@ -11,6 +11,7 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PlansLink } from "@/components/ProUpsell";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { FormPanel } from "@/components/settings";
 import { getDb } from "@/lib/db";
@@ -96,9 +97,9 @@ export default async function AlertsPage({
         <div className="notice notice--pro" role="status">
           <span>
             This server has {feeds.length} alerts and its plan runs {limit}, so the last{" "}
-            {plural(paused, "alert is", "alerts are")} paused: still saved, not checked.{" "}
-            <Link href={`/servers/${guild.id}/plan`}>Upgrade to Pro</Link> to bring{" "}
-            {paused === 1 ? "it" : "them"} back.
+            {plural(paused, "alert is", "alerts are")} paused: still saved, not checked. A paid plan
+            brings {paused === 1 ? "it" : "them"} back.{" "}
+            <PlansLink guildId={guild.id} className="" />
           </span>
         </div>
       ) : null}

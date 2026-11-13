@@ -43,15 +43,39 @@ export default async function StaffPage({
         <div className="picker__head">
           <h1>Staff</h1>
           <p>
-            Every server Garrison is in: {servers.length}{" "}
-            {servers.length === 1 ? "server" : "servers"}, {paid} paying for Pro,{" "}
-            {pro.length - paid} on free Pro.
+            Every server Garrison is in, and who has which plan. Paid plans can't be changed here;
+            free ones can.
           </p>
         </div>
+        <dl className="staff-counts">
+          <div>
+            <dt>Servers</dt>
+            <dd>{servers.length}</dd>
+          </div>
+          <div>
+            <dt>Paying for Pro</dt>
+            <dd>{paid}</dd>
+          </div>
+          <div>
+            <dt>Agency seats</dt>
+            <dd>{pro.filter((s) => s.source === "bundle").length}</dd>
+          </div>
+          <div>
+            <dt>Free Pro</dt>
+            <dd>{pro.filter((s) => s.source === "comp").length}</dd>
+          </div>
+          <div>
+            <dt>Agency plans</dt>
+            <dd>{agencies.length}</dd>
+          </div>
+        </dl>
         {done && DONE[done] ? (
-          <p className="g-card" role="status">
+          <div
+            className={`notice${done === "paid" || done === "agency_bad" ? "" : " notice--ok"}`}
+            role="status"
+          >
             {DONE[done]}
-          </p>
+          </div>
         ) : null}
 
         <section className="g-card table-wrap" aria-label="Servers and plans">
@@ -126,10 +150,16 @@ export default async function StaffPage({
             <ul className="seats-list">
               {agencies.map((a) => (
                 <li key={a.id}>
-                  <span className="mono">{a.ownerId}</span>
+                  <span className="seats-list__who">
+                    <span className="g-label">Owner</span>
+                    <span className="mono">{a.ownerId}</span>
+                  </span>
                   <span>
-                    {a.used} of {a.seats} seats · {a.source === "comp" ? "free" : "paid"}
-                    {a.note ? ` · ${a.note}` : ""}
+                    {a.used} of {a.seats} seats used
+                    {a.note ? <span className="muted"> · {a.note}</span> : null}
+                  </span>
+                  <span className={`g-badge${a.source === "comp" ? "" : " g-badge--go"}`}>
+                    {a.source === "comp" ? "Given free" : "Paid"}
                   </span>
                   {a.source === "comp" ? (
                     <form action={staffAgencyAction}>
@@ -144,6 +174,7 @@ export default async function StaffPage({
               ))}
             </ul>
           ) : null}
+          <h3 className="card-title staff-sub">Give an Agency plan</h3>
           <form action={staffAgencyAction} className="filter-row">
             <label className="g-field" htmlFor="ownerId">
               <span>Their Discord user ID</span>
@@ -173,7 +204,7 @@ export default async function StaffPage({
               <input className="g-input" id="agency-note" name="note" maxLength={200} />
             </label>
             <button type="submit" className="g-btn g-btn--primary">
-              Give an Agency plan
+              Give plan
             </button>
           </form>
         </section>

@@ -53,7 +53,7 @@ export const PRICING = {
       "Everything in Pro, on each of 5 servers",
       "Put a server in a seat, or free it, from its Plan page",
       "15 AI builder plans a day on each server",
-      "One bill: 7 dollars a server a month",
+      "One bill: $7.00 a server a month",
     ],
   },
 } as const;
@@ -64,6 +64,10 @@ export type PlanTier = keyof typeof PRICING;
  * nothing can be bought. Until then plans are given only by staff (comps).
  */
 export const PAID_PLANS_LIVE = false;
+
+/** "save 26%": what paying yearly saves against twelve monthly payments. */
+export const yearlySaving = (monthly: number, yearly: number) =>
+  `save ${Math.round((1 - yearly / (monthly * 12)) * 100)}%`;
 
 /** A price for display, always with cents so prices line up: "$8.99", "$0.00". */
 export const formatPrice = (n: number) => `$${n.toFixed(2)}`;

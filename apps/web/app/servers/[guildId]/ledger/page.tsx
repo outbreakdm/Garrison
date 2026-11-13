@@ -10,6 +10,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { formatTime } from "@/components/format";
+import { ProUpsell } from "@/components/ProUpsell";
 import {
   ChannelSelect,
   FormFoot,
@@ -194,13 +195,9 @@ export default async function LedgerPage({
         </section>
       ) : null}
 
-      <div className="row-between">
-        <span className="g-help">
-          {canExport
-            ? "Download what this filter shows, up to 20,000 events."
-            : "Downloading the log as a spreadsheet is part of Garrison Pro."}
-        </span>
-        {canExport ? (
+      {canExport ? (
+        <div className="row-between">
+          <span className="g-help">Download what this filter shows, up to 20,000 events.</span>
           <a
             className="g-btn g-btn--secondary"
             href={`/servers/${guild.id}/ledger/export${exportQuery.size ? `?${exportQuery}` : ""}`}
@@ -208,12 +205,12 @@ export default async function LedgerPage({
           >
             Download CSV
           </a>
-        ) : (
-          <Link className="g-btn g-btn--ghost" href={`/servers/${guild.id}/plan`}>
-            See Pro
-          </Link>
-        )}
-      </div>
+        </div>
+      ) : (
+        <ProUpsell guildId={guild.id}>
+          Download the log as a spreadsheet, for whatever this filter shows.
+        </ProUpsell>
+      )}
 
       <div className="g-card table-card">
         <div className="table-wrap">

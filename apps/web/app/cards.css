@@ -991,13 +991,6 @@
   flex-direction: column;
   gap: var(--space-1);
 }
-.queue-stats__pro {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0;
-}
 
 .ticket-head__side {
   display: flex;

@@ -1,4 +1,4 @@
-import { formatPrice, PAID_PLANS_LIVE, type PlanTier, PRICING } from "@garrison/db";
+import { formatPrice, PAID_PLANS_LIVE, type PlanTier, PRICING, yearlySaving } from "@garrison/db";
 import type { ReactNode } from "react";
 
 const TIERS: PlanTier[] = ["free", "pro", "agency"];
@@ -20,9 +20,9 @@ function Check() {
 
 /**
  * Free, Pro and Agency side by side: the price, who it's for, what it adds, and where
- * this server stands. Prices come from PRICING; before PAID_PLANS_LIVE they read "at
- * launch" and nothing can be bought. `current` marks this server's plan; `action` goes
- * under a tier (an Agency owner's seat button, for example).
+ * this server stands. Prices come from PRICING. Before PAID_PLANS_LIVE the section says
+ * once that these are launch prices, and each paid card ends with "Opens at launch".
+ * `current` marks this server's plan; `actions` goes at the foot of a tier.
  */
 export function PlanCards({
   current,
@@ -36,44 +36,39 @@ export function PlanCards({
       {TIERS.map((tier) => {
         const p = PRICING[tier];
         const paid = p.monthly > 0;
-        const perServer =
-          tier === "agency" && p.servers ? formatPrice(p.monthly / p.servers) : null;
+        const here = current === tier;
+        const foot =
+          actions[tier] ??
+          (here ? null : paid && !PAID_PLANS_LIVE ? (
+            <span className="tier__soon">Opens at launch</span>
+          ) : null);
         return (
           <li
             key={tier}
-            className={`tier tier--${tier}${current === tier ? " is-current" : ""}`}
-            aria-current={current === tier ? "true" : undefined}
+            className={`tier tier--${tier}${here ? " is-current" : ""}`}
+            aria-current={here ? "true" : undefined}
           >
             <div className="tier__head">
               <h3 className="tier__name">
                 {paid ? <span className="tier__foil">{p.name}</span> : p.name}
               </h3>
-              {current === tier ? <span className="g-badge g-badge--go">This server</span> : null}
+              {here ? <span className="g-badge g-badge--accent">This server</span> : null}
             </div>
             <p className="tier__price">
-              {paid ? (
-                <>
-                  <span className="tier__amount">{formatPrice(p.monthly)}</span>
-                  <span className="tier__per">
-                    a month{p.servers === 1 ? ", per server" : `, up to ${p.servers} servers`}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="tier__amount">Free</span>
-                  <span className="tier__per">for any number of servers</span>
-                </>
-              )}
+              <span className="tier__amount">{paid ? formatPrice(p.monthly) : "$0"}</span>
+              <span className="tier__per">
+                {!paid
+                  ? "for any number of servers"
+                  : p.servers === 1
+                    ? "a month, per server"
+                    : `a month, up to ${p.servers} servers`}
+              </span>
             </p>
-            {paid ? (
-              <p className="tier__year">
-                or {formatPrice(p.yearly)} a year
-                {perServer ? ` · ${perServer} a server a month` : ""}
-                {PAID_PLANS_LIVE ? "" : " · at launch"}
-              </p>
-            ) : (
-              <p className="tier__year">No card, no trial clock</p>
-            )}
+            <p className="tier__year">
+              {paid
+                ? `or ${formatPrice(p.yearly)} a year, ${yearlySaving(p.monthly, p.yearly)}`
+                : "No card, no trial clock"}
+            </p>
             <p className="tier__pitch">{p.pitch}</p>
             <ul className="tier__list">
               {p.highlights.map((h) => (
@@ -83,7 +78,7 @@ export function PlanCards({
                 </li>
               ))}
             </ul>
-            {actions[tier] ? <div className="tier__action">{actions[tier]}</div> : null}
+            {foot ? <div className="tier__action">{foot}</div> : null}
           </li>
         );
       })}

@@ -368,6 +368,10 @@ The cases table becomes one stacked card per case below 640px: each cell a line 
 - **Phones (720px and below):** the rail gives way to one 48px button naming the current page (gem, name, "All pages"), which opens a sheet: Overview across the top, then the four sections in two columns of 44px items, the current one tinted. The sheet closes when a page is picked. The top bar drops Sign out (it lives on the account page), the search hint hides on touch screens, and it reads Ctrl K or ⌘K by platform.
 - **Skip link:** the first stop in the top bar, hidden until focused, jumps to the page (`#content`).
 
+### Plans (PlanCards) and Pro slots
+- **Plan cards:** Free, Pro and Agency side by side (two columns below 1100px, one on phones with Pro first). Each card: the name (paid plans in foil), the monthly price at 34px tabular, "or $X a year, save N%", a one-line pitch under a rule, ticks in the page's colour (never status green), and a muted "Opens at launch" until paid plans are live. This server's plan takes the identity edge and a "This server" badge. Prices come only from `PRICING` in `packages/db/src/plans.ts`.
+- **Pro slot (`ProUpsell`):** where a Pro feature sits on a Free server: a dashed, faintly foil-tinted strip with the Requires Pro tag, one sentence on what the feature does, and "See plans". Every link to the plans says "See plans" (`PlansLink`), never "Upgrade" while nothing can be bought.
+
 ### Pro tag
 "Requires Pro" in words with a lock, printed in foil: 700 12px/16px Foil Ink on the foil gradient, 6px corners, a white 55% edge and a faint orchid outline. The sheen sweeps once across the tag on arrival. A Pro notice takes a foil border and a foil diamond as its mark.
 

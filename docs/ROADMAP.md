@@ -610,3 +610,9 @@ Decided (2026-11-12, owner):
   side with this server's plan and an owner's seat button; the account page lists your seats;
   the staff page gives Agency plans; the landing page shows the three plans as "at launch".
   Tested in `repo/agency.test.ts` and in the local preview.
+- 2026-11-13: Subscription polish (impeccable polish, committed, not deployed): plan cards show
+  "$0" and "save N%" the same way on the dashboard and the landing page, ticks in the page's
+  colour, "Opens at launch" on paid cards, a plain "This server is on Free / has Pro" line and
+  "All 5 seats free". The staff page gets a readout of plan counts, labelled Agency rows and a
+  plain notice. Pro features on Free share one slot (`ProUpsell`) and every plans link says
+  "See plans". The landing flag reads "Recommended" (no usage claim).

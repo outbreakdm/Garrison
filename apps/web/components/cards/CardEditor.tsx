@@ -508,7 +508,7 @@ export function ProNotice({
           Undo Pro changes
         </button>
         <a className="g-btn g-btn--ghost g-btn--sm" href={planHref}>
-          See what Pro includes
+          See plans
         </a>
       </span>
     </div>

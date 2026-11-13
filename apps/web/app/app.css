@@ -4025,7 +4025,6 @@ button.list-rows__remove:focus-visible {
 }
 .tier__check {
   margin-top: 3px;
-  color: var(--go);
 }
 .tier__action {
   margin-top: auto;
@@ -4112,4 +4111,93 @@ button.list-rows__remove:focus-visible {
   .tier__foil {
     animation: none;
   }
+}
+/* Section heads that stack: a title, then one line about the section. */
+.block-head {
+  display: grid;
+  gap: 4px;
+}
+.block-head p {
+  max-width: 68ch;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+/* Ticks on a plan's list say "included", so they wear the page's colour, not a status. */
+.tier__check {
+  color: var(--accent-strong);
+}
+.tier__soon {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.plan-now__text {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+/* Staff: the plan counts as one readout strip under the title. */
+.staff-counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1px;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--line);
+}
+.staff-counts > div {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  background: var(--surface);
+}
+.staff-counts dt {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.staff-counts dd {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 650;
+  line-height: 32px;
+  font-variant-numeric: tabular-nums;
+}
+.seats-list__who {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.staff-sub {
+  margin-top: var(--space-2);
+  font-size: 15px;
+}
+.picker:has(.staff-counts) {
+  gap: var(--space-6);
+}
+/* Where a Pro feature sits on a Free server: foil tag, one sentence, the plans link. */
+.pro-slot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: 12px 14px;
+  border: 1px dashed color-mix(in srgb, rgb(123 69 214) 40%, var(--line));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, rgb(123 69 214) 5%, var(--surface));
+  font-size: 14px;
+  line-height: 20px;
+}
+.pro-slot__text {
+  flex: 1 1 260px;
+  min-width: 0;
+  color: var(--text-muted);
+}
+.pro-slot__link {
+  font-weight: 600;
+  white-space: nowrap;
 }

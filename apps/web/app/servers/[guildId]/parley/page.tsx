@@ -19,6 +19,7 @@ import {
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ProTag } from "@/components/cards/CardEditor";
+import { PlansLink, ProUpsell } from "@/components/ProUpsell";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { CheckList, FormFoot, FormPanel, SettingsPanel } from "@/components/settings";
 import { getDb } from "@/lib/db";
@@ -125,9 +126,9 @@ export default async function TicketsPage({
         <div className="notice notice--pro" role="status">
           <span>
             This server has {config.panels.length} panels and its plan runs {limit}, so the last{" "}
-            {plural(pausedPanels, "panel is", "panels are")} paused: still saved, buttons resting.{" "}
-            <Link href={`/servers/${guild.id}/plan`}>Upgrade to Pro</Link> to bring{" "}
-            {pausedPanels === 1 ? "it" : "them"} back.
+            {plural(pausedPanels, "panel is", "panels are")} paused: still saved, buttons resting. A
+            paid plan brings {pausedPanels === 1 ? "it" : "them"} back.{" "}
+            <PlansLink guildId={guild.id} className="" />
           </span>
         </div>
       ) : null}
@@ -255,10 +256,9 @@ export default async function TicketsPage({
             </div>
           </>
         ) : (
-          <p className="g-help queue-stats__pro">
-            <ProTag on={false} /> Ticket stats: opened and closed each month, and how long members
-            wait for a first reply. <Link href={`/servers/${guild.id}/plan`}>See Pro</Link>
-          </p>
+          <ProUpsell guildId={guild.id}>
+            Ticket stats: opened and closed each month, and how long members wait for a first reply.
+          </ProUpsell>
         )}
       </section>
 

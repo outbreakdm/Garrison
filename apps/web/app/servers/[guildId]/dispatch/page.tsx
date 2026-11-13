@@ -12,7 +12,7 @@ import {
   SCHEDULED_HARD_MAX,
 } from "@garrison/db";
 import type { Metadata } from "next";
-import Link from "next/link";
+import { PlansLink } from "@/components/ProUpsell";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { FormPanel } from "@/components/settings";
 import { getDb } from "@/lib/db";
@@ -96,7 +96,7 @@ export default async function MessagesPage({
           <span>
             {paused.size} scheduled {paused.size === 1 ? "message is" : "messages are"} paused: this
             server's plan runs {limit}. Nothing was lost.{" "}
-            <Link href={`/servers/${guild.id}/plan`}>See Pro</Link>
+            <PlansLink guildId={guild.id} className="" />
           </span>
         </div>
       ) : null}

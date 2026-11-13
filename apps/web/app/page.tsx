@@ -1,5 +1,5 @@
 import { brand, inviteUrl, modules } from "@garrison/brand";
-import { formatPrice, PAID_PLANS_LIVE, PRICING } from "@garrison/db";
+import { formatPrice, PAID_PLANS_LIVE, PRICING, yearlySaving } from "@garrison/db";
 import type { Metadata } from "next";
 import { Gabarito, Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
@@ -783,7 +783,7 @@ export default async function Home() {
               const paid = p.monthly > 0;
               return (
                 <li key={tier} className={`lp-tier lp-tier--${tier}`}>
-                  {tier === "pro" ? <span className="lp-tier__flag">Most servers</span> : null}
+                  {tier === "pro" ? <span className="lp-tier__flag">Recommended</span> : null}
                   <h3 className="lp-tier__name">{p.name}</h3>
                   <p className="lp-tier__price">
                     <span className="lp-tier__amount">{paid ? formatPrice(p.monthly) : "$0"}</span>
@@ -797,8 +797,8 @@ export default async function Home() {
                   </p>
                   <p className="lp-tier__year">
                     {paid
-                      ? `or ${formatPrice(p.yearly)} a year${p.servers && p.servers > 1 ? ` (${formatPrice(p.yearly / 12 / p.servers)} a server a month)` : ""}`
-                      : "No card needed"}
+                      ? `or ${formatPrice(p.yearly)} a year, ${yearlySaving(p.monthly, p.yearly)}`
+                      : "No card, no trial clock"}
                   </p>
                   <p className="lp-tier__pitch">{p.pitch}</p>
                   <ul className="lp-tier__list">
