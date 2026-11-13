@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 /**
  * What a list says when it has nothing yet: what will appear here, and the one
- * thing to do about it. A drawn mark on a tile in the page's colour, not a painting,
+ * thing to do about it. A drawn mark on a tile in the page's color, not a painting,
  * so it reads at a glance in both themes and never fails to load.
  */
 

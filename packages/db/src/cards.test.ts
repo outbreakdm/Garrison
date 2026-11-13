@@ -34,7 +34,7 @@ describe("cards", () => {
     });
   });
 
-  it("refuses bad colours, links and sizes with a plain reason", () => {
+  it("refuses bad colors, links and sizes with a plain reason", () => {
     const base = blankCard("Hi");
     expect(parseCard({ ...base, accent: "red" })).toMatchObject({ ok: false });
     expect(parseCard({ ...base, image: "http://example.com/a.png" })).toMatchObject({

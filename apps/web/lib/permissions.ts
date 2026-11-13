@@ -1,4 +1,4 @@
-/** Discord permission maths, mirrored from Discord's rules. Pure, so it's testable. */
+/** Discord permission math, mirrored from Discord's rules. Pure, so it's testable. */
 
 export const ADMINISTRATOR = 1n << 3n;
 export const MANAGE_GUILD = 1n << 5n;

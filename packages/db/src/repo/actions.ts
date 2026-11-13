@@ -81,7 +81,7 @@ export type QueueResult =
   | { ok: true; action: DashboardAction }
   | { ok: false; reason: "busy" | "too_fast" | "cooldown" };
 
-/** Add a request, within the rate limits. Serialised per server so limits can't be raced. */
+/** Add a request, within the rate limits. Serialized per server so limits can't be raced. */
 export async function queueDashboardAction(
   db: Db,
   guildId: string,

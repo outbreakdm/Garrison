@@ -6,7 +6,7 @@ import { safeNext } from "@/lib/security";
 export const metadata: Metadata = { title: "Sign in" };
 
 const ERRORS: Record<string, string> = {
-  denied: "Discord sign-in was cancelled.",
+  denied: "Discord sign-in was canceled.",
   state: "That sign-in link expired or was tampered with. Try again.",
   discord: "Discord didn't answer. Try again in a moment.",
   mismatch:

@@ -28,8 +28,8 @@ import {
  * Every Garrison message, described once and drawn two ways.
  *
  * New messages use Discord's Components V2 layout: a container with the tone's
- * colour bar, a real heading, the status in bold, dividers with spacing, buttons
- * beside the line they act on, and a small grey footer. Messages posted as embeds
+ * color bar, a real heading, the status in bold, dividers with spacing, buttons
+ * beside the line they act on, and a small gray footer. Messages posted as embeds
  * before the switch keep being edited as embeds (`legacyMessage`), because a
  * message can't change format halfway through its life.
  */

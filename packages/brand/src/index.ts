@@ -47,7 +47,7 @@ export const colors = {
 const hexToInt = (hex: string): number => Number.parseInt(hex.slice(1), 16);
 
 /**
- * Discord embed bar colours. Volt marks a normal message; the status colours
+ * Discord embed bar colors. Volt marks a normal message; the status colors
  * mark moderation and alerts, and are never used for decoration.
  */
 export const embedColors = {

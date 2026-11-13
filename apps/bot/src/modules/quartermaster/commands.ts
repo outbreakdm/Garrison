@@ -191,8 +191,8 @@ export const qmButtons: ButtonHandler = {
       await interaction.update(
         cardEdit(interaction.message, {
           tone: done ? "intel" : "caution",
-          title: done ? `Plan v${build.version} cancelled` : `Plan v${build.version}`,
-          lead: done ? "Nothing was changed." : "That plan isn't pending any more.",
+          title: done ? `Plan v${build.version} canceled` : `Plan v${build.version}`,
+          lead: done ? "Nothing was changed." : "That plan isn't pending anymore.",
           module: "quartermaster",
           ref: `v${build.version}`,
         }),

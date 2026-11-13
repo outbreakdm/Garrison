@@ -1,6 +1,6 @@
 /**
  * Rank cards: the image /rank shows. Every server gets Garrison's standard card;
- * Pro picks a background, an accent colour, and up to 4 detail fields members fill
+ * Pro picks a background, an accent color, and up to 4 detail fields members fill
  * in themselves (in-game name, main, realm...), plus the game accounts a member
  * shares with the server. Pure and shared (`@garrison/db/cards`), so the bot draws
  * and the dashboard previews exactly the same rules.
@@ -150,7 +150,7 @@ export function parseRankCard(raw: unknown): Parsed<RankCardStyle> {
   let accent: string | null = null;
   if (r.accent) {
     const a = typeof r.accent === "string" ? r.accent.trim().toLowerCase() : "";
-    if (!ACCENT.test(a)) return { ok: false, error: "Pick the accent colour as #rrggbb." };
+    if (!ACCENT.test(a)) return { ok: false, error: "Pick the accent color as #rrggbb." };
     accent = a === STANDARD_ACCENT ? null : a;
   }
   const rawFields = Array.isArray(r.fields) ? r.fields : [];
@@ -194,7 +194,7 @@ export function lockedRankCard(
   const out: string[] = [];
   if (style.background !== "garrison" && style.background !== before.background)
     out.push("Background");
-  if (style.accent && style.accent !== before.accent) out.push("Accent colour");
+  if (style.accent && style.accent !== before.accent) out.push("Accent color");
   if (style.fields.length && JSON.stringify(style.fields) !== JSON.stringify(before.fields))
     out.push("Details on the card");
   if (style.showLinked && !before.showLinked) out.push("Linked game accounts");

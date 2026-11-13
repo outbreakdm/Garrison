@@ -20,7 +20,7 @@ const C = "300000000000000001";
 const ok = { enabled: true, channelId: C, emoji: "⭐", threshold: 3 };
 
 describe("starboard rules", () => {
-  it("is free, with the colour on Pro", () => {
+  it("is free, with the color on Pro", () => {
     expect(checkStarboard(ok, free, DEFAULT_STARBOARD).ok).toBe(true);
     expect(checkStarboard({ ...ok, accent: "#5ab0ff" }, free, DEFAULT_STARBOARD).ok).toBe(false);
     expect(checkStarboard({ ...ok, accent: "#5ab0ff" }, pro, DEFAULT_STARBOARD).ok).toBe(true);

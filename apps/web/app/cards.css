@@ -1,7 +1,7 @@
 /* --- Card editor ------------------------------------------------------------
    The shared editor (components/cards): fields on the left, a live Discord
    preview on the right that stays in view while you scroll the fields. Dashboard
-   world: plates, hairlines, Saira captions. Discord's own colours appear only
+   world: plates, hairlines, Saira captions. Discord's own colors appear only
    inside the preview (.dc), which is always Discord's dark theme. */
 
 .editor-layout {
@@ -177,13 +177,13 @@
   color: var(--caution);
 }
 
-/* Accent colour: the swatch opens the system picker; the hex field takes a typed value. */
-.colour-field {
+/* Accent color: the swatch opens the system picker; the hex field takes a typed value. */
+.color-field {
   display: flex;
   align-items: center;
   gap: var(--space-2);
 }
-.colour-field__swatch {
+.color-field__swatch {
   flex: none;
   width: 38px;
   height: 38px;
@@ -193,22 +193,22 @@
   background: var(--surface-raised);
   cursor: pointer;
 }
-.colour-field__swatch::-webkit-color-swatch-wrapper {
+.color-field__swatch::-webkit-color-swatch-wrapper {
   padding: 4px;
 }
-.colour-field__swatch::-webkit-color-swatch {
+.color-field__swatch::-webkit-color-swatch {
   border: 0;
   border-radius: var(--radius-sm);
 }
-.colour-field__swatch::-moz-color-swatch {
+.color-field__swatch::-moz-color-swatch {
   border: 0;
   border-radius: var(--radius-sm);
 }
-.colour-field__swatch:focus-visible {
+.color-field__swatch:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
-.colour-field__hex {
+.color-field__hex {
   flex: 0 1 11ch;
   min-width: 9ch;
 }
@@ -493,8 +493,8 @@
 }
 
 /* --- Discord preview (.dc) ----------------------------------------------------
-   Discord's dark theme and Components V2 anatomy: a container with a 4px colour
-   bar, a heading, text, dividers, media, controls, then small grey footer text. */
+   Discord's dark theme and Components V2 anatomy: a container with a 4px color
+   bar, a heading, text, dividers, media, controls, then small gray footer text. */
 .dc {
   --dc-bg: #313338;
   --dc-text: #dbdee1;
@@ -1150,7 +1150,7 @@
 /* --- Rank card ------------------------------------------------------------------
    The preview mirrors the 1000 × 300 image the bot draws (modules/ranks/render.ts):
    positions are the canvas coordinates as percentages, type sizes in container
-   units so it scales with the pane. Colours arrive as variables set from script. */
+   units so it scales with the pane. Colors arrive as variables set from script. */
 
 .swatches {
   display: flex;

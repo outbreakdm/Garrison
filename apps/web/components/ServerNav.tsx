@@ -6,8 +6,8 @@ import { useEffect, useRef, ViewTransition } from "react";
 
 /**
  * Plain names first: the address keeps each module's original path. Each part of the
- * server has a colour identity (Safety cobalt, Community orchid, Gaming volt, Server
- * steel); the current page's identity colours the whole page (app.css, Card Table).
+ * server has a color identity (Safety cobalt, Community orchid, Gaming volt, Server
+ * steel); the current page's identity colors the whole page (app.css, Card Table).
  */
 const ITEMS = [
   { group: null, id: "volt", href: "", name: "Overview" },

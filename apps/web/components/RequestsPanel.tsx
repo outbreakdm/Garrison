@@ -27,7 +27,7 @@ const ERRORS: Record<string, string> = {
   panel_paused: "This panel is paused: the server has more panels than its plan runs.",
   giveaway:
     "Some giveaway details weren't valid: a prize, 1 to 20 winners and a length. Nothing was queued.",
-  giveaway_pro: "Entry rules, bonus entries and your own colour are part of Garrison Pro.",
+  giveaway_pro: "Entry rules, bonus entries and your own color are part of Garrison Pro.",
   giveaway_full: "This server runs as many giveaways at once as its plan allows. End one first.",
   ticket_closed: "That ticket is already closed.",
   ticket_open: "That ticket is already open.",

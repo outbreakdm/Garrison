@@ -137,10 +137,10 @@ export default async function StarboardPage({ params }: { params: Promise<{ guil
             />
             <div className="g-field">
               <label htmlFor="accent" className="field-label">
-                Colour <ProTag on={pro} />
+                Color <ProTag on={pro} />
               </label>
               <input
-                className="colour-field__swatch"
+                className="color-field__swatch"
                 id="accent"
                 name="accent"
                 type="color"

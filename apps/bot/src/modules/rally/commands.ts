@@ -338,7 +338,7 @@ export const rallyButtons: ButtonHandler = {
           already: "You're already in this group.",
           full: renderWording("{Group}'s full.", postWording(post.wording)),
           slot_full: `${group.name || "That role"} is full. Pick another role.`,
-          no_such_slot: "That role doesn't exist any more.",
+          no_such_slot: "That role doesn't exist anymore.",
         }[result.reason];
         await interaction.reply({ content: msg, ...ephemeral });
         return;

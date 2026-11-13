@@ -35,7 +35,7 @@ describe("rank card rules", () => {
     expect(checkRankCard(DEFAULT_RANK_CARD, free, DEFAULT_RANK_CARD).ok).toBe(true);
     expect(lockedRankCard(custom, free)).toEqual([
       "Background",
-      "Accent colour",
+      "Accent color",
       "Details on the card",
       "Linked game accounts",
     ]);

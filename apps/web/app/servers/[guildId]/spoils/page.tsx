@@ -255,9 +255,9 @@ export default async function GiveawaysPage({
               </span>
             </label>
             <label className="g-field" htmlFor="accent">
-              <span>Colour</span>
+              <span>Color</span>
               <input
-                className="colour-field__swatch"
+                className="color-field__swatch"
                 id="accent"
                 name="accent"
                 type="color"
@@ -272,7 +272,7 @@ export default async function GiveawaysPage({
             <span className="g-help">
               {pro
                 ? "Garrison posts it as itself; winners are drawn with a secure random draw."
-                : `Free servers run ${limit} at once, open to everyone. Pro runs ${RUNNING_HARD_MAX}, with entry rules, bonus entries and your colour.`}
+                : `Free servers run ${limit} at once, open to everyone. Pro runs ${RUNNING_HARD_MAX}, with entry rules, bonus entries and your color.`}
             </span>
           </div>
         </form>
@@ -298,7 +298,7 @@ export default async function GiveawaysPage({
                       {g.status === "ended"
                         ? ` · won by ${winners || "nobody"}`
                         : g.status === "cancelled"
-                          ? " · cancelled"
+                          ? " · canceled"
                           : ""}
                       {g.repeat && g.status === "running" ? " · runs again when drawn" : ""}
                     </span>
@@ -310,7 +310,7 @@ export default async function GiveawaysPage({
                       ? `Draws ${until(g.endsAt)}`
                       : g.status === "ended"
                         ? `Drawn ${ago(g.endedAt ?? g.endsAt)}`
-                        : "Cancelled"}
+                        : "Canceled"}
                   </span>
                   <span className="gw-row__actions">
                     {g.status === "running" ? (

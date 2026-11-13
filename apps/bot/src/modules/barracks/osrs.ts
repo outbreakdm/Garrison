@@ -30,7 +30,7 @@ export interface OsrsStats {
 /** The standard OSRS combat level formula. Unranked skills count at their minimum. */
 export function combatLevel(levels: Record<string, number>) {
   const lv = (skill: string, min = 1) => Math.max(min, levels[skill] ?? min);
-  const base = 0.25 * (lv("Defence") + lv("Hitpoints", 10) + Math.floor(lv("Prayer") / 2));
+  const base = 0.25 * (lv("Defense") + lv("Hitpoints", 10) + Math.floor(lv("Prayer") / 2));
   const melee = 0.325 * (lv("Attack") + lv("Strength"));
   const range = 0.325 * Math.floor((3 * lv("Ranged")) / 2);
   const mage = 0.325 * Math.floor((3 * lv("Magic")) / 2);

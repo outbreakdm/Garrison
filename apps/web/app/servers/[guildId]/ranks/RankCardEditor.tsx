@@ -27,7 +27,7 @@ const SAMPLE = { level: 12, position: 3, into: 640, needed: 1420, total: 9140 };
 
 /**
  * The rank card's look and the details members fill in, beside a preview drawn
- * like the image /rank posts. Colours reach the preview through CSS variables set
+ * like the image /rank posts. Colors reach the preview through CSS variables set
  * from script (the dashboard's CSP has no inline styles).
  */
 export function RankCardEditor({
@@ -164,13 +164,13 @@ export function RankCardEditor({
 
           <fieldset className="editor-group">
             <legend className="g-label">
-              Accent colour <ProTag on={ent["ranks.cards"]} />
+              Accent color <ProTag on={ent["ranks.cards"]} />
             </legend>
-            <div className="colour-field">
+            <div className="color-field">
               <input
                 type="color"
-                className="colour-field__swatch"
-                aria-label="Pick the accent colour"
+                className="color-field__swatch"
+                aria-label="Pick the accent color"
                 value={style.accent ?? STANDARD_ACCENT}
                 onChange={(e) =>
                   set({ accent: e.target.value === STANDARD_ACCENT ? null : e.target.value })

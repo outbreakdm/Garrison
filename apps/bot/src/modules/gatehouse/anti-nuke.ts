@@ -266,7 +266,7 @@ export async function restoreQuarantine(
   if (q.kicked) return { ok: false, error: "That bot was kicked. Re-invite it if you trust it." };
 
   const member = await guild.members.fetch(q.userId).catch(() => null);
-  if (!member) return { ok: false, error: `<@${q.userId}> isn't in the server any more.` };
+  if (!member) return { ok: false, error: `<@${q.userId}> isn't in the server anymore.` };
 
   // Claim it first, so two clicks restore once.
   const claimed = await markQuarantineRestored(ctx.db, q.id, clicker.id);

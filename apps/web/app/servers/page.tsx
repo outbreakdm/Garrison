@@ -19,7 +19,7 @@ function GuildIcon({ guild }: { guild: ListedGuild }) {
   if (guild.icon)
     return (
       // Discord's CDN is allowed by the CSP (img-src); the icon hash was checked at sign-in.
-      // biome-ignore lint/performance/noImgElement: tiny remote icon, no optimisation needed
+      // biome-ignore lint/performance/noImgElement: tiny remote icon, no optimization needed
       <img
         className="guild-icon guild-icon--lg"
         src={`https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=128`}

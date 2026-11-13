@@ -4,7 +4,7 @@ import { guilds, type ModCase, modCases, type NewModCase } from "../schema";
 
 /**
  * Create a case with the guild's next case number. The counter update and the
- * insert share a transaction, and the row lock on `guilds` serialises
+ * insert share a transaction, and the row lock on `guilds` serializes
  * concurrent cases in the same guild, so numbers never repeat or skip.
  */
 export async function createCase(db: Db, input: NewModCase): Promise<ModCase> {

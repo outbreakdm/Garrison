@@ -3,7 +3,7 @@
  * bot draws winners. Pure and shared (`@garrison/db/cards`).
  *
  * Free: 2 running at once, anyone can enter. Pro: 20 running, entry rules (a role
- * or a level from Ranks), bonus entries for chosen roles, and the card's colour.
+ * or a level from Ranks), bonus entries for chosen roles, and the card's color.
  */
 
 import { ACCENT, STANDARD_ACCENT } from "./cards";
@@ -112,14 +112,14 @@ export function checkGiveaway(
   let accent: string | null = null;
   if (raw.accent) {
     const a = typeof raw.accent === "string" ? raw.accent.trim().toLowerCase() : "";
-    if (!ACCENT.test(a)) return { ok: false, error: "Pick the colour as #rrggbb." };
+    if (!ACCENT.test(a)) return { ok: false, error: "Pick the color as #rrggbb." };
     accent = a === STANDARD_ACCENT ? null : a;
   }
   const repeat = raw.repeat === true || raw.repeat === "on";
   if (!rules && (requiredRoleId || minLevel || bonusRoles.length || accent || repeat))
     return {
       ok: false,
-      error: "Entry rules, bonus entries, repeating and your own colour are part of Garrison Pro.",
+      error: "Entry rules, bonus entries, repeating and your own color are part of Garrison Pro.",
     };
   return {
     ok: true,

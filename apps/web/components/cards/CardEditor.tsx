@@ -139,7 +139,7 @@ export function RowTools({
   );
 }
 
-/** A #rrggbb field that lets you type freely and only reports whole colours. */
+/** A #rrggbb field that lets you type freely and only reports whole colors. */
 export function HexInput({
   id,
   value,
@@ -154,7 +154,7 @@ export function HexInput({
   const valid = /^#[0-9a-f]{6}$/i.test(draft.trim());
   return (
     <input
-      className={`g-input mono colour-field__hex${valid ? "" : " g-input--invalid"}`}
+      className={`g-input mono color-field__hex${valid ? "" : " g-input--invalid"}`}
       id={id}
       value={draft}
       maxLength={7}
@@ -370,13 +370,13 @@ export function CardEditor({
         <div className="field-row">
           <div className="g-field">
             <label htmlFor={id("accent")} className="field-label">
-              Accent colour <ProTag on={plan.accent} />
+              Accent color <ProTag on={plan.accent} />
             </label>
-            <div className="colour-field">
+            <div className="color-field">
               <input
                 type="color"
-                className="colour-field__swatch"
-                aria-label="Pick the accent colour"
+                className="color-field__swatch"
+                aria-label="Pick the accent color"
                 value={card.accent ?? STANDARD_ACCENT}
                 onChange={(e) =>
                   set({ accent: e.target.value === STANDARD_ACCENT ? null : e.target.value })

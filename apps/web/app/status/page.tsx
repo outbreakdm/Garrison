@@ -111,7 +111,7 @@ export default async function StatusPage() {
               </div>
               <span className="g-help">
                 Each bar is a UTC day: the share of minutes Garrison checked in, counted from when
-                tracking began and up to now for today. Grey days have no data yet.
+                tracking began and up to now for today. Gray days have no data yet.
               </span>
             </div>
           </>

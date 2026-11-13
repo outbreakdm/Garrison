@@ -67,7 +67,7 @@
         "Gaming": "volt",
         "Server": "steel"
       },
-      "colours": [
+      "colors": [
         "nav gem",
         "title gem",
         "section tag",
@@ -121,7 +121,7 @@
       {
         "state": "kind (case actions)",
         "class": "g-badge--tag + tone",
-        "shape": "none, coloured word"
+        "shape": "none, colored word"
       }
     ],
     "colorMeta": {
@@ -1097,7 +1097,7 @@
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "The one obvious action per first viewport, in the page's identity colour (volt shown).",
+      "description": "The one obvious action per first viewport, in the page's identity color (volt shown).",
       "html": "<button class=\"ds-btn ds-btn-primary\">Save changes</button>",
       "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; padding: 8px 14px; border: 1px solid transparent; border-radius: 8px; font: 600 14px/20px Archivo, system-ui, sans-serif; white-space: nowrap; cursor: pointer; transition: background-color .15s cubic-bezier(0.16,1,0.3,1), border-color .15s cubic-bezier(0.16,1,0.3,1), color .15s cubic-bezier(0.16,1,0.3,1), transform .1s cubic-bezier(0.16,1,0.3,1); } .ds-btn:active { transform: translateY(1px); } .ds-btn:focus-visible { outline: 2px solid #d4ff3a; outline-offset: 2px; } .ds-btn-primary { background: #d4ff3a; color: #141a00; box-shadow: 0 1px 0 rgb(255 255 255 / 0.18) inset, 0 1px 2px rgb(4 7 20 / 0.3); } .ds-btn-primary:hover { background: color-mix(in srgb, #d4ff3a 88%, #eef1fa); }"
     },
@@ -1176,12 +1176,12 @@
   ],
   "narrative": {
     "northStar": "The Card Table",
-    "overview": "Every module of a server has a colour identity and reads like a well-built card: a name, rules text in plain sentences, and its state. An owner opens a page, sees by colour which part of the server they are in, reads the current settings as sentences, spots what needs them by shape and colour, and changes it with one obvious button. Pro needs are unmistakable. The system refuses the grey sidebar-and-cards dashboard where every page looks the same and status hides in colour alone.\n\nThe world is a lifted playmat at night: a deep slate-blue table, card faces two steps lighter, never black. Four identities divide the server: **Safety** is cobalt, **Community** orchid, **Gaming** volt, **Server** steel, and Overview takes Garrison's own volt. The current page's identity colours its nav gem, the gem beside its title, its section tag, its primary button, its switches, its settings gear plates and the edge of the panel you have open. Card stock is plain: 10px corners, a 1px edge, a soft drop, no frames or ornaments. Foil, a holographic sheen, marks what requires Pro and nothing else.\n\nOne grotesque, Archivo, carries display, interface and numbers, with tabular figures wherever something is counted or timed; only code and diffs drop to a system monospace. State is never colour alone: each state has its own shape. Durations are drawn to scale, so a long wait looks long. The layout reflows by whole cards on an 8px grid and holds a 68-character reading measure.\n\nThis system replaces the earlier \"night-watch HUD\" world (near-black ground, Saira Semi Condensed / Inter / JetBrains Mono, chamfered buttons, HUD corner brackets, lime on everything, lock-on and glint motion). None of that survives in the dashboard: the HUD lock-on brackets and the glint sweep are gone with it. The landing page (`/`, `app/landing.css`, Gabarito and Geist) keeps its own world and is not part of this system.\n\nMotion explains state and keeps your place, and it is quick because switching pages is work, not a show. Page changes swap the content under a still top bar and rail (old page out in 0.1s, new page rises 10px in 0.2s) while the current-page gem slides to its new item (0.34s, snap easing). Panels open by height (0.32s); a notice drops in and its mark pings twice; new seats and rows pop or fade in; XP gauges, seat bars and uptime sweep in from the left; a submitting button carries a moving line; the Pro tag's foil sweeps once. Distances are tokens that reduced motion sets to zero, keeping fades and colour changes; sweeps become fades and the sending line blinks instead.",
+    "overview": "Every module of a server has a color identity and reads like a well-built card: a name, rules text in plain sentences, and its state. An owner opens a page, sees by color which part of the server they are in, reads the current settings as sentences, spots what needs them by shape and color, and changes it with one obvious button. Pro needs are unmistakable. The system refuses the gray sidebar-and-cards dashboard where every page looks the same and status hides in color alone.\n\nThe world is a lifted playmat at night: a deep slate-blue table, card faces two steps lighter, never black. Four identities divide the server: **Safety** is cobalt, **Community** orchid, **Gaming** volt, **Server** steel, and Overview takes Garrison's own volt. The current page's identity colors its nav gem, the gem beside its title, its section tag, its primary button, its switches, its settings gear plates and the edge of the panel you have open. Card stock is plain: 10px corners, a 1px edge, a soft drop, no frames or ornaments. Foil, a holographic sheen, marks what requires Pro and nothing else.\n\nOne grotesque, Archivo, carries display, interface and numbers, with tabular figures wherever something is counted or timed; only code and diffs drop to a system monospace. State is never color alone: each state has its own shape. Durations are drawn to scale, so a long wait looks long. The layout reflows by whole cards on an 8px grid and holds a 68-character reading measure.\n\nThis system replaces the earlier \"night-watch HUD\" world (near-black ground, Saira Semi Condensed / Inter / JetBrains Mono, chamfered buttons, HUD corner brackets, lime on everything, lock-on and glint motion). None of that survives in the dashboard: the HUD lock-on brackets and the glint sweep are gone with it. The landing page (`/`, `app/landing.css`, Gabarito and Geist) keeps its own world and is not part of this system.\n\nMotion explains state and keeps your place, and it is quick because switching pages is work, not a show. Page changes swap the content under a still top bar and rail (old page out in 0.1s, new page rises 10px in 0.2s) while the current-page gem slides to its new item (0.34s, snap easing). Panels open by height (0.32s); a notice drops in and its mark pings twice; new seats and rows pop or fade in; XP gauges, seat bars and uptime sweep in from the left; a submitting button carries a moving line; the Pro tag's foil sweeps once. Distances are tokens that reduced motion sets to zero, keeping fades and color changes; sweeps become fades and the sending line blinks instead.",
     "keyCharacteristics": [
       "Dark-first slate-blue table with a full light theme (cookie-driven `data-theme` on `<html>`).",
-      "Four identity colours, chosen by the page you are on, never by decoration.",
+      "Four identity colors, chosen by the page you are on, never by decoration.",
       "Card stock: 10px faces, 1px edge, soft drop, nothing ornamental.",
-      "Status by shape and colour together: filled dot, hollow ring, triangle, struck dash.",
+      "Status by shape and color together: filled dot, hollow ring, triangle, struck dash.",
       "One grotesque (Archivo, variable width and weight), tabular numbers, a strict scale.",
       "Foil is Pro, and only Pro.",
       "Strict CSP: classes only, no inline style attributes; fonts self-hosted through next/font."
@@ -1189,12 +1189,12 @@
     "rules": [
       {
         "name": "The You Are Here Rule",
-        "body": "Identity colour comes from the page you are on and nothing else. A Safety page is cobalt from its menu gem to its primary button; it never borrows orchid for variety, and a module never picks a colour for itself.",
+        "body": "Identity color comes from the page you are on and nothing else. A Safety page is cobalt from its menu gem to its primary button; it never borrows orchid for variety, and a module never picks a color for itself.",
         "section": "colors"
       },
       {
         "name": "The Status Is State Rule",
-        "body": "Go, caution, alert and intel report state and nothing else: never a category colour, a section accent or a flourish. Bot embeds in Discord follow the same rule.",
+        "body": "Go, caution, alert and intel report state and nothing else: never a category color, a section accent or a flourish. Bot embeds in Discord follow the same rule.",
         "section": "colors"
       },
       {
@@ -1234,10 +1234,10 @@
       }
     ],
     "dos": [
-      "**Do** take the identity from the page's menu item and let it colour the gem, title gem, section tag, primary button, switches, gear plates and open-panel edge.",
+      "**Do** take the identity from the page's menu item and let it color the gem, title gem, section tag, primary button, switches, gear plates and open-panel edge.",
       "**Do** give every state its shape: filled dot on, hollow ring waiting, triangle needs you, struck dash off; use a plain tag (no tone) for roles and types, and a kind tag for case actions.",
       "**Do** write current settings as plain sentences and say what happened and what to do next.",
-      "**Do** keep one primary button per first viewport, in the page's identity colour.",
+      "**Do** keep one primary button per first viewport, in the page's identity color.",
       "**Do** draw durations to scale beside their words, and use tabular figures for anything counted or timed.",
       "**Do** hold card copy to 68ch and reflow by whole cards on the 8px grid.",
       "**Do** use classes only: the CSP blocks inline style attributes. Fonts are self-hosted through next/font.",
@@ -1248,9 +1248,9 @@
       "**Don't** use uppercase captions or tracked-out labels, except inside Discord replicas.",
       "**Don't** use chamfers, corner brackets, glints, frames or ornaments.",
       "**Don't** use foil for anything but Requires Pro.",
-      "**Don't** let colour be the only sign of a state.",
-      "**Don't** use status colours (go, caution, alert, intel) as category or decoration colours.",
-      "**Don't** put a coloured side bar on a card, notice or row outside a Discord replica.",
+      "**Don't** let color be the only sign of a state.",
+      "**Don't** use status colors (go, caution, alert, intel) as category or decoration colors.",
+      "**Don't** put a colored side bar on a card, notice or row outside a Discord replica.",
       "**Don't** use black or near-black grounds; the table is slate blue.",
       "**Don't** add a second display or UI face, or use monospace outside code and diffs."
     ]

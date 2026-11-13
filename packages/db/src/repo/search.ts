@@ -10,7 +10,7 @@ export function likeEscape(text: string) {
   return text.replace(/[\\%_]/g, (c) => `\\${c}`);
 }
 
-/** Normalise a search box value: trimmed, bounded, and null when empty. */
+/** Normalize a search box value: trimmed, bounded, and null when empty. */
 export function cleanQuery(raw: unknown) {
   if (typeof raw !== "string") return null;
   const q = raw.trim().slice(0, SEARCH_MAX);

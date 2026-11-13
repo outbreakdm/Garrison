@@ -43,7 +43,7 @@ export async function renderWelcomeBanner(input: BannerInput): Promise<Buffer> {
     ctx.fillRect(0, 0, BANNER_WIDTH, BANNER_HEIGHT);
   }
 
-  // Avatar, centred above the words, with an accent ring.
+  // Avatar, centered above the words, with an accent ring.
   const size = 150;
   const cx = BANNER_WIDTH / 2;
   const cy = 112;

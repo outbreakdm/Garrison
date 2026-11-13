@@ -40,8 +40,8 @@ One dashboard runs the whole server: moderation, security, logs, LFG, raid signu
 
 - Name: Garrison. Tagline: "Guard the gate. Rally the squad."
 - The shield mark (`components/Logo.tsx`) and the module names above with their plain labels.
-- Bot embeds in Discord use the status colours from `packages/brand` (go, caution, alert, intel) for moderation and alerts only, never decoration.
-- The landing page is getting a new visual world (decided 2026-11-11): the category-standard Discord-bot page, played straight, at the craft of Linear, Vercel and Raycast, and sitting comfortably beside MEE6, Dyno, Carl-bot and Discord's own site. The dashboard has its own world, Card Table (2026-11-13; see DESIGN.md): a slate-blue table, four section colours, one typeface, state by shape.
+- Bot embeds in Discord use the status colors from `packages/brand` (go, caution, alert, intel) for moderation and alerts only, never decoration.
+- The landing page is getting a new visual world (decided 2026-11-11): the category-standard Discord-bot page, played straight, at the craft of Linear, Vercel and Raycast, and sitting comfortably beside MEE6, Dyno, Carl-bot and Discord's own site. The dashboard has its own world, Card Table (2026-11-13; see DESIGN.md): a slate-blue table, four section colors, one typeface, state by shape.
 
 ## Evidence on Hand
 

@@ -73,7 +73,7 @@ export function giveawayMessage(
     g.bonusRoles.length
       ? `**Bonus entries** ${g.bonusRoles.map((b) => `<@&${b.roleId}> +${b.extra}`).join(", ")}`
       : null,
-    g.status === "cancelled" ? "**Cancelled.** No winners were drawn." : null,
+    g.status === "cancelled" ? "**Canceled.** No winners were drawn." : null,
     g.repeat && running ? "-# Starts again as soon as it's drawn." : null,
   ].filter((l): l is string => l !== null);
   const card = {
@@ -326,7 +326,7 @@ export async function doGiveawayAction(
     const done = await finishGiveaway(ctx.db, g.id, { status: "cancelled", winnerIds: [] });
     if (!done) return fail("That giveaway is already over.");
     await refreshCard(ctx, guild, done);
-    return { ok: true, message: `Cancelled the giveaway for ${g.prize}.` };
+    return { ok: true, message: `Canceled the giveaway for ${g.prize}.` };
   }
   if (g.status !== "ended") return fail("Only a finished giveaway can be drawn again.");
   const entries = await listGiveawayEntries(ctx.db, g.id);

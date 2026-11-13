@@ -168,9 +168,9 @@ async function doMoveSignup(ctx: BotContext, guild: Guild, raw: unknown) {
   const p = moveSignup.safeParse(raw);
   if (!p.success) return fail("That request wasn't valid.");
   const event = await getOpsEvent(ctx.db, guild.id, p.data.eventId);
-  if (event?.status !== "scheduled") return fail("That raid isn't scheduled any more.");
+  if (event?.status !== "scheduled") return fail("That raid isn't scheduled anymore.");
   const current = (await listSignups(ctx.db, event.id)).find((s) => s.userId === p.data.userId);
-  if (!current?.bench) return fail("That player isn't on the bench any more.");
+  if (!current?.bench) return fail("That player isn't on the bench anymore.");
   const res = await signUp(ctx.db, event.id, p.data.userId, p.data.role, current.spec, false);
   if (!res.ok)
     return fail(
@@ -187,7 +187,7 @@ async function doCallSignups(ctx: BotContext, guild: Guild, raw: unknown) {
   const p = callSignups.safeParse(raw);
   if (!p.success) return fail("That request wasn't valid.");
   const event = await getOpsEvent(ctx.db, guild.id, p.data.eventId);
-  if (event?.status !== "scheduled") return fail("That raid isn't scheduled any more.");
+  if (event?.status !== "scheduled") return fail("That raid isn't scheduled anymore.");
   const short = shortages(event, await listSignups(ctx.db, event.id));
   if (!short) return fail("Every role is filled already.");
   const channel = guild.channels.cache.get(event.channelId);
@@ -258,11 +258,11 @@ async function doCancelRaid(ctx: BotContext, guild: Guild, raw: unknown) {
   const p = idOnly.safeParse(raw);
   if (!p.success) return fail("That request wasn't valid.");
   const event = await getOpsEvent(ctx.db, guild.id, p.data.id);
-  if (event?.status !== "scheduled") return fail("That raid isn't scheduled any more.");
+  if (event?.status !== "scheduled") return fail("That raid isn't scheduled anymore.");
   const cancelled = await cancelOpsEvent(ctx.db, event.id);
-  if (!cancelled) return fail("That raid isn't scheduled any more.");
+  if (!cancelled) return fail("That raid isn't scheduled anymore.");
   await refreshOpsCard(ctx, guild, cancelled);
-  return { ok: true, message: `Cancelled ${event.title}.` };
+  return { ok: true, message: `Canceled ${event.title}.` };
 }
 
 async function doCloseLfg(ctx: BotContext, guild: Guild, raw: unknown) {
@@ -395,7 +395,7 @@ async function doPostRoleMenu(ctx: BotContext, guild: Guild, member: GuildMember
 async function doWebVerify(ctx: BotContext, guild: Guild, userId: string): Promise<Outcome> {
   const settings = await getGatehouseSettings(ctx.db, guild.id);
   if (!settings.verifyWeb || !settings.verifyRoleId)
-    return fail("This server doesn't verify on the website any more.");
+    return fail("This server doesn't verify on the website anymore.");
   const member = await guild.members.fetch(userId).catch(() => null);
   if (!member) return fail("Join the server first, then verify.");
   const message = await verifyMember(ctx, member);
@@ -427,14 +427,14 @@ export async function runDashboardAction(
   action: DashboardAction,
 ): Promise<Outcome> {
   const guild = client.guilds.cache.get(action.guildId);
-  if (!guild) return fail("Garrison isn't in that server any more.");
+  if (!guild) return fail("Garrison isn't in that server anymore.");
   // Website verification is asked for by the member themself, not a manager.
   if (action.kind === "web_verify") return doWebVerify(ctx, guild, action.requestedById);
   // Joining and leaving groups and raids act only on the person asking: any member may.
   const member = SELF_SERVICE.has(action.kind)
     ? await guild.members.fetch(action.requestedById).catch(() => null)
     : await requester(guild, action.requestedById);
-  if (!member && SELF_SERVICE.has(action.kind)) return fail("You're not in that server any more.");
+  if (!member && SELF_SERVICE.has(action.kind)) return fail("You're not in that server anymore.");
   if (!member) return fail("You no longer have Manage Server in this server.");
   switch (action.kind) {
     case "create_raid":

@@ -1,6 +1,6 @@
 "use client";
 
-/** A background swatch's colours, set from script (the dashboard's CSP has no inline styles). */
+/** A background swatch's colors, set from script (the dashboard's CSP has no inline styles). */
 export function BackgroundChip({ from, to }: { from: string; to: string }) {
   return (
     <span

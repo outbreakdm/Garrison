@@ -37,7 +37,7 @@ export function safeNext(next: string | null | undefined, fallback = "/servers")
   return next;
 }
 
-/** A state-changing request must come from our own origin (CSRF defence alongside SameSite cookies). */
+/** A state-changing request must come from our own origin (CSRF defense alongside SameSite cookies). */
 export function isSameOrigin(originHeader: string | null, appUrl: string) {
   if (!originHeader) return false;
   try {

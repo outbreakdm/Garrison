@@ -13,7 +13,7 @@ describe("combatLevel", () => {
   it("matches known values", () => {
     expect(combatLevel({})).toBe(3); // a fresh account
     const maxed = Object.fromEntries(
-      ["Attack", "Strength", "Defence", "Hitpoints", "Prayer", "Ranged", "Magic"].map((s) => [
+      ["Attack", "Strength", "Defense", "Hitpoints", "Prayer", "Ranged", "Magic"].map((s) => [
         s,
         99,
       ]),
@@ -26,7 +26,7 @@ describe("fetchHiscores", () => {
   const json = (status: number, body: unknown) => async () =>
     new Response(JSON.stringify(body), { status });
 
-  it("summarises a player", async () => {
+  it("summarizes a player", async () => {
     const r = await fetchHiscores(
       "Zezima",
       json(200, {

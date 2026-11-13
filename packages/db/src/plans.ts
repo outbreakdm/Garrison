@@ -36,7 +36,7 @@ export const PRICING = {
     servers: 1,
     pitch: "Your server's own look, higher limits and history. Replaces three or four paid bots.",
     highlights: [
-      "Branded cards: your colours, images, emoji and footer",
+      "Branded cards: your colors, images, emoji and footer",
       "Ticket forms, auto-assign, stats and a year of transcripts",
       "Custom rank cards, XP boosts and seasons",
       "Raid attendance, roles from game stats, scheduled backups",
@@ -107,7 +107,7 @@ export const FEATURES = {
   // Every card Garrison posts from the card editor (role menus first).
   "cards.accent": {
     module: "cards",
-    about: "Your own accent colour on cards",
+    about: "Your own accent color on cards",
     free: false,
     pro: true,
   },
@@ -221,7 +221,7 @@ export const FEATURES = {
   },
   "ranks.cards": {
     module: "ranks",
-    about: "Rank cards with your background, colour, and details members fill in",
+    about: "Rank cards with your background, color, and details members fill in",
     free: false,
     pro: true,
   },
@@ -233,7 +233,7 @@ export const FEATURES = {
   },
   "alerts.custom": {
     module: "alerts",
-    about: "Your own alert message and colour",
+    about: "Your own alert message and color",
     free: false,
     pro: true,
   },
@@ -245,13 +245,13 @@ export const FEATURES = {
   },
   "giveaways.rules": {
     module: "giveaways",
-    about: "Giveaway entry rules (a role or a level), bonus entries, repeating and your own colour",
+    about: "Giveaway entry rules (a role or a level), bonus entries, repeating and your own color",
     free: false,
     pro: true,
   },
   "starboard.look": {
     module: "starboard",
-    about: "Your own starboard colour",
+    about: "Your own starboard color",
     free: false,
     pro: true,
   },

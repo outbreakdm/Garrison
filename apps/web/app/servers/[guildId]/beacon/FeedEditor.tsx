@@ -23,7 +23,7 @@ const SAMPLE = {
   youtube: { title: "Raid night highlights", game: "" },
 };
 
-/** One alert: where it posts, who it pings and (Pro) its words and colour, beside a preview. */
+/** One alert: where it posts, who it pings and (Pro) its words and color, beside a preview. */
 export function FeedEditor({
   guildId,
   saved,
@@ -56,7 +56,7 @@ export function FeedEditor({
     ? []
     : [
         ...(feed.message && feed.message !== saved.message ? ["Your own message"] : []),
-        ...(feed.accent && feed.accent !== saved.accent ? ["Accent colour"] : []),
+        ...(feed.accent && feed.accent !== saved.accent ? ["Accent color"] : []),
       ];
   const undoPro = () =>
     set({
@@ -196,13 +196,13 @@ export function FeedEditor({
               </label>
               <div className="g-field">
                 <label htmlFor={id("accent")} className="field-label">
-                  Colour <ProTag on={ent["alerts.custom"]} />
+                  Color <ProTag on={ent["alerts.custom"]} />
                 </label>
-                <div className="colour-field">
+                <div className="color-field">
                   <input
                     type="color"
-                    className="colour-field__swatch"
-                    aria-label="Pick the alert colour"
+                    className="color-field__swatch"
+                    aria-label="Pick the alert color"
                     value={feed.accent ?? STANDARD_ACCENT}
                     onChange={(e) =>
                       set({ accent: e.target.value === STANDARD_ACCENT ? null : e.target.value })

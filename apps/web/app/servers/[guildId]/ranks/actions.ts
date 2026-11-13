@@ -20,7 +20,7 @@ import { checkGuildAccess } from "@/lib/session";
 /**
  * The rank card's look. Re-checks access for the server in the form, re-reads the
  * plan, and checks the card with the same rules the bot draws by. The standard
- * card is stored as null, so a server that never customised has nothing saved.
+ * card is stored as null, so a server that never customized has nothing saved.
  */
 export async function saveRankCard(form: FormData) {
   const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
@@ -87,7 +87,7 @@ export async function saveBoosts(form: FormData) {
     ...layout.categories.flatMap((c) => [c.id, ...c.channels.map((ch) => ch.id)]),
   ]);
   if (checked.value.some((b) => !(b.kind === "role" ? roles : places).has(b.id)))
-    return back({ error: "One of those roles or channels isn't in this server any more." });
+    return back({ error: "One of those roles or channels isn't in this server anymore." });
   const result = await applySettingsChange(db, {
     guildId: guild.id,
     module: "ranks",

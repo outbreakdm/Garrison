@@ -55,7 +55,7 @@ export const SEARCH_INDEX: SearchEntry[] = [
     "/insignia",
     "Role menus",
     null,
-    "role menu reaction roles self assign buttons dropdown colours pings card insignia",
+    "role menu reaction roles self assign buttons dropdown colors pings card insignia",
   ),
   page(
     "/herald",

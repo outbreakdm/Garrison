@@ -37,7 +37,7 @@ export function opsCard(event: OpsEvent, signups: OpsSignup[]): Card {
 
   const status =
     event.status === "cancelled"
-      ? "Cancelled"
+      ? "Canceled"
       : event.status === "done"
         ? "Done"
         : openSeats === 0

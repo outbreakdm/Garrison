@@ -32,7 +32,7 @@ export async function setCalendarToken(db: Db, guildId: string, token: string | 
     .onConflictDoUpdate({ target: opsSettings.guildId, set: { calendarToken: token } });
 }
 
-/** Raids for the calendar: those not cancelled, from `since` on. */
+/** Raids for the calendar: those not canceled, from `since` on. */
 export async function listOpsForCalendar(db: Db, guildId: string, since: Date) {
   return db
     .select()

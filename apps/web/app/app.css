@@ -766,7 +766,7 @@ figure.preview {
   display: grid;
   gap: var(--space-1);
 }
-/* Links styled as primary buttons keep the button's text colour, not the link colour. */
+/* Links styled as primary buttons keep the button's text color, not the link color. */
 a.g-btn--primary,
 a.g-btn--primary:hover {
   color: var(--accent-ink);
@@ -1251,7 +1251,7 @@ select[multiple].g-input option {
   }
 }
 
-/* Cards keep their own height: one opening its form must not stretch its neighbours. */
+/* Cards keep their own height: one opening its form must not stretch its neighbors. */
 .grid-cards {
   align-items: start;
 }
@@ -1271,7 +1271,7 @@ select[multiple].g-input option {
   display: block;
   max-width: 100%;
   height: auto;
-  /* The pieces are painted on the dark table colour, in both themes. */
+  /* The pieces are painted on the dark table color, in both themes. */
   background: #151a2c;
 }
 .card-banner {
@@ -2770,7 +2770,7 @@ a.server-tile .server-tile__foot {
    travel with you; an open panel takes its edge; a pressed button shows it is
    sending; new seats, notices and plan additions arrive.
    Distances are tokens, so reduced motion zeroes the movement and keeps the
-   fades and colour changes that carry meaning. */
+   fades and color changes that carry meaning. */
 :root {
   --m-rise: 10px;
   --m-lift: 2px;
@@ -3082,7 +3082,7 @@ form[data-pending] [aria-busy="true"]::after {
   animation-timing-function: var(--ease-snap);
 }
 
-/* Reduced motion: no travel or sweeps; fades, colour and state stay. */
+/* Reduced motion: no travel or sweeps; fades, color and state stay. */
 @media (prefers-reduced-motion: reduce) {
   .panel::details-content,
   .card-edit::details-content,
@@ -3112,7 +3112,7 @@ form[data-pending] [aria-busy="true"]::after {
 /* --- Layout pass ---------------------------------------------------------------
    Security leads with the lockdown (the page's emergency control), then pairs the
    tall anti-raid settings with verification and anti-nuke stacked beside it, so no
-   card leaves a void under a short neighbour. Form buttons size to their label. */
+   card leaves a void under a short neighbor. Form buttons size to their label. */
 .gate-layout {
   display: flex;
   flex-direction: column;
@@ -3338,7 +3338,7 @@ form[data-pending] [aria-busy="true"]::after {
 }
 
 /* --- Empty states --------------------------------------------------------------------
-   A drawn mark on a tile in the page's colour, what will show up here, and the one
+   A drawn mark on a tile in the page's color, what will show up here, and the one
    thing to do. */
 .empty {
   display: flex;
@@ -3388,9 +3388,9 @@ form[data-pending] [aria-busy="true"]::after {
   }
 }
 
-/* --- Card Table: colour identities ---------------------------------------------------
-   Every part of a server has a colour: Safety cobalt, Community orchid, Gaming volt,
-   Server steel (Overview takes Garrison's volt). The current page's colour lights its
+/* --- Card Table: color identities ---------------------------------------------------
+   Every part of a server has a color: Safety cobalt, Community orchid, Gaming volt,
+   Server steel (Overview takes Garrison's volt). The current page's color lights its
    gem in the menu, the gem beside its title, its primary button, its switches and its
    open panel, so an owner always knows which part of the server they are in. */
 .shell {
@@ -3458,7 +3458,7 @@ form[data-pending] [aria-busy="true"]::after {
 .page-head {
   border-bottom-color: color-mix(in srgb, var(--id, var(--line)) 22%, var(--line));
 }
-/* Text links inside a page read in the page's colour. */
+/* Text links inside a page read in the page's color. */
 .main a:not([class]) {
   color: var(--accent-strong);
 }
@@ -3501,7 +3501,7 @@ form[data-pending] [aria-busy="true"]::after {
 }
 
 /* --- Finish pass ---------------------------------------------------------------------- */
-/* The section a page belongs to, set beside its title in the section's colour. The
+/* The section a page belongs to, set beside its title in the section's color. The
    menu already names it for screen readers, so the alt text is empty. */
 .page-head h1::after {
   display: inline-block;
@@ -3530,7 +3530,7 @@ form[data-pending] [aria-busy="true"]::after {
 .shell:has(.g-nav__item[aria-current="page"][data-section="Server"]) .page-head h1::after {
   content: "Server" / "";
 }
-/* Settings gear plates take the page's colour. */
+/* Settings gear plates take the page's color. */
 .panel__icon {
   border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
   background: color-mix(in srgb, var(--accent) 12%, var(--surface));
@@ -3542,7 +3542,7 @@ form[data-pending] [aria-busy="true"]::after {
 .card-sub {
   max-width: 68ch;
 }
-/* Case actions (warn, ban) are kinds, not states: coloured words, no state mark. */
+/* Case actions (warn, ban) are kinds, not states: colored words, no state mark. */
 .g-badge--tag::before {
   content: none;
 }
@@ -3704,8 +3704,8 @@ form[data-pending] [aria-busy="true"]::after {
   }
 }
 
-/* --- The section colour owns the page (bolder pass) ---------------------------------------
-   The page head is the module's name card, printed in its section's colour: a tinted face,
+/* --- The section color owns the page (bolder pass) ---------------------------------------
+   The page head is the module's name card, printed in its section's color: a tinted face,
    an edge in the same hue, the gem and the section tag. Safety, Community, Gaming and
    Server pages now differ at a glance, not only by an 8px gem. The current menu item and an
    open panel's head carry the same tint, so where you are and what you are editing match. */
@@ -3743,7 +3743,7 @@ form[data-pending] [aria-busy="true"]::after {
   }
 }
 
-/* Removals (kick, ban) read heavier than reversible actions, in words, not status colour. */
+/* Removals (kick, ban) read heavier than reversible actions, in words, not status color. */
 .g-badge--heavy {
   --tone: var(--text);
   font-weight: 700;
@@ -4124,7 +4124,7 @@ button.list-rows__remove:focus-visible {
   font-size: 14px;
   line-height: 20px;
 }
-/* Ticks on a plan's list say "included", so they wear the page's colour, not a status. */
+/* Ticks on a plan's list say "included", so they wear the page's color, not a status. */
 .tier__check {
   color: var(--accent-strong);
 }

@@ -5,7 +5,7 @@
  * editor can import it in the browser (`@garrison/db/cards`).
  *
  * The paywall rule (docs/ROADMAP.md): every field works on Free with the standard
- * look. Pro adds the look itself: an accent colour, images and your own footer.
+ * look. Pro adds the look itself: an accent color, images and your own footer.
  * Pro values stay stored after a downgrade and come back on re-subscribing; the
  * bot draws the standard look meanwhile (`cardForPlan`).
  */
@@ -24,7 +24,7 @@ export interface CustomCard {
   title: string;
   /** The body, in order. Text takes Discord markdown; mentions never ping. */
   blocks: CardBlock[];
-  /** Pro: the colour bar, as "#rrggbb". Null is Garrison's volt. */
+  /** Pro: the color bar, as "#rrggbb". Null is Garrison's volt. */
   accent: string | null;
   /** Pro: a banner image under the text (https). */
   image: string | null;
@@ -61,7 +61,7 @@ export const STANDARD_FOOTER = "Garrison";
 
 /** The Pro-only parts of a card, in the order the editor shows them. */
 export const CARD_PRO_FIELDS = [
-  { key: "accent", feature: "cards.accent", label: "Accent colour" },
+  { key: "accent", feature: "cards.accent", label: "Accent color" },
   { key: "image", feature: "cards.images", label: "Banner image" },
   { key: "thumbnail", feature: "cards.images", label: "Thumbnail" },
   { key: "footer", feature: "cards.footer", label: "Footer" },
@@ -280,7 +280,7 @@ export function parseCard(raw: unknown, where = "The card"): Parsed<CustomCard> 
   let accent: string | null = null;
   if (r.accent !== null && r.accent !== undefined && r.accent !== "") {
     const a = typeof r.accent === "string" ? r.accent.trim().toLowerCase() : "";
-    if (!ACCENT.test(a)) return { ok: false, error: "Pick the accent colour as #rrggbb." };
+    if (!ACCENT.test(a)) return { ok: false, error: "Pick the accent color as #rrggbb." };
     accent = a === STANDARD_ACCENT ? null : a;
   }
 

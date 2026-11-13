@@ -132,10 +132,10 @@ export async function onModmailPick(ctx: BotContext, interaction: ButtonInteract
   const guild = guildId ? interaction.client.guilds.cache.get(guildId) : undefined;
   const reply = (content: string) =>
     interaction.update({ content, components: [], allowedMentions: { parse: [] } });
-  if (!guild) return reply("That server isn't available any more.");
+  if (!guild) return reply("That server isn't available anymore.");
   const config = await getTicketConfig(ctx.db, guild.id);
   const member = await guild.members.fetch(interaction.user.id).catch(() => null);
-  if (!config.modmail || !member) return reply("That server doesn't take messages here any more.");
+  if (!config.modmail || !member) return reply("That server doesn't take messages here anymore.");
   if (await getOpenDmTicket(ctx.db, interaction.user.id))
     return reply("You already have a conversation open. Just keep writing here.");
   const wait = pending.get(interaction.user.id);

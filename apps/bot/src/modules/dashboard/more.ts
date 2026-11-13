@@ -240,7 +240,7 @@ export async function doLfgJoin(ctx: BotContext, guild: Guild, member: GuildMemb
   const post = await getLfgPost(ctx.db, guild.id, p.data.id);
   if (!post) return fail("That group is gone.");
   const group = post.slots.find((g) => g.name === p.data.role);
-  if (!group) return fail("That role doesn't exist any more.");
+  if (!group) return fail("That role doesn't exist anymore.");
   const result = await joinLfg(ctx.db, post.id, member.id, group.name);
   if (!result.ok)
     return fail(
@@ -250,7 +250,7 @@ export async function doLfgJoin(ctx: BotContext, guild: Guild, member: GuildMemb
         already: "You're already in this group.",
         full: renderWording("{Group}'s full.", postWording(post.wording)),
         slot_full: `${group.name || "That role"} is full. Pick another role.`,
-        no_such_slot: "That role doesn't exist any more.",
+        no_such_slot: "That role doesn't exist anymore.",
       }[result.reason],
     );
   await refreshCard(ctx, guild, result.post);
@@ -286,7 +286,7 @@ export async function doRaidSignup(
   const p = raidSignup.safeParse(raw);
   if (!p.success) return fail("That request wasn't valid.");
   const event = await getOpsEvent(ctx.db, guild.id, p.data.eventId);
-  if (event?.status !== "scheduled") return fail("That raid isn't scheduled any more.");
+  if (event?.status !== "scheduled") return fail("That raid isn't scheduled anymore.");
   const res = await signUp(ctx.db, event.id, member.id, p.data.role, p.data.spec || null, false);
   if (!res.ok)
     return fail(
@@ -314,7 +314,7 @@ export async function doRaidWithdraw(
   const p = raidWithdraw.safeParse(raw);
   if (!p.success) return fail("That request wasn't valid.");
   const event = await getOpsEvent(ctx.db, guild.id, p.data.eventId);
-  if (event?.status !== "scheduled") return fail("That raid isn't scheduled any more.");
+  if (event?.status !== "scheduled") return fail("That raid isn't scheduled anymore.");
   const res = await withdraw(ctx.db, event.id, member.id);
   if (!res.ok)
     return fail(res.reason === "not_signed_up" ? "You're not signed up." : "This raid is closed.");
@@ -369,5 +369,5 @@ export async function doQmCancel(ctx: BotContext, guild: Guild, raw: unknown) {
   const done = await transitionQmBuild(ctx.db, build.id, "pending", "cancelled");
   return done
     ? { ok: true, message: `Discarded plan v${build.version}. Nothing was changed.` }
-    : fail("That plan isn't waiting any more.");
+    : fail("That plan isn't waiting anymore.");
 }

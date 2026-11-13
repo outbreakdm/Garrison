@@ -21,7 +21,7 @@ OWN-WORLD: Ink ground, rounded surfaces with hairline borders and soft depth, pi
 
 STORY: An owner sees the whole server run from one dashboard, believes it is safe (re-checks, undo, least privilege, free) and adds Garrison.
 
-FIRST VIEWPORT: A centred two-line headline at up to 72px, a subline, two pill actions with Add to Discord first, and the live chip when /status has data. Below them, about 1100px wide, the dashboard's Security page: the Lockdown card and the Requests card, with a Discord window overlapping its lower right. Lock the server now is pressed, the request goes from Queued to Done, the lockdown message lands in Discord, and the card becomes the locked card with Lift lockdown (the undo). The result is in view on a 1440x800 screen.
+FIRST VIEWPORT: A centered two-line headline at up to 72px, a subline, two pill actions with Add to Discord first, and the live chip when /status has data. Below them, about 1100px wide, the dashboard's Security page: the Lockdown card and the Requests card, with a Discord window overlapping its lower right. Lock the server now is pressed, the request goes from Queued to Done, the lockdown message lands in Discord, and the card becomes the locked card with Lift lockdown (the undo). The result is in view on a 1440x800 screen.
 
 FORM: canon (standing exit, chosen by the user), category standard; seed key 3b9d5f84.
 

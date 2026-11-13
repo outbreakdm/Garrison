@@ -272,7 +272,7 @@ async function lockRow(tx: Tx, module: SettingsModule, guildId: string): Promise
     return { rewards: await readRewards(tx, guildId) };
   }
   if (module === "escalation") {
-    // The ladder spans several rows; one lock per server serialises edits to it.
+    // The ladder spans several rows; one lock per server serializes edits to it.
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`garrison:ladder:${guildId}`}))`);
     return { rules: await readLadder(tx, guildId) };
   }

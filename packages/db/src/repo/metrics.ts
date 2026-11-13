@@ -66,7 +66,7 @@ export async function saveLatencyHour(
     });
 }
 
-/** One heartbeat a minute: refreshes bot_status and counts the minute towards today's uptime. */
+/** One heartbeat a minute: refreshes bot_status and counts the minute toward today's uptime. */
 export async function heartbeat(db: Db, startedAt: Date, now = new Date()) {
   await db
     .insert(botStatus)

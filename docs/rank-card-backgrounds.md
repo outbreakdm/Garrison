@@ -42,13 +42,13 @@ How uploads will work (not built yet):
 - **Never:** text, letters, logos, watermarks, UI, people's faces, or anything from a specific
   game, film or brand (characters, maps, emblems, art style named after a franchise).
 - **Accent:** Garrison's volt green (#d4ff3a) works as a small highlight, never a large fill.
-  Each preset's colours follow its existing gradient (in `RANK_BACKGROUNDS`) so the image and the
+  Each preset's colors follow its existing gradient (in `RANK_BACKGROUNDS`) so the image and the
   fallback gradient match.
 
 Paste the shared line at the end of each prompt:
 
 > Wide 10:3 banner, dark and moody, low contrast, soft focus toward the left and top edges,
-> detail concentrated in the centre-right, no text, no letters, no logos, no watermark, no
+> detail concentrated in the center-right, no text, no letters, no logos, no watermark, no
 > people, no UI, original design not based on any existing game or franchise, 2000×600.
 
 Negative prompt (for generators that take one): `text, letters, typography, logo, watermark,
@@ -57,25 +57,25 @@ high contrast, busy foreground`.
 
 ## The default set
 
-Six match the existing presets (same names and colours), and four are new.
+Six match the existing presets (same names and colors), and four are new.
 
 1. **Garrison** (`#0b0d10` → `#1a2028`): A top-down tactical map at night: faint topographic
    contour lines and a fine grid on near-black slate, a few thin volt-green route lines and
-   small waypoint marks in the centre-right, subtle paper grain.
+   small waypoint marks in the center-right, subtle paper grain.
 2. **Ember** (`#160c08` → `#4a1d0e`): Close view of a forge's cooling coals: deep charcoal
-   black with glowing orange-red embers drifting up through the centre-right, heat haze, a
+   black with glowing orange-red embers drifting up through the center-right, heat haze, a
    few sparks, warm and dim.
 3. **Frost** (`#08111c` → `#173a5c`): A frozen mountain ridge at blue hour, seen from far
    away: layered ice-blue peaks fading into mist, fine snow in the air, faint aurora light
    low on the right horizon.
 4. **Forest** (`#08130d` → `#1a3f29`): A misty pine forest at dusk, silhouetted treeline
-   layers receding into green fog, a faint path of light between trees centre-right,
+   layers receding into green fog, a faint path of light between trees center-right,
    fireflies as tiny points.
 5. **Dusk** (`#120a1d` → `#3b2160`): A violet twilight sky over a distant flat horizon:
    soft nebula-like clouds, a scattering of stars, one thin bright band of light near the
    horizon on the right.
-6. **Steel** (`#111418` → `#3a4350`): Brushed dark steel armour plates with rivets and fine
-   scratches, overlapping panels angled towards the right, one cool rim light along a seam.
+6. **Steel** (`#111418` → `#3a4350`): Brushed dark steel armor plates with rivets and fine
+   scratches, overlapping panels angled toward the right, one cool rim light along a seam.
 7. **Neon** (new): A rain-soaked city rooftop at night seen from above, dark wet surfaces
    reflecting small cyan and magenta signs far in the distance, heavy blur, mostly
    shadow.

@@ -8,7 +8,7 @@
 /* Label: a field or figure name, in a sentence and in plain weight. */
 .g-label { font: 600 12px/16px var(--font-sans); color: var(--text-muted); }
 
-/* Buttons: one obvious primary in the page's identity colour. */
+/* Buttons: one obvious primary in the page's identity color. */
 .g-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: 36px; font: 600 14px/20px var(--font-sans); padding: var(--space-2) 14px; border: 1px solid transparent; border-radius: var(--radius-md); background: transparent; color: var(--text); cursor: pointer; text-decoration: none; }
 .g-btn:focus-visible, .g-input:focus-visible, .g-toggle:focus-visible, .g-nav__item:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .g-btn--primary { background: var(--accent); color: var(--accent-ink); box-shadow: 0 1px 0 rgb(255 255 255 / 0.18) inset, 0 1px 2px rgb(4 7 20 / 0.3); }
@@ -20,7 +20,7 @@
 .g-btn--danger { color: var(--alert); border-color: color-mix(in srgb, var(--alert) 60%, var(--line)); }
 .g-btn[disabled] { opacity: .45; cursor: not-allowed; }
 
-/* Badge: a state, said in a word and drawn as a shape, so colour is never the only sign.
+/* Badge: a state, said in a word and drawn as a shape, so color is never the only sign.
    Filled dot: on. Hollow ring: waiting. Triangle: needs you. Struck dash: off (--off).
    A badge with no tone is a plain tag (a role, a log type) and carries no mark. */
 .g-badge { --tone: var(--text-muted); display: inline-flex; align-items: center; gap: 6px; font: 600 12px/16px var(--font-sans); padding: 2px 8px 2px 7px; border: 1px solid color-mix(in srgb, var(--tone) 40%, transparent); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--tone) 10%, transparent); color: var(--tone); }
@@ -64,7 +64,7 @@
 .g-nav__name { flex: 1; }
 .g-nav__plain { font-size: 12px; color: var(--text-muted); font-weight: 400; }
 
-/* Discord embed preview (Discord's own format: colour bar on the left) */
+/* Discord embed preview (Discord's own format: color bar on the left) */
 .g-embed { display: grid; grid-template-columns: 4px 1fr; background: var(--surface-raised); border-radius: var(--radius-md); overflow: hidden; max-width: 440px; }
 .g-embed__bar { background: var(--accent); }
 .g-embed--alert .g-embed__bar { background: var(--alert); }

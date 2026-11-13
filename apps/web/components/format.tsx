@@ -1,7 +1,7 @@
 import type { CaseAction } from "@garrison/db";
 
 /**
- * Case actions are kinds, not states, so they never borrow the status colours: a plain
+ * Case actions are kinds, not states, so they never borrow the status colors: a plain
  * tag, with the removals (kick, ban) set heavier than the reversible ones.
  */
 const TONE: Record<CaseAction, string> = {

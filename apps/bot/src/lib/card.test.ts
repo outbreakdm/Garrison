@@ -47,7 +47,7 @@ describe("cardMessage (Components V2)", () => {
     expect(m.allowedMentions).toEqual({ parse: [] });
   });
 
-  it("draws the tone as the container's colour bar", () => {
+  it("draws the tone as the container's color bar", () => {
     const root = top(cardMessage(card));
     expect(root.type).toBe(17);
     expect(root.accent_color).toBe(embedColors.caution);
@@ -59,7 +59,7 @@ describe("cardMessage (Components V2)", () => {
     );
   });
 
-  it("puts a block's button beside it, facts as lines, and a grey footer last", () => {
+  it("puts a block's button beside it, facts as lines, and a gray footer last", () => {
     const texts = cardTexts(cardMessage(card));
     expect(texts[1]).toBe("**Reason:** Spam");
     expect(texts[2]).toBe("[Undo]");
@@ -151,7 +151,7 @@ describe("customCardMessage (cards designed on the dashboard)", () => {
     ...(n.accessory ? kinds(n.accessory) : []),
   ];
 
-  it("draws the Pro look on Pro: colour, thumbnail, banner, no footer", () => {
+  it("draws the Pro look on Pro: color, thumbnail, banner, no footer", () => {
     const m = customCardMessage(designed, entitlements("pro"));
     expect(m.flags).toBe(MessageFlags.IsComponentsV2);
     expect(top(m).accent_color).toBe(0xff0000);

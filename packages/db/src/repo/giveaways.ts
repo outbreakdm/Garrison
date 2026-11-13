@@ -96,7 +96,7 @@ export async function listDueGiveaways(db: Db, now = new Date()): Promise<Giveaw
 }
 
 /**
- * End or cancel a running giveaway. Null when it wasn't running any more, so a
+ * End or cancel a running giveaway. Null when it wasn't running anymore, so a
  * draw happens once even if two sweeps overlap.
  */
 export async function finishGiveaway(

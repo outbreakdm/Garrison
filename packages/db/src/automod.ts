@@ -185,7 +185,7 @@ export function checkAutomod(
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 /** Zero-width and look-alike tricks people use to dodge word filters. */
-const normalise = (text: string) => text.normalize("NFKC").replace(/[​-‍⁠﻿]/g, "").toLowerCase();
+const normalize = (text: string) => text.normalize("NFKC").replace(/[​-‍⁠﻿]/g, "").toLowerCase();
 
 export const INVITE = /(?:discord(?:app)?\.com\/invite|discord\.gg)\/([\w-]{2,32})/gi;
 
@@ -203,7 +203,7 @@ export function checkMessageText(
   msg: { text: string; mentions: number },
   ownInvite: (code: string) => boolean = () => false,
 ): RuleHit | null {
-  const text = normalise(msg.text);
+  const text = normalize(msg.text);
   for (const w of config.words) {
     // Whole words, so "class" doesn't trip on "ass".
     if (new RegExp(`(^|[^\\p{L}\\p{N}])${escapeRe(w)}($|[^\\p{L}\\p{N}])`, "u").test(text))

@@ -11,7 +11,7 @@ apps/
   bot/          discord.js bot (slash commands, events)
   web/          Next.js dashboard (Discord login, read-only server views)
 packages/
-  brand/        design tokens (CSS + TS), embed colours, module names
+  brand/        design tokens (CSS + TS), embed colors, module names
   db/           Drizzle schema, SQL migrations and queries for Supabase Postgres
 ```
 
@@ -98,7 +98,7 @@ After pulling this change, run `pnpm commands:deploy` once: `/lfg create` has a 
 - **Opt-in per server.** `/link` in a server shares your linked accounts with that server's roster; `/link share visible:false` hides them. Members can remove any link or stop sharing on their dashboard **Account** page.
 - **Verified, from Discord Connections:** `/link accounts` opens the Account page, where **Link from Discord Connections** imports the verified game accounts in Discord → Settings → Connections (Steam, Battle.net, Riot, Xbox, PlayStation, Epic, Bungie, Roblox). Only this flow asks Discord for `connections`; ordinary sign-in never does.
 - **Verified, World of Warcraft:** Battle.net sign-in imports characters with level, class and realm. Turns on when `BNET_CLIENT_ID` and `BNET_CLIENT_SECRET` are set; register `APP_URL/auth/battlenet/callback` as the redirect.
-- **Claimed, Old School RuneScape:** `/link osrs name:Zezima` shows total and combat level from the public hiscores, refreshed every 6 h. OSRS can't prove ownership, so it's labelled claimed.
+- **Claimed, Old School RuneScape:** `/link osrs name:Zezima` shows total and combat level from the public hiscores, refreshed every 6 h. OSRS can't prove ownership, so it's labeled claimed.
 - **Claimed, RuneScape 3:** `/link rs3 name:` shows total level from the public hiscores, refreshed every 6 h with OSRS.
 - **Roles from game stats (Pro):** on the dashboard's Barracks page, up to 10 rules like "OSRS total level 2000+ → @Maxed" (also OSRS combat level, RuneScape total level and WoW character level). Members get the role while an account they share with the server meets a rule and lose it when none does or they stop sharing; checked every 30 minutes and right after `/link`. Roles with admin or moderation powers are never given. Claimed accounts count, so these are for flair, not access.
 - `/roster [game]` lists what members shared; the dashboard's Barracks page shows the same with verified or claimed badges. No Discord or Battle.net token is ever stored.
@@ -135,28 +135,28 @@ After pulling this change, run `pnpm commands:deploy` once: `/lfg create` has a 
 - Watches a **Twitch** channel (goes live) or a **YouTube** channel (new video) and posts a card with the thumbnail and a Watch button, optionally pinging one role (never @everyone). Each stream and video is announced once: its ID is swapped in with a conditional update before posting, and a feed's first check only records what's there.
 - YouTube uses the channel's public feed (no key). Twitch needs a Twitch app: set `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` (dev.twitch.tv/console); without them Twitch alerts stay off and the dashboard says so.
 - Twitch is checked every 2 minutes and YouTube every 5, once per watched channel however many servers watch it. Every request has a timeout; provider text is made inert before it's posted.
-- Free: 3 alerts with the standard look. Pro: 25, with your own message (`{name}`, `{title}`, `{game}`, `{url}`) and colour. Set up on the dashboard's Alerts page with a live preview.
+- Free: 3 alerts with the standard look. Pro: 25, with your own message (`{name}`, `{title}`, `{game}`, `{url}`) and color. Set up on the dashboard's Alerts page with a live preview.
 
 ### Spoils (giveaways)
 
 - Started from the dashboard's Giveaways page: a prize, 1 to 20 winners, 30 minutes to 2 weeks, and a channel. Members press **Enter** (and can leave again); the card's entry count updates within a minute.
 - When time's up the minute sweep draws winners with a secure random draw, each entry weighing as much as its entries, and replies to the card naming them (the only pings). A draw is claimed by a conditional update, so it happens once. **Draw now**, **Cancel** and **Draw again** (new winners, never anyone drawn before) are on the dashboard.
 - Also from Discord: `/giveaway start`, `end`, `reroll` and `cancel` (Manage Server).
-- Free: 2 running at once, open to everyone. Pro: 20, entry rules (a role, or a level from Ranks), up to 3 bonus-entry roles, repeating ("Run again when it ends") and the card's colour.
+- Free: 2 running at once, open to everyone. Pro: 20, entry rules (a role, or a level from Ranks), up to 3 bonus-entry roles, repeating ("Run again when it ends") and the card's color.
 
 ### Honors (starboard)
 
 - When a message collects the server's emoji (⭐ by default) as many times as it asks (3 by default), Garrison reposts it to the starboard channel: the count, who wrote it and where, their text and first image, and a Jump button. Later reactions update the count. Mentions in the repost never ping.
 - The author's own reaction doesn't count unless the server says so; bots' messages, the board itself and ignored channels never reach it; messages from age-restricted channels only go to an age-restricted board.
 - Only the message's IDs and its star count are stored, never its text. A repost is claimed before it's posted, so a message reaches the board once.
-- Free: everything. Pro: the board's colour and one of the server's own emoji. Set up on the dashboard's Starboard page.
+- Free: everything. Pro: the board's color and one of the server's own emoji. Set up on the dashboard's Starboard page.
 - Role menus and ticket topics can use the server's own emoji on Pro too: type `:name:` on the dashboard.
 
 ### Ranks
 
 - **Off by default.** Turn it on with `/ranks settings enabled:true`. Members then earn 15–25 XP for chatting, at most once a minute. The cooldown is enforced in the database, so spam and multiple bot processes can't farm XP. Only who posted and when is used: no message content.
 - **`/rank [user]`** posts a rank card image: avatar, name, rank, level and the XP bar. **`/leaderboard`** shows the top 10. Both are open to everyone, one lookup per person every 10 s.
-- **Rank cards** are drawn by the bot with `@napi-rs/canvas` and the brand's fonts (bundled from npm, since the container has none), and cached until something on the card changes. On Pro a server picks a background (a preset, or an image uploaded to Discord: the bot fetches images only from Discord's CDN, 4 MB and 5 s at most), an accent colour, up to 4 details members fill in with **`/rankcard`**, and the game accounts members share with the roster. Set it on the dashboard's Ranks page, with a live preview.
+- **Rank cards** are drawn by the bot with `@napi-rs/canvas` and the brand's fonts (bundled from npm, since the container has none), and cached until something on the card changes. On Pro a server picks a background (a preset, or an image uploaded to Discord: the bot fetches images only from Discord's CDN, 4 MB and 5 s at most), an accent color, up to 4 details members fill in with **`/rankcard`**, and the game accounts members share with the roster. Set it on the dashboard's Ranks page, with a live preview.
 - **Voice XP:** a switch in Ranks settings gives 10 XP a minute in voice, only with at least one other person listening, never while deafened or in the AFK channel. It shares the once-a-minute cooldown with messages, so nobody earns twice.
 - **XP boosts (Pro):** up to 10 multipliers (×0.5 to ×3) for a role, channel or category, or No XP in places like a bot-commands channel. The biggest that applies counts and No XP always wins. On Free they're kept but not applied.
 - **Seasons (Pro):** on the Ranks page, **End this season** keeps the final top 100 (shown there by season), then resets everyone's XP and level so the next season starts even. Reward roles stay. Garrison does it from the dashboard's request queue after re-checking Manage Server and the plan, and posts the top 3 in the level-up channel if there is one.
@@ -226,4 +226,4 @@ See [SECURITY.md](SECURITY.md) for the principles and the checklists for new tab
 
 ## Brand
 
-Copy follows the Garrison Brand Guide: calm, brief, specific. Sentence case, numbers over adjectives, every confirmation offers undo, errors give the fix, no "Powered by" footers. Colours and fonts come from `@garrison/brand`, which mirrors the design system tokens.
+Copy follows the Garrison Brand Guide: calm, brief, specific. Sentence case, numbers over adjectives, every confirmation offers undo, errors give the fix, no "Powered by" footers. Colors and fonts come from `@garrison/brand`, which mirrors the design system tokens.

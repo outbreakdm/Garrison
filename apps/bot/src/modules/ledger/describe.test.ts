@@ -5,7 +5,7 @@ import { describeAudit } from "./describe.js";
 const base = { executorId: "taner", targetId: "kel", changes: [], reason: null, extra: null };
 
 describe("describeAudit", () => {
-  it("summarises role changes by name", () => {
+  it("summarizes role changes by name", () => {
     const d = describeAudit({
       ...base,
       action: AuditLogEvent.MemberRoleUpdate,

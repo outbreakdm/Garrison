@@ -38,7 +38,7 @@ export interface RoleMenu {
   maxPicks: number | null;
   /** Pro: only members with this role can use the menu. */
   requiredRoleId: string | null;
-  /** Dropdowns only: the grey text before anything is picked. */
+  /** Dropdowns only: the gray text before anything is picked. */
   placeholder: string | null;
 }
 
@@ -111,13 +111,13 @@ export const ROLE_MENU_PRESETS: Record<
       ],
     },
   },
-  colours: {
-    name: "Name colour",
+  colors: {
+    name: "Name color",
     style: "buttons",
     maxPicks: 1,
     card: {
-      ...blankCard("Pick a name colour"),
-      blocks: [{ kind: "text", text: "One colour at a time: picking another swaps it." }],
+      ...blankCard("Pick a name color"),
+      blocks: [{ kind: "text", text: "One color at a time: picking another swaps it." }],
     },
   },
   blank: {

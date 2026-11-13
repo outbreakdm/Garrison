@@ -287,7 +287,7 @@ export const opsModals: ModalHandler = {
       const msg = {
         not_found: "That raid is gone.",
         closed: "This raid is closed.",
-        no_such_role: "That role doesn't exist any more.",
+        no_such_role: "That role doesn't exist anymore.",
         unchanged: "You're already signed up like that.",
       }[result.reason];
       await interaction.reply({ content: msg, ...ephemeral });

@@ -3,7 +3,7 @@
  * (live) or YouTube channel (new videos) and posts a card in a Discord channel,
  * optionally pinging one role. Pure and shared (`@garrison/db/cards`).
  *
- * Free: 3 feeds, the standard alert. Pro: 25 feeds, your own message and colour.
+ * Free: 3 feeds, the standard alert. Pro: 25 feeds, your own message and color.
  * Over the limit after a downgrade, the extra feeds pause; nothing is deleted.
  */
 
@@ -23,7 +23,7 @@ export interface AlertFeed {
   roleId: string | null;
   /** Pro: your own words, with {name} {title} {game} {url}. Null: the standard text. */
   message: string | null;
-  /** Pro: the card's colour. Null: Garrison volt. */
+  /** Pro: the card's color. Null: Garrison volt. */
   accent: string | null;
 }
 
@@ -115,7 +115,7 @@ export function parseAlertFeed(raw: unknown, index = 0): Parsed<AlertFeed> {
   let accent: string | null = null;
   if (r.accent) {
     const a = typeof r.accent === "string" ? r.accent.trim().toLowerCase() : "";
-    if (!ACCENT.test(a)) return { ok: false, error: `${where}: pick the colour as #rrggbb.` };
+    if (!ACCENT.test(a)) return { ok: false, error: `${where}: pick the color as #rrggbb.` };
     accent = a === STANDARD_ACCENT ? null : a;
   }
   return {
@@ -129,7 +129,7 @@ export function feedPlanProblems(feed: AlertFeed, ent: Entitlements, before?: Al
   if (ent["alerts.custom"]) return [];
   const out: string[] = [];
   if (feed.message && feed.message !== before?.message) out.push("Your own message");
-  if (feed.accent && feed.accent !== before?.accent) out.push("Accent colour");
+  if (feed.accent && feed.accent !== before?.accent) out.push("Accent color");
   return out;
 }
 
@@ -182,7 +182,7 @@ export function readAlertFeeds(raw: unknown): AlertFeed[] {
   });
 }
 
-/** The words and colour an alert uses on this plan: Pro values pause on Free. */
+/** The words and color an alert uses on this plan: Pro values pause on Free. */
 export function alertLook(feed: AlertFeed, ent: Entitlements) {
   const custom = ent["alerts.custom"];
   return {

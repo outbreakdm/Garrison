@@ -141,7 +141,7 @@ const DEMO_PREVIEW: Preview = {
   added: { categories: 1, channels: 3, roles: 1 },
 };
 
-/** A browser-ish frame around a real dashboard component, labelled as an example. */
+/** A browser-ish frame around a real dashboard component, labeled as an example. */
 function AppWindow({
   path,
   className = "",

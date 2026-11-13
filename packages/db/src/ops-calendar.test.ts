@@ -46,7 +46,7 @@ describe("calendar grid", () => {
     expect(days[1]?.items[0]?.startsAt.toISOString()).toBe("2026-11-06T02:00:00.000Z");
   });
 
-  it("leaves out cancelled raids and doesn't repeat finished ones", () => {
+  it("leaves out canceled raids and doesn't repeat finished ones", () => {
     const items = expandRaids(
       [raid({ status: "cancelled" }), raid({ id: "b", status: "done", repeatWeekly: true })],
       new Date("2027-01-01T00:00:00Z"),

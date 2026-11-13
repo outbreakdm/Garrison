@@ -40,7 +40,7 @@ export async function fetchRs3Hiscores(
     if (res.status === 404) return { ok: false, reason: "not_found" };
     if (!res.ok) return { ok: false, reason: "unavailable" };
     const stats = parseRs3(await res.text());
-    // RS3 doesn't return the name's capitalisation, so keep what the player typed.
+    // RS3 doesn't return the name's capitalization, so keep what the player typed.
     return stats ? { ok: true, name: name.trim(), stats } : { ok: false, reason: "unavailable" };
   } catch {
     return { ok: false, reason: "unavailable" };

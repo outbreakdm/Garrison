@@ -38,7 +38,7 @@ then updates **Status** and the **Log** before stopping.
 | 2 | Stripe in test mode: Checkout, customer portal, webhook, then live keys | Not started |
 | 3 | Shared card editor (field editor + live preview + Pro-locked styling) | **Done** (not deployed) |
 | 4 | Role menus (first module on the card editor) | **Code done**, not deployed: needs migration 0023 |
-| 5 | Bot profile per server (name, avatar, banner, bio, card colours) | **Code done** (not deployed); card colour and footer defaults moved to later |
+| 5 | Bot profile per server (name, avatar, banner, bio, card colors) | **Code done** (not deployed); card color and footer defaults moved to later |
 | 6 | Welcome (messages, leave messages, roles on join) | **Code done**, not deployed: needs migration 0024 |
 | 7 | Tickets / modmail | **Code done**, not deployed: needs migration 0026 and the Message Content intent |
 | 8 | Message builder (post now or on a schedule) | **Code done**, not deployed: needs migration 0025 |
@@ -59,7 +59,7 @@ limits. Pro sells **deeper customization, branding, scale and history**, never s
 **The pattern every feature follows:**
 
 - Free: the full feature, a ready-made template, every field editable, a live preview.
-- Pro: styling and branding (accent colour, images, thumbnails, banners, custom emoji,
+- Pro: styling and branding (accent color, images, thumbnails, banners, custom emoji,
   removing the Garrison footer), higher limits, history and exports, automation (schedules,
   conditions).
 - Locked controls are visible on Free with a Pro tag. The preview shows the Pro look so
@@ -79,16 +79,16 @@ member (the owner bypass) gets Pro limits everywhere.
 
 | Feature | Free | Pro |
 |---|---|---|
-| Bot profile per server | Nickname | Avatar, banner and bio in this server; accent colour on every card; footer without "Garrison" |
-| Role menus | 3 menus, buttons or dropdown, template editor with live preview | Unlimited menus, accent colour, images and banners, custom emoji, max picks, required roles, temporary roles |
-| Welcome | Text welcome and leave messages, 1 role on join | Image welcome cards, colours, DM welcome, roles on join by condition |
+| Bot profile per server | Nickname | Avatar, banner and bio in this server; accent color on every card; footer without "Garrison" |
+| Role menus | 3 menus, buttons or dropdown, template editor with live preview | Unlimited menus, accent color, images and banners, custom emoji, max picks, required roles, temporary roles |
+| Welcome | Text welcome and leave messages, 1 role on join | Image welcome cards, colors, DM welcome, roles on join by condition |
 | Tickets / modmail | 1 panel, 3 categories, claim, close, transcripts kept 30 days | Many panels, forms before opening, auto-assign, transcripts 365 days, branding, ticket stats |
-| Message builder | Post cards with the standard look, 3 scheduled | Colours, images, link buttons, repeating schedules, 50 scheduled |
-| Stream and video alerts | 3 feeds | 25 feeds, custom message and colour |
+| Message builder | Post cards with the standard look, 3 scheduled | Colors, images, link buttons, repeating schedules, 50 scheduled |
+| Stream and video alerts | 3 feeds | 25 feeds, custom message and color |
 | Giveaways and starboard | Basic giveaways, starboard | Entry requirements (role, level), bonus entries, custom look |
-| Ranks | XP, levels, rewards, default rank card, voice XP | Custom rank cards (background, colours, character details), XP boosts by role or channel, seasons |
-| Rally | 3 templates (exists) | 25 templates, notify a role (exists), custom card colour |
-| Ops | 25 scheduled raids, calendar view, calendar feed, web signup | Attendance history and reliability, custom card colour, more raids |
+| Ranks | XP, levels, rewards, default rank card, voice XP | Custom rank cards (background, colors, character details), XP boosts by role or channel, seasons |
+| Rally | 3 templates (exists) | 25 templates, notify a role (exists), custom card color |
+| Ops | 25 scheduled raids, calendar view, calendar feed, web signup | Attendance history and reliability, custom card color, more raids |
 | Watch (safety) | Everything: cases, undo, escalation, automod, mod notes, appeals, temporary bans | Bigger automod word lists and per-channel rules, appeal form branding |
 | Gatehouse (safety) | Everything: anti-raid, anti-nuke, verification, web captcha, alt warnings, 1 manual backup | Scheduled backups, 30 backups kept |
 | Ledger | 30 days, invite tracking, voice and nickname events | Up to 365 days, CSV export |
@@ -103,7 +103,7 @@ dashboard (or with `/rank edit`). Rendered as an image, cached, regenerated on c
 **Bot profile per server (Pro).** Discord lets a bot set its own nickname in a server, and
 (added 2025) a per-server avatar, banner and bio through Modify Current Member
 (`PATCH /guilds/{id}/members/@me`). Confirm the fields in Discord's docs when building.
-Card accent colour and footer text come from the same settings, read by `lib/card.ts`.
+Card accent color and footer text come from the same settings, read by `lib/card.ts`.
 
 ### Owner bypass (staff)
 
@@ -122,7 +122,7 @@ Card accent colour and footer text come from the same settings, read by `lib/car
 
 - Each server gets a **Plan** page on the dashboard: what's included, what's locked, Upgrade.
 - Upgrade opens **Stripe Checkout** (subscription mode) with the server's ID in metadata.
-  The **customer portal** handles card changes, cancelling and invoices.
+  The **customer portal** handles card changes, canceling and invoices.
 - A **webhook** on the dashboard writes `guild_plans`. Events: `checkout.session.completed`,
   `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`.
 - New columns: Stripe customer ID, subscription ID, status, current period end, cancel at
@@ -161,7 +161,7 @@ Card accent colour and footer text come from the same settings, read by `lib/car
 ### Phase 3: shared card editor
 
 - [x] Dashboard component (`apps/web/components/cards/`): `CardEditor` edits title, text
-      blocks and dividers (reorder, remove), accent colour, thumbnail, banner image and
+      blocks and dividers (reorder, remove), accent color, thumbnail, banner image and
       footer; `CardPreview` draws it like Discord (dark theme, accent bar, heading, Discord
       markdown, mentions by name, image, the module's buttons or dropdown, footer). Styles in
       `app/cards.css`. Side by side with a sticky preview on desktop, preview first on phones.
@@ -199,7 +199,7 @@ Card accent colour and footer text come from the same settings, read by `lib/car
       moderation or admin powers, or sits above Garrison. Answers are private cards.
       Dropdowns are routed through a new `SelectHandler` registry.
 - [x] Dashboard (`/servers/:id/insignia`, nav "Insignia · Role menus"): starting points
-      (Notifications, Games, Name colour, blank), the card editor plus roles, picks and who
+      (Notifications, Games, Name color, blank), the card editor plus roles, picks and who
       can use it, the live preview with the real buttons or dropdown, Save (blocked in the
       browser when the server would refuse, so edits are never lost), Post/Update/Move in a
       channel (only the saved menu, never unsaved edits), Remove (undoable). Roles a menu
@@ -209,7 +209,7 @@ Card accent colour and footer text come from the same settings, read by `lib/car
 - [x] Checked in the local preview (desktop, phone, light theme; no sideways scroll):
       add, edit, Pro refusal and undo, save, queue a post, history. Not checked: the bot
       posting and answering clicks against real Discord.
-- Later: server (custom) emoji on Pro, temporary roles on Pro, button colours, the landing
+- Later: server (custom) emoji on Pro, temporary roles on Pro, button colors, the landing
   page still says "Eight modules" (Insignia makes nine; copy change for the owner to approve).
 
 ### Phase 5: bot profile per server
@@ -230,8 +230,8 @@ Card accent colour and footer text come from the same settings, read by `lib/car
       nickname-only request queued, phone width).
 - No settings history for the profile: Discord holds it, and undo is "Garrison's own" per
   part. Image data stays in that request's row; prune old image payloads later.
-- Later: server-wide card accent colour and footer defaults (they must never recolour
-  moderation and alert cards, whose colours report state).
+- Later: server-wide card accent color and footer defaults (they must never recolour
+  moderation and alert cards, whose colors report state).
 
 ### Phase 6: welcome (module "Herald", plain label "Welcome")
 
@@ -292,7 +292,7 @@ Card accent colour and footer text come from the same settings, read by `lib/car
       container has no fonts).
 - [x] Rules (`packages/db/src/rank-cards.ts`, browser-safe): the standard card is free; Pro
       (`ranks.cards`) picks a background (6 presets, or an image on Discord's CDN), an accent
-      colour, up to 4 details members fill in, and shared game accounts. Saved Pro looks pause on
+      color, up to 4 details members fill in, and shared game accounts. Saved Pro looks pause on
       Free. Stored in `ranks_settings.card` (Settings history and undo); members' answers in
       `rank_profiles` (migration `0028_rank_cards`), written by the bot only.
 - [x] Bot: `/rank` posts the card as a PNG (`modules/ranks/render.ts`), falling back to the
@@ -309,7 +309,7 @@ Card accent colour and footer text come from the same settings, read by `lib/car
 
 - [x] Rules (`packages/db/src/alerts.ts`, browser-safe): a feed watches a Twitch login or a
       YouTube channel (ID or @handle, from a name or a link), posts in one channel and may ping
-      one role. Free 3 feeds (`alerts.feeds`), Pro 25 with your own message and colour
+      one role. Free 3 feeds (`alerts.feeds`), Pro 25 with your own message and color
       (`alerts.custom`); extras pause on Free.
 - [x] Storage (migration `0029_alerts`): `alert_settings` (the list, Settings history and undo)
       and `alert_state` (what the bot last saw and posted; the dashboard reads it for "Live now",
@@ -321,7 +321,7 @@ Card accent colour and footer text come from the same settings, read by `lib/car
       `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` are optional secrets, passed through the
       Cloudflare Worker and the deploy workflow; preflight says whether Twitch is on.
 - [x] Dashboard (`/servers/:id/beacon`, nav "Beacon · Alerts"): add a feed, edit where it posts,
-      the ping and (Pro) the message and colour with a live preview, each feed's status.
+      the ping and (Pro) the message and color with a live preview, each feed's status.
       Checked in the local preview (add from links, Pro refusal, statuses, phone width).
 - Later: Kick (its public API needs an app review), YouTube live streams (needs the YouTube
   Data API key), a "send a test alert" button.
@@ -330,7 +330,7 @@ Card accent colour and footer text come from the same settings, read by `lib/car
 
 - [x] Giveaway rules (`packages/db/src/giveaways.ts`): prize, 1 to 20 winners, set lengths from 30
       minutes to 2 weeks. Free 2 running (`giveaways.running`), Pro 20 with entry rules, bonus
-      entries and colour (`giveaways.rules`). Weighted draw without repeats, tested for fairness.
+      entries and color (`giveaways.rules`). Weighted draw without repeats, tested for fairness.
 - [x] Storage (migration `0030_giveaways`): `giveaways` and `giveaway_entries`, written by the bot
       only; the dashboard asks through `start_giveaway` and `giveaway_action` requests.
 - [x] Bot (`apps/bot/src/modules/giveaways/`): posts the card, Enter and Leave (rules checked on
@@ -341,7 +341,7 @@ Card accent colour and footer text come from the same settings, read by `lib/car
       in the local preview (the form, the queued request's payload, the list).
 - [x] Starboard (module "Honors", plain label "Starboard"): rules in
       `packages/db/src/starboard.ts` (one emoji, 1 to 50 reactions, the author's own star off by
-      default, ignored channels, Pro colour `starboard.look`); migration `0031_starboard`
+      default, ignored channels, Pro color `starboard.look`); migration `0031_starboard`
       (`starboard_settings` with history, `starboard_posts` with IDs and counts only, claimed
       before reposting and released if the post fails); the bot listens to reactions (new
       intent `GuildMessageReactions`, not privileged) and reposts with the text, first image and
@@ -568,11 +568,11 @@ Decided (2026-11-12, owner):
   dashboard Worker; session and server lookups in parallel. The bot deploys before the dashboard
   when the binding is new.
 - 2026-11-13: Dashboard redesign, "Card Table" (impeccable new-work, deployed in run 43441441759):
-  a lifted slate-blue dark default and a cool light theme. Each part of the server has a colour:
-  Safety azure, Community orchid, Gaming volt, Server steel. That colour lights the menu gem,
+  a lifted slate-blue dark default and a cool light theme. Each part of the server has a color:
+  Safety azure, Community orchid, Gaming volt, Server steel. That color lights the menu gem,
   the title gem, the section tag, the primary button, switches and open panels. Archivo is now
   the one typeface (Saira, Inter and JetBrains Mono are gone). Status is shown by shape as well
-  as colour: dot for on, ring for waiting, triangle for needs you, dash for off. "Requires Pro"
+  as color: dot for on, ring for waiting, triangle for needs you, dash for off. "Requires Pro"
   is printed in foil, which nothing else uses. HUD brackets, chamfers and the glint are gone.
   Time is drawn to scale: ticket waits, raid countdowns and lockdowns. Card text is held to
   68ch. Phone fixes: filter rows scroll, and head actions stack. The card editor's `.block`
@@ -583,7 +583,7 @@ Decided (2026-11-12, owner):
   everything, phone first). Phones: the menu is one "current page" button that opens a sheet
   of the four sections (44px items); the Moderation search takes a full row and cases stack as
   cards with Undo in reach; Sign out moves to the account page; the search hint reads Ctrl K or
-  ⌘K and hides on touch. The section colour now owns each page head (a tinted name card), the
+  ⌘K and hides on touch. The section color now owns each page head (a tinted name card), the
   current menu item and open panels. Safety moved to cobalt and Community to a pinker orchid,
   away from the info blue; case tags (warn, ban) are neutral, removals heavier. Security and
   Welcome use the shared settings row; duplicate head buttons and the second "Edit ladder" are
@@ -612,7 +612,11 @@ Decided (2026-11-12, owner):
   Tested in `repo/agency.test.ts` and in the local preview.
 - 2026-11-13: Subscription polish (impeccable polish, committed, not deployed): plan cards show
   "$0" and "save N%" the same way on the dashboard and the landing page, ticks in the page's
-  colour, "Opens at launch" on paid cards, a plain "This server is on Free / has Pro" line and
-  "All 5 seats free". The staff page gets a readout of plan counts, labelled Agency rows and a
+  color, "Opens at launch" on paid cards, a plain "This server is on Free / has Pro" line and
+  "All 5 seats free". The staff page gets a readout of plan counts, labeled Agency rows and a
   plain notice. Pro features on Free share one slot (`ProUpsell`) and every plans link says
   "See plans". The landing flag reads "Recommended" (no usage claim).
+- 2026-11-13: American spelling everywhere (committed, not deployed): color, center, gray,
+  labeled, canceled, defense, armor, neighbor, humor, anymore, math, toward and the -ize forms,
+  across the dashboard, bot replies, landing page, docs and comments. Saved status values
+  (`cancelled` in the database) and `aria-labelledby` are unchanged, as they must be.

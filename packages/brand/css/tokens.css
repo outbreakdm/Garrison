@@ -1,6 +1,6 @@
 /* Garrison design tokens: the Card Table world (2026-11-13). Mirrored in
    packages/brand/src/index.ts (colors). A lifted slate-blue table, card faces two
-   steps lighter, and four colour identities, one for each part of a server. */
+   steps lighter, and four color identities, one for each part of a server. */
 :root, [data-theme="dark"] {
   --bg: #151a2c;
   --surface: #1e2540;

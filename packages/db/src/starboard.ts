@@ -1,7 +1,7 @@
 /**
  * Starboard (module "Honors"): a message that collects enough of one emoji is
  * reposted to a starboard channel, with its star count kept current. Pure and
- * shared (`@garrison/db/cards`). Free: the whole feature. Pro: the card's colour.
+ * shared (`@garrison/db/cards`). Free: the whole feature. Pro: the card's color.
  */
 
 import { ACCENT, STANDARD_ACCENT } from "./cards";
@@ -19,7 +19,7 @@ export interface StarboardConfig {
   selfStar: boolean;
   /** Channels whose messages never reach the board. */
   ignoredChannelIds: string[];
-  /** Pro: the card's colour. Null: Garrison volt. */
+  /** Pro: the card's color. Null: Garrison volt. */
   accent: string | null;
 }
 
@@ -57,7 +57,7 @@ export function readStarboard(raw: Partial<Record<keyof StarboardConfig, unknown
   } satisfies StarboardConfig;
 }
 
-/** Check a change from the dashboard. `before` is what's saved: a saved colour stays on Free. */
+/** Check a change from the dashboard. `before` is what's saved: a saved color stays on Free. */
 export function checkStarboard(
   raw: Record<string, unknown>,
   ent: Entitlements,
@@ -93,11 +93,11 @@ export function checkStarboard(
   let accent: string | null = null;
   if (raw.accent) {
     const a = typeof raw.accent === "string" ? raw.accent.trim().toLowerCase() : "";
-    if (!ACCENT.test(a)) return { ok: false, error: "Pick the colour as #rrggbb." };
+    if (!ACCENT.test(a)) return { ok: false, error: "Pick the color as #rrggbb." };
     accent = a === STANDARD_ACCENT ? null : a;
   }
   if (accent && !ent["starboard.look"] && accent !== before.accent)
-    return { ok: false, error: "Your own starboard colour is part of Garrison Pro." };
+    return { ok: false, error: "Your own starboard color is part of Garrison Pro." };
   return {
     ok: true,
     value: {

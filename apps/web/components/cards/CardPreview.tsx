@@ -13,11 +13,11 @@ import { DiscordMarkdown, type MentionNames } from "./markdown";
 
 /**
  * A card drawn the way Discord draws Garrison's Components V2 messages: the
- * channel, Garrison's name with the App tag, then the container with its colour
+ * channel, Garrison's name with the App tag, then the container with its color
  * bar, title, text, dividers, image, the module's own controls and the footer.
  * Always Discord's dark theme, whatever the dashboard's theme.
  *
- * The CSP blocks style attributes, so the accent colour is set through the
+ * The CSP blocks style attributes, so the accent color is set through the
  * CSSOM after render (allowed) as a custom property the stylesheet reads.
  */
 export function CardPreview({
@@ -157,7 +157,7 @@ export function PreviewEmoji({ emoji }: { emoji: string }) {
   return <span aria-hidden="true">{emoji}</span>;
 }
 
-/** A role menu's buttons, drawn like Discord's grey buttons. */
+/** A role menu's buttons, drawn like Discord's gray buttons. */
 export function PreviewButtons({ labels }: { labels: { label: string; emoji: string | null }[] }) {
   if (!labels.length) return <div className="dc-empty">Buttons appear here as you add roles.</div>;
   return (
@@ -173,7 +173,7 @@ export function PreviewButtons({ labels }: { labels: { label: string; emoji: str
   );
 }
 
-/** Link buttons, drawn like Discord's: grey, with the external-link mark. */
+/** Link buttons, drawn like Discord's: gray, with the external-link mark. */
 export function PreviewLinkButtons({ labels }: { labels: string[] }) {
   return (
     <div className="dc-buttons">

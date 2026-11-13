@@ -169,7 +169,7 @@ export default async function AlertsPage({
             {plan === "free" ? (
               <span className="g-help">
                 Free servers run {limit} alerts with the standard look. Pro runs {FEED_HARD_MAX},
-                with your own message and colour.
+                with your own message and color.
               </span>
             ) : null}
           </div>

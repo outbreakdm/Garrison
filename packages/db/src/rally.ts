@@ -64,7 +64,7 @@ export function parseSlots(roles: string | null, size: number | null): Parsed<Lf
 
 /**
  * Every player-facing phrase on an LFG card. Placeholders: {role}, {group},
- * {Group} (capitalised) and {title}.
+ * {Group} (capitalized) and {title}.
  */
 export interface RallyWording {
   /** What a group is called: "group", "squad", "party", "fireteam", "team". */

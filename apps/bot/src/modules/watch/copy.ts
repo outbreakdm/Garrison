@@ -47,7 +47,7 @@ export function confirmationTitle(
   return `${verbs[action].noun} applied to ${targetName}${forDuration}`;
 }
 
-/** Moderation DMs are neutral and factual: the action, the reason, how to appeal. No humour. */
+/** Moderation DMs are neutral and factual: the action, the reason, how to appeal. No humor. */
 export function dmTitle(action: MemberAction, guildName: string, durationSeconds?: number | null) {
   const forDuration = durationSeconds ? ` for ${formatDuration(durationSeconds)}` : "";
   const where = action === "warn" ? `in ${guildName}` : `from ${guildName}`;

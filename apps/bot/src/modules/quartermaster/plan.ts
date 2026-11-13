@@ -145,7 +145,7 @@ export function validatePlan(raw: AiPlan, server: ServerSnapshot): ValidationRes
     if (op.kind === "create_role" && op.color_hex) {
       const m = op.color_hex.trim().match(/^#?([0-9a-f]{6})$/i);
       if (m?.[1]) color = Number.parseInt(m[1], 16);
-      else errors.push(`${n}: "${op.color_hex.slice(0, 20)}" isn't a colour like #d4ff3a.`);
+      else errors.push(`${n}: "${op.color_hex.slice(0, 20)}" isn't a color like #d4ff3a.`);
     }
 
     const slowmode =

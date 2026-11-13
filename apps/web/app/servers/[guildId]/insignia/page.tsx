@@ -75,8 +75,8 @@ export default async function RoleMenusPage({
           <h1>Role menus</h1>
           <p>
             A card in Discord with buttons or a dropdown, so members pick their own roles: games,
-            pings, name colours. Design it here, post it, and every click is checked against what
-            you saved.
+            pings, name colors. Design it here, post it, and every click is checked against what you
+            saved.
           </p>
         </div>
         <span className="mono">
@@ -151,7 +151,7 @@ export default async function RoleMenusPage({
             </button>
             {plan === "free" ? (
               <span className="g-help">
-                Free servers run {limit} menus. Pro runs {MENU_HARD_MAX}, with your own colours,
+                Free servers run {limit} menus. Pro runs {MENU_HARD_MAX}, with your own colors,
                 images and pick limits.
               </span>
             ) : null}

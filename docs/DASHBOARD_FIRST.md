@@ -117,7 +117,7 @@ preview.
 
 ## Rules that are easy to break
 
-- **CSP**: the site allows no inline styles. Use classes; for a dynamic colour use
+- **CSP**: the site allows no inline styles. Use classes; for a dynamic color use
   an SVG `fill` attribute (see the role dots in `ServerPreview.tsx`). Images may
   only come from the site itself, `data:` and `cdn.discordapp.com`.
 - **The dashboard never acts in Discord itself.** It only reads with the bot

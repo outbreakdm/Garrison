@@ -218,7 +218,7 @@ export async function reopenClosedTicket(
   if (!me.permissions.has(PermissionFlagsBits.ManageChannels))
     return { ok: false, message: "Garrison needs the Manage Channels permission to open tickets." };
   const opener = await guild.members.fetch(ticket.openerId).catch(() => null);
-  if (!opener) return { ok: false, message: `${ticket.openerName} isn't in the server any more.` };
+  if (!opener) return { ok: false, message: `${ticket.openerName} isn't in the server anymore.` };
   const channel = await ticketChannel(
     guild,
     me,

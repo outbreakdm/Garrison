@@ -34,7 +34,7 @@ export function Art({
   const piece = ART[slot];
   if (!piece) return null;
   return (
-    // biome-ignore lint/performance/noImgElement: served as-is from /art; no image optimiser on Cloudflare
+    // biome-ignore lint/performance/noImgElement: served as-is from /art; no image optimizer on Cloudflare
     <img
       className={`art ${className}`.trim()}
       src={piece.src}

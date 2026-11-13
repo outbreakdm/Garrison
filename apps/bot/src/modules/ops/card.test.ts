@@ -70,12 +70,12 @@ describe("opsCard", () => {
     expect(healerButton?.disabled).not.toBe(true);
   });
 
-  it("reads Ready when every role is filled, and drops buttons once cancelled", () => {
+  it("reads Ready when every role is filled, and drops buttons once canceled", () => {
     const full = [...signups, s("a", "Tank", null), s("b", "Tank", null)];
     expect(shortages(event, full)).toBeNull();
     expect(opsCard(event, full).status).toBe("Ready");
     const cancelled = opsCard({ ...event, status: "cancelled" }, full);
-    expect(cancelled.status).toBe("Cancelled");
+    expect(cancelled.status).toBe("Canceled");
     expect(cancelled.actions).toBeUndefined();
     expect(cancelled.blocks?.some((b) => b !== "divider" && b.button)).toBe(false);
   });

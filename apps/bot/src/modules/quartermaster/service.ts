@@ -191,7 +191,7 @@ export async function applyBuild(
   const claimed = await transitionQmBuild(ctx.db, build.id, "pending", "applied", {
     appliedAt: new Date(),
   });
-  if (!claimed) return { ok: false, error: "That plan was already applied, cancelled or expired." };
+  if (!claimed) return { ok: false, error: "That plan was already applied, canceled or expired." };
 
   const ids = new Map<string, string>();
   const created: QmCreated[] = [];

@@ -77,6 +77,6 @@ servers, which are never stopped by Free use. Logged as a follow-up, not built y
 - Two Stripe products (Pro, Agency), each with a monthly and a yearly price.
 - Checkout for Agency carries the buyer's Discord user ID; the webhook creates or updates the
   `plan_bundles` row (seats 5, source `stripe`) instead of a `guild_plans` row.
-- Cancelling an Agency plan frees every seat at period end (the servers drop to Free, paused,
+- Canceling an Agency plan frees every seat at period end (the servers drop to Free, paused,
   nothing deleted).
 - Flip `PAID_PLANS_LIVE` once checkout works end to end in test mode.

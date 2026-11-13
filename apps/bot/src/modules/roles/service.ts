@@ -86,7 +86,7 @@ export async function pickRoles(
   if (!loaded)
     return note(
       "This menu was removed",
-      "It isn't on the dashboard any more. Ask a moderator for the new one.",
+      "It isn't on the dashboard anymore. Ask a moderator for the new one.",
     );
   const { menu, ent, paused } = loaded;
   if (paused)
@@ -113,7 +113,7 @@ export async function pickRoles(
           `Pick up to ${menu.maxPicks}. Drop one first, then pick again.`,
         )
       : note(
-          "That role isn't in this menu any more",
+          "That role isn't in this menu anymore",
           "The menu changed since it was posted. Ask a moderator to post it again.",
         );
 
