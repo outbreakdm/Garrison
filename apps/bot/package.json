@@ -12,7 +12,7 @@
     "preflight": "tsx --env-file-if-exists=../../.env src/preflight.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^1.6.0",
+    "@anthropic-ai/sdk": "^1.7.0",
     "@garrison/brand": "workspace:*",
     "@garrison/db": "workspace:*",
     "discord.js": "^14.28.1",
