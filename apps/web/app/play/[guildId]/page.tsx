@@ -102,7 +102,9 @@ export default async function PlayPage({ params }: { params: Promise<{ guildId: 
                             .join(" · ")}
                         </span>
                       </span>
-                      <span className={`g-badge ${g.status === "full" ? "" : "g-badge--go"}`}>
+                      <span
+                        className={`g-badge ${g.status === "full" ? "g-badge--off" : "g-badge--go"}`}
+                      >
                         {mine ? "You're in" : g.status === "full" ? "Full" : "Open"}
                       </span>
                       <span className="gw-row__actions">
@@ -161,7 +163,7 @@ export default async function PlayPage({ params }: { params: Promise<{ guildId: 
                             .join(" · ")}
                         </span>
                       </span>
-                      <span className={`g-badge ${mine ? "g-badge--go" : ""}`}>
+                      <span className={`g-badge ${mine ? "g-badge--go" : "g-badge--off"}`}>
                         {mine ? (mine.bench ? `Bench · ${mine.role}` : mine.role) : "Not signed up"}
                       </span>
                       <span className="gw-row__actions">

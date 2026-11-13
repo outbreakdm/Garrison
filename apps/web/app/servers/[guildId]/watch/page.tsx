@@ -609,7 +609,7 @@ export default async function WatchPage({
                 name="q"
                 type="search"
                 maxLength={64}
-                placeholder="Search member or case #"
+                placeholder="Member or case #"
                 defaultValue={q ?? ""}
               />
               {q ? (

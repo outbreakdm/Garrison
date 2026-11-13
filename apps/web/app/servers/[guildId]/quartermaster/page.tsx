@@ -30,8 +30,8 @@ const PLAN_TTL_MS = 15 * 60_000;
 const STATUS: Record<QmBuild["status"], { label: string; tone: string }> = {
   pending: { label: "Not built", tone: "g-badge--intel" },
   applied: { label: "Built", tone: "g-badge--go" },
-  cancelled: { label: "Discarded", tone: "" },
-  expired: { label: "Expired", tone: "" },
+  cancelled: { label: "Discarded", tone: "g-badge--off" },
+  expired: { label: "Expired", tone: "g-badge--off" },
   failed: { label: "Stopped partway", tone: "g-badge--alert" },
   rolled_back: { label: "Undone", tone: "g-badge--caution" },
 };
@@ -111,11 +111,7 @@ export default async function QuartermasterPage({
         </div>
       </div>
 
-      <section
-        className="g-card g-card--hud qm-compose"
-        id="describe"
-        aria-label="Describe a build"
-      >
+      <section className="g-card qm-compose" id="describe" aria-label="Describe a build">
         <form action={requestAction} className="card-col" key={idea?.label ?? "blank"}>
           <input type="hidden" name="guildId" value={guild.id} />
           <input type="hidden" name="page" value="quartermaster" />

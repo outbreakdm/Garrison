@@ -1,38 +1,64 @@
-/* Garrison design tokens. Mirrored in packages/brand/src/index.ts (colors). Plates, hairlines
-   and muted text were raised on 2026-11-12 so cards, borders and secondary text read clearly. */
+/* Garrison design tokens: the Card Table world (2026-11-13). Mirrored in
+   packages/brand/src/index.ts (colors). A lifted slate-blue table, card faces two
+   steps lighter, and four colour identities, one for each part of a server. */
 :root, [data-theme="dark"] {
-  --accent: #d4ff3a;
-  --accent-strong: #d4ff3a;
-  --accent-ink: #0b0d10;
-  --bg: #08090c;
-  --surface: #161b22;
-  --surface-raised: #212933;
-  --line: #3b4653;
-  --text: #eef1f5;
-  --text-muted: #a7b1be;
+  --bg: #151a2c;
+  --surface: #1e2540;
+  --surface-raised: #283152;
+  --line: #3a4570;
+  --text: #eef1fa;
+  --text-muted: #a9b2cf;
   --go: #2bd99f;
   --caution: #ffb547;
-  --alert: #ff5c5c;
+  --alert: #ff6b6b;
   --intel: #5ab0ff;
-  --focus: var(--accent);
-  --shadow-overlay: 0 8px 24px rgba(0,0,0,0.5);
+  /* Identities: fill (buttons, gems), ink on that fill, and a text-safe tone. */
+  --azure: #5aa9ff;
+  --azure-ink: #04162b;
+  --azure-text: #7dbcff;
+  --orchid: #c39bff;
+  --orchid-ink: #1c0a38;
+  --orchid-text: #cfb0ff;
+  --volt: #d4ff3a;
+  --volt-ink: #141a00;
+  --volt-text: #d4ff3a;
+  --steel: #a9bdd6;
+  --steel-ink: #0f1824;
+  --steel-text: #bccbe0;
+  --accent: var(--volt);
+  --accent-strong: var(--volt-text);
+  --accent-ink: var(--volt-ink);
+  --focus: var(--accent-strong);
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 2px 6px -2px rgb(4 7 20 / 0.55);
+  --shadow-lift: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 16px 32px -14px rgb(4 7 20 / 0.8);
+  --shadow-overlay: 0 12px 32px -6px rgb(4 7 20 / 0.7);
 }
 [data-theme="light"] {
-  --accent: #d4ff3a;
-  --accent-strong: #4d6b00;
-  --accent-ink: #0b0d10;
-  --bg: #e8ecf0;
+  --bg: #eceff7;
   --surface: #ffffff;
-  --surface-raised: #eef1f5;
-  --line: #bcc5d0;
-  --text: #0e1216;
-  --text-muted: #4b5563;
+  --surface-raised: #f2f4fa;
+  --line: #c8cfe2;
+  --text: #141a2e;
+  --text-muted: #4d5779;
   --go: #0b7a57;
   --caution: #9a5b00;
   --alert: #c62828;
   --intel: #1f6fc5;
-  --focus: var(--accent-strong);
-  --shadow-overlay: 0 8px 24px rgba(17,21,26,0.12);
+  --azure: #1f6fd6;
+  --azure-ink: #ffffff;
+  --azure-text: #1a62bf;
+  --orchid: #7b45d6;
+  --orchid-ink: #ffffff;
+  --orchid-text: #6c3bc4;
+  --volt: #4d6b00;
+  --volt-ink: #ffffff;
+  --volt-text: #4d6b00;
+  --steel: #4a5d75;
+  --steel-ink: #ffffff;
+  --steel-text: #45576e;
+  --shadow-card: 0 1px 2px rgb(20 26 46 / 0.06), 0 2px 8px -4px rgb(20 26 46 / 0.1);
+  --shadow-lift: 0 2px 4px rgb(20 26 46 / 0.06), 0 16px 32px -14px rgb(20 26 46 / 0.24);
+  --shadow-overlay: 0 12px 32px -8px rgb(20 26 46 / 0.22);
 }
 :root {
   --space-1: 4px;
@@ -42,11 +68,11 @@
   --space-6: 24px;
   --space-8: 32px;
   --space-12: 48px;
-  --radius-sm: 2px;
-  --radius-md: 4px;
-  --radius-lg: 8px;
-  --chamfer: 8px;
-  --font-display: "Saira Semi Condensed", "Arial Narrow", sans-serif;
-  --font-sans: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  /* Card stock: 10px faces, 8px controls, 6px chips. */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --font-display: Archivo, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: var(--font-display);
+  --font-mono: var(--font-display);
 }

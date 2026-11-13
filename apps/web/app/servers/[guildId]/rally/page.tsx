@@ -490,7 +490,7 @@ export default async function RallyPage({
               const short = missing.filter((m) => m.n > 0).map((m) => `${m.n} ${m.name} short`);
               const mine = signups.find((s) => s.userId === session.userId);
               return (
-                <article className="g-card g-card--hud card-col" key={r.id} aria-label={r.title}>
+                <article className="g-card card-col" key={r.id} aria-label={r.title}>
                   <div className="lfg__head">
                     <div>
                       <h3 className="card-title">{r.title}</h3>

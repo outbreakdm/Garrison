@@ -13,12 +13,15 @@ import {
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ViewTransition } from "react";
+import { DurationBar, untilText } from "@/components/DurationBar";
 import { ActionBadge, formatTime, plainMentions } from "@/components/format";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { getDb } from "@/lib/db";
 import { ACTION_KIND } from "@/lib/rally-schema";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "./requests";
+
+const WEEK_MS = 7 * 86_400_000;
 
 export const metadata: Metadata = { title: "Overview" };
 
@@ -269,7 +272,7 @@ export default async function OverviewPage({
       </section>
 
       <div className="overview-grid">
-        <section className="g-card g-card--hud card-col" aria-labelledby="next-op">
+        <section className="g-card card-col" aria-labelledby="next-op">
           <div className="card-head">
             <h2 className="card-title" id="next-op">
               Next raid
@@ -284,6 +287,14 @@ export default async function OverviewPage({
                 <div className="big">{o.nextOp.title}</div>
                 <div className="mono">{formatTime(o.nextOp.startsAt, o.nextOp.timezone)}</div>
               </div>
+              {o.nextOp.startsAt.getTime() > Date.now() ? (
+                <DurationBar
+                  value={WEEK_MS - (o.nextOp.startsAt.getTime() - Date.now())}
+                  max={WEEK_MS}
+                  label="Time until the raid starts, out of a week"
+                  text={`Starts ${untilText(o.nextOp.startsAt.getTime() - Date.now())}`}
+                />
+              ) : null}
               {o.nextOp.slots.map((s) => {
                 const n = seated.filter((x) => x.role === s.name).length;
                 return (
@@ -327,7 +338,7 @@ export default async function OverviewPage({
               {o.activeLockdown ? (
                 <span className="g-badge g-badge--alert">Active</span>
               ) : (
-                <span className="g-badge g-badge--go">Off</span>
+                <span className="g-badge g-badge--off">Off</span>
               )}
             </div>
             <div className="status-line">
@@ -348,7 +359,7 @@ export default async function OverviewPage({
             </div>
             <div className="status-line">
               <span>Verification</span>
-              <span className={`g-badge ${g?.verifyRoleId ? "g-badge--go" : ""}`}>
+              <span className={`g-badge ${g?.verifyRoleId ? "g-badge--go" : "g-badge--off"}`}>
                 {g?.verifyRoleId ? "On" : "Off"}
               </span>
             </div>

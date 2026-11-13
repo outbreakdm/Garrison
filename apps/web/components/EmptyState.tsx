@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 
 /**
  * What a list says when it has nothing yet: what will appear here, and the one
- * thing to do about it. A drawn mark in a bracketed plate, not a painting, so it
- * reads at a glance in both themes and never fails to load.
+ * thing to do about it. A drawn mark on a tile in the page's colour, not a painting,
+ * so it reads at a glance in both themes and never fails to load.
  */
 
 type Mark = "server" | "accounts" | "log" | "leaderboard" | "cases" | "groups" | "raids" | "inbox";
@@ -98,6 +98,7 @@ export function EmptyState({
     <div className={`empty${compact ? " empty--compact" : " g-card"}`}>
       <span className="empty__mark" aria-hidden="true">
         <svg
+          aria-hidden="true"
           viewBox="0 0 24 24"
           width="28"
           height="28"

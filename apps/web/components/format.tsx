@@ -9,7 +9,7 @@ const TONE: Record<CaseAction, string> = {
 };
 
 export function ActionBadge({ action }: { action: CaseAction }) {
-  return <span className={`g-badge ${TONE[action]}`}>{action}</span>;
+  return <span className={`g-badge g-badge--tag ${TONE[action]}`}>{action}</span>;
 }
 
 /** "Thu Nov 12, 8:00 PM CST" in the event's own time zone. */

@@ -25,7 +25,7 @@ const DISCORD_CDN = /^https:\/\/(cdn\.discordapp\.com|media\.discordapp\.net)\//
 const WAITS = {
   staff: { label: "Waiting on staff", tone: "g-badge--caution" },
   member: { label: "Waiting on member", tone: "g-badge--intel" },
-  closed: { label: "Closed", tone: "" },
+  closed: { label: "Closed", tone: "g-badge--off" },
 } as const;
 
 export default async function TicketPage({

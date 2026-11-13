@@ -41,13 +41,13 @@ One dashboard runs the whole server: moderation, security, logs, LFG, raid signu
 - Name: Garrison. Tagline: "Guard the gate. Rally the squad."
 - The shield mark (`components/Logo.tsx`) and the module names above with their plain labels.
 - Bot embeds in Discord use the status colours from `packages/brand` (go, caution, alert, intel) for moderation and alerts only, never decoration.
-- The landing page is getting a new visual world (decided 2026-11-11): the category-standard Discord-bot page, played straight, at the craft of Linear, Vercel and Raycast, and sitting comfortably beside MEE6, Dyno, Carl-bot and Discord's own site. The dashboard keeps its current look for now; following later is an open decision.
+- The landing page is getting a new visual world (decided 2026-11-11): the category-standard Discord-bot page, played straight, at the craft of Linear, Vercel and Raycast, and sitting comfortably beside MEE6, Dyno, Carl-bot and Discord's own site. The dashboard has its own world, Card Table (2026-11-13; see DESIGN.md): a slate-blue table, four section colours, one typeface, state by shape.
 
 ## Evidence on Hand
 
 - Live numbers from `/status`: command reply time (p95, 24 h), 30-day uptime, last heartbeat. Use only when present; the landing hides them when there is no data.
 - The real product: dashboard pages, Discord embed and card wording from the bot, the Quartermaster server preview.
-- Site art in `apps/web/public/art/`, prompts in `apps/web/art/slots.json` (night outpost world, volt light).
+- Site art in `apps/web/public/art/`, prompts in `apps/web/art/slots.json` (painted for the old night outpost look; the login and 404 pictures still use it).
 - Pricing: free during early access; paid plans will be published with every price and limit before anything costs money.
 - Absent, never to be invented: server or member counts, testimonials, customer or community logos, benchmarks beyond `/status`, published prices.
 

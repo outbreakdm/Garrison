@@ -1,8 +1,10 @@
 /* Dashboard layout. Classes only: the CSP blocks inline style attributes. */
 :root {
-  --font-display: var(--font-saira), "Arial Narrow", sans-serif;
-  --font-sans: var(--font-inter), system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --font-display: var(--font-archivo), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: var(--font-display);
+  --font-mono: var(--font-display);
+  /* Only for code and diffs, where columns must line up. */
+  --font-code: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
 }
 * {
   box-sizing: border-box;
@@ -24,8 +26,8 @@ a:hover {
 h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 32px;
+  font-weight: 750;
+  font-size: 30px;
   line-height: 36px;
 }
 h2 {
@@ -42,7 +44,7 @@ h2 {
   align-items: center;
   padding: var(--space-3) var(--space-6);
   border-bottom: 1px solid var(--line);
-  background: var(--surface);
+  background: var(--bg);
 }
 .topbar__spacer {
   flex: 1;
@@ -67,7 +69,7 @@ h2 {
   align-items: flex-start;
 }
 .shell .g-nav {
-  flex: 0 0 220px;
+  flex: 0 0 232px;
 }
 .main {
   /* Beside the menu at every width above phones: it shrinks rather than wrapping under it. */
@@ -263,7 +265,7 @@ textarea.g-input {
   padding: var(--space-3);
   background: var(--surface-raised);
   border-radius: var(--radius-md);
-  font: 400 13px / 20px var(--font-mono);
+  font: 400 13px / 20px var(--font-code);
   color: var(--go);
   white-space: pre-wrap;
   overflow-x: auto;
@@ -567,6 +569,8 @@ a.topbar__user:hover {
   }
   .shell .g-nav .g-nav__item {
     flex: none;
+    min-height: 34px;
+    padding: 6px 12px 6px 26px;
     white-space: nowrap;
   }
 }
@@ -690,9 +694,9 @@ a.g-btn--primary:hover {
   margin-bottom: var(--space-3);
 }
 
-/* --- Refinement pass --------------------------------------------------------
-   Same world (dark HUD, lime accent, chamfers): this layer finishes the states,
-   the browser-drawn surfaces and the hierarchy the base styles left at defaults. */
+/* --- States and browser surfaces -------------------------------------------
+   Finishes the states, the browser-drawn controls and the hierarchy the base
+   styles leave at defaults. */
 :root {
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --surface-sunken: color-mix(in srgb, var(--surface) 55%, var(--bg));
@@ -722,7 +726,6 @@ a {
 }
 h1 {
   text-wrap: balance;
-  letter-spacing: 0.01em;
 }
 .mono,
 .g-stat,
@@ -806,8 +809,7 @@ input[type="number"].g-input {
   border-color: var(--focus);
 }
 input[type="number"].g-input {
-  font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 14px;
 }
 select.g-input:not([multiple]) {
   appearance: none;
@@ -845,11 +847,11 @@ select[multiple].g-input option {
   appearance: none;
   flex: none;
   position: relative;
-  width: 36px;
-  height: 20px;
-  margin: 1px 0 0;
+  width: 38px;
+  height: 22px;
+  margin: 0;
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border-radius: 999px;
   background: var(--surface-raised);
   cursor: pointer;
   transition:
@@ -862,9 +864,9 @@ select[multiple].g-input option {
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 12px;
-  height: 12px;
-  border-radius: var(--radius-sm);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
   background: var(--text-muted);
   transition:
     transform 0.18s var(--ease-out),
@@ -894,7 +896,7 @@ select[multiple].g-input option {
   cursor: pointer;
 }
 
-/* Notices: a tinted plate with the status square, readable in both themes */
+/* Notices: a tinted face with the state's shape, readable in both themes */
 .notice,
 .notice--ok {
   --tone: var(--alert);
@@ -912,10 +914,17 @@ select[multiple].g-input option {
 .notice::before {
   content: "";
   flex: none;
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 9px;
   background: var(--tone);
-  transform: translateY(-2px);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  transform: translateY(-1px);
+}
+.notice--ok::before {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  clip-path: none;
 }
 
 /* Tables */
@@ -997,30 +1006,12 @@ select[multiple].g-input option {
 .panel[open] .panel__cue {
   transform: translateY(2px) rotate(-135deg);
 }
-/* Open means "you are editing": the panel takes the HUD corner brackets. */
+/* Open means "you are editing": the card takes the page's identity edge. */
 .panel[open] {
-  border-radius: 0;
-}
-.panel[open]::before,
-.panel[open]::after {
-  content: "";
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  border: 0 solid var(--accent-strong);
-  pointer-events: none;
-}
-.panel[open]::before {
-  top: -1px;
-  left: -1px;
-  border-top-width: 2px;
-  border-left-width: 2px;
-}
-.panel[open]::after {
-  bottom: -1px;
-  right: -1px;
-  border-bottom-width: 2px;
-  border-right-width: 2px;
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent),
+    var(--shadow-card);
 }
 .panel[open] > .panel__summary {
   border-bottom: 1px solid var(--line);
@@ -1185,8 +1176,8 @@ select[multiple].g-input option {
   display: block;
   max-width: 100%;
   height: auto;
-  /* The pieces are painted on the dark background colour, in both themes. */
-  background: #0b0d10;
+  /* The pieces are painted on the dark table colour, in both themes. */
+  background: #151a2c;
 }
 .card-banner {
   width: calc(100% + 2 * var(--space-4));
@@ -1195,10 +1186,6 @@ select[multiple].g-input option {
   aspect-ratio: 2 / 1;
   object-fit: cover;
   border-bottom: 1px solid var(--line);
-}
-/* The HUD corner bracket stays on top of a banner. */
-.g-card--hud::before {
-  z-index: 1;
 }
 .table-card__head:has(.empty-art) {
   display: flex;
@@ -1223,7 +1210,7 @@ select[multiple].g-input option {
   width: 32px;
   height: 32px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border-radius: 50%;
   background: var(--surface-raised);
   color: var(--text-muted);
   font: 600 14px / 1 var(--font-display);
@@ -1345,8 +1332,8 @@ select[multiple].g-input option {
     var(--surface);
 }
 .qm-compose__label {
-  font: 600 22px / 28px var(--font-display);
-  letter-spacing: 0.01em;
+  font: 700 22px / 28px var(--font-display);
+  font-stretch: 108%;
 }
 .qm-compose__input {
   min-height: 96px;
@@ -1389,11 +1376,12 @@ select[multiple].g-input option {
 .qm-rules li::before {
   content: "";
   display: inline-block;
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   margin-right: var(--space-2);
+  border-radius: 50%;
   background: var(--go);
-  vertical-align: 2px;
+  vertical-align: 1px;
 }
 .qm-plan {
   display: flex;
@@ -1436,7 +1424,9 @@ select[multiple].g-input option {
 /* The server, drawn the way Discord lists it. */
 .sp {
   border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
   background: var(--bg);
+  overflow: hidden;
 }
 .sp__bar {
   display: flex;
@@ -1463,7 +1453,7 @@ select[multiple].g-input option {
   background: var(--accent);
   color: var(--accent-ink);
   font: 700 18px / 1 var(--font-display);
-  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  border-radius: 12px;
 }
 .sp__name {
   display: block;
@@ -1473,6 +1463,7 @@ select[multiple].g-input option {
   display: block;
   color: var(--text-muted);
   font: 400 12px / 16px var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 .sp-switch {
   display: flex;
@@ -1497,9 +1488,7 @@ select[multiple].g-input option {
   padding: 4px var(--space-3);
   border-radius: var(--radius-sm);
   color: var(--text-muted);
-  font: 600 12px / 20px var(--font-display);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font: 600 13px / 20px var(--font-display);
 }
 .sp-switch input:checked + span {
   background: var(--accent);
@@ -1586,9 +1575,7 @@ select[multiple].g-input option {
   border-radius: var(--radius-sm);
   background: var(--accent);
   color: var(--accent-ink);
-  font: 700 10px / 16px var(--font-display);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font: 700 11px / 16px var(--font-display);
 }
 .sp-row .sp-new {
   margin-top: 2px;
@@ -1689,23 +1676,13 @@ select[multiple].g-input option {
   }
 }
 
-/* --- Uplift -------------------------------------------------------------------
-   Same world (dark HUD, volt accent, chamfers), more presence: cards carry real
-   headings instead of caption labels, one depth system, a readout band for the
-   numbers, and panels shaped for the people who play, not only for staff. */
-:root,
-[data-theme="dark"] {
-  --card-shadow: inset 0 1px 0 rgb(255 255 255 / 0.035), 0 1px 2px rgb(0 0 0 / 0.4);
-  --card-shadow-lift: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 14px 32px -12px rgb(0 0 0 / 0.75);
-  --plate: color-mix(in srgb, var(--surface-raised) 70%, var(--surface));
-}
-[data-theme="light"] {
-  --card-shadow: 0 1px 2px rgb(17 21 26 / 0.05), 0 2px 10px -4px rgb(17 21 26 / 0.08);
-  --card-shadow-lift: 0 2px 4px rgb(17 21 26 / 0.06), 0 16px 32px -14px rgb(17 21 26 / 0.22);
+/* --- Hierarchy -----------------------------------------------------------------
+   Cards carry real headings instead of caption labels, one depth system, a readout
+   band for the numbers, and panels shaped for the people who play, not only staff. */
+:root {
+  --card-shadow: var(--shadow-card);
+  --card-shadow-lift: var(--shadow-lift);
   --plate: var(--surface-raised);
-}
-.g-card {
-  box-shadow: var(--card-shadow);
 }
 .g-card .g-card {
   box-shadow: none;
@@ -1716,32 +1693,35 @@ select[multiple].g-input option {
 
 /* Headings: the page title, a block of the page, and the title of one card. */
 h1 {
-  font-size: 36px;
-  line-height: 40px;
+  font-size: 30px;
+  font-stretch: 110%;
+  line-height: 36px;
+  letter-spacing: -0.01em;
 }
 .block-title,
 .card-title {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: 0.01em;
   color: var(--text);
   text-wrap: balance;
 }
 .block-title {
-  font-size: 22px;
+  font-size: 20px;
+  font-weight: 700;
+  font-stretch: 106%;
   line-height: 28px;
 }
 .card-title {
-  font-size: 18px;
+  font-size: 17px;
+  font-weight: 650;
   line-height: 24px;
 }
 .block-title .count,
 .card-title .count {
   margin-left: var(--space-2);
   color: var(--text-muted);
-  font: 400 14px / 1 var(--font-mono);
-  letter-spacing: 0;
+  font: 500 14px / 1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 .table-card__head .card-title {
   font-size: 16px;
@@ -1849,14 +1829,14 @@ a.topbar__user:hover {
   background: var(--surface);
 }
 .readout__value {
-  font: 500 32px / 36px var(--font-mono);
+  font: 650 30px / 36px var(--font-mono);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   color: var(--text);
 }
 .readout__value--text {
-  font: 600 22px / 36px var(--font-display);
-  letter-spacing: 0.01em;
+  font: 650 21px / 36px var(--font-display);
+  letter-spacing: 0;
 }
 .readout__value.tone-go {
   color: var(--go);
@@ -1908,7 +1888,7 @@ a.topbar__user:hover {
 .attention__item {
   --tone: var(--caution);
   display: grid;
-  grid-template-columns: 8px minmax(0, 1fr) auto;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
   gap: var(--space-3);
   align-items: center;
   padding: var(--space-3) var(--space-4);
@@ -1922,7 +1902,16 @@ a.topbar__user:hover {
   content: "";
   width: 8px;
   height: 8px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 2px var(--tone);
+}
+.attention__item--alert::before {
+  width: 10px;
+  height: 9px;
+  border-radius: 0;
   background: var(--tone);
+  box-shadow: none;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
 }
 .attention__item--alert {
   --tone: var(--alert);
@@ -1960,7 +1949,7 @@ a.topbar__user:hover {
     display: none;
   }
   .attention__item {
-    grid-template-columns: 8px minmax(0, 1fr);
+    grid-template-columns: 10px minmax(0, 1fr);
   }
 }
 
@@ -1989,8 +1978,7 @@ a:hover .cue {
   line-height: 18px;
 }
 .panel__title--lg {
-  font: 600 16px / 22px var(--font-display);
-  letter-spacing: 0.01em;
+  font: 650 16px / 22px var(--font-display);
 }
 @media (max-width: 520px) {
   .panel__hint {
@@ -2009,8 +1997,9 @@ a:hover .cue {
   padding: var(--space-12) var(--space-6) 64px;
 }
 .picker__head h1 {
-  font-size: clamp(36px, 5vw, 52px);
-  line-height: 1.02;
+  font-size: clamp(32px, 4.4vw, 46px);
+  font-stretch: 112%;
+  line-height: 1.05;
 }
 .picker__head p {
   max-width: 56ch;
@@ -2036,7 +2025,7 @@ a:hover .cue {
   min-height: 176px;
   padding: 20px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: var(--card-shadow);
   color: var(--text);
@@ -2057,18 +2046,6 @@ a.server-tile:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
-/* The HUD corner marks the servers Garrison already guards. */
-a.server-tile::after {
-  content: "";
-  position: absolute;
-  top: -1px;
-  left: -1px;
-  width: 14px;
-  height: 14px;
-  border-top: 2px solid var(--accent-strong);
-  border-left: 2px solid var(--accent-strong);
-  border-top-left-radius: var(--radius-md);
-}
 .server-tile__top {
   display: flex;
   align-items: center;
@@ -2083,8 +2060,7 @@ a.server-tile::after {
 .server-tile__name {
   min-width: 0;
   overflow: hidden;
-  font: 600 20px / 26px var(--font-display);
-  letter-spacing: 0.01em;
+  font: 700 19px / 26px var(--font-display);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2098,8 +2074,9 @@ a.server-tile::after {
 .server-tile__state::before {
   content: "";
   flex: none;
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
   background: var(--go);
 }
 .server-tile__foot {
@@ -2122,6 +2099,8 @@ a.server-tile .server-tile__foot {
   box-shadow: none;
 }
 .server-tile--add .server-tile__state::before {
+  height: 2px;
+  border-radius: 1px;
   background: var(--text-muted);
 }
 .server-tile--add .server-tile__foot {
@@ -2130,17 +2109,9 @@ a.server-tile .server-tile__foot {
 .guild-icon--lg {
   width: 52px;
   height: 52px;
-  border-radius: 0;
+  border-radius: 14px;
   font-family: var(--font-display);
   font-size: 18px;
-  clip-path: polygon(
-    10px 0,
-    100% 0,
-    100% calc(100% - 10px),
-    calc(100% - 10px) 100%,
-    0 100%,
-    0 10px
-  );
 }
 .guild-icon--text.guild-icon--lg {
   background: color-mix(in srgb, var(--accent) 14%, var(--surface-raised));
@@ -2258,6 +2229,7 @@ a.server-tile .server-tile__foot {
   flex: none;
   width: 20px;
   height: 20px;
+  border-radius: 4px;
   background: var(--accent);
   color: var(--accent-ink);
   font: 700 11px / 1 var(--font-display);
@@ -2304,8 +2276,9 @@ a.server-tile .server-tile__foot {
 .you-line::before {
   content: "";
   flex: none;
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
   background: var(--go);
 }
 .raid-card__when {
@@ -2367,8 +2340,10 @@ a.server-tile .server-tile__foot {
   width: 30px;
   height: 30px;
   border: 1px solid var(--line);
+  border-radius: var(--radius-md);
   color: var(--text-muted);
-  font: 600 14px / 1 var(--font-display);
+  font: 650 14px / 1 var(--font-display);
+  font-variant-numeric: tabular-nums;
 }
 .board__row--top .board__rank {
   border-color: var(--accent-strong);
@@ -2378,7 +2353,6 @@ a.server-tile .server-tile__foot {
   border: 0;
   background: var(--accent);
   color: var(--accent-ink);
-  clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 0 100%);
 }
 .board__who {
   display: flex;
@@ -2399,8 +2373,8 @@ a.server-tile .server-tile__foot {
   align-items: center;
 }
 .board__lv {
-  font: 600 14px / 1 var(--font-display);
-  letter-spacing: 0.02em;
+  font: 650 14px / 1 var(--font-display);
+  font-variant-numeric: tabular-nums;
 }
 .board__xp,
 .board__msgs {
@@ -2411,24 +2385,27 @@ a.server-tile .server-tile__foot {
 .board__xp {
   color: var(--text);
 }
-/* Progress to the next level: a real <progress>, drawn in the HUD style. */
+/* Progress to the next level: a real <progress>, its length the real share. */
 .xpbar {
   appearance: none;
   display: block;
   width: 100%;
   height: 6px;
   border: 0;
-  border-radius: 0;
+  border-radius: 999px;
   background: var(--surface-raised);
   overflow: hidden;
 }
 .xpbar::-webkit-progress-bar {
+  border-radius: 999px;
   background: var(--surface-raised);
 }
 .xpbar::-webkit-progress-value {
+  border-radius: 999px;
   background: var(--accent-strong);
 }
 .xpbar::-moz-progress-bar {
+  border-radius: 999px;
   background: var(--accent-strong);
 }
 .xpbar--go::-webkit-progress-value {
@@ -2522,17 +2499,16 @@ a.server-tile .server-tile__foot {
   place-items: center;
   width: 40px;
   height: 40px;
+  border-radius: var(--radius-lg);
   background: var(--surface-raised);
   color: var(--text);
   font: 700 14px / 1 var(--font-display);
-  letter-spacing: 0.04em;
-  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
 }
 .game-mark--sm {
   width: 30px;
   height: 30px;
+  border-radius: var(--radius-md);
   font-size: 11px;
-  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
 }
 .game-row__name {
   display: grid;
@@ -2627,8 +2603,7 @@ a.server-tile .server-tile__foot {
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  font: 600 16px / 22px var(--font-display);
-  letter-spacing: 0.01em;
+  font: 650 16px / 22px var(--font-display);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2696,15 +2671,14 @@ a.server-tile .server-tile__foot {
 }
 
 /* --- Motion -------------------------------------------------------------------
-   Motion explains state and keeps your place. HUD brackets lock on to what you
-   are editing; the menu pip and the server name travel with you; a pressed
-   button shows it is transmitting; new seats, notices and plan additions arrive.
+   Motion explains state and keeps your place. The menu gem and the server name
+   travel with you; an open panel takes its edge; a pressed button shows it is
+   sending; new seats, notices and plan additions arrive.
    Distances are tokens, so reduced motion zeroes the movement and keeps the
    fades and colour changes that carry meaning. */
 :root {
   --m-rise: 10px;
   --m-lift: 2px;
-  --m-lock: 7px;
   --m-blur: 4px;
   --m-pop: 0.86;
   --m-settle: 0.97;
@@ -2716,7 +2690,6 @@ a.server-tile .server-tile__foot {
   :root {
     --m-rise: 0px;
     --m-lift: 0px;
-    --m-lock: 0px;
     --m-blur: 0px;
     --m-pop: 1;
     --m-settle: 1;
@@ -2740,34 +2713,6 @@ a.server-tile .server-tile__foot {
   to {
     box-shadow: 0 0 0 8px transparent;
   }
-}
-
-/* Lock-on: the HUD brackets slide in from outside and snap to the corners. They
-   mark what you are editing (an open panel) and what matters most on a page. */
-@keyframes lock-tl {
-  from {
-    opacity: 0;
-    translate: calc(-1 * var(--m-lock)) calc(-1 * var(--m-lock));
-  }
-}
-@keyframes lock-br {
-  from {
-    opacity: 0;
-    translate: var(--m-lock) var(--m-lock);
-  }
-}
-.g-card--hud::before,
-a.server-tile::after {
-  animation: lock-tl 0.5s var(--ease-snap) 0.08s both;
-}
-.g-card--hud::after {
-  animation: lock-br 0.5s var(--ease-snap) 0.08s both;
-}
-.panel[open]::before {
-  animation: lock-tl 0.36s var(--ease-snap) both;
-}
-.panel[open]::after {
-  animation: lock-br 0.36s var(--ease-snap) both;
 }
 
 /* Folding panels open and close by height, so the page below moves instead of jumping. */
@@ -2822,7 +2767,7 @@ a.server-tile::after {
   animation: fade-in 0.3s ease-out;
 }
 
-/* Outcomes land where you are looking: the notice drops in and its square pings. */
+/* Outcomes land where you are looking: the notice drops in and its mark pings. */
 @keyframes notice-in {
   from {
     opacity: 0;
@@ -2845,7 +2790,7 @@ a.server-tile::after {
     background-color 0.3s var(--ease-out);
 }
 
-/* Transmitting: the pressed button carries a scanning line and can't be pressed
+/* Sending: the pressed button carries a moving line and can't be pressed
    twice until the page answers (components/PendingForms.tsx sets aria-busy). */
 @keyframes transmit {
   from {
@@ -2914,24 +2859,6 @@ form[data-pending] [aria-busy="true"]::after {
 .op-bar:nth-of-type(n + 5) .xpbar {
   animation-delay: 0.35s;
 }
-/* First place catches the light once. */
-@keyframes glint {
-  to {
-    transform: translateX(130%);
-  }
-}
-.board__row--first .board__rank {
-  position: relative;
-  overflow: hidden;
-}
-.board__row--first .board__rank::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(105deg, transparent 25%, rgb(255 255 255 / 0.6) 50%, transparent 75%);
-  transform: translateX(-130%);
-  animation: glint 0.9s var(--ease-in-out) 0.8s both;
-}
 
 /* Quartermaster: what a plan adds materialises in the server, and folds away on "Now". */
 @keyframes wipe {
@@ -2967,7 +2894,7 @@ form[data-pending] [aria-busy="true"]::after {
 
 /* --- Navigation ----------------------------------------------------------------
    Links tagged "nav" swap the page under a still top bar and menu: the old page
-   leaves fast, the new one rises in. The menu pip and a server's name travel to
+   leaves fast, the new one rises in. The menu gem and a server's name travel to
    their new place. Full page loads crossfade. */
 @view-transition {
   navigation: auto;
@@ -2994,7 +2921,7 @@ form[data-pending] [aria-busy="true"]::after {
 .g-nav__item[aria-current="page"]::before {
   content: none;
 }
-/* The pip sits in the menu's gutter, so labels never move when the page changes
+/* The gem sits in the item's own gutter, so labels never move when the page changes
    (a moving label would show twice while the old and new menus crossfade). */
 .g-nav__item {
   position: relative;
@@ -3002,20 +2929,17 @@ form[data-pending] [aria-busy="true"]::after {
 .g-nav__pip {
   position: absolute;
   top: 50%;
-  left: -7px;
-  width: 6px;
-  height: 6px;
-  margin-top: -3px;
-  background: var(--accent-strong);
+  left: 11px;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 2px;
+  background: var(--gem, var(--accent));
+  transform: rotate(45deg);
 }
 @media (max-width: 720px) {
   .g-nav__pip {
-    top: auto;
-    bottom: -4px;
-    left: 50%;
-    width: 14px;
-    height: 3px;
-    margin: 0 0 0 -7px;
+    left: 10px;
   }
 }
 .page-title {
@@ -3067,7 +2991,7 @@ form[data-pending] [aria-busy="true"]::after {
   animation-timing-function: var(--ease-snap);
 }
 
-/* Reduced motion: no travel, no sweeps or glints; fades, colour and state stay. */
+/* Reduced motion: no travel or sweeps; fades, colour and state stay. */
 @media (prefers-reduced-motion: reduce) {
   .panel::details-content,
   .card-edit::details-content,
@@ -3081,9 +3005,6 @@ form[data-pending] [aria-busy="true"]::after {
   .uptime-bars,
   .sp-row.is-new {
     animation-name: fade-in;
-  }
-  .board__row--first .board__rank::after {
-    display: none;
   }
   form[data-pending] [aria-busy="true"]::after {
     animation: blink 0.8s ease-in-out infinite alternate;
@@ -3130,13 +3051,6 @@ form[data-pending] [aria-busy="true"]::after {
   align-self: flex-start;
 }
 
-/* The chamfered primary button clips anything drawn outside it, outlines included,
-   so its keyboard focus ring sits inside the shape. */
-.g-btn--primary:focus-visible {
-  outline: 2px solid var(--accent-ink);
-  outline-offset: -5px;
-}
-
 /* --- Loading ---------------------------------------------------------------------
    Shown the moment a page is picked, while the server reads it: the page's frame in
    plate tones, so the switch feels instant and nothing jumps when it arrives. */
@@ -3180,7 +3094,7 @@ form[data-pending] [aria-busy="true"]::after {
   gap: 1px;
   background: var(--line);
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 .skeleton__cell {
@@ -3196,7 +3110,7 @@ form[data-pending] [aria-busy="true"]::after {
   padding: var(--space-4);
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
 }
 @keyframes skeleton-sweep {
   from {
@@ -3213,31 +3127,69 @@ form[data-pending] [aria-busy="true"]::after {
 }
 
 /* --- Pro and settings, said plainly ------------------------------------------------
-   "Requires Pro" in words with a lock, so nobody wonders what a badge means; settings
-   rows carry a gear plate and a real "Change" control instead of a bare chevron. */
+   "Requires Pro" in words with a lock, printed in foil: the holographic sheen marks
+   what needs Pro and nothing else on the dashboard. Settings rows carry a gear plate
+   and a real "Change" control instead of a bare chevron. */
+:root {
+  --foil: linear-gradient(
+    115deg,
+    #ffd9f3 0%,
+    #d7e4ff 22%,
+    #c9f7ef 42%,
+    #f1ffc8 60%,
+    #ffe6c7 78%,
+    #f0d6ff 100%
+  );
+  --foil-ink: #2b1a46;
+}
 .pro-tag {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 1px 7px 1px 6px;
-  border: 1px solid color-mix(in srgb, var(--accent-strong) 55%, var(--line));
+  gap: 5px;
+  padding: 2px 8px 2px 7px;
+  border: 1px solid rgb(255 255 255 / 0.55);
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--accent) 9%, transparent);
-  color: var(--accent-strong);
-  font-family: var(--font-display);
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 16px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  background: var(--foil);
+  background-size: 220% 100%;
+  box-shadow:
+    0 0 0 1px rgb(123 69 214 / 0.28),
+    0 1px 2px rgb(20 26 46 / 0.18);
+  color: var(--foil-ink);
+  font: 700 12px / 16px var(--font-display);
   white-space: nowrap;
   vertical-align: middle;
+  animation: foil 2.4s var(--ease-in-out) 0.3s both;
+}
+@keyframes foil {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pro-tag {
+    animation: none;
+  }
 }
 .pro-tag__lock {
   flex: none;
 }
+.notice--pro {
+  --tone: var(--orchid);
+  border-image: var(--foil) 1;
+}
+.notice--pro::before {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--foil);
+  clip-path: none;
+  transform: rotate(45deg);
+}
 .notice--pro strong {
-  color: var(--accent-strong);
+  color: var(--text);
 }
 
 .panel__icon {
@@ -3295,7 +3247,8 @@ form[data-pending] [aria-busy="true"]::after {
 }
 
 /* --- Empty states --------------------------------------------------------------------
-   A drawn mark in a bracketed plate, what will show up here, and the one thing to do. */
+   A drawn mark on a tile in the page's colour, what will show up here, and the one
+   thing to do. */
 .empty {
   display: flex;
   align-items: flex-start;
@@ -3312,42 +3265,23 @@ form[data-pending] [aria-busy="true"]::after {
   flex: none;
   width: 56px;
   height: 56px;
-  background: var(--surface-raised);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
   color: var(--accent-strong);
-}
-.empty__mark::before,
-.empty__mark::after {
-  content: "";
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border: 0 solid var(--accent-strong);
-}
-.empty__mark::before {
-  top: 0;
-  left: 0;
-  border-top-width: 2px;
-  border-left-width: 2px;
-}
-.empty__mark::after {
-  right: 0;
-  bottom: 0;
-  border-right-width: 2px;
-  border-bottom-width: 2px;
 }
 .empty__text {
   display: grid;
   gap: var(--space-2);
   justify-items: start;
-  max-width: 62ch;
+  max-width: 68ch;
 }
 .empty__title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 17px;
+  font-weight: 650;
   line-height: 24px;
-  letter-spacing: 0.01em;
 }
 .empty__body {
   color: var(--text-muted);
@@ -3360,5 +3294,237 @@ form[data-pending] [aria-busy="true"]::after {
 @media (max-width: 520px) {
   .empty {
     flex-direction: column;
+  }
+}
+
+/* --- Card Table: colour identities ---------------------------------------------------
+   Every part of a server has a colour: Safety azure, Community orchid, Gaming volt,
+   Server steel (Overview takes Garrison's volt). The current page's colour lights its
+   gem in the menu, the gem beside its title, its primary button, its switches and its
+   open panel, so an owner always knows which part of the server they are in. */
+.shell {
+  --id: var(--volt);
+  --id-ink: var(--volt-ink);
+  --id-text: var(--volt-text);
+  --accent: var(--id);
+  --accent-ink: var(--id-ink);
+  --accent-strong: var(--id-text);
+  --focus: var(--id-text);
+}
+.shell:has(.g-nav__item[aria-current="page"][data-id="azure"]) {
+  --id: var(--azure);
+  --id-ink: var(--azure-ink);
+  --id-text: var(--azure-text);
+}
+.shell:has(.g-nav__item[aria-current="page"][data-id="orchid"]) {
+  --id: var(--orchid);
+  --id-ink: var(--orchid-ink);
+  --id-text: var(--orchid-text);
+}
+.shell:has(.g-nav__item[aria-current="page"][data-id="steel"]) {
+  --id: var(--steel);
+  --id-ink: var(--steel-ink);
+  --id-text: var(--steel-text);
+}
+[data-id="azure"] {
+  --gem: var(--azure);
+}
+[data-id="orchid"] {
+  --gem: var(--orchid);
+}
+[data-id="volt"] {
+  --gem: var(--volt);
+}
+[data-id="steel"] {
+  --gem: var(--steel);
+}
+/* The group heading is led by its gem; the gem is a cut stone, not a pip. */
+.g-nav__group::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin: 0 3px 0 3px;
+  border-radius: 2px;
+  background: var(--gem, var(--text-muted));
+  transform: rotate(45deg);
+}
+.g-nav > div:first-child .g-nav__item {
+  margin-top: 2px;
+}
+/* The page title carries the same gem, a size up. */
+.main .page-head h1::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin: 0 14px 0 3px;
+  border-radius: 3px;
+  background: var(--id, var(--accent));
+  transform: rotate(45deg) translateY(-3px);
+  vertical-align: middle;
+}
+.page-head {
+  border-bottom-color: color-mix(in srgb, var(--id, var(--line)) 22%, var(--line));
+}
+/* Text links inside a page read in the page's colour. */
+.main a:not([class]) {
+  color: var(--accent-strong);
+}
+.main a:not([class]):hover {
+  color: var(--text);
+}
+@media (max-width: 720px) {
+  .main .page-head h1::before {
+    width: 10px;
+    height: 10px;
+    margin-right: 12px;
+  }
+  .shell .g-nav {
+    gap: 4px;
+  }
+}
+/* Lockdown on: the security card says so by its edge as well as its badge. */
+.gate-lockdown--on {
+  border-color: color-mix(in srgb, var(--alert) 65%, var(--line));
+  background: color-mix(in srgb, var(--alert) 6%, var(--surface));
+}
+/* A readout that reports a state carries the state's shape beside the word. */
+.readout__value.tone-go::before,
+.readout__value.tone-caution::before,
+.readout__value.tone-alert::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 10px;
+  vertical-align: 2px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.readout__value.tone-caution::before {
+  background: none;
+  box-shadow: inset 0 0 0 3px currentColor;
+}
+.readout__value.tone-alert::before {
+  width: 14px;
+  border-radius: 0;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+/* --- Finish pass ---------------------------------------------------------------------- */
+/* The section a page belongs to, set beside its title in the section's colour. The
+   menu already names it for screen readers, so the alt text is empty. */
+.page-head h1::after {
+  display: inline-block;
+  margin-left: 14px;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--id, var(--accent)) 40%, transparent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--id, var(--accent)) 12%, transparent);
+  color: var(--id-text, var(--accent-strong));
+  font-size: 12px;
+  font-weight: 600;
+  font-stretch: 100%;
+  line-height: 16px;
+  letter-spacing: 0;
+  vertical-align: 6px;
+}
+.shell:has(.g-nav__item[aria-current="page"][data-section="Safety"]) .page-head h1::after {
+  content: "Safety" / "";
+}
+.shell:has(.g-nav__item[aria-current="page"][data-section="Community"]) .page-head h1::after {
+  content: "Community" / "";
+}
+.shell:has(.g-nav__item[aria-current="page"][data-section="Gaming"]) .page-head h1::after {
+  content: "Gaming" / "";
+}
+.shell:has(.g-nav__item[aria-current="page"][data-section="Server"]) .page-head h1::after {
+  content: "Server" / "";
+}
+/* Settings gear plates take the page's colour. */
+.panel__icon {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--accent-strong);
+}
+/* A held reading measure: card copy stops at 68 characters. */
+.g-card p:not(.queue__empty),
+.g-card .g-help,
+.card-sub {
+  max-width: 68ch;
+}
+/* Case actions (warn, ban) are kinds, not states: coloured words, no state mark. */
+.g-badge--tag::before {
+  content: none;
+}
+/* Durations drawn to scale. */
+.duration {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+}
+.duration__bar {
+  height: 6px;
+}
+.duration__bar--caution::-webkit-progress-value {
+  background: var(--caution);
+}
+.duration__bar--caution::-moz-progress-bar {
+  background: var(--caution);
+}
+.duration__bar--alert::-webkit-progress-value {
+  background: var(--alert);
+}
+.duration__bar--alert::-moz-progress-bar {
+  background: var(--alert);
+}
+.ticket-row__when {
+  display: grid;
+  gap: 6px;
+  justify-items: end;
+}
+.ticket-row__when .duration__bar {
+  width: 100%;
+  height: 4px;
+}
+@media (max-width: 720px) {
+  /* Queue filters: one row that scrolls, never two wrapped rows. */
+  nav.queue__views {
+    flex-wrap: nowrap;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .queue__view {
+    flex: none;
+  }
+  /* The row fades at its right edge, so it reads as one that scrolls. */
+  nav.queue__views {
+    padding-right: var(--space-6);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent);
+  }
+  /* Page-head actions stack full width, the primary first. */
+  .page-head > .row-between {
+    display: grid;
+    justify-content: stretch;
+    width: 100%;
+    gap: var(--space-2);
+  }
+  .page-head > .row-between > .g-btn {
+    width: 100%;
+  }
+  .page-head > .row-between > .g-btn--primary {
+    order: -1;
+  }
+  /* Head shortcuts that open a form already sitting just below the title are noise here. */
+  .page-head > .row-between > a.g-btn[href^="?post="],
+  .page-head > .row-between > a.g-btn[href^="?create="] {
+    display: none;
+  }
+  .page-head h1::after {
+    margin-left: 10px;
+    vertical-align: 5px;
   }
 }

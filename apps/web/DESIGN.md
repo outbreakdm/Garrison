@@ -1,551 +1,397 @@
 ---
 name: Garrison
-description: "Guard the gate. Rally the squad. Two visual worlds, one signal: the dashboard's night-watch HUD and the landing page's product stage."
+description: "Guard the gate. Rally the squad. The dashboard as a card table: every module a colour identity, read like a well-built card."
 colors:
-  volt: "#d4ff3a"
-  volt-ink: "#0b0d10"
-  olive: "#4d6b00"
-  dash-bg: "#08090c"
-  dash-surface: "#161b22"
-  dash-surface-raised: "#212933"
-  dash-line: "#3b4653"
-  dash-text: "#eef1f5"
-  dash-text-muted: "#a7b1be"
+  table: "#151a2c"
+  card-face: "#1e2540"
+  card-raised: "#283152"
+  card-edge: "#3a4570"
+  text: "#eef1fa"
+  text-muted: "#a9b2cf"
   go: "#2bd99f"
   caution: "#ffb547"
-  alert: "#ff5c5c"
+  alert: "#ff6b6b"
   intel: "#5ab0ff"
-  dash-bg-light: "#e8ecf0"
-  dash-surface-light: "#ffffff"
-  dash-surface-raised-light: "#eef1f5"
-  dash-line-light: "#bcc5d0"
-  dash-text-light: "#0e1216"
-  dash-text-muted-light: "#4b5563"
+  azure: "#5aa9ff"
+  azure-ink: "#04162b"
+  azure-text: "#7dbcff"
+  orchid: "#c39bff"
+  orchid-ink: "#1c0a38"
+  orchid-text: "#cfb0ff"
+  volt: "#d4ff3a"
+  volt-ink: "#141a00"
+  volt-text: "#d4ff3a"
+  steel: "#a9bdd6"
+  steel-ink: "#0f1824"
+  steel-text: "#bccbe0"
+  foil-ink: "#2b1a46"
+  table-light: "#eceff7"
+  card-face-light: "#ffffff"
+  card-raised-light: "#f2f4fa"
+  card-edge-light: "#c8cfe2"
+  text-light: "#141a2e"
+  text-muted-light: "#4d5779"
   go-light: "#0b7a57"
   caution-light: "#9a5b00"
   alert-light: "#c62828"
   intel-light: "#1f6fc5"
-  lp-ink: "#07080c"
-  lp-surface: "#10131a"
-  lp-surface-2: "#161a23"
-  lp-hairline: "rgb(255 255 255 / 0.08)"
-  lp-hairline-strong: "rgb(255 255 255 / 0.15)"
-  lp-text: "#f3f5f9"
-  lp-muted: "#a3abba"
-  lp-faint: "#7c8596"
-  lp-volt-hover: "#e2ff70"
-  lp-indigo: "#6f6cf8"
-  lp-glow-indigo: "rgb(111 108 248 / 0.32)"
-  lp-glow-blue: "rgb(88 140 255 / 0.12)"
-  lp-ink-light: "#f6f7fa"
-  lp-surface-light: "#ffffff"
-  lp-surface-2-light: "#f2f4f8"
-  lp-hairline-light: "rgb(15 18 30 / 0.09)"
-  lp-hairline-strong-light: "rgb(15 18 30 / 0.16)"
-  lp-text-light: "#0c0f16"
-  lp-muted-light: "#4b5364"
-  lp-faint-light: "#646c7c"
-  lp-indigo-light: "#5452e6"
-  lp-glow-indigo-light: "rgb(84 82 230 / 0.16)"
-  lp-glow-blue-light: "rgb(84 82 230 / 0.08)"
+  azure-light: "#1f6fd6"
+  azure-text-light: "#1a62bf"
+  orchid-light: "#7b45d6"
+  orchid-text-light: "#6c3bc4"
+  volt-light: "#4d6b00"
+  steel-light: "#4a5d75"
+  steel-text-light: "#45576e"
+  identity-ink-light: "#ffffff"
   discord-bg: "#313338"
-  discord-embed: "#2b2d31"
+  discord-container: "#2b2d31"
   discord-text: "#dbdee1"
   discord-muted: "#949ba4"
-  discord-line: "rgb(255 255 255 / 0.06)"
   discord-blurple: "#5865f2"
-  discord-bg-light: "#ffffff"
-  discord-embed-light: "#f2f3f5"
-  discord-text-light: "#313338"
-  discord-muted-light: "#5c5e66"
-  discord-line-light: "rgb(0 0 0 / 0.06)"
 typography:
-  dash-display:
-    fontFamily: "Saira Semi Condensed, Arial Narrow, sans-serif"
-    fontSize: "36px"
+  display:
+    fontFamily: "Archivo, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontSize: "30px"
+    fontWeight: 750
+    lineHeight: "36px"
+    letterSpacing: "-0.01em"
+    fontVariation: "'wdth' 110"
+  readout:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "30px"
+    fontWeight: 650
+    lineHeight: "36px"
+    letterSpacing: "-0.01em"
+    fontFeature: "'tnum' 1"
+  headline:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "20px"
     fontWeight: 700
-    lineHeight: "40px"
-    letterSpacing: "0.01em"
-  dash-display-picker:
-    fontFamily: "Saira Semi Condensed, Arial Narrow, sans-serif"
-    fontSize: "clamp(36px, 5vw, 52px)"
-    fontWeight: 700
-    lineHeight: 1.02
-    letterSpacing: "0.01em"
-  dash-headline:
-    fontFamily: "Saira Semi Condensed, Arial Narrow, sans-serif"
-    fontSize: "22px"
-    fontWeight: 600
     lineHeight: "28px"
-    letterSpacing: "0.01em"
-  dash-title:
-    fontFamily: "Saira Semi Condensed, Arial Narrow, sans-serif"
-    fontSize: "18px"
-    fontWeight: 600
+    fontVariation: "'wdth' 106"
+  title:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "17px"
+    fontWeight: 650
     lineHeight: "24px"
-    letterSpacing: "0.01em"
-  dash-label:
-    fontFamily: "Saira Semi Condensed, Arial Narrow, sans-serif"
-    fontSize: "11px"
-    fontWeight: 600
-    lineHeight: "16px"
-    letterSpacing: "0.08em"
-  dash-body:
-    fontFamily: "Inter, system-ui, sans-serif"
+  body:
+    fontFamily: "Archivo, system-ui, sans-serif"
     fontSize: "15px"
     fontWeight: 400
     lineHeight: "22px"
-  dash-body-sm:
-    fontFamily: "Inter, system-ui, sans-serif"
+  body-sm:
+    fontFamily: "Archivo, system-ui, sans-serif"
     fontSize: "14px"
     fontWeight: 400
     lineHeight: "20px"
-  dash-button:
-    fontFamily: "Inter, system-ui, sans-serif"
-    fontSize: "14px"
-    fontWeight: 600
-    lineHeight: "20px"
-  dash-data:
-    fontFamily: "JetBrains Mono, ui-monospace, monospace"
-    fontSize: "32px"
-    fontWeight: 500
-    lineHeight: "36px"
-    letterSpacing: "-0.02em"
-    fontFeature: "\"tnum\""
-  dash-mono:
-    fontFamily: "JetBrains Mono, ui-monospace, monospace"
+  meta:
+    fontFamily: "Archivo, system-ui, sans-serif"
     fontSize: "13px"
     fontWeight: 400
     lineHeight: "18px"
-    fontFeature: "\"tnum\""
-  lp-display:
-    fontFamily: "Gabarito, Geist, sans-serif"
-    fontSize: "clamp(42px, 6vw, 68px)"
-    fontWeight: 800
-    lineHeight: 1
-    letterSpacing: "-0.03em"
-  lp-headline:
-    fontFamily: "Gabarito, Geist, sans-serif"
-    fontSize: "clamp(32px, 4.2vw, 52px)"
-    fontWeight: 800
-    lineHeight: 1.05
-    letterSpacing: "-0.025em"
-  lp-title:
-    fontFamily: "Gabarito, Geist, sans-serif"
-    fontSize: "clamp(26px, 2.6vw, 34px)"
-    fontWeight: 800
-    lineHeight: 1.12
-    letterSpacing: "-0.02em"
-  lp-title-sm:
-    fontFamily: "Gabarito, Geist, sans-serif"
-    fontSize: "22px"
-    fontWeight: 700
-    letterSpacing: "-0.01em"
-  lp-lede:
-    fontFamily: "Geist, system-ui, sans-serif"
-    fontSize: "18px"
-    fontWeight: 400
-    lineHeight: 1.6
-  lp-body:
-    fontFamily: "Geist, system-ui, sans-serif"
-    fontSize: "16px"
-    fontWeight: 400
-    lineHeight: 1.6
-  lp-button:
-    fontFamily: "Geist, system-ui, sans-serif"
-    fontSize: "15px"
+    fontFeature: "'tnum' 1"
+  label:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "12px"
     fontWeight: 600
-    lineHeight: 1
-  lp-nav:
-    fontFamily: "Geist, system-ui, sans-serif"
-    fontSize: "14px"
-    fontWeight: 500
-  lp-mono:
-    fontFamily: "Geist Mono, monospace"
+    lineHeight: "16px"
+  code:
+    fontFamily: "ui-monospace, Cascadia Mono, Menlo, Consolas, monospace"
     fontSize: "13px"
     fontWeight: 400
     lineHeight: "20px"
 rounded:
-  hud: "0px"
-  dash-sm: "2px"
-  dash-md: "4px"
-  discord-embed: "4px"
-  lp-window: "14px"
-  lp-card: "22px"
-  lp-band: "28px"
+  sm: "6px"
+  md: "8px"
+  lg: "10px"
+  tile: "14px"
   pill: "999px"
 spacing:
-  space-1: "4px"
-  space-2: "8px"
-  space-3: "12px"
-  space-4: "16px"
-  space-6: "24px"
-  space-8: "32px"
-  space-12: "48px"
-  lp-gutter-sm: "16px"
-  lp-gutter: "24px"
-  lp-gap: "72px"
-  lp-section-sm: "88px"
-  lp-section: "120px"
+  "1": "4px"
+  "2": "8px"
+  "3": "12px"
+  "4": "16px"
+  "6": "24px"
+  "8": "32px"
+  "12": "48px"
 components:
-  dash-button-primary:
+  button-primary:
     backgroundColor: "{colors.volt}"
     textColor: "{colors.volt-ink}"
-    typography: "{typography.dash-button}"
-    rounded: "{rounded.hud}"
-    padding: "8px 16px"
-  dash-button-secondary:
-    backgroundColor: "transparent"
-    textColor: "{colors.dash-text}"
-    typography: "{typography.dash-button}"
-    rounded: "{rounded.dash-md}"
-    padding: "8px 16px"
-  dash-button-secondary-hover:
-    backgroundColor: "{colors.dash-surface-raised}"
-    textColor: "{colors.dash-text}"
-  dash-button-ghost:
-    backgroundColor: "transparent"
-    textColor: "{colors.dash-text-muted}"
-    typography: "{typography.dash-button}"
-    rounded: "{rounded.dash-md}"
-    padding: "8px 16px"
-  dash-button-ghost-hover:
-    backgroundColor: "{colors.dash-surface-raised}"
-    textColor: "{colors.dash-text}"
-  dash-button-danger:
-    backgroundColor: "transparent"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.md}"
+    padding: "8px 14px"
+    height: "36px"
+  button-secondary:
+    backgroundColor: "{colors.card-face}"
+    textColor: "{colors.text}"
+    rounded: "{rounded.md}"
+    padding: "8px 14px"
+    height: "36px"
+  button-secondary-hover:
+    backgroundColor: "{colors.card-raised}"
+  button-ghost:
+    textColor: "{colors.text-muted}"
+    rounded: "{rounded.md}"
+    padding: "8px 14px"
+    height: "36px"
+  button-ghost-hover:
+    backgroundColor: "{colors.card-raised}"
+    textColor: "{colors.text}"
+  button-danger:
     textColor: "{colors.alert}"
-    rounded: "{rounded.dash-md}"
-    padding: "8px 16px"
-  dash-button-danger-hover:
+    rounded: "{rounded.md}"
+    padding: "8px 14px"
+  button-danger-hover:
     backgroundColor: "{colors.alert}"
-    textColor: "{colors.dash-bg}"
-  dash-input:
-    backgroundColor: "{colors.dash-surface-raised}"
-    textColor: "{colors.dash-text}"
-    typography: "{typography.dash-body-sm}"
-    rounded: "{rounded.dash-md}"
-    padding: "8px 12px"
-  dash-switch-on:
-    backgroundColor: "{colors.volt}"
-    rounded: "{rounded.dash-sm}"
-    width: "36px"
-    height: "20px"
-  dash-card:
-    backgroundColor: "{colors.dash-surface}"
-    rounded: "{rounded.dash-md}"
+    textColor: "{colors.table}"
+  button-sm:
+    padding: "4px 10px"
+  card:
+    backgroundColor: "{colors.card-face}"
+    textColor: "{colors.text}"
+    rounded: "{rounded.lg}"
     padding: "16px"
-  dash-card-hud:
-    backgroundColor: "{colors.dash-surface}"
-    rounded: "{rounded.hud}"
-    padding: "16px"
-  dash-badge:
-    backgroundColor: "transparent"
-    textColor: "{colors.dash-text-muted}"
-    typography: "{typography.dash-label}"
-    rounded: "{rounded.dash-sm}"
-    padding: "2px 8px"
-  dash-nav-item:
-    textColor: "{colors.dash-text-muted}"
-    typography: "{typography.dash-body-sm}"
-    rounded: "{rounded.dash-md}"
-    padding: "6px 8px"
-  dash-nav-item-active:
-    backgroundColor: "{colors.dash-surface-raised}"
-    textColor: "{colors.dash-text}"
-  dash-readout-cell:
-    backgroundColor: "{colors.dash-surface}"
-    textColor: "{colors.dash-text}"
-    typography: "{typography.dash-data}"
-    padding: "16px 16px 18px"
-  lp-button-primary:
-    backgroundColor: "{colors.volt}"
-    textColor: "{colors.volt-ink}"
-    typography: "{typography.lp-button}"
-    rounded: "{rounded.pill}"
-    padding: "0 24px"
-    height: "48px"
-  lp-button-primary-hover:
-    backgroundColor: "{colors.lp-volt-hover}"
-    textColor: "{colors.volt-ink}"
-  lp-button-ghost:
-    textColor: "{colors.lp-text}"
-    typography: "{typography.lp-button}"
-    rounded: "{rounded.pill}"
-    padding: "0 24px"
-    height: "48px"
-  lp-button-ghost-hover:
-    backgroundColor: "{colors.lp-surface-2}"
-    textColor: "{colors.lp-text}"
-  lp-button-sm:
-    rounded: "{rounded.pill}"
-    padding: "0 16px"
-    height: "38px"
-  lp-nav-link:
-    textColor: "{colors.lp-muted}"
-    typography: "{typography.lp-nav}"
-    rounded: "{rounded.pill}"
+  input:
+    textColor: "{colors.text}"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.md}"
     padding: "8px 12px"
-  lp-nav-link-hover:
-    backgroundColor: "{colors.lp-surface-2}"
-    textColor: "{colors.lp-text}"
-  lp-live-chip:
-    textColor: "{colors.lp-muted}"
-    typography: "{typography.lp-mono}"
+    height: "36px"
+  badge:
+    typography: "{typography.label}"
+    rounded: "{rounded.sm}"
+    padding: "2px 8px 2px 7px"
+  pro-tag:
+    textColor: "{colors.foil-ink}"
+    rounded: "{rounded.sm}"
+    padding: "2px 8px 2px 7px"
+  switch:
+    backgroundColor: "{colors.card-raised}"
     rounded: "{rounded.pill}"
-    padding: "6px 14px 6px 10px"
-  lp-window:
-    backgroundColor: "{colors.dash-bg}"
-    textColor: "{colors.dash-text}"
-    rounded: "{rounded.lp-window}"
-  lp-card:
-    backgroundColor: "{colors.lp-surface}"
-    rounded: "{rounded.lp-card}"
-    padding: "40px"
-  lp-price-card:
-    backgroundColor: "{colors.lp-surface}"
-    rounded: "{rounded.lp-card}"
-    padding: "56px"
-  lp-cta-band:
-    backgroundColor: "{colors.lp-surface}"
-    rounded: "{rounded.lp-band}"
-    padding: "88px 24px"
-  discord-window:
-    backgroundColor: "{colors.discord-bg}"
+    width: "38px"
+    height: "22px"
+  nav-item:
+    textColor: "{colors.text-muted}"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.md}"
+    padding: "7px 10px 7px 28px"
+    height: "36px"
+  nav-item-current:
+    backgroundColor: "{colors.card-face}"
+    textColor: "{colors.text}"
+  empty-mark:
+    rounded: "{rounded.tile}"
+    size: "56px"
+  discord-container:
+    backgroundColor: "{colors.discord-container}"
     textColor: "{colors.discord-text}"
-    rounded: "{rounded.lp-window}"
-  discord-embed:
-    backgroundColor: "{colors.discord-embed}"
-    textColor: "{colors.discord-text}"
-    rounded: "{rounded.discord-embed}"
-    padding: "12px 16px 14px"
+    rounded: "{rounded.md}"
+    padding: "14px 16px"
 ---
 
 # Design System: Garrison
 
 ## Overview
 
-**Creative North Star: "The Signal Lamp"**
+**Creative North Star: "The Card Table"**
 
-Garrison is two dark rooms with one lamp lit in each. The dashboard is the night-watch console where a server is run: a dense, dark HUD of hairline-split plates, where volt lime marks the one thing that acts, the page you are on, and what you are editing. The landing page is the same console carried onto a studio stage: an ink floor, rounded glass-and-graphite surfaces, soft indigo air, and volt lime on the one button that adds Garrison to Discord. The lamp is the shared idea; everything around it differs on purpose.
+Every module of a server has a colour identity and reads like a well-built card: a name, rules text in plain sentences, and its state. An owner opens a page, sees by colour which part of the server they are in, reads the current settings as sentences, spots what needs them by shape and colour, and changes it with one obvious button. Pro needs are unmistakable. The system refuses the grey sidebar-and-cards dashboard where every page looks the same and status hides in colour alone.
 
-The dashboard world is incumbent and governs almost every route. It is an instrument, not a brochure: tonal plates over a night ground, 1px slate hairlines, small radii, a chamfered primary button, HUD corner brackets that lock on to what you are editing or what a page exists for, and four status colours that only ever report state. Saira Semi Condensed speaks headings and captions, Inter carries the interface, JetBrains Mono carries every number. Motion explains state and keeps your place; its distances are tokens that reduced motion sets to zero while fades and colour changes stay.
+The world is a lifted playmat at night: a deep slate-blue table, card faces two steps lighter, never black. Four identities divide the server: **Safety** is azure, **Community** orchid, **Gaming** volt, **Server** steel, and Overview takes Garrison's own volt. The current page's identity colours its nav gem, the gem beside its title, its section tag, its primary button, its switches, its settings gear plates and the edge of the panel you have open. Card stock is plain: 10px corners, a 1px edge, a soft drop, no frames or ornaments. Foil, a holographic sheen, marks what requires Pro and nothing else.
 
-The landing world is new and scoped to one route. It plays the category-standard Discord-bot page straight, at product-page craft: centred display headline, pill actions, hairline-bordered rounded surfaces with soft deep shadows, and real product shots. It refuses the HUD costume (chamfers, corner brackets, uppercase captions) in its own chrome, but its product windows render the dashboard's real components and tokens on purpose, and its Discord mocks use Discord's own colours and embed anatomy.
+One grotesque, Archivo, carries display, interface and numbers, with tabular figures wherever something is counted or timed; only code and diffs drop to a system monospace. State is never colour alone: each state has its own shape. Durations are drawn to scale, so a long wait looks long. The layout reflows by whole cards on an 8px grid and holds a 68-character reading measure.
+
+This system replaces the earlier "night-watch HUD" world (near-black ground, Saira Semi Condensed / Inter / JetBrains Mono, chamfered buttons, HUD corner brackets, lime on everything, lock-on and glint motion). None of that survives in the dashboard: the HUD lock-on brackets and the glint sweep are gone with it. The landing page (`/`, `app/landing.css`, Gabarito and Geist) keeps its own world and is not part of this system.
+
+Motion explains state and keeps your place, and it is quick because switching pages is work, not a show. Page changes swap the content under a still top bar and rail (old page out in 0.1s, new page rises 10px in 0.2s) while the current-page gem slides to its new item (0.34s, snap easing). Panels open by height (0.32s); a notice drops in and its mark pings twice; new seats and rows pop or fade in; XP gauges, seat bars and uptime sweep in from the left; a submitting button carries a moving line; the Pro tag's foil sweeps once. Distances are tokens that reduced motion sets to zero, keeping fades and colour changes; sweeps become fades and the sending line blinks instead.
 
 **Key Characteristics:**
-- Dark-first in both worlds, with a full light theme in both (cookie-driven `data-theme` on `<html>`).
-- One accent, volt lime, used as a signal, never as decoration; olive replaces it for text and strokes on light grounds.
-- Dashboard: square-cornered HUD plates, chamfers, corner brackets, square status pips, three typefaces with fixed jobs.
-- Landing: ink stage, rounded surfaces, pills, indigo and blue only as ambient light, Gabarito/Geist/Geist Mono.
-- Product shots on the landing page are the dashboard itself, framed and labelled as an example.
-- Strict CSP: classes only, no inline style attributes, fonts self-hosted through next/font.
-
-### Which world governs which route
-
-| Route | World | Stylesheet scope |
-|---|---|---|
-| `/` (the landing page) | Landing | `app/landing.css`, everything under the `.lp` root |
-| `/servers` (server picker) | Dashboard | `packages/brand` tokens + components, `app/app.css` |
-| `/servers/[guildId]` and every module page beneath it (Overview, Watch, member pages, Gatehouse, Ledger, Rally, Rally templates, Barracks, Ranks, Quartermaster, Settings, Search) | Dashboard | same |
-| `/account` | Dashboard | same |
-| `/login` | Dashboard | same |
-| `/status` | Dashboard | same (its shell classes are named `.landing`, `.landing__bar`, `.landing__main`; they are a leftover name and belong to the dashboard world, not to `.lp`) |
-| 404 (`not-found`) | Dashboard | same |
-
-**The Two Worlds Rule.** Pick the world from the route before writing a line of CSS: `/` is the landing world, every other route is the dashboard world. A dashboard page never borrows a landing token, face, radius or glow, and the landing page never borrows the HUD costume outside a `.lp-win` product shot.
-
-### Imagery
-
-Pictures come from `public/art` by slot (defined in `art/slots.json`). A slot with no file renders nothing, so every layout must read complete without its art. There are two art sets, one per world.
-
-- **Landing set (`lp-*`, plus `og`):** premium 3D product renders of glossy objects (satin graphite, thick smoked glass, generous bevels) on an ink stage. Exactly one small volt-lime light per piece, as emitted light or a lit inset, never as paint or ambient light. Indigo rim light from behind-left; any ambient or floor light is indigo or cool blue. Calm and friendly, nothing military, no text. Hero (`lp-hero`) and closing band (`lp-cta`) art sit behind content in the dark theme only and are hidden in the light theme and on phones; module icons (`lp-icon-*`) are transparent 1024px pieces shown at 64px and 44px. The link-preview image (`og`) is painted in this set.
-- **Dashboard set (night outpost):** cinematic matte paintings of a near-future outpost at night: dark concrete and gunmetal, chamfered panels, fog and wet reflections, cold blue-black palette, with volt lime only as emitted light (signal lamps, light strips, a targeting bracket). Used on the sign-in card banner (`login`), the 404 banner (`not-found`) and empty states (`empty`, a simple emblem readable at 120px). These pieces keep their dark ground in both themes.
-- Retired slots (`hero`, `hero-light`, `security`, `module-*`) remain in `slots.json` so existing files keep a slot, but nothing renders them.
+- Dark-first slate-blue table with a full light theme (cookie-driven `data-theme` on `<html>`).
+- Four identity colours, chosen by the page you are on, never by decoration.
+- Card stock: 10px faces, 1px edge, soft drop, nothing ornamental.
+- Status by shape and colour together: filled dot, hollow ring, triangle, struck dash.
+- One grotesque (Archivo, variable width and weight), tabular numbers, a strict scale.
+- Foil is Pro, and only Pro.
+- Strict CSP: classes only, no inline style attributes; fonts self-hosted through next/font.
 
 ## Colors
 
-One saturated colour, volt lime, carries every signal; everything else is a cold blue-black ramp (dashboard) or a deeper ink ramp with indigo air (landing).
+A cool slate-blue ramp for the table and cards, four saturated identity colours that say where you are, and four status colours that only ever report state.
 
-### Primary
-- **Volt Lime** (`volt`): the signal. Dashboard: the primary button fill, switches that are on, filled seats and XP gauges, the current-page pip, HUD brackets, links and focus rings in the dark theme, text selection. Landing: the primary pill button and its glow, focus rings, selection and the shield mark only. Always paired with Volt Ink text when used as a fill.
-- **Volt Ink** (`volt-ink`): text and marks on a volt fill, in both themes and both worlds.
-- **Signal Olive** (`olive`): the light-theme stand-in wherever volt would be text, a stroke, a pip or a bracket (`--accent-strong` and `--lp-accent-text` in light). Volt fills stay volt in light; anything thin or textual switches to olive so it stays legible.
+### Primary (the four identities)
+Each identity has three tokens: a **fill** for buttons, gems and switches; an **ink** for text and marks on that fill; and a **text** tone safe for links, strokes and small type on the card face. In light theme every ink is white and the fills darken so white text clears contrast.
 
-### Secondary (dashboard status, state only)
-- **Go Green** (`go` / `go-light`): done, online, verified, healthy, the diff of what a plan adds.
-- **Caution Amber** (`caution` / `caution-light`): needs attention, short-handed raids, partial uptime.
-- **Alert Red** (`alert` / `alert-light`): lockdowns, failures, destructive buttons, downtime.
-- **Intel Blue** (`intel` / `intel-light`): neutral information tags.
+- **Safety Azure** (`azure`, `azure-ink`, `azure-text`): Moderation, Security, Logs.
+- **Community Orchid** (`orchid`, `orchid-ink`, `orchid-text`): Welcome, Role menus, Tickets, Leveling, Giveaways, Starboard, Stream alerts, Messages.
+- **Gaming Volt** (`volt`, `volt-ink`, `volt-text`): Groups and raids, Game accounts, and Overview. Volt is also the accent on pages outside a server (server picker, sign-in, account). In light theme volt becomes a deep olive (`volt-light`) so it reads as text.
+- **Server Steel** (`steel`, `steel-ink`, `steel-text`): AI builder, Settings, Plan.
 
-### Tertiary (landing ambient only)
-- **Ambient Indigo** (`lp-indigo` / `lp-indigo-light`): the hue of the stage light. In the build it reaches the page only as Indigo Haze and Blue Haze (`lp-glow-indigo`, `lp-glow-blue`, and their light variants): radial glows behind the hero, under the closing band and across the top of the price card. It also names the rim light in every landing art prompt.
+The shell resolves the current page's identity into the working accent: the page picks its identity from the menu item marked current, and every accent-driven control on the page (primary button, switches, selection, focus ring, text links, filled seats, XP gauges, gear plates, open-panel edge, empty-state tile) follows it.
+
+### Secondary (status, state only)
+- **Go Green** (`go`): on, done, online, verified, what a plan adds.
+- **Caution Amber** (`caution`): waiting, needs attention soon, short-handed.
+- **Alert Red** (`alert`): needs you now, lockdown on, failures, destructive actions.
+- **Intel Blue** (`intel`): neutral information (waiting on a member, not built yet, a purge).
+
+### Tertiary (Pro)
+- **Foil**: a six-stop holographic gradient at 115deg (pink, periwinkle, mint, pale lime, peach, lilac) printed on the Requires Pro tag, the edge of a Pro notice and its diamond mark. Text on foil is **Foil Ink** (`foil-ink`). The gradient lives in the sidecar; it is not a flat colour.
 
 ### Neutral
-- **Night Ground** (`dash-bg`): the dashboard page ground; also the ground inside landing product windows and the backdrop painted behind dashboard art.
-- **Hull Plate** (`dash-surface`): cards, the top bar, the side nav, readout cells.
-- **Raised Plate** (`dash-surface-raised`): inputs, hover fills, nested plates, the active nav item. Two derived mixes sit around it: a sunken plate (55% surface into ground) for table heads and leaderboard headers, and a plate (70% raised into surface in dark; raised in light) for player cards.
-- **Slate Hairline** (`dash-line`): every 1px border and divider; also the 1px gaps of the readout strip.
-- **Cold White** (`dash-text`) and **Fog Grey** (`dash-text-muted`): primary and secondary text. Light theme equivalents carry the `-light` suffix.
-- **Stage Ink** (`lp-ink`): the landing ground; **Graphite** (`lp-surface`) and **Lifted Graphite** (`lp-surface-2`) for cards, ghost-button fills and hover plates.
-- **Glass Hairline** (`lp-hairline`, `lp-hairline-strong`): translucent borders; strong for windows, pills and the price card, regular for section dividers and FAQ rules.
-- **Paper White** (`lp-text`), **Mist** (`lp-muted`), **Dim Mist** (`lp-faint`): landing text tiers. Dim Mist is for 13–14px meta only, tuned to clear 4.5:1 on every landing ground in both themes.
-- **Discord neutrals** (`discord-*`): Discord's own chat colours, used only inside Discord message mocks; the App tag uses Discord's blurple.
+- **Slate Table** (`table`): the page ground and top bar. Never black.
+- **Card Face** (`card-face`): cards, the current nav item, secondary buttons.
+- **Raised Card** (`card-raised`): hover fills, nested plates, switch tracks, skeleton bars, the embed preview. A sunken mix (55% card face into table) heads tables.
+- **Card Edge** (`card-edge`): every 1px border, hairline divider and readout split.
+- **Chalk** (`text`) and **Slate Mist** (`text-muted`): primary and secondary text.
+- **Discord neutrals** (`discord-*`): Discord's own dark chat colours, used only inside Discord previews.
 
 ### Named Rules
-**The Signal Lamp Rule.** Volt lime is light, not paint. It marks the action, the current place, what is on, and what you are editing. On the landing page it appears on the primary pill button, focus and selection, and the shield mark, and nowhere else in the page's own chrome.
+**The You Are Here Rule.** Identity colour comes from the page you are on and nothing else. A Safety page is azure from its menu gem to its primary button; it never borrows orchid for variety, and a module never picks a colour for itself.
 
-**The Status Is State Rule.** Go, caution, alert and intel report a state and nothing else: never a category colour, a section accent or a flourish. Bot embeds in Discord follow the same rule.
+**The Status Is State Rule.** Go, caution, alert and intel report state and nothing else: never a category colour, a section accent or a flourish. Bot embeds in Discord follow the same rule.
 
-**The Indigo Is Air Rule.** On the landing page, indigo and blue exist only as ambient light (radial glows and the art's rim light). No indigo text, border, button, icon or fill.
+**The Foil Is Pro Rule.** The holographic sheen marks "Requires Pro" and nothing else on the dashboard. No foil buttons, headings, highlights or celebrations.
 
 ## Typography
 
-**Dashboard Display Font:** Saira Semi Condensed (with Arial Narrow), weights 600 and 700
-**Dashboard Body Font:** Inter (with system-ui), weights 400, 500, 600
-**Dashboard Data Font:** JetBrains Mono (with ui-monospace), weights 400 and 500
-**Landing Display Font:** Gabarito (with Geist), weights 700 and 800
-**Landing Body Font:** Geist (with system-ui), variable
-**Landing Numbers Font:** Geist Mono (with monospace), weights 400 and 500
+**Display Font:** Archivo (variable `wdth` and `wght`), self-hosted with next/font, falling back to system-ui
+**Body Font:** Archivo
+**Numbers:** Archivo with tabular figures
+**Code Font:** system monospace (`ui-monospace`, Cascadia Mono, Menlo, Consolas), for code and diffs only
 
-**Character:** The dashboard pairs a semi-condensed, squared display face that reads like stencilled equipment labels with a neutral UI sans and a monospace for anything counted or timed. The landing page swaps all three for a rounder, heavier display face with tight negative tracking and a clean geometric sans, the voice of a modern product launch.
+**Character:** One sturdy grotesque at a strict scale, widened a little for titles (width 106 to 112%) so headings have presence without a second face. Numbers line up because every counted or timed value uses tabular figures.
 
-### Hierarchy (dashboard)
-- **Display** (`dash-display`): the page title, one per page, balanced wrap. The server picker uses the larger `dash-display-picker`.
-- **Headline** (`dash-headline`): a block of the page ("With Garrison", grouped sections), with an optional mono count beside it.
-- **Title** (`dash-title`): the title of one card; 16px/22px when it sits in a table card's head.
-- **Body** (`dash-body`): page text; page intros cap at 68ch.
-- **UI text** (`dash-body-sm`, `dash-button`): fields, nav items, tables, buttons. Button labels never wrap.
-- **Label** (`dash-label`, uppercase): the HUD caption over a number, a field group, a seat role or a nav group. Badges use the same face.
-- **Data** (`dash-data`, `dash-mono`): readout values at 32px, timestamps, IDs, metadata and numeric inputs at 13px, always tabular figures.
+### Hierarchy
+- **Display** (750, 30px/36px, width 110%, -0.01em): the page title, preceded by the identity gem and followed by the section tag.
+- **Readout** (650, 30px/36px, tabular, -0.01em): the big numbers in a page's readout strip; a worded value drops to 650 21px.
+- **Headline** (700, 20px/28px, width 106%): a block of the page.
+- **Title** (650, 17px/24px): the title of one card, and empty-state titles. Table-card heads use 16px/22px.
+- **Body** (400, 15px/22px): page copy. Card copy, help text and card subtitles hold a 68ch measure.
+- **Body small** (400 to 600, 14px/20px): buttons (600), inputs, nav items, table cells, card subtitles.
+- **Meta** (400, 13px/18px, tabular): times, counts, IDs, panel facts, help lines.
+- **Label** (600, 12px/16px): field names, badges, the section tag, nav group names. Sentence case, no tracking.
+- **Code** (400, 13px/20px system mono): diffs and code blocks; 12px/18px in the card editor's placeholders.
 
-### Hierarchy (landing)
-- **Display** (`lp-display`): the centred hero headline, two lines on desktop.
-- **Headline** (`lp-headline`): section headings.
-- **Title** (`lp-title`, `lp-title-sm`): feature-row headings; step and card headings at 22px.
-- **Lede and body** (`lp-lede`, `lp-body`): 18px under headings, 16px elsewhere, pretty wrap.
-- **Numbers** (`lp-mono`): the live chip and step numbers.
-- The wordmark changes with the world: Saira 700 uppercase at 16px in the dashboard, Gabarito 800 sentence case at 21px on the landing page.
+The wordmark is Archivo 800 at width 112%, -0.01em, sentence case.
 
 ### Named Rules
-**The Three Voices Rule.** In the dashboard, Saira is for headings and captions, Inter for everything you read or operate, JetBrains Mono for everything counted, timed or identified. A number in Inter is a bug.
+**The One Voice Rule.** Archivo is the only face in the dashboard's own chrome. The system monospace appears only where columns of code must line up.
 
-**The Caption Sits Over a Value Rule.** The uppercase label captions a number, a field, a seat row or a nav group. It never sits above a heading.
+**The Sentence Case Rule.** Every heading, label, badge and button is in sentence case with no letter-spacing. Uppercase appears only inside Discord replicas, because Discord itself sets it there.
 
-**The No Crossing Faces Rule.** Gabarito, Geist and Geist Mono load only on `/` and style only `.lp` chrome. Saira, Inter and JetBrains Mono appear on the landing page only inside product windows, where they are part of the shot.
+**The Strict Scale Rule.** Sizes come from the scale above (12, 13, 14, 15, 16, 17, 20, 30). A new size needs a reason that the scale cannot meet.
 
 ## Layout
 
-**Dashboard.** A shell capped at 1400px and centred: the side nav as a fixed 220px column, the page as a flexible column, 24px gutters and gaps. Page sections stack with 24px gaps; cards inside a section use 16px gaps. A page head carries the title and an intro with a hairline rule below it. Grids are auto-fit (stat cells from 200px, cards from 280px, settings fields from 260px with a 920px cap) or explicit splits for the busy pages (overview 3 columns, rally board 1 : 1.25, ranks 1.6 : 1, settings 1 : 1.25, security as the lockdown on top and two columns under it). Grids align items to the start so a card opening its form never stretches its neighbours. The spacing scale is 4, 8, 12, 16, 24, 32 and 48px (`space-*`). Density is high: rows of 10–12px padding, tables at 14px.
+An 8px grid (4px for fine steps: 4, 8, 12, 16, 24, 32, 48). The shell is capped at 1400px and centred, with 24px padding and gaps: a 232px side rail beside a main column that shrinks rather than wrapping under it. Above phones the top bar is sticky and the rail sticks 84px from the top. Pages stack their blocks with 24px gaps; cards in a grid sit 16px apart.
 
-Responsive behaviour: the top bar and side nav stick from 721px up (the nav under the bar at 84px); at 720px and below the side nav becomes one horizontally scrolling row that keeps the current item centred, the shell padding drops to 16px, and multi-column layouts fold at 1100px, 960px, 900px and 720px. At 520px the top bar becomes a single row of controls with search below it. The server picker is its own 1120px column with 48px section gaps.
+Cards reflow by whole cards: grids are `auto-fit` with a minimum card width (280px for card grids, 200px for stats, 230px for moderation, 260px for settings fields) and align to the top, so a card opening its form never stretches its neighbours. Overview runs three columns, two below 1100px and one below 720px. Paired layouts (Security, global settings) collapse to one column below 960px. Readout strips go from four (or three) cells to two below 900px.
 
-**Landing.** A 1180px container with 24px gutters (16px on phones). Sections open with 120px of space (88px on phones); section heads are centred, capped at 720px, with 72px below them. The hero is centred copy (900px) over a stage: the Security page in a product window, with a Discord window overlapping its lower right edge. Feature rows split copy and product shot 5 : 7 with a 72px gap, alternating sides while the shot stays in the wide column, separated by glass hairlines. Below 1100px the overlapping Discord windows drop under their product window with a small overlap; below 900px rows stack and nav links hide; below 600px actions stack full width and each shot keeps only the element that proves its point.
+Phones (720px and below): the side rail becomes one scrolling row that keeps the current page centred; page-head actions stack full width with the primary first; head shortcuts to a form already just below the title are hidden; filter rows scroll on one line and fade at their right edge. At 520px and below the top bar becomes one row of controls with search below it, panel facts drop under their title, and empty states stack mark over text.
 
-**The Own Height Rule.** In the dashboard, cards keep their own height: grids align to the start, and a short card never stretches to match a tall neighbour.
+**The Held Measure Rule.** Copy in a card stops at 68 characters; page intros under the title do too. Wide screens get more cards, never longer lines.
 
 ## Elevation & Depth
 
-The dashboard is tonal first: depth comes from the ground, plate and raised-plate steps plus slate hairlines. Shadows are faint and structural: every card carries a near-invisible top highlight and a 1–2px contact shadow, nested cards drop it, a server tile lifts on hover, and menus and dialogs float on an overlay shadow. The landing page is lifted: product and Discord windows, and the price card, hang on a long, soft, deep shadow over the ink stage, with indigo and blue radial glows behind them and a volt glow under the primary button. The landing nav is frosted (blurred, saturated, 78% ink).
+Lifted, but quietly: cards sit on the table with a soft drop and a faint top highlight, the way a card lies on a mat. Depth has three steps and they are tokens.
 
 ### Shadow Vocabulary
-- **Card rest** (dark: `box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.035), 0 1px 2px rgb(0 0 0 / 0.4)`; light: `0 1px 2px rgb(17 21 26 / 0.05), 0 2px 10px -4px rgb(17 21 26 / 0.08)`): every dashboard card at rest.
-- **Card lift** (dark: `box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 14px 32px -12px rgb(0 0 0 / 0.75)`; light: `0 2px 4px rgb(17 21 26 / 0.06), 0 16px 32px -14px rgb(17 21 26 / 0.22)`): a server tile on hover or focus, with a 2px rise.
-- **Overlay** (dark: `box-shadow: 0 8px 24px rgba(0,0,0,0.5)`; light: `0 8px 24px rgba(17,21,26,0.12)`): the server switcher menu and the invite dialog.
-- **Stage window** (dark: `box-shadow: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 40px 80px -40px rgb(0 0 0 / 0.9), 0 12px 28px -18px rgb(0 0 0 / 0.7)`; light: `0 1px 0 rgb(255 255 255 / 0.7) inset, 0 40px 80px -44px rgb(17 21 40 / 0.35), 0 10px 24px -16px rgb(17 21 40 / 0.18)`): landing product windows, Discord windows, the price card.
-- **Volt glow** (`box-shadow: 0 0 0 1px rgb(0 0 0 / 0.05) inset, 0 8px 24px -10px rgb(212 255 58 / 0.55)`, hover `0 10px 30px -8px rgb(212 255 58 / 0.7)`): the landing primary pill only.
+- **Card** (dark: `0 1px 0 rgb(255 255 255 / 0.04) inset, 0 2px 6px -2px rgb(4 7 20 / 0.55)`): every card face, the current nav item, LFG cards. A card inside a card has no shadow.
+- **Lift** (dark: `0 1px 0 rgb(255 255 255 / 0.06) inset, 0 16px 32px -14px rgb(4 7 20 / 0.8)`): a server tile on hover or focus, with a 2px rise.
+- **Overlay** (dark: `0 12px 32px -6px rgb(4 7 20 / 0.7)`): dialogs.
+- **Open panel ring**: an open settings panel adds a 1px ring of its identity colour at 25% around the card shadow, and its edge takes the identity at 60%.
 
-### Named Rules
-**The Plates Not Shadows Rule.** In the dashboard a surface reads as raised because it is a lighter plate with a hairline, not because it casts a shadow. Only overlays and a hovered server tile get a visible shadow.
+Light theme uses the same three roles with lower-opacity slate-ink shadows (in the sidecar).
+
+**The Soft Drop Rule.** Shadows are soft and downward. No hard offset shadows, no glows, no inner frames.
 
 ## Shapes
 
-**Dashboard.** Small, squared geometry. Radii are 2px (badges, switches, seats, roster slots) and 4px (cards, inputs, buttons, nav items, dialogs). Things that are being edited or that matter most drop to square corners and take HUD brackets. The chamfer (an 8px 45-degree cut) is the signature: the primary button loses its top-right corner; identity plates (large server icons at 10px, the Quartermaster server icon and game marks at 8px, small game marks at 6px) lose their top-left and bottom-right corners; first place on the leaderboard loses its top-right corner at 7px. Status pips, the nav pip and list markers are 6–8px squares, never circles. Chevron cues are 7px squares drawn with 2px borders. Progress gauges are square-ended. The one round-ended dashboard element is the Quartermaster suggestion chip.
+Card stock: **10px** for card faces (cards, server tiles, LFG cards), **8px** for controls (buttons, inputs, nav items, embed and Discord previews, readout strips), **6px** for chips of state (badges, the section tag, the Pro tag, slots, the empty-art frame), and **14px** for icon tiles (the empty-state mark, a large server icon). Switches, chips, XP and duration bars are full pills. Gems are 8px squares (12px beside the title) rotated 45deg with 2 to 3px corners: a cut stone, not a pip. Every edge is 1px.
 
-**Landing.** Generous, rounded geometry. Product and Discord windows at 14px (`lp-window`), large cards at 22px (`lp-card`), the closing band at 28px (`lp-band`), and pills (`pill`) for every button, nav link, the live chip, the window tag and the price list items. Circles for the window dots, step numbers, the Discord avatar and the live dot. Borders are glass hairlines. Discord mocks keep Discord's 4px radius and its 4px coloured left bar.
-
-**The Bracket Means Focus Rule.** HUD corner brackets (12px, 2px stroke, top-left and bottom-right, in volt/olive) mark what you are editing (an open settings panel) and the object a page exists for (an active lockdown, the next op, the Quartermaster prompt, a scheduled raid, the sign-in card). A server tile Garrison already guards takes a single top-left bracket. Brackets lock on with motion; they never decorate a card at random.
-
-**The Discord Bar Rule.** The 4px coloured left bar belongs to Discord's embed anatomy and appears only where Garrison draws a Discord message (the landing mocks and the brand package's embed preview). No card, notice or list row gets a side stripe.
+**The Plain Stock Rule.** No chamfers, no corner brackets, no glints, no frames or ornaments. A card is a rounded rectangle with an edge and a drop.
 
 ## Components
 
 ### Buttons
-- **Shape (dashboard):** 4px radius; primary is square with the chamfer cut from its top-right corner.
-- **Primary (dashboard):** volt fill, volt-ink label, 8px 16px. Hover brightens the fill slightly (`filter: brightness(1.06)`); press nudges 1px down. Links styled as primary keep the ink label.
-- **Focus (dashboard):** every button takes a 2px outline in the focus colour, offset 2px. The chamfered primary clips anything drawn outside its shape, so its focus ring is drawn inside instead: 2px ink, offset -5px.
-- **Secondary / Ghost / Danger (dashboard):** secondary is a slate hairline outline that fills with the raised plate on hover; ghost is muted text that fills on hover; danger is an alert outline and label that fills solid alert on hover with the ground colour as text. Disabled sits at 45% opacity.
-- **Pending:** a pressed submit inside a pending form carries a 2px scanning line along its foot and ignores further presses until the page answers (blinks instead of sweeping under reduced motion).
-- **Landing pills:** 48px tall (38px small), 24px side padding, 15px Geist 600. Primary is volt with the volt glow, brightening to Volt Flash on hover; ghost is a strong glass hairline over a 70% graphite fill, warming to Lifted Graphite on hover. Add to Discord always comes first.
+Confident and few: one obvious primary per first viewport.
+- **Shape:** 8px corners, 36px minimum height, 8px by 14px padding, 600 14px label, never wrapping.
+- **Primary:** the page's identity fill with its ink, a faint top highlight (`0 1px 0 rgb(255 255 255 / 0.18) inset, 0 1px 2px rgb(4 7 20 / 0.3)`). Hover mixes 12% of the text colour in.
+- **Secondary:** card face with a 1px edge; hover raises the fill and darkens the edge.
+- **Ghost:** muted text only; hover takes the raised fill.
+- **Danger:** alert text and an alert-tinted edge; hover fills alert with table-colour text.
+- **Small:** 4px by 10px, 13px/18px, for actions inside rows and empty states.
+- **States:** pressed buttons sink 1px; disabled at 45% opacity; focus is a 2px ring in the page's identity text tone, offset 2px. A submitting button carries a 2px moving line along its foot and cannot be pressed twice.
 
-### Chips and Badges
-- **Pro badge (dashboard):** shown only where the server's plan lacks a feature: a lock icon and "Requires Pro" in Saira 11px uppercase, accent-strong text and border over a 9% volt wash. Never just "Pro".
-- **Status badge (dashboard):** Saira 11px uppercase, 1px border in the current colour, 2px radius, a 6px square pip before the label. Tone comes from the status colour; neutral badges use Fog Grey; an accent badge marks open seats.
-- **Suggestion chip (dashboard, Quartermaster only):** pill, slate hairline, 13px text, volt/olive border and text on hover.
-- **Live chip (landing):** glass-hairline pill, Geist Mono 13px, a go-green dot with a soft halo, linking to `/status`; shown only when live data exists.
+### Badges (state marks)
+A state said in a word and drawn as a shape, so colour is never the only sign. 600 12px/16px, 6px corners, tone at 10% fill and 40% edge.
+- **On** (go, or the page's identity for an open or current thing): a filled dot.
+- **Waiting** (caution): a hollow ring.
+- **Needs you** (alert): a triangle.
+- **Off**: a struck dash in muted grey.
+- **Information** (intel): a small diamond.
+- **Plain tag** (no tone): a role, a log type; no mark at all.
+- **Kind tag**: case actions (warn, timeout, kick, ban, purge) are kinds, not states, so they print as coloured words with no mark.
+
+The same shapes recur at larger sizes: notices lead with the triangle (alert) or dot (done); the Needs attention list leads each line with a ring (caution) or triangle (alert); readout values that report a state carry the shape before the word.
 
 ### Cards / Containers
-- **Corner Style:** dashboard 4px, square when bracketed; landing 14px windows, 22px cards, 28px closing band.
-- **Background:** Hull Plate in the dashboard (nested plates use Raised Plate); Graphite on the landing page.
-- **Shadow Strategy:** see Elevation & Depth.
-- **Border:** 1px Slate Hairline (dashboard) or Glass Hairline (landing). A "needs attention" card tints its border and head toward caution.
-- **Internal Padding:** 16px in the dashboard (20px on server tiles); 40px and 56px on landing cards (20px on phones).
+- **Corner Style:** 10px.
+- **Background:** card face on the slate table.
+- **Shadow Strategy:** the Card shadow; nested cards are flat.
+- **Border:** 1px card edge. A card that reports a state can take that state's edge (lockdown on: alert edge and a 6% alert wash; Needs attention: caution edge).
+- **Internal Padding:** 16px; table cards run flush with a 12px by 16px head.
+
+### Settings panels
+A card whose closed row reads the current settings as a sentence of label and value facts, led by a 28px gear plate in the page's identity (12% fill, 35% edge) and ended by a real "Change" control. Open means you are editing: the card takes its identity edge and ring, the gear plate brightens, and the body slides open by height.
 
 ### Inputs / Fields
-- **Style:** Raised Plate fill, slate hairline, 4px radius, 14px Inter; numeric inputs switch to 13px JetBrains Mono. Selects draw their own chevron.
-- **Focus:** the border turns to the focus colour plus a 2px focus outline offset 2px (volt in dark, olive in light). Hover lifts the border to Fog Grey.
-- **Error / Disabled:** invalid fields take an alert border and alert help text.
-- **Switches:** real checkboxes drawn as a 36 x 20px square-cornered track with a 12px square knob; on, the track fills volt and the knob turns volt ink.
+- **Style:** 36px minimum, 8px corners, 1px edge, a fill 45% of the way from card face to table, 400 14px text.
+- **Focus:** the edge turns to the focus colour and a 2px focus ring appears; hover darkens the edge.
+- **Error:** alert edge with alert help text below.
+- **Selects:** drawn chevron, no system arrow.
+- **Switches:** real checkboxes drawn as a 38 by 22px pill; on fills with the page's identity and the knob takes its ink.
 
 ### Navigation
-- **Top bar (dashboard):** Hull Plate bar with a bottom hairline, sticky from 721px; logo, server switcher (a secondary button that drops a menu), search, theme toggle, the signed-in person as an avatar plate, sign out.
-- **Side nav (dashboard):** a 220px plate of 14px items grouped under uppercase labels (Safety, Community, Gaming, Server), each module named by its plain name only. Hover and current fill with Raised Plate; the current item is bold with a 6px volt square pip in the gutter that slides between items on navigation. On phones the nav is one scrolling row and the pip becomes a 14 x 3px bar under the item.
-- **Landing nav:** 64px sticky frosted bar, pill links in Mist that fill Lifted Graphite on hover, Sign in, and a small primary pill.
+- **Side rail:** 232px. Groups (Safety, Community, Gaming, Server) are 600 12px muted names led by their identity gem. Items are 36px rows in muted 14px text. The current item is a raised card (card face, edge, card shadow, 600 weight) with its identity gem in its left gutter; moving pages slides that gem from the old item to the new one.
+- **Page head:** the title with its identity gem before it and a section tag after it (the group name in the identity colour on a 12% tint, 6px corners, 600 12px), a muted intro under it, and the page head's rule tinted 22% toward the identity.
+- **Phones:** the rail becomes one horizontally scrolling row with the current item kept in view.
 
-### Readout (dashboard signature)
-The numbers of a page in one instrument strip: four (or three) cells split by 1px hairline gaps, each a caption over a 32px mono value with an optional muted unit and help line. Values can take a status tone; text values switch to 22px Saira. Folds to two columns at 900px.
+### Pro tag
+"Requires Pro" in words with a lock, printed in foil: 700 12px/16px Foil Ink on the foil gradient, 6px corners, a white 55% edge and a faint orchid outline. The sheen sweeps once across the tag on arrival. A Pro notice takes a foil border and a foil diamond as its mark.
 
-### Settings panel (dashboard signature)
-A disclosure card whose summary is one row: a gear in a small raised plate, the title, the current values, and a bordered "Change" control ("Close" when open) with the chevron cue. Opening it squares the corners, locks HUD brackets on, rules off the summary, and folds the form open by height. Forms end in a footer rule with the primary save button first.
+### Duration bars
+Time drawn to scale with the same span said in words beside it: a ticket's wait out of two days, a raid's countdown out of a week, a lockdown's time served out of its length. A real progress element, 6px (4px inside a ticket row), full pill, filled in the identity text tone, or caution or alert when the wait is long.
 
-### Needs attention list (dashboard signature)
-A caution-tinted card listing what to fix first; each row is an 8px tone square, a bold line with a muted reason, and a "go" link with a chevron that leans forward on hover. Alert rows ping their square.
+### Readout
+The numbers of a page in one strip, four or three cells split by 1px hairlines inside one card, each with a label, a 30px tabular value and a help line.
 
-### Product window (landing signature)
-A browser-like frame (14px radius, strong glass hairline, stage shadow) with three dots, a mono path, and an "Example" pill tag, wrapping real dashboard markup rendered at 84% zoom (74% under 900px, 85% on phones) with pointer events off. Inside it, dashboard tokens and faces apply and follow the theme.
+### Empty states
+What will appear here and the one thing to do about it: a drawn line mark (1.5px stroke, 28px) on a 56px tile with 14px corners in the page's identity (12% fill, 35% edge), a 17px title, muted body, and one small secondary button. Inside a list card it drops its own card. A drawn mark, not a painting, so it reads in both themes and never fails to load.
 
-### Discord message mock (landing signature)
-Discord's own layout and colours: channel header with a muted hash, a 40px round avatar (the shield mark in volt on Night Ground), author line with Discord's blurple App tag and a timestamp, then the embed: Discord embed grey, 4px radius, 4px left bar coloured by tone (volt, caution or alert), title, lines, an optional field, a muted footer.
-
-### Motion
-- **Dashboard:** state changes run 0.12–0.2s on a long ease-out; panels fold by height in 0.32s; brackets lock on from 7px outside in 0.36–0.5s on a snap curve; notices drop in and ping their square; new seats pop in and new rows fade; gauges sweep from the left; first place catches one glint; navigation swaps the page under a still top bar and nav (old page out in 0.14s, new page up in 0.34s) while the pip and server name morph to their new place.
-- **Landing:** hero copy rises in sequence, then the focal sequence plays once: the windows rise, a pointer presses Lock the server now, the request goes Queued to Done, the message lands in Discord and the card becomes the locked card with its brackets. The final state is the default markup, so the shot is complete with no animation.
-- **Both worlds** take distances from the shared `--m-*` tokens and curves from the shared easing tokens. Reduced motion zeroes every travel, sweep and glint and hides the landing pointer; fades, colour and state changes remain.
+### Discord previews (an intentional exception)
+Discord messages, Components V2 containers, the profile card and the server channel list are reproduced in Discord's own look: Discord's dark neutrals, blurple App tag, 40px round avatar, and the **4px coloured bar on the container's left edge**. They keep Discord's uppercase where Discord uses it (the App tag, channel categories) and stay dark in both themes. The bar and the uppercase belong to Discord's anatomy and appear only inside these replicas.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** decide the world from the route first: `/` is the landing world under `.lp`; every other route, including `/status`, `/login`, `/account` and the 404 page, is the dashboard world.
-- **Do** build dashboard UI from the `g-` components and the `packages/brand` tokens, with layout classes in `app/app.css`; never an inline style attribute (the CSP blocks them).
-- **Do** keep one primary action per form or section: a chamfered volt button in the dashboard, a volt pill on the landing page.
-- **Do** use HUD brackets only for what is being edited and the object a page exists for.
-- **Do** report state with the status colours plus a square pip, and tint notices with their tone (about 9% into the surface, border about 55% into the hairline) so they read in both themes.
-- **Do** set every number, time and identifier in the mono face with tabular figures.
-- **Do** express motion distances with the `--m-*` tokens so reduced motion can zero them while fades remain.
-- **Do** build landing product shots from the dashboard's real classes inside a `.lp-win` frame, labelled as an example.
-- **Do** mirror Discord exactly in message mocks: Discord's colours, avatar, App tag and the 4px embed bar.
-- **Do** give every landing art piece exactly one small volt light, with indigo or cool-blue ambient light, and keep every layout complete when a slot has no file.
-- **Do** check both themes; on light grounds, volt text and strokes become olive.
+- **Do** take the identity from the page's menu item and let it colour the gem, title gem, section tag, primary button, switches, gear plates and open-panel edge.
+- **Do** give every state its shape: filled dot on, hollow ring waiting, triangle needs you, struck dash off; use a plain tag (no tone) for roles and types, and a kind tag for case actions.
+- **Do** write current settings as plain sentences and say what happened and what to do next.
+- **Do** keep one primary button per first viewport, in the page's identity colour.
+- **Do** draw durations to scale beside their words, and use tabular figures for anything counted or timed.
+- **Do** hold card copy to 68ch and reflow by whole cards on the 8px grid.
+- **Do** use classes only: the CSP blocks inline style attributes. Fonts are self-hosted through next/font.
+- **Do** source pictures from `public/art` by slot, with prompts in `art/PROMPTS.md` (generated from `art/slots.json`); a slot with no file renders nothing, so every layout must read complete without its art.
 
 ### Don't:
-- **Don't** use Gabarito, Geist, pill buttons, 14–28px radii, indigo glows or the stage shadow on any dashboard route.
-- **Don't** use chamfers, HUD brackets, uppercase Saira captions or square status pips in the landing page's own chrome; they belong only inside product windows (the shield mark keeps its own cut corners).
-- **Don't** use go, caution, alert or intel as decoration, category colour or brand flourish.
-- **Don't** put volt lime on landing text, borders, icons or surfaces beyond the primary pill, focus, selection and the shield mark.
-- **Don't** use indigo or blue for landing text, borders, buttons or fills; they are ambient light only.
-- **Don't** give a card, notice or list row a coloured side stripe; the 4px left bar exists only in Discord embed mocks.
-- **Don't** put an uppercase label above a heading.
-- **Don't** hard-code a motion distance or add travel that reduced motion cannot zero.
-- **Don't** paint volt as ambient light or surface colour in art, put text in art, or bring military subjects into the landing set.
-- **Don't** confuse `.landing` (the `/status` shell in `app/app.css`, dashboard world) with `.lp` (the landing world).
-- **Don't** set body or meta text below 4.5:1; Dim Mist sits just above it on every landing ground, so nothing quieter belongs in body or meta copy.
+- **Don't** put eyebrow labels or kickers above headings.
+- **Don't** use uppercase captions or tracked-out labels, except inside Discord replicas.
+- **Don't** use chamfers, corner brackets, glints, frames or ornaments.
+- **Don't** use foil for anything but Requires Pro.
+- **Don't** let colour be the only sign of a state.
+- **Don't** use status colours (go, caution, alert, intel) as category or decoration colours.
+- **Don't** put a coloured side bar on a card, notice or row outside a Discord replica.
+- **Don't** use black or near-black grounds; the table is slate blue.
+- **Don't** add a second display or UI face, or use monospace outside code and diffs.

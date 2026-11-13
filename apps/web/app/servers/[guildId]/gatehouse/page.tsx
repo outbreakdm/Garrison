@@ -8,6 +8,7 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import { ProTag } from "@/components/cards/CardEditor";
+import { DurationBar, untilText } from "@/components/DurationBar";
 import { formatTime } from "@/components/format";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import {
@@ -102,7 +103,7 @@ export default async function GatehousePage({
       <SettingsNotice query={query} />
 
       <div className="gate-layout">
-        <div className={`g-card card-col gate-lockdown ${l ? "g-card--hud" : ""}`}>
+        <div className={`g-card card-col gate-lockdown ${l ? "gate-lockdown--on" : ""}`}>
           <h2 className="card-title">Lockdown</h2>
           {l ? (
             <>
@@ -112,6 +113,15 @@ export default async function GatehousePage({
                 label="Lifts"
                 value={l.endsAt ? formatTime(l.endsAt) : "When someone lifts it"}
               />
+              {l.endsAt && l.endsAt.getTime() > Date.now() ? (
+                <DurationBar
+                  value={Date.now() - l.startedAt.getTime()}
+                  max={l.endsAt.getTime() - l.startedAt.getTime()}
+                  label="Lockdown time served, out of its length"
+                  text={`Lifts ${untilText(l.endsAt.getTime() - Date.now())}`}
+                  tone="alert"
+                />
+              ) : null}
               <Row label="Invites" value={l.invitesPaused ? "Paused" : "Open"} />
               <Row label="Reason" value={l.reason ?? "No reason given"} />
               <form action={requestAction}>

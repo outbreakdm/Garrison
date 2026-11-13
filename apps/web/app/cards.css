@@ -68,7 +68,7 @@
   padding: 0 4px;
   border-radius: var(--radius-sm);
   background: var(--surface-raised);
-  font: 400 12px / 18px var(--font-mono);
+  font: 400 12px / 18px var(--font-code);
   color: var(--text);
   white-space: nowrap;
 }
@@ -91,8 +91,6 @@
   line-height: 18px;
 }
 
-/* Pro tag: a quiet marker on controls this plan doesn't include. */
-
 /* Text and divider blocks, in order, each with its own move and remove tools. */
 .block-list {
   display: flex;
@@ -102,7 +100,8 @@
 .block-list:empty {
   display: none;
 }
-.block {
+/* Scoped to the list: page sections also use .block (app.css) and must not become grids. */
+.block-list > .block {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-2);
@@ -123,7 +122,7 @@
   font-size: 14px;
   line-height: 20px;
 }
-.block--divider {
+.block-list > .block--divider {
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   min-height: 36px;
@@ -432,7 +431,7 @@
   padding: 0 4px;
   border-radius: var(--radius-sm);
   background: var(--surface-raised);
-  font: 400 12px / 18px var(--font-mono);
+  font: 400 12px / 18px var(--font-code);
   color: var(--text);
   white-space: nowrap;
 }
@@ -692,7 +691,7 @@
 .dc-code {
   border-radius: 4px;
   background: var(--dc-field);
-  font-family: var(--font-mono);
+  font-family: var(--font-code);
   font-size: 0.85em;
 }
 .dc-inline-code {
@@ -783,11 +782,11 @@
   .editor-fields .field-row {
     grid-template-columns: minmax(0, 1fr);
   }
-  .block:not(.block--divider) {
+  .block-list > .block:not(.block--divider) {
     grid-template-columns: minmax(0, 1fr);
     gap: 0;
   }
-  .block:not(.block--divider) > .row-tools {
+  .block-list > .block:not(.block--divider) > .row-tools {
     order: -1;
     justify-self: end;
   }
@@ -795,7 +794,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .option,
-  .block {
+  .block-list > .block {
     animation: none;
   }
 }
@@ -1418,8 +1417,6 @@
   text-align: left;
   font-size: 12px;
   color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   background: var(--surface-raised);
 }
 .ops-cal__day {
@@ -1600,7 +1597,7 @@
   display: grid;
   gap: 2px;
 }
-.block--field {
+.block-list > .block--field {
   align-items: flex-start;
 }
 .block__field {

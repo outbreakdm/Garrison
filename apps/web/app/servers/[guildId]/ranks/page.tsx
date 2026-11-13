@@ -360,7 +360,7 @@ export default async function RanksPage({
                     </span>
                     <span className="ticket-row__who">
                       {s.standings[0]
-                        ? `🥇 ${s.standings[0].username || "a member"}`
+                        ? `Top: ${s.standings[0].username || "a member"}`
                         : "Nobody ranked"}
                     </span>
                   </summary>

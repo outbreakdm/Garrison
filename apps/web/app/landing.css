@@ -1123,10 +1123,6 @@
 .lp-stage .lp-lock__after {
   animation: lp-in 0.4s var(--ease-out) 2.95s backwards;
 }
-.lp-stage .lp-lock.g-card--hud::before,
-.lp-stage .lp-lock.g-card--hud::after {
-  animation-delay: 2.9s;
-}
 @media (prefers-reduced-motion: reduce) {
   .lp-cursor {
     display: none;

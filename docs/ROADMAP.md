@@ -22,6 +22,7 @@ then updates **Status** and the **Log** before stopping.
   open in a calendar app. Next: Phase 2 (Stripe) once a price is set. The depth backlog is
   done; what's left needs the owner (Kick alerts, YouTube live, uploaded backgrounds).
 - **Branch:** `dashboard-first`, pushed; everything through commit `341d88b` is deployed.
+  The Card Table dashboard redesign (2026-11-13) is committed locally, not pushed or deployed.
 - **Before pushing:** `pnpm -r exec tsc --noEmit`, `pnpm test`, `pnpm exec biome check apps packages`.
 - **Deploying:** "deploy" means commit, push, then
   `gh workflow run deploy-cloudflare.yml --repo outbreakdm/Garrison --ref <branch> -f target=everything -f register_commands=true`.
@@ -564,3 +565,15 @@ Decided (2026-11-12, owner):
   per request (a page's parallel queries had been queuing on one); Smart Placement for the
   dashboard Worker; session and server lookups in parallel. The bot deploys before the dashboard
   when the binding is new.
+- 2026-11-13: Dashboard redesign, "Card Table" (impeccable new-work, committed, not deployed):
+  a lifted slate-blue dark default and a cool light theme. Each part of the server has a colour:
+  Safety azure, Community orchid, Gaming volt, Server steel. That colour lights the menu gem,
+  the title gem, the section tag, the primary button, switches and open panels. Archivo is now
+  the one typeface (Saira, Inter and JetBrains Mono are gone). Status is shown by shape as well
+  as colour: dot for on, ring for waiting, triangle for needs you, dash for off. "Requires Pro"
+  is printed in foil, which nothing else uses. HUD brackets, chamfers and the glint are gone.
+  Time is drawn to scale: ticket waits, raid countdowns and lockdowns. Card text is held to
+  68ch. Phone fixes: filter rows scroll, and head actions stack. The card editor's `.block`
+  grid no longer squeezes the server picker. DESIGN.md is rewritten. The finish review took
+  two rounds; still open: the lockdown bar is unseen in a capture (no timed lockdown in the
+  seed), and the section tag carries no live count.

@@ -304,7 +304,7 @@ export default async function GiveawaysPage({
                     </span>
                   </span>
                   <span
-                    className={`g-badge ${g.status === "running" ? "g-badge--go" : g.status === "cancelled" ? "g-badge--caution" : ""}`}
+                    className={`g-badge ${g.status === "running" ? "g-badge--go" : g.status === "cancelled" ? "g-badge--caution" : "g-badge--off"}`}
                   >
                     {g.status === "running"
                       ? `Draws ${until(g.endsAt)}`

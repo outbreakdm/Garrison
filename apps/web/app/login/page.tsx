@@ -23,7 +23,7 @@ export default async function LoginPage({
   const error = params.error ? ERRORS[params.error] : undefined;
   return (
     <main className="center">
-      <div className="g-card g-card--hud login">
+      <div className="g-card login">
         <Art slot="login" className="card-banner" decorative eager />
         <Logo />
         <h1>Sign in to your servers</h1>

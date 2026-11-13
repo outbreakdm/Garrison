@@ -30,6 +30,8 @@ import { addPanel, removePanel, savePanel, saveTicketOptions } from "./actions";
 import { TicketPanelEditor } from "./TicketPanelEditor";
 import { ago } from "./when";
 
+const TWO_DAYS_MS = 2 * 86_400_000;
+
 export const metadata: Metadata = { title: "Tickets" };
 
 const VIEWS: { key: TicketView; label: string }[] = [
@@ -151,7 +153,7 @@ export default async function TicketsPage({
               name="q"
               type="search"
               defaultValue={q ?? ""}
-              placeholder="#42, a member, or words from a transcript"
+              placeholder="#42, member or words"
               maxLength={64}
             />
             <button type="submit" className="g-btn g-btn--secondary">
@@ -199,7 +201,7 @@ export default async function TicketsPage({
                       </span>
                     </span>
                     <span
-                      className={`g-badge ${waits === "staff" ? "g-badge--caution" : waits === "member" ? "g-badge--intel" : ""}`}
+                      className={`g-badge ${waits === "staff" ? "g-badge--caution" : waits === "member" ? "g-badge--intel" : "g-badge--off"}`}
                     >
                       {waits === "staff"
                         ? "Needs reply"
@@ -207,7 +209,17 @@ export default async function TicketsPage({
                           ? "Replied"
                           : "Closed"}
                     </span>
-                    <span className="ticket-row__when mono">{ago(last)}</span>
+                    <span className="ticket-row__when mono">
+                      {ago(last)}
+                      {waits === "staff" ? (
+                        <progress
+                          className="xpbar duration__bar duration__bar--caution"
+                          value={Math.min(Date.now() - last.getTime(), TWO_DAYS_MS)}
+                          max={TWO_DAYS_MS}
+                          aria-label="Time waiting for staff, out of two days"
+                        />
+                      ) : null}
+                    </span>
                   </Link>
                 </li>
               );

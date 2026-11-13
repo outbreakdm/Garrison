@@ -354,7 +354,7 @@ export default async function Home() {
                 </div>
                 <div className="lp-app__grid">
                   {/* Two states of the same card: before the press, and the locked card it becomes. */}
-                  <div className="g-card g-card--hud card-col lp-lock">
+                  <div className="g-card card-col lp-lock">
                     <h3 className="card-title">Lockdown</h3>
                     <div className="lp-lock__states">
                       <div className="card-col lp-lock__before" aria-hidden="true">
