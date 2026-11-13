@@ -11,6 +11,7 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { formatTime } from "@/components/format";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { SettingsNotice } from "@/components/settings";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -262,7 +263,7 @@ export default async function SettingsPage({
             />
             <Place
               href={`${base}/ranks?edit=settings#settings`}
-              name="Ranks"
+              name="Leveling"
               value={`XP ${ranks.enabled ? "on" : "off"} · level-ups ${ANNOUNCE[ranks.announce] ?? ranks.announce}`}
             />
             <Place
@@ -347,9 +348,7 @@ export default async function SettingsPage({
             <tbody>
               {history.map((h: SettingsChange) => (
                 <tr key={h.id} className={undone.has(h.id) ? "revoked" : undefined}>
-                  <td className="mono">
-                    {h.createdAt.toISOString().slice(0, 16).replace("T", " ")} UTC
-                  </td>
+                  <td className="mono">{formatTime(h.createdAt)}</td>
                   <td>{h.username}</td>
                   <td>
                     {h.revertsChangeId ? <span className="muted">Undo: </span> : null}

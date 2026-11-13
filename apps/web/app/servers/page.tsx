@@ -58,7 +58,7 @@ export default async function ServersPage() {
   return (
     <>
       <Topbar username={session.username} theme={await currentTheme()} back="/servers" />
-      <main className="picker">
+      <main id="content" className="picker">
         <div className="picker__head">
           <h1>Pick a server</h1>
           <p>

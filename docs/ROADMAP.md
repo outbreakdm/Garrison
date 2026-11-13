@@ -577,3 +577,17 @@ Decided (2026-11-12, owner):
   grid no longer squeezes the server picker. DESIGN.md is rewritten. The finish review took
   two rounds; still open: the lockdown bar is unseen in a capture (no timed lockdown in the
   seed), and the section tag carries no live count.
+- 2026-11-13: Critique fixes (impeccable critique scored 24/40; the owner chose to fix
+  everything, phone first). Phones: the menu is one "current page" button that opens a sheet
+  of the four sections (44px items); the Moderation search takes a full row and cases stack as
+  cards with Undo in reach; Sign out moves to the account page; the search hint reads Ctrl K or
+  ⌘K and hides on touch. The section colour now owns each page head (a tinted name card), the
+  current menu item and open panels. Safety moved to cobalt and Community to a pinker orchid,
+  away from the info blue; case tags (warn, ban) are neutral, removals heavier. Security and
+  Welcome use the shared settings row; duplicate head buttons and the second "Edit ladder" are
+  gone; one primary per screen on Groups and raids; one date format. Plain names everywhere
+  (no Watch, Ledger, Quartermaster, Herald or Ranks in copy). Logs take a member name and show
+  names, not IDs (cached 10 min). Undo a case and Close ticket ask once. Role and channel
+  pickers are checkboxes, not Ctrl-click lists. A skip link, shorter attention-row link names,
+  an empty /status history explained, the appeal link gets a copy button, and the theme
+  toggle keeps you on the page. Not done: new login and 404 art, replying to tickets.

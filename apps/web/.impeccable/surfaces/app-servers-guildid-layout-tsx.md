@@ -13,7 +13,7 @@ Scope: /servers, /servers/[guildId] and every module page, /account, /login, /st
 
 THESIS: Every module has a colour identity and reads like a well-built card: name, rules text in plain sentences, state. Refuses the grey sidebar-and-cards dashboard where every page looks the same and status hides in colour alone.
 
-OWN-WORLD: Lifted playmat dark (deep slate-blue ground, card faces two steps lighter, never black). Four identities: Safety azure, Community orchid, Gaming volt, Server steel; the page's identity colours its nav gem, title gem and primary button. Card stock: 10px corners, 1px edge, soft drop, no frames or ornaments. Foil (holographic sheen) marks Requires Pro and nothing else. One grotesque (Archivo) for display, UI and numbers, tabular figures. Status marks differ by shape: filled dot on, hollow ring waiting, triangle alert, struck dash off.
+OWN-WORLD: Lifted playmat dark (deep slate-blue ground, card faces two steps lighter, never black). Four identities: Safety cobalt, Community orchid, Gaming volt, Server steel; the page's identity colours its nav gem, title gem and primary button. Card stock: 10px corners, 1px edge, soft drop, no frames or ornaments. Foil (holographic sheen) marks Requires Pro and nothing else. One grotesque (Archivo) for display, UI and numbers, tabular figures. Status marks differ by shape: filled dot on, hollow ring waiting, triangle alert, struck dash off.
 
 STORY: An owner opens a page, sees by colour which part of the server they're in, reads current settings as sentences, spots what needs them by shape and colour, and changes it with one obvious button. Pro needs are unmistakable.
 

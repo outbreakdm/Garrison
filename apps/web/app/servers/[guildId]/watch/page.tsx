@@ -16,16 +16,17 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CopyButton } from "@/components/CopyButton";
 import { ProTag } from "@/components/cards/CardEditor";
 import { EmptyState } from "@/components/EmptyState";
-import { ActionBadge, formatDuration, plainMentions } from "@/components/format";
+import { ActionBadge, formatDuration, formatTime, plainMentions } from "@/components/format";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import {
   ChannelSelect,
+  CheckList,
   FormFoot,
   FormPanel,
-  GearIcon,
   isEditing,
   SettingsNotice,
   SettingsPanel,
@@ -99,10 +100,6 @@ export default async function WatchPage({
           <h1>Moderation</h1>
           <p>Moderate members, set the escalation ladder, and review or undo every case.</p>
         </div>
-        <a className="g-btn g-btn--secondary" href="?edit=settings#settings">
-          <GearIcon />
-          Watch settings
-        </a>
       </div>
 
       <RequestsPanel
@@ -127,7 +124,10 @@ export default async function WatchPage({
             <h2 className="card-title" id="appeals-title">
               Appeals <span className="count">{appeals.open.length}</span>
             </h2>
-            <span className="g-help mono">{appealUrl}</span>
+            <span className="appeal-link">
+              <span className="g-help mono">{appealUrl}</span>
+              <CopyButton text={appealUrl} />
+            </span>
           </div>
           {appeals.open.length ? (
             <ul className="queue__list">
@@ -193,7 +193,7 @@ export default async function WatchPage({
               {appeals.decided
                 .map(
                   (a) =>
-                    `${a.username} ${a.status === "accepted" ? "accepted" : "denied"} by ${a.reviewerName ?? "staff"}`,
+                    `${a.username}'s appeal ${a.status === "accepted" ? "accepted" : "denied"} by ${a.reviewerName ?? "staff"}`,
                 )
                 .join(" · ")}
             </p>
@@ -266,7 +266,7 @@ export default async function WatchPage({
           )
         ) : null}
         <details className="card-edit" open={query.clear === "1"}>
-          <summary className="g-btn g-btn--ghost">Clear messages…</summary>
+          <summary className="g-btn g-btn--secondary">Clear messages…</summary>
           <form action={requestAction} className="settings-form">
             <input type="hidden" name="guildId" value={guild.id} />
             <input type="hidden" name="page" value="watch" />
@@ -458,42 +458,20 @@ export default async function WatchPage({
                 </label>
               </div>
             </div>
-            <label className="g-field" htmlFor="exemptRoleIds">
-              <span>Never check these roles</span>
-              <select
-                className="g-input"
-                id="exemptRoleIds"
-                name="exemptRoleIds"
-                multiple
-                size={4}
-                defaultValue={am.exemptRoleIds}
-              >
-                {roles
-                  .filter((r) => !r.managed)
-                  .map((r) => (
-                    <option key={r.id} value={r.id}>
-                      @{r.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <label className="g-field" htmlFor="exemptChannelIds">
-              <span>Never check these channels</span>
-              <select
-                className="g-input"
-                id="exemptChannelIds"
-                name="exemptChannelIds"
-                multiple
-                size={4}
-                defaultValue={am.exemptChannelIds}
-              >
-                {channels.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    #{c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <CheckList
+              name="exemptRoleIds"
+              label="Never check these roles"
+              value={am.exemptRoleIds}
+              options={roles
+                .filter((r) => !r.managed)
+                .map((r) => ({ id: r.id, label: `@${r.name}` }))}
+            />
+            <CheckList
+              name="exemptChannelIds"
+              label="Never check these channels"
+              value={am.exemptChannelIds}
+              options={channels.map((c) => ({ id: c.id, label: `#${c.name}` }))}
+            />
           </div>
           <fieldset className="editor-group" disabled={!ent["automod.ai"] && !am.aiEnabled}>
             <legend className="g-label">
@@ -537,7 +515,7 @@ export default async function WatchPage({
       </SettingsPanel>
 
       <SettingsPanel
-        title="Watch settings"
+        title="Moderation settings"
         open={isEditing(query, "settings")}
         facts={[
           {
@@ -591,7 +569,7 @@ export default async function WatchPage({
               </span>
             </label>
           </div>
-          <FormFoot label="Save Watch settings" guildId={guild.id} />
+          <FormFoot label="Save moderation settings" guildId={guild.id} />
         </form>
       </SettingsPanel>
 
@@ -621,7 +599,7 @@ export default async function WatchPage({
           </search>
         </div>
         <div className="table-wrap">
-          <table className="g-table">
+          <table className="g-table case-table">
             <thead>
               <tr>
                 {["Case", "Action", "Member", "Reason", "By", "When", ""].map((h) => (
@@ -634,13 +612,15 @@ export default async function WatchPage({
             <tbody>
               {cases.map((c) => (
                 <tr key={c.id} className={c.revokedAt ? "revoked" : undefined}>
-                  <td className="mono">#{c.caseNumber}</td>
-                  <td>
+                  <td className="mono" data-label="Case">
+                    #{c.caseNumber}
+                  </td>
+                  <td data-label="Action">
                     <ActionBadge action={c.action} />{" "}
                     <span className="mono">{formatDuration(c.durationSeconds)}</span>
                   </td>
                   {/* React escapes all of this: user-typed reasons can't inject markup. */}
-                  <td>
+                  <td data-label="Member">
                     {c.targetId ? (
                       <Link
                         href={`/servers/${guild.id}/watch/member/${c.targetId}`}
@@ -652,7 +632,7 @@ export default async function WatchPage({
                       (c.targetTag ?? "—")
                     )}
                   </td>
-                  <td>
+                  <td data-label="Reason">
                     {c.reason ? (
                       plainMentions(c.reason)
                     ) : (
@@ -660,31 +640,31 @@ export default async function WatchPage({
                     )}
                     {c.revokedAt ? <span className="muted"> · undone</span> : null}
                   </td>
-                  <td className="muted">
+                  <td className="muted" data-label="By">
                     {c.source === "manual"
                       ? c.moderatorTag
                       : c.source === "escalation"
                         ? "Escalation rule"
                         : "Automod"}
                   </td>
-                  <td className="mono">
-                    {c.createdAt.toISOString().slice(0, 16).replace("T", " ")} UTC
+                  <td className="mono" data-label="When">
+                    {formatTime(c.createdAt)}
                   </td>
                   <td>
                     {!c.revokedAt && UNDOABLE.has(c.action) ? (
-                      <form action={requestAction}>
-                        <input type="hidden" name="guildId" value={guild.id} />
-                        <input type="hidden" name="page" value="watch" />
-                        <input type="hidden" name="kind" value="undo_case" />
-                        <input type="hidden" name="caseNumber" value={c.caseNumber} />
-                        <button
-                          type="submit"
-                          className="g-btn g-btn--ghost"
-                          title={UNDO_LABEL[c.action]}
-                        >
-                          Undo
-                        </button>
-                      </form>
+                      // Undoing reaches back into Discord (an unban is public), so it asks once.
+                      <details className="confirm case-undo">
+                        <summary className="confirm__toggle g-btn g-btn--ghost">Undo…</summary>
+                        <form action={requestAction}>
+                          <input type="hidden" name="guildId" value={guild.id} />
+                          <input type="hidden" name="page" value="watch" />
+                          <input type="hidden" name="kind" value="undo_case" />
+                          <input type="hidden" name="caseNumber" value={c.caseNumber} />
+                          <button type="submit" className="g-btn g-btn--danger">
+                            {UNDO_LABEL[c.action]} (case #{c.caseNumber})
+                          </button>
+                        </form>
+                      </details>
                     ) : null}
                   </td>
                 </tr>
@@ -709,9 +689,6 @@ export default async function WatchPage({
               don't count.
             </div>
           </div>
-          <a className="g-btn g-btn--ghost" href="?edit=edit-ladder#edit-ladder">
-            Edit ladder
-          </a>
         </div>
         {rules.length ? (
           <div className="ladder">

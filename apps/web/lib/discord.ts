@@ -389,6 +389,36 @@ export async function fetchMemberCard(guildId: string, userId: string): Promise<
   }
 }
 
+const NAME_TTL_MS = 10 * 60_000;
+const nameCache = new Map<string, { at: number; name: string | null }>();
+
+/**
+ * Display names for a page of user IDs (log rows, appeal reviewers), so owners read
+ * people, not 18-digit numbers. Looks up at most 20 unknown IDs per call, keeps names
+ * for 10 minutes, and leaves out anyone Discord doesn't know or a failed read.
+ */
+export async function memberNames(guildId: string, ids: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const missing: string[] = [];
+  for (const id of new Set(ids)) {
+    if (!SNOWFLAKE.test(id)) continue;
+    const hit = nameCache.get(`${guildId}:${id}`);
+    if (hit && Date.now() - hit.at < NAME_TTL_MS) {
+      if (hit.name) out.set(id, hit.name);
+    } else missing.push(id);
+  }
+  await Promise.all(
+    missing.slice(0, 20).map(async (id) => {
+      const card = await fetchMemberCard(guildId, id).catch(() => undefined);
+      if (card === undefined) return;
+      nameCache.set(`${guildId}:${id}`, { at: Date.now(), name: card?.name ?? null });
+      if (card) out.set(id, card.name);
+    }),
+  );
+  if (nameCache.size > 2_000) nameCache.clear();
+  return out;
+}
+
 /** Members whose name or nickname starts with `query`; a user ID finds that one person. */
 export async function searchMembers(guildId: string, query: string): Promise<MemberCard[]> {
   const q = query.trim().replace(/^@/, "").slice(0, 32);

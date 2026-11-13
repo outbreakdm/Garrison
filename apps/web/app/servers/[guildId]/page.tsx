@@ -212,15 +212,17 @@ export default async function OverviewPage({
             </h2>
           </div>
           <ul className="attention__list">
-            {attention.map((a) => (
+            {attention.map((a, i) => (
               <li key={a.title}>
                 <a
                   className={`attention__item ${a.tone === "alert" ? "attention__item--alert" : ""}`}
                   href={a.href}
+                  aria-label={`${a.title}. ${a.go}`}
+                  aria-describedby={`attn-${i}`}
                 >
                   <span className="attention__text">
                     <strong>{a.title}</strong>
-                    <span>{a.detail}</span>
+                    <span id={`attn-${i}`}>{a.detail}</span>
                   </span>
                   <span className="attention__go">
                     {a.go}

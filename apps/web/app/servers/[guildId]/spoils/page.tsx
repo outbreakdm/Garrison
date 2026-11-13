@@ -200,7 +200,7 @@ export default async function GiveawaysPage({
                 </select>
               </label>
               <label className="g-field" htmlFor="minLevel">
-                <span>Needs Ranks level</span>
+                <span>Minimum level to enter</span>
                 <input
                   className="g-input"
                   id="minLevel"

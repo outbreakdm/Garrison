@@ -13,12 +13,12 @@
   --alert: #ff6b6b;
   --intel: #5ab0ff;
   /* Identities: fill (buttons, gems), ink on that fill, and a text-safe tone. */
-  --azure: #5aa9ff;
-  --azure-ink: #04162b;
-  --azure-text: #7dbcff;
-  --orchid: #c39bff;
-  --orchid-ink: #1c0a38;
-  --orchid-text: #cfb0ff;
+  --cobalt: #7b93ff;
+  --cobalt-ink: #0a1240;
+  --cobalt-text: #97aaff;
+  --orchid: #df95f5;
+  --orchid-ink: #2a0a35;
+  --orchid-text: #e6abf8;
   --volt: #d4ff3a;
   --volt-ink: #141a00;
   --volt-text: #d4ff3a;
@@ -44,12 +44,12 @@
   --caution: #9a5b00;
   --alert: #c62828;
   --intel: #1f6fc5;
-  --azure: #1f6fd6;
-  --azure-ink: #ffffff;
-  --azure-text: #1a62bf;
-  --orchid: #7b45d6;
+  --cobalt: #3c53d6;
+  --cobalt-ink: #ffffff;
+  --cobalt-text: #3449c4;
+  --orchid: #9437b5;
   --orchid-ink: #ffffff;
-  --orchid-text: #6c3bc4;
+  --orchid-text: #8a2fab;
   --volt: #4d6b00;
   --volt-ink: #ffffff;
   --volt-text: #4d6b00;

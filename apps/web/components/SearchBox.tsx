@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * The topbar search. A plain GET form, so it works without JavaScript; the
@@ -8,6 +8,11 @@ import { useEffect, useRef } from "react";
  */
 export function SearchBox({ guildId, defaultValue }: { guildId: string; defaultValue?: string }) {
   const input = useRef<HTMLInputElement>(null);
+  // The hint names the shortcut for this keyboard: Ctrl K, or ⌘K on a Mac.
+  const [hint, setHint] = useState("Ctrl K");
+  useEffect(() => {
+    if (/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)) setHint("⌘K");
+  }, []);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
@@ -37,7 +42,7 @@ export function SearchBox({ guildId, defaultValue }: { guildId: string; defaultV
           defaultValue={defaultValue}
         />
         <span className="searchbox__hint" aria-hidden="true">
-          ⌘K
+          {hint}
         </span>
       </form>
     </search>

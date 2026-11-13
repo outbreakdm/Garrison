@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { formatTime } from "@/components/format";
 import { Logo } from "@/components/Logo";
 import { siteUrl } from "@/lib/hosts";
 import { publicMetrics } from "@/lib/public-metrics";
@@ -31,8 +32,7 @@ export default async function StatusPage() {
           </h1>
           {m?.lastBeatAt ? (
             <p className="muted">
-              Last heartbeat {m.lastBeatAt.toISOString().slice(0, 16).replace("T", " ")} UTC. The
-              bot checks in every minute.
+              Last heartbeat {formatTime(m.lastBeatAt)}. The bot checks in every minute.
             </p>
           ) : null}
         </div>
@@ -81,6 +81,11 @@ export default async function StatusPage() {
             </section>
             <div className="g-card card-col">
               <h2 className="card-title">Last 30 days</h2>
+              {m.days.length === 0 ? (
+                <p className="muted">
+                  No history yet. Each day fills in once Garrison has checked in on it.
+                </p>
+              ) : null}
               <div
                 className="uptime-bars"
                 role="img"

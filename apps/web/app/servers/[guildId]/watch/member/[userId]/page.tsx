@@ -309,7 +309,7 @@ export default async function MemberPage({
         <div className="table-card__head row-between">
           <h2 className="card-title">Cases</h2>
           <Link className="g-btn g-btn--ghost" href={`/servers/${guild.id}/ledger?user=${userId}`}>
-            Their Ledger events
+            Their log events
           </Link>
         </div>
         {cases.length ? (
@@ -348,9 +348,7 @@ export default async function MemberPage({
                           ? "Escalation rule"
                           : "Automod"}
                     </td>
-                    <td className="mono">
-                      {c.createdAt.toISOString().slice(0, 16).replace("T", " ")} UTC
-                    </td>
+                    <td className="mono">{formatTime(c.createdAt)}</td>
                     <td>
                       {!c.revokedAt && UNDOABLE.has(c.action) ? (
                         <form action={requestAction}>

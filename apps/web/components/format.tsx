@@ -1,11 +1,15 @@
 import type { CaseAction } from "@garrison/db";
 
+/**
+ * Case actions are kinds, not states, so they never borrow the status colours: a plain
+ * tag, with the removals (kick, ban) set heavier than the reversible ones.
+ */
 const TONE: Record<CaseAction, string> = {
-  warn: "g-badge--caution",
-  timeout: "g-badge--caution",
-  kick: "g-badge--alert",
-  ban: "g-badge--alert",
-  purge: "g-badge--intel",
+  warn: "",
+  timeout: "",
+  kick: "g-badge--heavy",
+  ban: "g-badge--heavy",
+  purge: "",
 };
 
 export function ActionBadge({ action }: { action: CaseAction }) {

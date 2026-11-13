@@ -11,6 +11,7 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CheckList } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { listNotifiableRoles, listTextChannels } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
@@ -244,23 +245,13 @@ export default async function RallyTemplatesPage({
                     defaultValue={t.lifetimeHours}
                   />
                 </label>
-                <label className="g-field">
-                  <span>Only in these channels</span>
-                  <select
-                    className="g-input"
-                    name="channelIds"
-                    multiple
-                    size={4}
-                    defaultValue={t.channelIds}
-                  >
-                    {channels.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        #{c.name}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="g-help">None selected: any channel.</span>
-                </label>
+                <CheckList
+                  name="channelIds"
+                  label="Only in these channels"
+                  value={t.channelIds}
+                  options={channels.map((c) => ({ id: c.id, label: `#${c.name}` }))}
+                  help={<>None selected: any channel.</>}
+                />
               </div>
               <label className="g-field">
                 <span>Notify a role when a post goes up {plan === "pro" ? "" : "(Pro)"}</span>

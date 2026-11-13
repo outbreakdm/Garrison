@@ -60,7 +60,7 @@ export default async function PlayPage({ params }: { params: Promise<{ guildId: 
   return (
     <>
       <Topbar username={session.username} theme={await currentTheme()} back={`/play/${guild.id}`} />
-      <main className="shell">
+      <main id="content" className="shell">
         <div className="main">
           <div className="page-head">
             <div>

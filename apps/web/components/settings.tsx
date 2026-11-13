@@ -221,3 +221,45 @@ export function Switch({
     </label>
   );
 }
+
+/**
+ * Pick several (roles, channels) with plain checkboxes, never Ctrl-click. Each ticked box
+ * posts the same name, so the server reads it exactly like a multiple select.
+ */
+export function CheckList({
+  name,
+  label,
+  value,
+  options,
+  help,
+}: {
+  name: string;
+  label: string;
+  value: readonly string[];
+  options: { id: string; label: string }[];
+  help?: ReactNode;
+}) {
+  return (
+    <fieldset className="g-field checklist">
+      <legend className="checklist__legend">{label}</legend>
+      <div className="checklist__box">
+        {options.length ? (
+          options.map((o) => (
+            <label className="checklist__item" key={o.id}>
+              <input
+                type="checkbox"
+                name={name}
+                value={o.id}
+                defaultChecked={value.includes(o.id)}
+              />
+              <span>{o.label}</span>
+            </label>
+          ))
+        ) : (
+          <span className="g-help">Nothing to pick yet.</span>
+        )}
+      </div>
+      {help ? <span className="g-help">{help}</span> : null}
+    </fieldset>
+  );
+}

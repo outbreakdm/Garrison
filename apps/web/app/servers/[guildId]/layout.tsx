@@ -35,7 +35,7 @@ export default async function ServerLayout({
       />
       <div className="shell">
         <ServerNav guildId={guild.id} />
-        <main className="main">
+        <main id="content" className="main">
           <PageTransition>{children}</PageTransition>
         </main>
       </div>

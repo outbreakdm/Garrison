@@ -32,7 +32,7 @@ export default async function StaffPage({
   return (
     <>
       <Topbar username={session.username} theme={await currentTheme()} back="/staff" />
-      <main className="picker">
+      <main id="content" className="picker">
         <div className="picker__head">
           <h1>Staff</h1>
           <p>

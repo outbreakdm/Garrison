@@ -9,17 +9,17 @@ import {
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
+import { formatTime } from "@/components/format";
 import {
   ChannelSelect,
   FormFoot,
-  GearIcon,
   isEditing,
   SettingsNotice,
   SettingsPanel,
   Switch,
 } from "@/components/settings";
 import { getDb } from "@/lib/db";
-import { listTextChannels } from "@/lib/discord";
+import { listTextChannels, memberNames, searchMembers } from "@/lib/discord";
 import { isSnowflake } from "@/lib/security";
 import { requireGuildAccess } from "@/lib/session";
 import { saveLedger } from "../settings/actions";
@@ -39,7 +39,11 @@ export default async function LedgerPage({
   const { guild } = await requireGuildAccess(guildId);
   const q = await searchParams;
   // Filters come from the URL: accept only known shapes, ignore anything else.
-  const user = q.user && isSnowflake(q.user.trim()) ? q.user.trim() : undefined;
+  // A member by name or ID: a name is looked up in the server, its first match is used.
+  const userQuery = (q.user ?? "").trim().replace(/^@/, "").slice(0, 32);
+  let user = isSnowflake(userQuery) ? userQuery : undefined;
+  if (!user && userQuery) user = (await searchMembers(guild.id, userQuery).catch(() => []))[0]?.id;
+  const userNotFound = Boolean(userQuery && !user);
   const type = q.type && Object.hasOwn(ledgerTypeLabels, q.type) ? q.type : undefined;
   const before = q.before && /^\d{1,15}$/.test(q.before) ? Number(q.before) : undefined;
   const db = await getDb();
@@ -50,6 +54,10 @@ export default async function LedgerPage({
     topInviters(db, guild.id),
     getGuildPlan(db, guild.id),
   ]);
+  const names = await memberNames(
+    guild.id,
+    events.flatMap((e) => [e.actorId, e.targetId]).filter((id): id is string => Boolean(id)),
+  );
   const canExport = entitlements(plan)["ledger.export"];
   const exportQuery = new URLSearchParams({ ...(user ? { user } : {}), ...(type ? { type } : {}) });
   const ledgerChannel = channels.find((c) => c.id === settings.channelId);
@@ -72,12 +80,13 @@ export default async function LedgerPage({
               : "Message text isn't kept."}
           </p>
         </div>
-        <a className="g-btn g-btn--secondary" href="?edit=settings#settings">
-          <GearIcon />
-          Ledger settings
-        </a>
       </div>
       <SettingsNotice query={q} />
+      {userNotFound ? (
+        <div className="notice" role="status">
+          No member here matches “{userQuery}”. Showing every event; try their user ID.
+        </div>
+      ) : null}
 
       <SettingsPanel
         title="Log settings"
@@ -134,15 +143,15 @@ export default async function LedgerPage({
 
       <form className="g-card filter-row" method="get">
         <label className="g-field" htmlFor="user">
-          <span>Member ID</span>
+          <span>Member</span>
           <input
             className="g-input"
             id="user"
             name="user"
-            defaultValue={user ?? ""}
-            placeholder="e.g. 123456789012345678"
-            inputMode="numeric"
-            maxLength={20}
+            type="search"
+            defaultValue={userQuery}
+            placeholder="Name or user ID"
+            maxLength={32}
           />
         </label>
         <label className="g-field" htmlFor="type">
@@ -222,9 +231,7 @@ export default async function LedgerPage({
               {events.map((e) => (
                 <tr key={e.id}>
                   <td className="mono">{e.id}</td>
-                  <td className="mono">
-                    {e.createdAt.toISOString().slice(0, 16).replace("T", " ")} UTC
-                  </td>
+                  <td className="mono">{formatTime(e.createdAt)}</td>
                   <td>
                     <span className="g-badge">{ledgerTypeLabels[e.type] ?? e.type}</span>
                   </td>
@@ -245,19 +252,19 @@ export default async function LedgerPage({
                       </div>
                     ) : null}
                   </td>
-                  <td className="mono">
+                  <td>
                     {e.actorId ? (
                       <Link href={`/servers/${guild.id}/ledger?user=${e.actorId}`}>
-                        {e.actorId}
+                        {names.get(e.actorId) ?? e.actorId}
                       </Link>
                     ) : (
                       "—"
                     )}
                   </td>
-                  <td className="mono">
+                  <td>
                     {e.targetId ? (
                       <Link href={`/servers/${guild.id}/ledger?user=${e.targetId}`}>
-                        {e.targetId}
+                        {names.get(e.targetId) ?? e.targetId}
                       </Link>
                     ) : (
                       "—"

@@ -45,7 +45,7 @@ export default async function AccountPage({
   return (
     <>
       <Topbar username={session.username} theme={await currentTheme()} back="/account" />
-      <main className="shell">
+      <main id="content" className="shell">
         <div className="main">
           <div className="page-head">
             <div>
@@ -55,6 +55,12 @@ export default async function AccountPage({
                 never keeps your Discord or Battle.net token.
               </p>
             </div>
+            {/* On phones the top bar drops Sign out (too easy to hit); it lives here too. */}
+            <form method="post" action="/auth/logout">
+              <button type="submit" className="g-btn g-btn--secondary">
+                Sign out
+              </button>
+            </form>
           </div>
           {key ? (
             <div className={`notice ${key.startsWith("error") ? "" : "notice--ok"}`} role="status">

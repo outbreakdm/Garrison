@@ -13,7 +13,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { BackgroundChip } from "@/components/cards/BackgroundChip";
 import { ProTag } from "@/components/cards/CardEditor";
-import { FormFoot } from "@/components/settings";
+import { FormFoot, GearIcon } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { botTopPosition, listGuildRoles, listTextChannels } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
@@ -39,8 +39,12 @@ function Panel({
 }) {
   return (
     <details className="g-card panel" id={id} open={open}>
-      <summary className="panel__summary">
-        <span className="panel__title panel__title--lg">{title}</span>
+      {/* The same settings row as every page: gear, current values, Change. */}
+      <summary className="panel__summary panel__summary--settings">
+        <span className="panel__icon">
+          <GearIcon />
+        </span>
+        <span className="panel__title">{title}</span>
         <span className="panel__facts">
           {facts.map((f) => (
             <span className="fact" key={f}>
@@ -48,7 +52,11 @@ function Panel({
             </span>
           ))}
         </span>
-        <span className="panel__cue" aria-hidden="true" />
+        <span className="panel__action" aria-hidden="true">
+          <span className="panel__action-open">Change</span>
+          <span className="panel__action-close">Close</span>
+          <span className="panel__cue" />
+        </span>
       </summary>
       <div className="panel__body">{children}</div>
     </details>
@@ -118,7 +126,8 @@ export default async function WelcomePage({
           <h1>Welcome</h1>
           <p>
             Greet people as they join, see them off when they leave, and give new members their
-            first roles. Herald stays quiet during a raid or lockdown, so raiders get nothing.
+            first roles. Welcome messages stay quiet during a raid or lockdown, so raiders get
+            nothing.
           </p>
         </div>
         <span className="mono">{plan === "pro" ? "Pro" : "Free"}</span>

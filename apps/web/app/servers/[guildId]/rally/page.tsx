@@ -442,7 +442,7 @@ export default async function RallyPage({
                         ) : (
                           <input type="hidden" name="role" value="" />
                         )}
-                        <button type="submit" className="g-btn g-btn--primary">
+                        <button type="submit" className="g-btn g-btn--secondary">
                           Join
                         </button>
                       </form>
@@ -619,7 +619,7 @@ export default async function RallyPage({
                         placeholder="Class or spec"
                         aria-label="Class or spec, optional"
                       />
-                      <button type="submit" className="g-btn g-btn--primary">
+                      <button type="submit" className="g-btn g-btn--secondary">
                         Sign up
                       </button>
                     </form>

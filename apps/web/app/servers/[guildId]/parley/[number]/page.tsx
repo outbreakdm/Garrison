@@ -202,29 +202,33 @@ export default async function TicketPage({
                     Claim it myself
                   </button>
                 </form>
-                <form action={requestAction} className="card-col">
-                  <input type="hidden" name="guildId" value={guild.id} />
-                  <input type="hidden" name="page" value={page} />
-                  <input type="hidden" name="kind" value="ticket_action" />
-                  <input type="hidden" name="ticketId" value={ticket.id} />
-                  <input type="hidden" name="op" value="close" />
-                  <label className="g-field" htmlFor="reason">
-                    <span>Reason (optional)</span>
-                    <input
-                      className="g-input"
-                      id="reason"
-                      name="reason"
-                      maxLength={TICKET_LIMITS.reason}
-                      placeholder="Kept with the transcript"
-                    />
-                  </label>
-                  <button type="submit" className="g-btn g-btn--danger">
-                    Close ticket
-                  </button>
-                  <span className="g-help">
-                    Garrison deletes the channel 10 seconds later. The transcript stays here.
-                  </span>
-                </form>
+                {/* Closing deletes the channel, so it asks once. */}
+                <details className="confirm">
+                  <summary className="confirm__toggle g-btn g-btn--danger">Close ticket…</summary>
+                  <form action={requestAction} className="card-col">
+                    <input type="hidden" name="guildId" value={guild.id} />
+                    <input type="hidden" name="page" value={page} />
+                    <input type="hidden" name="kind" value="ticket_action" />
+                    <input type="hidden" name="ticketId" value={ticket.id} />
+                    <input type="hidden" name="op" value="close" />
+                    <label className="g-field" htmlFor="reason">
+                      <span>Reason (optional)</span>
+                      <input
+                        className="g-input"
+                        id="reason"
+                        name="reason"
+                        maxLength={TICKET_LIMITS.reason}
+                        placeholder="Kept with the transcript"
+                      />
+                    </label>
+                    <button type="submit" className="g-btn g-btn--danger">
+                      Close ticket
+                    </button>
+                    <span className="g-help">
+                      Garrison deletes the channel 10 seconds later. The transcript stays here.
+                    </span>
+                  </form>
+                </details>
               </>
             ) : (
               <form action={requestAction} className="card-col">

@@ -23,7 +23,6 @@ import { RequestsPanel } from "@/components/RequestsPanel";
 import {
   ChannelSelect,
   FormFoot,
-  GearIcon,
   isEditing,
   SettingsNotice,
   SettingsPanel,
@@ -119,10 +118,6 @@ export default async function RanksPage({
             Garrison counts who posted and when, never what they wrote.
           </p>
         </div>
-        <a className="g-btn g-btn--secondary" href="?edit=settings#settings">
-          <GearIcon />
-          Leveling settings
-        </a>
       </div>
       <SettingsNotice query={query} />
       <RequestsPanel guildId={guild.id} kinds={["season_start"]} query={query} />
@@ -311,7 +306,7 @@ export default async function RanksPage({
           <span className="g-help">
             {seasons[0]
               ? `Season ${seasons[0].number + 1} since ${formatTime(seasons[0].endedAt)}`
-              : "Season 1: since Ranks began"}
+              : "Season 1: since leveling began"}
           </span>
         </div>
         <p className="g-help">

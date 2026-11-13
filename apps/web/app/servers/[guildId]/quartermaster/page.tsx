@@ -117,7 +117,7 @@ export default async function QuartermasterPage({
           <input type="hidden" name="page" value="quartermaster" />
           <input type="hidden" name="kind" value="qm_plan" />
           <label className="qm-compose__label" htmlFor="qm-request">
-            What should Quartermaster build?
+            What should Garrison build?
           </label>
           <textarea
             className="g-input qm-compose__input"
@@ -224,8 +224,8 @@ export default async function QuartermasterPage({
         <section className="card-col" aria-label="Your server">
           {planning ? (
             <div className="notice notice--ok" role="status">
-              Quartermaster is drawing up the plan. The preview appears here by itself, usually
-              within 20 seconds.
+              Garrison is drawing up the plan. The preview appears here by itself, usually within 20
+              seconds.
             </div>
           ) : null}
           {preview ? (

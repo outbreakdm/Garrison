@@ -13,10 +13,11 @@ import { formatTime } from "@/components/format";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import {
   ChannelSelect,
+  CheckList,
   FormFoot,
-  GearIcon,
   isEditing,
   SettingsNotice,
+  SettingsPanel,
   Switch,
 } from "@/components/settings";
 import { getDb } from "@/lib/db";
@@ -176,235 +177,224 @@ export default async function GatehousePage({
             </>
           )}
         </div>
-        <div className="gate-cols">
-          <div className="g-card card-col" id="anti-raid">
-            <h2 className="card-title">Anti-raid</h2>
-            <Row label="Status" value={g?.antiRaidEnabled ? "Armed" : "Off"} />
-            <Row
-              label="A raid is"
-              value={g ? `${g.raidJoinCount} joins in ${g.raidWindowSeconds} s` : "—"}
-            />
-            <Row
-              label="Response"
-              value={g?.raidResponse === "alert" ? "Alert only" : "Lock the server"}
-            />
-            <Row
-              label="Auto-unlock"
-              value={g?.autoUnlockMinutes ? `${g.autoUnlockMinutes} min` : "Off"}
-            />
-            <Row
-              label="Flag accounts under"
-              value={g?.flagAccountAgeDays ? `${g.flagAccountAgeDays} days` : "Off"}
-            />
-            <Row
-              label="Staff roles"
-              value={g?.staffRoleIds.length ? g.staffRoleIds.map(roleName).join(", ") : "None"}
-            />
-            <details className="card-edit" open={isEditing(query, "anti-raid")}>
-              <summary className="g-btn g-btn--secondary">
-                <GearIcon />
-                Change anti-raid
-              </summary>
-              {/* Keyed by last update, so the form re-mounts with the stored values after a save. */}
-              <form
-                action={saveAntiRaid}
-                className="card-col"
-                key={`raid-${g?.updatedAt.getTime() ?? 0}`}
-              >
-                <input type="hidden" name="guildId" value={guild.id} />
-                <Switch
-                  name="antiRaidEnabled"
-                  defaultChecked={g?.antiRaidEnabled ?? true}
-                  label="Watch the join rate for raids"
-                />
-                <div className="field-row">
-                  <label className="g-field" htmlFor="raidJoinCount">
-                    <span>Joins</span>
-                    <input
-                      className="g-input"
-                      id="raidJoinCount"
-                      name="raidJoinCount"
-                      type="number"
-                      min={3}
-                      max={200}
-                      defaultValue={g?.raidJoinCount ?? 10}
-                    />
-                  </label>
-                  <label className="g-field" htmlFor="raidWindowSeconds">
-                    <span>Within (s)</span>
-                    <input
-                      className="g-input"
-                      id="raidWindowSeconds"
-                      name="raidWindowSeconds"
-                      type="number"
-                      min={5}
-                      max={600}
-                      defaultValue={g?.raidWindowSeconds ?? 30}
-                    />
-                  </label>
-                </div>
-                <label className="g-field" htmlFor="raidResponse">
-                  <span>On a raid</span>
-                  <select
+        <div className="gate-settings">
+          <SettingsPanel
+            id="anti-raid"
+            title="Anti-raid"
+            open={isEditing(query, "anti-raid")}
+            facts={[
+              { label: "Status", value: g?.antiRaidEnabled ? "Armed" : "Off" },
+              {
+                label: "A raid is",
+                value: g ? `${g.raidJoinCount} joins in ${g.raidWindowSeconds} s` : "—",
+              },
+              {
+                label: "Then",
+                value: g?.raidResponse === "alert" ? "Alert only" : "Lock the server",
+              },
+              {
+                label: "Auto-unlock",
+                value: g?.autoUnlockMinutes ? `${g.autoUnlockMinutes} min` : "Off",
+              },
+              {
+                label: "Flag accounts under",
+                value: g?.flagAccountAgeDays ? `${g.flagAccountAgeDays} days` : "Off",
+              },
+              {
+                label: "Staff",
+                value: g?.staffRoleIds.length ? g.staffRoleIds.map(roleName).join(", ") : "None",
+              },
+            ]}
+          >
+            {/* Keyed by last update, so the form re-mounts with the stored values after a save. */}
+            <form
+              action={saveAntiRaid}
+              className="card-col"
+              key={`raid-${g?.updatedAt.getTime() ?? 0}`}
+            >
+              <input type="hidden" name="guildId" value={guild.id} />
+              <Switch
+                name="antiRaidEnabled"
+                defaultChecked={g?.antiRaidEnabled ?? true}
+                label="Watch the join rate for raids"
+              />
+              <div className="field-row">
+                <label className="g-field" htmlFor="raidJoinCount">
+                  <span>Joins</span>
+                  <input
                     className="g-input"
-                    id="raidResponse"
-                    name="raidResponse"
-                    defaultValue={g?.raidResponse ?? "lockdown"}
-                  >
-                    <option value="lockdown">Lock the server and pause invites</option>
-                    <option value="alert">Alert only</option>
-                  </select>
-                </label>
-                <div className="field-row">
-                  <label className="g-field" htmlFor="autoUnlockMinutes">
-                    <span>Auto-unlock (min)</span>
-                    <input
-                      className="g-input"
-                      id="autoUnlockMinutes"
-                      name="autoUnlockMinutes"
-                      type="number"
-                      min={0}
-                      max={1440}
-                      defaultValue={g?.autoUnlockMinutes ?? 15}
-                    />
-                  </label>
-                  <label className="g-field" htmlFor="flagAccountAgeDays">
-                    <span>Flag accounts under (days)</span>
-                    <input
-                      className="g-input"
-                      id="flagAccountAgeDays"
-                      name="flagAccountAgeDays"
-                      type="number"
-                      min={0}
-                      max={365}
-                      defaultValue={g?.flagAccountAgeDays ?? 7}
-                    />
-                  </label>
-                </div>
-                <label className="g-field" htmlFor="alertChannelId">
-                  <span>Alert channel</span>
-                  <ChannelSelect
-                    name="alertChannelId"
-                    value={g?.alertChannelId ?? null}
-                    channels={channels}
-                    none="Use the Watch log channel"
+                    id="raidJoinCount"
+                    name="raidJoinCount"
+                    type="number"
+                    min={3}
+                    max={200}
+                    defaultValue={g?.raidJoinCount ?? 10}
                   />
                 </label>
-                <label className="g-field" htmlFor="staffRoleIds">
-                  <span>Staff roles (keep talking during a lockdown)</span>
-                  <select
+                <label className="g-field" htmlFor="raidWindowSeconds">
+                  <span>Within (s)</span>
+                  <input
                     className="g-input"
-                    id="staffRoleIds"
-                    name="staffRoleIds"
-                    multiple
-                    size={4}
-                    defaultValue={g?.staffRoleIds ?? []}
-                  >
-                    {roles.map((r) => (
+                    id="raidWindowSeconds"
+                    name="raidWindowSeconds"
+                    type="number"
+                    min={5}
+                    max={600}
+                    defaultValue={g?.raidWindowSeconds ?? 30}
+                  />
+                </label>
+              </div>
+              <label className="g-field" htmlFor="raidResponse">
+                <span>On a raid</span>
+                <select
+                  className="g-input"
+                  id="raidResponse"
+                  name="raidResponse"
+                  defaultValue={g?.raidResponse ?? "lockdown"}
+                >
+                  <option value="lockdown">Lock the server and pause invites</option>
+                  <option value="alert">Alert only</option>
+                </select>
+              </label>
+              <div className="field-row">
+                <label className="g-field" htmlFor="autoUnlockMinutes">
+                  <span>Auto-unlock (min)</span>
+                  <input
+                    className="g-input"
+                    id="autoUnlockMinutes"
+                    name="autoUnlockMinutes"
+                    type="number"
+                    min={0}
+                    max={1440}
+                    defaultValue={g?.autoUnlockMinutes ?? 15}
+                  />
+                </label>
+                <label className="g-field" htmlFor="flagAccountAgeDays">
+                  <span>Flag accounts under (days)</span>
+                  <input
+                    className="g-input"
+                    id="flagAccountAgeDays"
+                    name="flagAccountAgeDays"
+                    type="number"
+                    min={0}
+                    max={365}
+                    defaultValue={g?.flagAccountAgeDays ?? 7}
+                  />
+                </label>
+              </div>
+              <label className="g-field" htmlFor="alertChannelId">
+                <span>Alert channel</span>
+                <ChannelSelect
+                  name="alertChannelId"
+                  value={g?.alertChannelId ?? null}
+                  channels={channels}
+                  none="Use the moderation log channel"
+                />
+              </label>
+              <CheckList
+                name="staffRoleIds"
+                label="Staff roles (keep talking during a lockdown)"
+                value={g?.staffRoleIds ?? []}
+                options={roles.map((r) => ({ id: r.id, label: `@${r.name}` }))}
+                help={<>Up to 10.</>}
+              />
+              <FormFoot label="Save anti-raid" guildId={guild.id} />
+            </form>
+          </SettingsPanel>
+          <SettingsPanel
+            id="verification"
+            title="Verification"
+            open={isEditing(query, "verification")}
+            facts={[
+              { label: "Status", value: g?.verifyRoleId ? "On" : "Off" },
+              { label: "Gives", value: roleName(g?.verifyRoleId) },
+              {
+                label: "Min account age",
+                value: g?.verifyMinAccountAgeDays ? `${g.verifyMinAccountAgeDays} days` : "Any",
+              },
+            ]}
+          >
+            <form
+              action={saveVerification}
+              className="card-col"
+              key={`verify-${g?.updatedAt.getTime() ?? 0}`}
+            >
+              <input type="hidden" name="guildId" value={guild.id} />
+              <label className="g-field" htmlFor="verifyRoleId">
+                <span>Verification gives</span>
+                <select
+                  className="g-input"
+                  id="verifyRoleId"
+                  name="verifyRoleId"
+                  defaultValue={g?.verifyRoleId ?? ""}
+                >
+                  <option value="">Verification off</option>
+                  {roles
+                    .filter((r) => !r.managed && !isDangerousRole(r.permissions))
+                    .map((r) => (
                       <option key={r.id} value={r.id}>
                         @{r.name}
                       </option>
                     ))}
-                  </select>
-                  <span className="g-help">Up to 10. Ctrl/⌘-click to pick several.</span>
-                </label>
-                <FormFoot label="Save anti-raid" guildId={guild.id} />
-              </form>
-            </details>
-          </div>
-          <div className="card-col gate-stack">
-            <div className="g-card card-col" id="verification">
-              <h2 className="card-title">Verification</h2>
-              <Row label="Status" value={g?.verifyRoleId ? "On" : "Off"} />
-              <Row label="Gives" value={roleName(g?.verifyRoleId)} />
-              <Row
-                label="Min account age"
-                value={g?.verifyMinAccountAgeDays ? `${g.verifyMinAccountAgeDays} days` : "Any"}
-              />
-              {g?.verifyRoleId ? (
-                <form action={requestAction} className="card-col">
-                  <Hidden guildId={guild.id} kind="post_verify_panel" />
-                  <label className="g-field">
-                    <span>Post the Verify button in</span>
-                    <select className="g-input" name="channelId" required defaultValue="">
-                      <option value="" disabled>
-                        Pick a channel
+                </select>
+                <span className="g-help">
+                  Roles with admin or moderation powers can't be the verified role.
+                </span>
+              </label>
+              <label className="g-field" htmlFor="verifyMinAccountAgeDays">
+                <span>Min account age (days)</span>
+                <input
+                  className="g-input"
+                  id="verifyMinAccountAgeDays"
+                  name="verifyMinAccountAgeDays"
+                  type="number"
+                  min={0}
+                  max={365}
+                  defaultValue={g?.verifyMinAccountAgeDays ?? 0}
+                />
+              </label>
+              <label className="switch">
+                <input type="checkbox" name="verifyWeb" defaultChecked={g?.verifyWeb ?? false} />
+                <span className="switch__text">
+                  <span>Verify on the website</span>
+                  <span className="g-help">
+                    The Verify button links to a page where members sign in with Discord (and pass a
+                    captcha if the host has Turnstile keys) before getting the role.
+                  </span>
+                </span>
+              </label>
+              <FormFoot label="Save verification" guildId={guild.id} />
+            </form>
+          </SettingsPanel>
+          {g?.verifyRoleId ? (
+            <div className="g-card card-col">
+              <h2 className="card-title">Verify button</h2>
+              <p className="g-help">
+                Members press it in Discord to get the verified role. Post it again after changing
+                the channel.
+              </p>
+              <form action={requestAction} className="card-col">
+                <Hidden guildId={guild.id} kind="post_verify_panel" />
+                <label className="g-field">
+                  <span>Post the Verify button in</span>
+                  <select className="g-input" name="channelId" required defaultValue="">
+                    <option value="" disabled>
+                      Pick a channel
+                    </option>
+                    {channels.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        #{c.name}
                       </option>
-                      {channels.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          #{c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <button type="submit" className="g-btn g-btn--secondary">
-                    Post Verify button
-                  </button>
-                </form>
-              ) : null}
-              <details className="card-edit" open={isEditing(query, "verification")}>
-                <summary className="g-btn g-btn--secondary">
-                  <GearIcon />
-                  {g?.verifyRoleId ? "Change verification" : "Turn on verification"}
-                </summary>
-                <form
-                  action={saveVerification}
-                  className="card-col"
-                  key={`verify-${g?.updatedAt.getTime() ?? 0}`}
-                >
-                  <input type="hidden" name="guildId" value={guild.id} />
-                  <label className="g-field" htmlFor="verifyRoleId">
-                    <span>Verification gives</span>
-                    <select
-                      className="g-input"
-                      id="verifyRoleId"
-                      name="verifyRoleId"
-                      defaultValue={g?.verifyRoleId ?? ""}
-                    >
-                      <option value="">Verification off</option>
-                      {roles
-                        .filter((r) => !r.managed && !isDangerousRole(r.permissions))
-                        .map((r) => (
-                          <option key={r.id} value={r.id}>
-                            @{r.name}
-                          </option>
-                        ))}
-                    </select>
-                    <span className="g-help">
-                      Roles with admin or moderation powers can't be the verified role.
-                    </span>
-                  </label>
-                  <label className="g-field" htmlFor="verifyMinAccountAgeDays">
-                    <span>Min account age (days)</span>
-                    <input
-                      className="g-input"
-                      id="verifyMinAccountAgeDays"
-                      name="verifyMinAccountAgeDays"
-                      type="number"
-                      min={0}
-                      max={365}
-                      defaultValue={g?.verifyMinAccountAgeDays ?? 0}
-                    />
-                  </label>
-                  <label className="switch">
-                    <input
-                      type="checkbox"
-                      name="verifyWeb"
-                      defaultChecked={g?.verifyWeb ?? false}
-                    />
-                    <span className="switch__text">
-                      <span>Verify on the website</span>
-                      <span className="g-help">
-                        The Verify button links to a page where members sign in with Discord (and
-                        pass a captcha if the host has Turnstile keys) before getting the role.
-                      </span>
-                    </span>
-                  </label>
-                  <FormFoot label="Save verification" guildId={guild.id} />
-                </form>
-              </details>
+                    ))}
+                  </select>
+                </label>
+                <button type="submit" className="g-btn g-btn--secondary">
+                  Post Verify button
+                </button>
+              </form>
             </div>
-
+          ) : null}
+          <div className="card-col gate-stack">
             <div className="g-card card-col">
               <h2 className="card-title">
                 Anti-nuke <span className="g-badge">Owner only</span>

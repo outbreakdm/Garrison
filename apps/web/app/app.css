@@ -547,31 +547,126 @@ a.topbar__user:hover {
   margin-bottom: var(--space-3);
 }
 
-/* Phones: the server menu becomes one scrollable row, so content starts on the first screen. */
+/* Phones: the rail gives way to one button naming the current page, which opens the
+   four sections as a sheet (ServerNav). Content starts on the first screen. */
+.nav-sheet {
+  display: none;
+}
 @media (max-width: 720px) {
   .shell {
     padding: var(--space-4);
     gap: var(--space-4);
   }
-  .shell .g-nav {
-    flex: 1 1 100%;
-    width: auto;
-    min-width: 0;
-    flex-direction: row;
-    gap: var(--space-1);
-    overflow-x: auto;
-    padding: var(--space-1);
-    scrollbar-width: none;
-  }
-  .shell .g-nav .g-nav__group,
-  .shell .g-nav .g-nav__plain {
+  .shell > .g-nav {
     display: none;
   }
-  .shell .g-nav .g-nav__item {
+  .nav-sheet {
+    display: block;
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .nav-sheet__bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 48px;
+    padding: 0 var(--space-4);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-card);
+    font-weight: 600;
+    list-style: none;
+    cursor: pointer;
+  }
+  .nav-sheet__bar::-webkit-details-marker {
+    display: none;
+  }
+  .nav-sheet__bar:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .nav-sheet__gem {
     flex: none;
-    min-height: 34px;
-    padding: 6px 12px 6px 26px;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: var(--gem, var(--accent));
+    transform: rotate(45deg);
+  }
+  .nav-sheet__here {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .nav-sheet__more {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .nav-sheet__more::after {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: translateY(-2px) rotate(45deg);
+    transition: transform 0.2s var(--ease-out);
+  }
+  .nav-sheet[open] .nav-sheet__more::after {
+    transform: translateY(2px) rotate(-135deg);
+  }
+  .nav-sheet[open] .nav-sheet__bar {
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  }
+  .nav-sheet__body {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4) var(--space-3);
+    margin-top: var(--space-2);
+    padding: var(--space-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-lift);
+  }
+  .nav-sheet__group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .nav-sheet__group .g-nav__group {
+    padding: 0 4px 4px;
+  }
+  .nav-sheet__item {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 10px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    color: var(--text);
+    font-size: 15px;
+    text-decoration: none;
+  }
+  .nav-sheet__item--wide {
+    grid-column: 1 / -1;
+    border-color: var(--line);
+  }
+  .nav-sheet__item[aria-current="page"] {
+    border-color: color-mix(in srgb, var(--gem, var(--accent)) 55%, var(--line));
+    background: color-mix(in srgb, var(--gem, var(--accent)) 14%, var(--surface));
+    font-weight: 600;
+  }
+  .nav-sheet__item:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
   }
 }
 
@@ -2937,11 +3032,7 @@ form[data-pending] [aria-busy="true"]::after {
   background: var(--gem, var(--accent));
   transform: rotate(45deg);
 }
-@media (max-width: 720px) {
-  .g-nav__pip {
-    left: 10px;
-  }
-}
+
 .page-title {
   width: fit-content;
   max-width: 100%;
@@ -3298,7 +3389,7 @@ form[data-pending] [aria-busy="true"]::after {
 }
 
 /* --- Card Table: colour identities ---------------------------------------------------
-   Every part of a server has a colour: Safety azure, Community orchid, Gaming volt,
+   Every part of a server has a colour: Safety cobalt, Community orchid, Gaming volt,
    Server steel (Overview takes Garrison's volt). The current page's colour lights its
    gem in the menu, the gem beside its title, its primary button, its switches and its
    open panel, so an owner always knows which part of the server they are in. */
@@ -3311,10 +3402,10 @@ form[data-pending] [aria-busy="true"]::after {
   --accent-strong: var(--id-text);
   --focus: var(--id-text);
 }
-.shell:has(.g-nav__item[aria-current="page"][data-id="azure"]) {
-  --id: var(--azure);
-  --id-ink: var(--azure-ink);
-  --id-text: var(--azure-text);
+.shell:has(.g-nav__item[aria-current="page"][data-id="cobalt"]) {
+  --id: var(--cobalt);
+  --id-ink: var(--cobalt-ink);
+  --id-text: var(--cobalt-text);
 }
 .shell:has(.g-nav__item[aria-current="page"][data-id="orchid"]) {
   --id: var(--orchid);
@@ -3326,8 +3417,8 @@ form[data-pending] [aria-busy="true"]::after {
   --id-ink: var(--steel-ink);
   --id-text: var(--steel-text);
 }
-[data-id="azure"] {
-  --gem: var(--azure);
+[data-id="cobalt"] {
+  --gem: var(--cobalt);
 }
 [data-id="orchid"] {
   --gem: var(--orchid);
@@ -3379,9 +3470,6 @@ form[data-pending] [aria-busy="true"]::after {
     width: 10px;
     height: 10px;
     margin-right: 12px;
-  }
-  .shell .g-nav {
-    gap: 4px;
   }
 }
 /* Lockdown on: the security card says so by its edge as well as its badge. */
@@ -3527,4 +3615,225 @@ form[data-pending] [aria-busy="true"]::after {
     margin-left: 10px;
     vertical-align: 5px;
   }
+}
+
+/* --- Phones (adapt pass) ---------------------------------------------------------------- */
+/* The shortcut hint is for keyboards; touch screens have none. */
+@media (hover: none) {
+  .searchbox__hint {
+    display: none;
+  }
+  .searchbox .g-input {
+    padding-right: var(--space-3);
+  }
+}
+/* A confirm inside a table cell opens beside its toggle. */
+.case-undo[open] > .confirm__toggle {
+  margin-bottom: var(--space-2);
+}
+@media (max-width: 520px) {
+  /* Sign out moves to the account page, away from the avatar it sat beside. */
+  .topbar__signout {
+    display: none;
+  }
+  /* A card head with a search form: the form takes its own full-width row. */
+  .row-between:has(> search) {
+    flex-wrap: wrap;
+  }
+  .row-between > search {
+    flex: 1 1 100%;
+  }
+  .row-between > search > form {
+    flex-wrap: nowrap;
+  }
+  .row-between > search .g-input {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+  }
+  /* Needs attention keeps its action, under the sentence. */
+  .attention__go {
+    display: block;
+    grid-column: 2;
+    color: var(--accent-strong);
+  }
+}
+@media (max-width: 640px) {
+  /* Cases read as stacked cards on a phone, with Undo in reach. */
+  .table-wrap:has(> .case-table) {
+    overflow: visible;
+  }
+  table.case-table {
+    min-width: 0;
+  }
+  .case-table thead {
+    display: none;
+  }
+  .case-table,
+  .case-table tbody {
+    display: block;
+  }
+  .case-table tr {
+    display: block;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--line);
+  }
+  .case-table td {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 8px;
+    padding: 3px 0;
+    border: 0;
+    white-space: normal;
+  }
+  .case-table td[data-label]::before {
+    content: attr(data-label) / "";
+    flex: none;
+    width: 64px;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .case-table td:last-child {
+    padding-top: var(--space-2);
+  }
+  .case-table td:empty {
+    display: none;
+  }
+}
+
+/* --- The section colour owns the page (bolder pass) ---------------------------------------
+   The page head is the module's name card, printed in its section's colour: a tinted face,
+   an edge in the same hue, the gem and the section tag. Safety, Community, Gaming and
+   Server pages now differ at a glance, not only by an 8px gem. The current menu item and an
+   open panel's head carry the same tint, so where you are and what you are editing match. */
+.main .page-head,
+.picker__head {
+  --head: var(--id, var(--accent));
+  padding: 22px 24px;
+  border: 1px solid color-mix(in srgb, var(--head) 42%, var(--line));
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--head) 13%, var(--surface));
+  box-shadow: var(--shadow-card);
+}
+[data-theme="light"] .main .page-head,
+[data-theme="light"] .picker__head {
+  background: color-mix(in srgb, var(--head) 9%, var(--surface));
+}
+.main .page-head p {
+  color: color-mix(in srgb, var(--head) 14%, var(--text-muted));
+}
+.main .page-head h1::before {
+  width: 14px;
+  height: 14px;
+}
+.g-nav__item[aria-current="page"] {
+  border-color: color-mix(in srgb, var(--gem, var(--accent)) 45%, var(--line));
+  background: color-mix(in srgb, var(--gem, var(--accent)) 14%, var(--surface));
+}
+.panel[open] > .panel__summary {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+@media (max-width: 720px) {
+  .main .page-head,
+  .picker__head {
+    padding: 18px 16px;
+  }
+}
+
+/* Removals (kick, ban) read heavier than reversible actions, in words, not status colour. */
+.g-badge--heavy {
+  --tone: var(--text);
+  font-weight: 700;
+}
+/* Security: settings as one column of panels, like every other page. */
+.gate-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.g-btn--sm {
+  min-height: 30px;
+  padding: 4px 10px;
+  font-size: 13px;
+}
+.appeal-link {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.appeal-link .mono {
+  overflow-wrap: anywhere;
+}
+/* Pick several: a scrolling box of checkboxes (CheckList). */
+.checklist {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.checklist__legend {
+  margin-bottom: 6px;
+  padding: 0;
+  font-size: 14px;
+}
+.checklist__box {
+  display: grid;
+  max-height: 188px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg) 45%, var(--surface));
+}
+.checklist__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 0 8px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  cursor: pointer;
+}
+.checklist__item:hover {
+  background: var(--surface-raised);
+}
+.checklist__item input {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+.checklist__item:has(input:checked) {
+  font-weight: 600;
+}
+/* Skip link: hidden until a keyboard reaches it, then a plain card at the top left. */
+.skip-link {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 20;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-overlay);
+  color: var(--text);
+  font-weight: 600;
+  transform: translateY(-160%);
+}
+.skip-link:focus-visible {
+  transform: none;
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+main:target,
+#content:focus {
+  outline: none;
 }

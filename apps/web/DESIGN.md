@@ -12,12 +12,12 @@ colors:
   caution: "#ffb547"
   alert: "#ff6b6b"
   intel: "#5ab0ff"
-  azure: "#5aa9ff"
-  azure-ink: "#04162b"
-  azure-text: "#7dbcff"
-  orchid: "#c39bff"
-  orchid-ink: "#1c0a38"
-  orchid-text: "#cfb0ff"
+  cobalt: "#7b93ff"
+  cobalt-ink: "#0a1240"
+  cobalt-text: "#97aaff"
+  orchid: "#df95f5"
+  orchid-ink: "#2a0a35"
+  orchid-text: "#e6abf8"
   volt: "#d4ff3a"
   volt-ink: "#141a00"
   volt-text: "#d4ff3a"
@@ -35,10 +35,10 @@ colors:
   caution-light: "#9a5b00"
   alert-light: "#c62828"
   intel-light: "#1f6fc5"
-  azure-light: "#1f6fd6"
-  azure-text-light: "#1a62bf"
-  orchid-light: "#7b45d6"
-  orchid-text-light: "#6c3bc4"
+  cobalt-light: "#3c53d6"
+  cobalt-text-light: "#3449c4"
+  orchid-light: "#9437b5"
+  orchid-text-light: "#8a2fab"
   volt-light: "#4d6b00"
   steel-light: "#4a5d75"
   steel-text-light: "#45576e"
@@ -198,7 +198,7 @@ components:
 
 Every module of a server has a colour identity and reads like a well-built card: a name, rules text in plain sentences, and its state. An owner opens a page, sees by colour which part of the server they are in, reads the current settings as sentences, spots what needs them by shape and colour, and changes it with one obvious button. Pro needs are unmistakable. The system refuses the grey sidebar-and-cards dashboard where every page looks the same and status hides in colour alone.
 
-The world is a lifted playmat at night: a deep slate-blue table, card faces two steps lighter, never black. Four identities divide the server: **Safety** is azure, **Community** orchid, **Gaming** volt, **Server** steel, and Overview takes Garrison's own volt. The current page's identity colours its nav gem, the gem beside its title, its section tag, its primary button, its switches, its settings gear plates and the edge of the panel you have open. Card stock is plain: 10px corners, a 1px edge, a soft drop, no frames or ornaments. Foil, a holographic sheen, marks what requires Pro and nothing else.
+The world is a lifted playmat at night: a deep slate-blue table, card faces two steps lighter, never black. Four identities divide the server: **Safety** is cobalt, **Community** orchid, **Gaming** volt, **Server** steel, and Overview takes Garrison's own volt. The current page's identity colours its nav gem, the gem beside its title, its section tag, its primary button, its switches, its settings gear plates and the edge of the panel you have open. Card stock is plain: 10px corners, a 1px edge, a soft drop, no frames or ornaments. Foil, a holographic sheen, marks what requires Pro and nothing else.
 
 One grotesque, Archivo, carries display, interface and numbers, with tabular figures wherever something is counted or timed; only code and diffs drop to a system monospace. State is never colour alone: each state has its own shape. Durations are drawn to scale, so a long wait looks long. The layout reflows by whole cards on an 8px grid and holds a 68-character reading measure.
 
@@ -222,7 +222,7 @@ A cool slate-blue ramp for the table and cards, four saturated identity colours 
 ### Primary (the four identities)
 Each identity has three tokens: a **fill** for buttons, gems and switches; an **ink** for text and marks on that fill; and a **text** tone safe for links, strokes and small type on the card face. In light theme every ink is white and the fills darken so white text clears contrast.
 
-- **Safety Azure** (`azure`, `azure-ink`, `azure-text`): Moderation, Security, Logs.
+- **Safety Cobalt** (`cobalt`, `cobalt-ink`, `cobalt-text`): Moderation, Security, Logs. A periwinkle cobalt (hue ~272), kept well away from Intel Blue (~249) so a page accent is never mistaken for an information state. Community Orchid leans pink (~318) to stay clear of cobalt.
 - **Community Orchid** (`orchid`, `orchid-ink`, `orchid-text`): Welcome, Role menus, Tickets, Leveling, Giveaways, Starboard, Stream alerts, Messages.
 - **Gaming Volt** (`volt`, `volt-ink`, `volt-text`): Groups and raids, Game accounts, and Overview. Volt is also the accent on pages outside a server (server picker, sign-in, account). In light theme volt becomes a deep olive (`volt-light`) so it reads as text.
 - **Server Steel** (`steel`, `steel-ink`, `steel-text`): AI builder, Settings, Plan.
@@ -247,7 +247,7 @@ The shell resolves the current page's identity into the working accent: the page
 - **Discord neutrals** (`discord-*`): Discord's own dark chat colours, used only inside Discord previews.
 
 ### Named Rules
-**The You Are Here Rule.** Identity colour comes from the page you are on and nothing else. A Safety page is azure from its menu gem to its primary button; it never borrows orchid for variety, and a module never picks a colour for itself.
+**The You Are Here Rule.** Identity colour comes from the page you are on and nothing else. A Safety page is cobalt from its menu gem to its primary button; it never borrows orchid for variety, and a module never picks a colour for itself.
 
 **The Status Is State Rule.** Go, caution, alert and intel report state and nothing else: never a category colour, a section accent or a flourish. Bot embeds in Discord follow the same rule.
 
@@ -332,7 +332,7 @@ A state said in a word and drawn as a shape, so colour is never the only sign. 6
 - **Off**: a struck dash in muted grey.
 - **Information** (intel): a small diamond.
 - **Plain tag** (no tone): a role, a log type; no mark at all.
-- **Kind tag**: case actions (warn, timeout, kick, ban, purge) are kinds, not states, so they print as coloured words with no mark.
+- **Kind tag**: case actions (warn, timeout, kick, ban, purge) are kinds, not states, so they never borrow a status colour: a plain neutral tag with no mark, with the removals (kick, ban) set in 700 weight and full text colour (`g-badge--heavy`).
 
 The same shapes recur at larger sizes: notices lead with the triangle (alert) or dot (done); the Needs attention list leads each line with a ring (caution) or triangle (alert); readout values that report a state carry the shape before the word.
 
@@ -346,6 +346,15 @@ The same shapes recur at larger sizes: notices lead with the triangle (alert) or
 ### Settings panels
 A card whose closed row reads the current settings as a sentence of label and value facts, led by a 28px gear plate in the page's identity (12% fill, 35% edge) and ended by a real "Change" control. Open means you are editing: the card takes its identity edge and ring, the gear plate brightens, and the body slides open by height.
 
+### Pick several (CheckList)
+Roles and channels are picked with plain checkboxes in a scrolling 188px box (36px rows, the checked ones in 600 weight, the box accent in the page's identity), never with a Ctrl-click multiple select. Each ticked box posts the same field name.
+
+### Confirms
+Actions that reach back into Discord and are hard to take back ask once, in place: a "…" toggle opens the real button beside it (undo a case, close a ticket, lock the server, cancel a raid).
+
+### Tables on phones
+The cases table becomes one stacked card per case below 640px: each cell a line of a 64px muted label and its value, with Undo in reach. Dates read the same everywhere ("Thu, Nov 12, 5:30 PM UTC").
+
 ### Inputs / Fields
 - **Style:** 36px minimum, 8px corners, 1px edge, a fill 45% of the way from card face to table, 400 14px text.
 - **Focus:** the edge turns to the focus colour and a 2px focus ring appears; hover darkens the edge.
@@ -354,9 +363,10 @@ A card whose closed row reads the current settings as a sentence of label and va
 - **Switches:** real checkboxes drawn as a 38 by 22px pill; on fills with the page's identity and the knob takes its ink.
 
 ### Navigation
-- **Side rail:** 232px. Groups (Safety, Community, Gaming, Server) are 600 12px muted names led by their identity gem. Items are 36px rows in muted 14px text. The current item is a raised card (card face, edge, card shadow, 600 weight) with its identity gem in its left gutter; moving pages slides that gem from the old item to the new one.
-- **Page head:** the title with its identity gem before it and a section tag after it (the group name in the identity colour on a 12% tint, 6px corners, 600 12px), a muted intro under it, and the page head's rule tinted 22% toward the identity.
-- **Phones:** the rail becomes one horizontally scrolling row with the current item kept in view.
+- **Side rail:** 232px. Groups (Safety, Community, Gaming, Server) are 600 12px muted names led by their identity gem. Items are 36px rows in muted 14px text. The current item is a raised card tinted 14% toward its identity (45% identity edge, 600 weight) with its identity gem in its left gutter; moving pages slides that gem from the old item to the new one.
+- **Page head (the name card):** the section colour owns the head. It is a card face tinted 13% toward the identity (9% in light), with a 42% identity edge, 10px corners and 22px by 24px padding. Inside: the title with a 14px identity gem before it and a section tag after it (the group name in the identity colour on a 12% tint, 6px corners, 600 12px), and the intro in muted text tinted 14% toward the identity. The server picker's head uses the same card. One primary action per first viewport; there are no head shortcuts that duplicate a settings panel below.
+- **Phones (720px and below):** the rail gives way to one 48px button naming the current page (gem, name, "All pages"), which opens a sheet: Overview across the top, then the four sections in two columns of 44px items, the current one tinted. The sheet closes when a page is picked. The top bar drops Sign out (it lives on the account page), the search hint hides on touch screens, and it reads Ctrl K or ⌘K by platform.
+- **Skip link:** the first stop in the top bar, hidden until focused, jumps to the page (`#content`).
 
 ### Pro tag
 "Requires Pro" in words with a lock, printed in foil: 700 12px/16px Foil Ink on the foil gradient, 6px corners, a white 55% edge and a faint orchid outline. The sheen sweeps once across the tag on arrival. A Pro notice takes a foil border and a foil diamond as its mark.

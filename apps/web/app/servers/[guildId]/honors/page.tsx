@@ -9,7 +9,7 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import { ProTag } from "@/components/cards/CardEditor";
-import { FormFoot } from "@/components/settings";
+import { CheckList, FormFoot } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { fetchMemberCard, listTextChannels } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
@@ -128,26 +128,13 @@ export default async function StarboardPage({ params }: { params: Promise<{ guil
                 />
               </label>
             </div>
-            <label className="g-field" htmlFor="ignoredChannelIds">
-              <span>Never from these channels</span>
-              <select
-                className="g-input"
-                id="ignoredChannelIds"
-                name="ignoredChannelIds"
-                multiple
-                size={4}
-                defaultValue={config.ignoredChannelIds}
-              >
-                {channels.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    #{c.name}
-                  </option>
-                ))}
-              </select>
-              <span className="g-help">
-                Ctrl/⌘-click to pick several. The board itself is always skipped.
-              </span>
-            </label>
+            <CheckList
+              name="ignoredChannelIds"
+              label="Never from these channels"
+              value={config.ignoredChannelIds}
+              options={channels.map((c) => ({ id: c.id, label: `#${c.name}` }))}
+              help={<>The board itself is always skipped.</>}
+            />
             <div className="g-field">
               <label htmlFor="accent" className="field-label">
                 Colour <ProTag on={pro} />

@@ -15,6 +15,10 @@ export interface TopbarProps {
 export function Topbar({ username, theme, back, guild, guilds = [] }: TopbarProps) {
   return (
     <header className="topbar">
+      {/* First stop for keyboards: past the bar and the menu, straight to the page. */}
+      <a className="skip-link" href="#content">
+        Skip to the page
+      </a>
       <a href="/servers" aria-label="All servers">
         <Logo />
       </a>
@@ -49,7 +53,7 @@ export function Topbar({ username, theme, back, guild, guilds = [] }: TopbarProp
         <span className="topbar__name">{username}</span>
       </a>
       {/* POST + Origin check + SameSite cookie: logout can't be triggered cross-site. */}
-      <form method="post" action="/auth/logout">
+      <form className="topbar__signout" method="post" action="/auth/logout">
         <button type="submit" className="g-btn g-btn--ghost">
           Sign out
         </button>

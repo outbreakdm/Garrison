@@ -1108,8 +1108,9 @@
   list-style: none;
 }
 .notes li {
-  padding-left: var(--space-3);
-  border-left: 2px solid var(--caution);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--caution) 8%, var(--surface));
 }
 .notes p {
   margin: 0 0 2px;
@@ -1458,18 +1459,19 @@
 .ops-cal__item {
   display: block;
   overflow: hidden;
-  padding: 2px var(--space-1);
-  border-left: 2px solid var(--accent-strong);
+  padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
   font-size: 12px;
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
-  background: var(--surface-raised);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
+/* Repeats not yet posted: the same chip, outlined in dashes. */
 .ops-cal__item.is-projected {
-  border-left-style: dashed;
-  border-left-color: var(--line);
+  border-style: dashed;
+  border-color: var(--line);
   color: var(--text-muted);
   background: transparent;
 }

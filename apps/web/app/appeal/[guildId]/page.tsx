@@ -54,7 +54,7 @@ export default async function AppealPage({ params }: { params: Promise<{ guildId
         theme={await currentTheme()}
         back={`/appeal/${guild.id}`}
       />
-      <main className="shell">
+      <main id="content" className="shell">
         <div className="main appeal">
           <div className="page-head">
             <div>

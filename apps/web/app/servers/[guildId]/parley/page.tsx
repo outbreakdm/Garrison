@@ -20,7 +20,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ProTag } from "@/components/cards/CardEditor";
 import { RequestsPanel } from "@/components/RequestsPanel";
-import { FormFoot, FormPanel, SettingsPanel } from "@/components/settings";
+import { CheckList, FormFoot, FormPanel, SettingsPanel } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { getServerLayout, listGuildEmojis, listGuildRoles, listTextChannels } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
@@ -290,27 +290,18 @@ export default async function TicketsPage({
         <form action={saveTicketOptions} className="settings-form" key={contentKey(config)}>
           <input type="hidden" name="guildId" value={guild.id} />
           <div className="settings-grid">
-            <label className="g-field" htmlFor="staffRoleIds">
-              <span>Staff roles</span>
-              <select
-                className="g-input"
-                id="staffRoleIds"
-                name="staffRoleIds"
-                multiple
-                size={5}
-                defaultValue={config.staffRoleIds}
-              >
-                {staffRoles.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    @{r.name}
-                  </option>
-                ))}
-              </select>
-              <span className="g-help">
-                They see and answer every ticket. Up to {TICKET_LIMITS.staffRoles}; Ctrl/⌘-click to
-                pick several. People with Manage Server count as staff too.
-              </span>
-            </label>
+            <CheckList
+              name="staffRoleIds"
+              label="Staff roles"
+              value={config.staffRoleIds}
+              options={staffRoles.map((r) => ({ id: r.id, label: `@${r.name}` }))}
+              help={
+                <>
+                  They see and answer every ticket. Up to {TICKET_LIMITS.staffRoles}. People with
+                  Manage Server count as staff too.
+                </>
+              }
+            />
             <div className="card-col">
               <label className="g-field" htmlFor="parentId">
                 <span>Open tickets in</span>
