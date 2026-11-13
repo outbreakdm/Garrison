@@ -42,6 +42,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - run: docker buildx build --target bot -t garrison-bot .
       - run: docker buildx build --target web -t garrison-web .
