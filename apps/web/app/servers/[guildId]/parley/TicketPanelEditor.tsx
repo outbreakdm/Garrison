@@ -213,10 +213,13 @@ export function TicketPanelEditor({
                             update({ questions: rows.map((q) => q.trim()).filter(Boolean) })
                           }
                         />
-                        <span className="g-help">
-                          One box per question, asked in a form when the member presses the button.
-                          Leave it empty to open the ticket straight away.
-                        </span>
+                        {i === 0 ? (
+                          // Said once, under the first topic: every topic's list works the same.
+                          <span className="g-help">
+                            Asked in a form when the member presses the button. Leave a topic's list
+                            empty to open its ticket straight away.
+                          </span>
+                        ) : null}
                       </fieldset>
                       {i >= limit ? (
                         <p className="g-help g-help--warn option__note">

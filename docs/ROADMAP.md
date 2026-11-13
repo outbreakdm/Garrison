@@ -592,3 +592,10 @@ Decided (2026-11-12, owner):
   an empty /status history explained, the appeal link gets a copy button, and the theme
   toggle keeps you on the page. Not done: new login and 404 art, replying to tickets. Deployed with
   the redesign (run 43441441759).
+- 2026-11-13: One box per item (committed, not deployed): ticket questions, automod blocked
+  words and anti-nuke trusted IDs are lists of numbered boxes (ListField: Enter opens the next,
+  Backspace in an empty box removes it, a count shows how many fit). Raid, group and template
+  roles are rows of a name and a count (SlotRows); the server joins them back into the text
+  the parser reads (lib/slots.ts, tested). Checked in the preview: questions, blocked words
+  (saved), raid roles, template roles (saved and reloaded). Trusted IDs are owner-only, so
+  they weren't tried in the preview.

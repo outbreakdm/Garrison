@@ -97,8 +97,8 @@ export default async function RallyTemplatesPage({
         <div>
           <h1>LFG templates</h1>
           <p>
-            Make Rally fit each game: default roles, the words on every button and message, where it
-            can be posted. Players pick one with /lfg create template:.
+            Make groups fit each game: default roles, the words on every button and message, where
+            it can be posted. Players pick one with /lfg create template:.
           </p>
         </div>
         <span className="mono">
