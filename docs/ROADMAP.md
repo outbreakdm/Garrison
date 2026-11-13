@@ -22,7 +22,7 @@ then updates **Status** and the **Log** before stopping.
   open in a calendar app. Next: Phase 2 (Stripe) once a price is set. The depth backlog is
   done; what's left needs the owner (Kick alerts, YouTube live, uploaded backgrounds).
 - **Branch:** `dashboard-first`, pushed; everything through commit `341d88b` is deployed.
-  The Card Table dashboard redesign (2026-11-13) is committed locally, not pushed or deployed.
+  The Card Table redesign and its critique fixes (through `c6d8efc`) are deployed (2026-11-13, run 43441441759).
 - **Before pushing:** `pnpm -r exec tsc --noEmit`, `pnpm test`, `pnpm exec biome check apps packages`.
 - **Deploying:** "deploy" means commit, push, then
   `gh workflow run deploy-cloudflare.yml --repo outbreakdm/Garrison --ref <branch> -f target=everything -f register_commands=true`.
@@ -565,7 +565,7 @@ Decided (2026-11-12, owner):
   per request (a page's parallel queries had been queuing on one); Smart Placement for the
   dashboard Worker; session and server lookups in parallel. The bot deploys before the dashboard
   when the binding is new.
-- 2026-11-13: Dashboard redesign, "Card Table" (impeccable new-work, committed, not deployed):
+- 2026-11-13: Dashboard redesign, "Card Table" (impeccable new-work, deployed in run 43441441759):
   a lifted slate-blue dark default and a cool light theme. Each part of the server has a colour:
   Safety azure, Community orchid, Gaming volt, Server steel. That colour lights the menu gem,
   the title gem, the section tag, the primary button, switches and open panels. Archivo is now
@@ -590,4 +590,5 @@ Decided (2026-11-12, owner):
   names, not IDs (cached 10 min). Undo a case and Close ticket ask once. Role and channel
   pickers are checkboxes, not Ctrl-click lists. A skip link, shorter attention-row link names,
   an empty /status history explained, the appeal link gets a copy button, and the theme
-  toggle keeps you on the page. Not done: new login and 404 art, replying to tickets.
+  toggle keeps you on the page. Not done: new login and 404 art, replying to tickets. Deployed with
+  the redesign (run 43441441759).
