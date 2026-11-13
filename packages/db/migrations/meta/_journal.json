@@ -351,6 +351,13 @@
       "when": 1794526779996,
       "tag": "0049_ai_usage",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1794591883695,
+      "tag": "0050_plan_bundles",
+      "breakpoints": true
     }
   ]
 }

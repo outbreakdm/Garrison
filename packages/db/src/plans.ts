@@ -10,6 +10,64 @@
 export const PLANS = ["free", "pro"] as const;
 export type GuildPlan = (typeof PLANS)[number];
 
+/**
+ * What each plan costs and the few lines that sell it. One place for every price: the
+ * landing page, the Plan page and the account page read this. Agency is Pro on up to
+ * `servers` servers under one subscription (plan_bundles); see docs/pricing.md.
+ */
+export const PRICING = {
+  free: {
+    name: "Free",
+    monthly: 0,
+    yearly: 0,
+    servers: null,
+    pitch: "Everything a server needs to stay safe, and every module to try.",
+    highlights: [
+      "Moderation, anti-raid, anti-nuke, verification and logs, in full",
+      "Every module with the standard look and sensible limits",
+      "3 AI builder plans a day",
+      "Undo and history on every change",
+    ],
+  },
+  pro: {
+    name: "Pro",
+    monthly: 8.99,
+    yearly: 79.99,
+    servers: 1,
+    pitch: "Your server's own look, higher limits and history. Replaces three or four paid bots.",
+    highlights: [
+      "Branded cards: your colours, images, emoji and footer",
+      "Ticket forms, auto-assign, stats and a year of transcripts",
+      "Custom rank cards, XP boosts and seasons",
+      "Raid attendance, roles from game stats, scheduled backups",
+      "15 AI builder plans a day and server templates",
+    ],
+  },
+  agency: {
+    name: "Agency",
+    monthly: 34.99,
+    yearly: 349.99,
+    servers: 5,
+    pitch: "Pro on up to 5 servers you run, under one subscription. Move a seat any time.",
+    highlights: [
+      "Everything in Pro, on each of 5 servers",
+      "Put a server in a seat, or free it, from its Plan page",
+      "15 AI builder plans a day on each server",
+      "One bill: 7 dollars a server a month",
+    ],
+  },
+} as const;
+export type PlanTier = keyof typeof PRICING;
+
+/**
+ * False until Stripe checkout works end to end: pages show prices as "at launch" and
+ * nothing can be bought. Until then plans are given only by staff (comps).
+ */
+export const PAID_PLANS_LIVE = false;
+
+/** A price for display, always with cents so prices line up: "$8.99", "$0.00". */
+export const formatPrice = (n: number) => `$${n.toFixed(2)}`;
+
 type Module =
   | "cards"
   | "messages"

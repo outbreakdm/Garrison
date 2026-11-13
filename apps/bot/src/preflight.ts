@@ -140,9 +140,10 @@ if (env) {
   await checkDb("Database (bot)", env.DATABASE_URL, "garrison_bot", latest);
   if (process.env.WEB_DATABASE_URL)
     // The dashboard also reads tables the bot never touches: staff (0022), ticket notes
-    // (0026) and appeals (0038).
+    // (0026), appeals (0038) and Agency plans (0050).
     await checkDb("Database (dashboard)", process.env.WEB_DATABASE_URL, "garrison_web", [
       "platform_staff",
+      "plan_bundles",
       "ticket_notes",
       "appeals",
       ...latest,

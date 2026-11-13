@@ -1,4 +1,5 @@
 import { brand, inviteUrl, modules } from "@garrison/brand";
+import { formatPrice, PAID_PLANS_LIVE, PRICING } from "@garrison/db";
 import type { Metadata } from "next";
 import { Gabarito, Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
@@ -80,7 +81,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "What does it cost?",
-    a: "Nothing during early access. Paid plans will be published here, with every price and limit, before anything costs money. Everything a server needs to stay safe stays free.",
+    a: "Nothing during early access. At launch, Pro is one server and Agency covers up to five you run; the prices are in the pricing section. Everything a server needs to stay safe stays free.",
   },
 ];
 
@@ -766,21 +767,60 @@ export default async function Home() {
         </section>
 
         <section className="lp-section lp-price" id="pricing" aria-labelledby="lp-pricing">
-          <div className="lp-price__card">
+          <div className="lp-price__head">
             <h2 className="lp-h2" id="lp-pricing">
-              Free during early access
+              {PAID_PLANS_LIVE ? "Pricing" : "Free now. Simple prices at launch."}
             </h2>
             <p>
-              Every module and the whole dashboard, free while Garrison is in early access. Paid
-              plans will be published here, with every price and limit, before anything costs money.
-              Everything a server needs to stay safe stays free.
+              {PAID_PLANS_LIVE
+                ? "Everything a server needs to stay safe is free. Pay for the look, the limits and the history."
+                : "Every module is free while Garrison is in early access. These are the prices when paid plans open; nothing costs money before then, and safety stays free for good."}
             </p>
-            <ul className="lp-price__list">
-              <li>All {moduleCount.toLowerCase()} modules</li>
-              <li>The dashboard, for every server you manage</li>
-              <li>Undo and history on every change</li>
-            </ul>
           </div>
+          <ul className="lp-tiers">
+            {(["free", "pro", "agency"] as const).map((tier) => {
+              const p = PRICING[tier];
+              const paid = p.monthly > 0;
+              return (
+                <li key={tier} className={`lp-tier lp-tier--${tier}`}>
+                  {tier === "pro" ? <span className="lp-tier__flag">Most servers</span> : null}
+                  <h3 className="lp-tier__name">{p.name}</h3>
+                  <p className="lp-tier__price">
+                    <span className="lp-tier__amount">{paid ? formatPrice(p.monthly) : "$0"}</span>
+                    <span className="lp-tier__per">
+                      {paid
+                        ? p.servers === 1
+                          ? "a month, per server"
+                          : `a month, up to ${p.servers} servers`
+                        : "forever, any number of servers"}
+                    </span>
+                  </p>
+                  <p className="lp-tier__year">
+                    {paid
+                      ? `or ${formatPrice(p.yearly)} a year${p.servers && p.servers > 1 ? ` (${formatPrice(p.yearly / 12 / p.servers)} a server a month)` : ""}`
+                      : "No card needed"}
+                  </p>
+                  <p className="lp-tier__pitch">{p.pitch}</p>
+                  <ul className="lp-tier__list">
+                    {p.highlights.map((h) => (
+                      <li key={h}>{h}</li>
+                    ))}
+                  </ul>
+                  <p className="lp-tier__cta">
+                    {paid
+                      ? PAID_PLANS_LIVE
+                        ? "Upgrade from any server's Plan page"
+                        : "Opens at launch"
+                      : "What every server gets"}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="lp-price__foot">
+            Prices in US dollars. Plans belong to servers, so moderators share them. Going back to
+            Free never deletes anything: extras pause until you upgrade again.
+          </p>
         </section>
 
         <section className="lp-section lp-faq" id="faq" aria-labelledby="lp-faq">

@@ -3915,3 +3915,201 @@ button.list-rows__remove:focus-visible {
     grid-template-columns: minmax(0, 1fr) 72px 40px;
   }
 }
+
+/* --- Plans: Free, Pro, Agency side by side (PlanCards) ---------------------------------
+   Three card faces in a row. The paid plans' names are printed in foil, the mark Pro wears
+   everywhere; this server's plan takes the page's identity edge. Prices are tabular so the
+   three line up. One column on phones, Pro first after Free. */
+.tiers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  align-items: stretch;
+}
+.tier {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+.tier--pro {
+  border-color: color-mix(in srgb, rgb(123 69 214) 45%, var(--line));
+  box-shadow:
+    0 0 0 1px rgb(123 69 214 / 0.18),
+    var(--shadow-lift);
+}
+.tier.is-current {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+}
+.tier__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 28px;
+}
+.tier__name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  font-stretch: 108%;
+  line-height: 24px;
+}
+/* The plan's name in foil: the same sheen as "Requires Pro". */
+.tier__foil {
+  display: inline-block;
+  padding: 1px 10px;
+  border: 1px solid rgb(255 255 255 / 0.55);
+  border-radius: var(--radius-sm);
+  background: var(--foil);
+  background-size: 220% 100%;
+  box-shadow: 0 0 0 1px rgb(123 69 214 / 0.28);
+  color: var(--foil-ink);
+  font-weight: 700;
+  animation: foil 2.4s var(--ease-in-out) 0.3s both;
+}
+.tier__price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  margin: 0;
+}
+.tier__amount {
+  font-size: 34px;
+  font-weight: 750;
+  font-stretch: 104%;
+  line-height: 40px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.tier__per,
+.tier__year {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+.tier__year {
+  margin: -6px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.tier__pitch {
+  margin: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+  line-height: 21px;
+}
+.tier__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  line-height: 20px;
+}
+.tier__list li {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+.tier__check {
+  margin-top: 3px;
+  color: var(--go);
+}
+.tier__action {
+  margin-top: auto;
+  padding-top: var(--space-3);
+}
+.tier__note {
+  margin-left: var(--space-3);
+}
+/* This server's plan, and an Agency owner's seat control beside it. */
+.plan-now {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.plan-now__seat form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+.plan-now__seat .tier__note {
+  margin: 0;
+}
+/* Seats in an Agency plan, numbered, with empty ones shown as free. */
+.seats-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.seats-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg) 35%, var(--surface));
+}
+.seats-list li.is-empty {
+  border-style: dashed;
+  background: transparent;
+}
+.seats-list__num {
+  width: 20px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.seats-list li > form {
+  margin-left: auto;
+}
+.limits-table td:not(:first-child),
+.limits-table th:not(:first-child) {
+  white-space: nowrap;
+  text-align: center;
+}
+.limits-table__up {
+  font-weight: 650;
+}
+@media (max-width: 1100px) {
+  .tiers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tier--free {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 720px) {
+  .tiers {
+    grid-template-columns: 1fr;
+  }
+  .tier--free {
+    order: 2;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tier__foil {
+    animation: none;
+  }
+}

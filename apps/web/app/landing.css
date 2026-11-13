@@ -803,44 +803,139 @@
   transform: rotate(-45deg);
 }
 
-/* Pricing */
-.lp-price__card {
-  position: relative;
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 56px;
-  overflow: hidden;
-  border: 1px solid var(--lp-line-strong);
-  border-radius: var(--lp-r-lg);
-  background:
-    radial-gradient(70% 90% at 50% 0%, var(--lp-glow-b), transparent 70%), var(--lp-surface);
-  box-shadow: var(--lp-shadow);
+/* Pricing: three plans side by side. Pro is lifted and flagged; the rest stay quiet. */
+.lp-price__head {
+  max-width: 720px;
+  margin: 0 auto 40px;
   text-align: center;
 }
-.lp-price__card > p {
-  margin: 20px auto 0;
-  max-width: 560px;
+.lp-price__head > p {
+  margin: 18px auto 0;
   color: var(--lp-muted);
   font-size: 17px;
 }
-.lp-price__list {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  margin: 28px 0 36px;
+.lp-tiers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  align-items: stretch;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
-/* With no buttons after it, the pills close the card with the same space as its top. */
-.lp-price__list:last-child {
-  margin-bottom: 0;
-}
-.lp-price__list li {
-  padding: 6px 14px;
+.lp-tier {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 32px 28px;
   border: 1px solid var(--lp-line-strong);
+  border-radius: var(--lp-r-lg);
+  background: var(--lp-surface);
+  box-shadow: var(--lp-shadow);
+}
+.lp-tier--pro {
+  border-color: rgb(111 108 248 / 0.55);
+  background:
+    radial-gradient(90% 60% at 50% 0%, var(--lp-glow-a), transparent 75%), var(--lp-surface);
+  transform: translateY(-8px);
+}
+.lp-tier__flag {
+  position: absolute;
+  top: -12px;
+  left: 28px;
+  padding: 3px 12px;
   border-radius: 999px;
+  background: var(--lp-accent);
+  color: var(--lp-accent-ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+.lp-tier__name {
+  margin: 0;
+  font-family: var(--lp-display), var(--lp-sans), sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+}
+.lp-tier__price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  margin: 0;
+}
+.lp-tier__amount {
+  font-family: var(--lp-display), var(--lp-sans), sans-serif;
+  font-size: 46px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.lp-tier__per,
+.lp-tier__year {
+  color: var(--lp-muted);
   font-size: 14px;
+}
+.lp-tier__year {
+  margin: -6px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.lp-tier__pitch {
+  margin: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--lp-line);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.lp-tier__list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.lp-tier__list li {
+  position: relative;
+  padding-left: 24px;
+}
+.lp-tier__list li::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: 2px;
+  width: 10px;
+  height: 5px;
+  border-bottom: 2px solid var(--lp-accent-text);
+  border-left: 2px solid var(--lp-accent-text);
+  transform: rotate(-45deg);
+}
+.lp-tier__cta {
+  margin: auto 0 0;
+  padding-top: 18px;
+  color: var(--lp-faint);
+  font-size: 13px;
+  font-weight: 600;
+}
+.lp-price__foot {
+  max-width: 640px;
+  margin: 32px auto 0;
+  color: var(--lp-faint);
+  font-size: 14px;
+  text-align: center;
+}
+@media (max-width: 960px) {
+  .lp-tiers {
+    grid-template-columns: 1fr;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+  .lp-tier--pro {
+    order: -1;
+    transform: none;
+  }
 }
 
 /* FAQ */
@@ -1254,8 +1349,8 @@
   .lp-also {
     padding: 28px 20px;
   }
-  .lp-price__card {
-    padding: 40px 20px;
+  .lp-tier {
+    padding: 28px 20px;
   }
   .lp-cta {
     margin: 88px 16px 0;

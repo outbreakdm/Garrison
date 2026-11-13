@@ -1160,8 +1160,37 @@ export const rallySettings = pgTable(
 
 export const guildPlan = pgEnum("guild_plan", ["free", "pro"]);
 
-/** Where a server's plan came from: a Stripe subscription, or given free by staff. */
-export const planSource = pgEnum("plan_source", ["stripe", "comp"]);
+/**
+ * Where a server's plan came from: a Stripe subscription, given free by staff, or a seat
+ * of an Agency plan (one subscription that makes up to 5 servers Pro).
+ */
+export const planSource = pgEnum("plan_source", ["stripe", "comp", "bundle"]);
+
+/**
+ * Agency plans: one subscription, owned by a Discord user, that makes up to `seats`
+ * servers Pro. The owner fills and frees seats from the dashboard through
+ * plan_bundle_assign() and plan_bundle_release(); billing (the database owner) or staff
+ * (plan_bundle_set_comp) create and remove the plan. Nothing else can write here.
+ */
+export const planBundles = pgTable(
+  "plan_bundles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** Discord user ID of whoever pays for (or was given) the plan. */
+    ownerId: text("owner_id").notNull(),
+    seats: integer("seats").notNull().default(5),
+    /** `stripe` or `comp`; a bundle is never itself a `bundle`. */
+    source: planSource("source").notNull().default("stripe"),
+    grantedBy: text("granted_by"),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("plan_bundles_owner_idx").on(t.ownerId),
+    check("plan_bundles_seats", sql`${t.seats} BETWEEN 1 AND 25`),
+  ],
+).enableRLS();
 
 /**
  * Which plan a server is on. No row means free. Neither the bot nor the
@@ -1178,6 +1207,8 @@ export const guildPlans = pgTable("guild_plans", {
   grantedBy: text("granted_by"),
   /** Why a complimentary plan was given, for the staff page. */
   note: text("note"),
+  /** The Agency plan whose seat this server takes (source `bundle`). Freed if it ends. */
+  bundleId: uuid("bundle_id").references(() => planBundles.id, { onDelete: "cascade" }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
 

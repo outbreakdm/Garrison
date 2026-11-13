@@ -1,5 +1,6 @@
-import { listLinks, listSharesForUser, RANK_CARD_LIMITS } from "@garrison/db";
+import { listAgencyPlans, listLinks, listSharesForUser, RANK_CARD_LIMITS } from "@garrison/db";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { GameMark, linkDetail, providerLabel } from "@/components/GameMark";
 import { Topbar } from "@/components/Topbar";
 import { WOW_REGIONS } from "@/lib/barracks";
@@ -35,10 +36,11 @@ export default async function AccountPage({
     return name && q[name] === value;
   });
   const db = await getDb();
-  const [links, shares, rankForms] = await Promise.all([
+  const [links, shares, rankForms, agency] = await Promise.all([
     listLinks(db, session.userId),
     listSharesForUser(db, session.userId),
     rankDetailsForms(session.userId).catch(() => []),
+    listAgencyPlans(db, session.userId),
   ]);
   const wow = battlenetConfigured();
 
@@ -67,6 +69,49 @@ export default async function AccountPage({
               {MESSAGES[key]}
             </div>
           ) : null}
+
+          {agency.map((plan) => (
+            // An Agency plan: Pro on up to N servers. Seats are filled from each server's Plan page.
+            <section
+              key={plan.id}
+              className="g-card card-col"
+              id="agency"
+              aria-labelledby={`agency-${plan.id}`}
+            >
+              <div className="card-head">
+                <h2 className="card-title" id={`agency-${plan.id}`}>
+                  <span className="tier__foil">Agency</span>{" "}
+                  <span className="count">
+                    {plan.servers.length} of {plan.seats} seats used
+                  </span>
+                </h2>
+                <p>
+                  {plan.source === "comp"
+                    ? `Given by Garrison staff${plan.note ? `: ${plan.note}` : "."}`
+                    : "Your subscription."}
+                </p>
+              </div>
+              <ol className="seats-list">
+                {Array.from({ length: plan.seats }, (_, i) => {
+                  const server = plan.servers[i];
+                  return (
+                    <li key={server?.guildId ?? `empty-${i}`} className={server ? "" : "is-empty"}>
+                      <span className="seats-list__num">{i + 1}</span>
+                      {server ? (
+                        <Link href={`/servers/${server.guildId}/plan`}>{server.name}</Link>
+                      ) : (
+                        <span className="muted">Free seat</span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+              <p className="g-help">
+                To fill a seat, open a server's Plan page and press "Use a seat on this server". To
+                move a seat, free it there first.
+              </p>
+            </section>
+          ))}
 
           <div className="accounts-layout">
             <div className="card-col">

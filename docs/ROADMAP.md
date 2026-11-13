@@ -409,13 +409,15 @@ Later phases get their checklists when they start.
 
 ## Open decisions for the owner
 
-- **Price** for Pro per server. The structure is set (per server, the table above); the
-  amount isn't chosen yet. Researched 2026-11-12 (third-party figures, approximate): MEE6
-  about $11.99/mo; Dyno about $4.99–5.99/mo or $49.99/yr; Carl-bot about $3.99–7.99/mo;
-  Ticket Tool $7.99/mo; Apollo $7.99/mo or $69.99/yr (its own announcement); Arcane about
-  $7/mo; Sesh about $5–6.99/mo; Raid-Helper €25/yr (its own page). Garrison Pro covers what
-  takes three or four of those. Proposed: **$5.99/mo or $49.99/yr per server**, with a
-  founders' discount at launch. Waiting on the owner.
+- **Price** (proposed 2026-11-13, `docs/pricing.md`; waiting on the owner's yes): **Pro
+  $8.99/mo or $79.99/yr per server**, and a new **Agency** plan, Pro on up to 5 servers for
+  **$34.99/mo or $349.99/yr**. Worst-case AI use leaves $7.20 (Pro) and $27.53 (Agency) a month
+  after Stripe. Prices live in `PRICING` (`packages/db/src/plans.ts`); `PAID_PLANS_LIVE`
+  stays false until Stripe works. Earlier research (2026-11-12): MEE6 about $11.99/mo; Dyno
+  about $4.99–5.99; Carl-bot $3.99–7.99; Ticket Tool $7.99; Apollo $7.99; Arcane about $7;
+  Sesh $5–6.99; Raid-Helper €25/yr.
+- **Free AI pool** (recommended, not built): split `QM_DAILY_BUDGET_USD` into a shared Free
+  pool ($2 a day) and paid servers, so Free use can never stop Pro or Agency.
 - **Quartermaster AI costs** (`docs/ai-costs.md`): decided 2026-11-12, built: Claude Haiku
   5.5 called directly through Anthropic, daily credits (Free 3, Pro 15), 10 attempts an hour,
   output capped at 4,000 tokens, a $5/day global spend cap (`QM_DAILY_BUDGET_USD`). Worst
@@ -598,4 +600,13 @@ Decided (2026-11-12, owner):
   roles are rows of a name and a count (SlotRows); the server joins them back into the text
   the parser reads (lib/slots.ts, tested). Checked in the preview: questions, blocked words
   (saved), raid roles, template roles (saved and reloaded). Trusted IDs are owner-only, so
-  they weren't tried in the preview.
+  they weren't tried in the preview. Deployed (run 43475488699).
+- 2026-11-13: Agency plan and pricing (committed, not deployed): `docs/pricing.md` proposes
+  Pro $8.99 and Agency $34.99 for 5 servers, checked against worst-case AI use. Migration
+  `0050_plan_bundles` (not yet applied in production): `plan_bundles`,
+  `guild_plans.bundle_id`, `plan_source` gains `bundle`, and functions that let only a plan's
+  owner fill or free a seat (never past the count, never over a server with Pro another way)
+  and let staff give an Agency plan for free. The Plan page shows Free, Pro and Agency side by
+  side with this server's plan and an owner's seat button; the account page lists your seats;
+  the staff page gives Agency plans; the landing page shows the three plans as "at launch".
+  Tested in `repo/agency.test.ts` and in the local preview.
