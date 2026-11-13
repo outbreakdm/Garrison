@@ -21,7 +21,7 @@ then updates **Status** and the **Log** before stopping.
   server template then applying it in a second server you own. The calendar feed link should
   open in a calendar app. Next: Phase 2 (Stripe) once a price is set. The depth backlog is
   done; what's left needs the owner (Kick alerts, YouTube live, uploaded backgrounds).
-- **Branch:** `dashboard-first`, pushed; everything through commit `c1c5995` is deployed.
+- **Branch:** `dashboard-first`, pushed; everything through commit `341d88b` is deployed.
 - **Before pushing:** `pnpm -r exec tsc --noEmit`, `pnpm test`, `pnpm exec biome check apps packages`.
 - **Deploying:** "deploy" means commit, push, then
   `gh workflow run deploy-cloudflare.yml --repo outbreakdm/Garrison --ref <branch> -f target=everything -f register_commands=true`.
@@ -552,3 +552,9 @@ Decided (2026-11-12, owner):
   (Free 3, Pro 15, refunded on failure), 10 attempts an hour, a 4,000-token output cap, a global
   daily spend cap (QM_DAILY_BUDGET_USD, $5) and an ai_usage ledger of every call's tokens and
   cost. Migration 0049. Deployed.
+- 2026-11-13: Dashboard pass, deployed (run 43346221842): plain module names (Tickets,
+  Moderation, Leveling...), higher-contrast tokens, "Requires Pro" badges, clearer settings
+  rows, drawn empty states, a layout fix at 721-850px, faster page switches (loading frame, one
+  shared Discord read per server, session touch after the response), Pro embed extras on cards
+  (author line, title link, fields; `cards.embed`), and rank card details read from shared game
+  accounts. No migrations.
