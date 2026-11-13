@@ -119,6 +119,8 @@ const client = new Client({
 const SWEEP_INTERVAL_MS = 60_000;
 let sweepTimer: NodeJS.Timeout | undefined;
 const ACTIONS_INTERVAL_MS = 5_000;
+/** Set once Discord is ready; before that a poke has nothing to do. */
+let drainActions: () => Promise<void> = async () => {};
 let actionsTimer: NodeJS.Timeout | undefined;
 const HEALTH_EVERY_MS = 30 * 60_000;
 let lastHealthSnapshot = 0;
@@ -167,17 +169,29 @@ client.once(Events.ClientReady, async (ready) => {
   };
   await sweep();
   sweepTimer = setInterval(sweep, SWEEP_INTERVAL_MS);
-  // Dashboard requests are checked more often than the sweep, so they feel quick.
+  // Dashboard requests: the dashboard pokes Garrison the moment it queues one; the
+  // timer is the fallback when a poke is lost.
   let running = false;
-  actionsTimer = setInterval(async () => {
-    if (running) return;
+  let again = false;
+  drainActions = async () => {
+    if (running) {
+      again = true;
+      return;
+    }
     running = true;
-    await processDashboardActions(ctx, ready)
-      .catch((error) => logger.error("Dashboard actions failed", { error }))
-      .finally(() => {
-        running = false;
-      });
-  }, ACTIONS_INTERVAL_MS);
+    try {
+      do {
+        again = false;
+        await processDashboardActions(ctx, ready).catch((error) =>
+          logger.error("Dashboard actions failed", { error }),
+        );
+      } while (again);
+    } finally {
+      running = false;
+    }
+  };
+  actionsTimer = setInterval(() => void drainActions(), ACTIONS_INTERVAL_MS);
+  void drainActions();
 });
 
 client.on(Events.GuildAuditLogEntryCreate, (entry, guild) => {
@@ -279,7 +293,11 @@ client.on(Events.InteractionCreate, (interaction) => handleInteraction(interacti
 client.on(Events.Error, (error) => logger.error("Discord client error", { error }));
 
 const health = env.HEALTH_PORT
-  ? startHealthServer(env.HEALTH_PORT, () => client.isReady() && client.ws.ping >= 0)
+  ? startHealthServer(
+      env.HEALTH_PORT,
+      () => client.isReady() && client.ws.ping >= 0,
+      () => void drainActions(),
+    )
   : undefined;
 
 async function shutdown(signal: string) {

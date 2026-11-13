@@ -15,6 +15,7 @@ import {
   removeMemberNote,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
+import { wakeBot } from "@/lib/bot";
 import { getDb } from "@/lib/db";
 import { listGuildRoles, listTextChannels } from "@/lib/discord";
 import { flashBack } from "@/lib/flash";
@@ -97,6 +98,7 @@ export async function decide(form: FormData) {
         { id: session.userId, name: session.username },
         { kind: "undo_case", payload: { caseNumber: c.caseNumber } },
       );
+      wakeBot();
       undo = queued.ok
         ? ` Case #${c.caseNumber} is being undone.`
         : " Undo the case from Requests.";

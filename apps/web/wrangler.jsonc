@@ -11,6 +11,10 @@
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
   "observability": { "enabled": true },
+  // Near the database: a page makes several round trips to it and one to the browser.
+  "placement": { "mode": "smart" },
+  // The bot's private entrypoint: wakes it the moment a dashboard request is queued.
+  "services": [{ "binding": "BOT", "service": "garrison-bot", "entrypoint": "BotControl" }],
   // Your dashboard's domain. Cloudflare issues the certificate.
   // "routes": [{ "pattern": "dash.example.com", "custom_domain": true }],
   "vars": {

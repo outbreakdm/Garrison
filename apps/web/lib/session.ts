@@ -50,10 +50,13 @@ export async function requireSession(next = "/servers") {
  * directly: they are public POST endpoints, so page checks don't cover them.
  */
 export const checkGuildAccess = cache(async (guildId: string) => {
-  const session = await getSession();
-  if (!session || typeof guildId !== "string" || !isSnowflake(guildId)) return null;
-  const guild = await getActiveGuild(await getDb(), guildId);
-  if (!guild) return null;
+  if (typeof guildId !== "string" || !isSnowflake(guildId)) return null;
+  // Independent reads, so neither waits for the other.
+  const [session, guild] = await Promise.all([
+    getSession(),
+    getDb().then((db) => getActiveGuild(db, guildId)),
+  ]);
+  if (!session || !guild) return null;
   if (!(await canManageGuildNow(guildId, session.userId))) return null;
   return { session, guild };
 });

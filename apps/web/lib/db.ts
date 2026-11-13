@@ -26,7 +26,9 @@ async function hyperdriveUrl(): Promise<string | undefined> {
 const perRequest = cache(async (): Promise<Db> => {
   const url = (await hyperdriveUrl()) ?? process.env.WEB_DATABASE_URL;
   if (!url) throw new Error("No database: bind HYPERDRIVE or set WEB_DATABASE_URL.");
-  return createDb(url, { max: 1 }).db;
+  // Five, as Cloudflare advises for postgres-js behind Hyperdrive: with one, a page's
+  // Promise.all of queries ran one after another on the same connection.
+  return createDb(url, { max: 5 }).db;
 });
 
 let roleChecked: Promise<void> | undefined;

@@ -34,6 +34,7 @@ import {
 } from "@garrison/db";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { wakeBot } from "@/lib/bot";
 import { getDb } from "@/lib/db";
 import { guildOwnerId, listTextChannels } from "@/lib/discord";
 import { checkGuildAccess } from "@/lib/session";
@@ -479,6 +480,7 @@ export async function requestAction(form: FormData) {
     { id: session.userId, name: session.username },
     built.input,
   );
+  wakeBot();
   if (!result.ok) redirect(`${base}?${new URLSearchParams({ error: result.reason })}#requests`);
   redirect(`${base}?${new URLSearchParams({ queued: built.input.kind })}#requests`);
 }

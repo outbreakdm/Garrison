@@ -13,6 +13,7 @@ import {
   setRaidAttendance,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
+import { wakeBot } from "@/lib/bot";
 import { getDb } from "@/lib/db";
 import { listTextChannels } from "@/lib/discord";
 import { callSignupsForm, createRaidForm, moveSignupForm } from "@/lib/rally-schema";
@@ -43,6 +44,7 @@ async function queue(form: FormData, input: QueueInput) {
     { id: session.userId, name: session.username },
     input,
   );
+  wakeBot();
   if (!result.ok) back(guild.id, { error: result.reason });
   back(guild.id, { queued: input.kind });
 }

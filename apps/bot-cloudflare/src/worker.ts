@@ -1,3 +1,4 @@
+import { WorkerEntrypoint } from "cloudflare:workers";
 import { Container, getContainer } from "@cloudflare/containers";
 
 /**
@@ -70,6 +71,19 @@ export class GarrisonBot extends Container<Env> {
   override onError(error: unknown) {
     console.error("Garrison bot container error", error);
     throw error;
+  }
+}
+
+/**
+ * Private: reachable only through a service binding (the dashboard's), never from
+ * the internet. The dashboard calls poke() right after queuing a request, so the
+ * bot runs it now instead of on its next check.
+ */
+export class BotControl extends WorkerEntrypoint<Env> {
+  async poke(): Promise<void> {
+    const bot = getContainer(this.env.BOT, "garrison");
+    const res = await bot.fetch(new Request("http://garrison/poke", { method: "POST" }));
+    if (!res.ok && res.status !== 202) console.warn("Garrison bot poke failed", res.status);
   }
 }
 

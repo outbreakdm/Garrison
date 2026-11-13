@@ -558,3 +558,9 @@ Decided (2026-11-12, owner):
   shared Discord read per server, session touch after the response), Pro embed extras on cards
   (author line, title link, fields; `cards.embed`), and rank card details read from shared game
   accounts. No migrations.
+- 2026-11-13: Speed: the dashboard wakes the bot through a private service binding
+  (BotControl.poke) the moment a request is queued, instead of waiting for the 5 s check; the
+  dashboard checks for the result every second for the first 10 s; up to 5 database connections
+  per request (a page's parallel queries had been queuing on one); Smart Placement for the
+  dashboard Worker; session and server lookups in parallel. The bot deploys before the dashboard
+  when the binding is new.

@@ -2,6 +2,7 @@
 
 import { getActiveGuild, queueDashboardAction, webVerifySettings } from "@garrison/db";
 import { redirect } from "next/navigation";
+import { wakeBot } from "@/lib/bot";
 import { getDb } from "@/lib/db";
 import { isGuildMember } from "@/lib/discord";
 import { env } from "@/lib/env";
@@ -46,6 +47,7 @@ export async function submitVerify(form: FormData) {
     { id: session.userId, name: session.username },
     { kind: "web_verify", payload: {} },
   );
+  wakeBot();
   if (!queued.ok)
     return flashBack(path, { error: "Lots of people are verifying. Try again in a minute." });
   return flashBack(path, { ok: "Done. Garrison is giving you the role; head back to Discord." });

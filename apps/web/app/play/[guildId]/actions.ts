@@ -2,6 +2,7 @@
 
 import { getActiveGuild, getLfgPost, getOpsEvent, queueDashboardAction } from "@garrison/db";
 import { redirect } from "next/navigation";
+import { wakeBot } from "@/lib/bot";
 import { getDb } from "@/lib/db";
 import { isGuildMember } from "@/lib/discord";
 import { flashBack } from "@/lib/flash";
@@ -58,6 +59,7 @@ export async function playRequest(form: FormData) {
     { id: session.userId, name: session.username },
     input,
   );
+  wakeBot();
   if (!queued.ok) return flashBack(path, { error: "That's a lot at once. Try again in a minute." });
   return flashBack(path, { ok: "Sent to Garrison. Refresh in a few seconds to see it." });
 }
