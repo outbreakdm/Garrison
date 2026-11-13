@@ -8,9 +8,9 @@ then updates **Status** and the **Log** before stopping.
 ## Pick up here
 
 - **Now:** Phases 1 and 3 to 11, the depth backlog and the Quartermaster cost controls are
-  **deployed** (2026-11-12, run 43331916135). Migrations through `0049_ai_usage` are applied
+  **deployed** (2026-11-12, run 43331916135). Migrations through `0050_plan_bundles` are applied
   in production and recorded in `drizzle.__drizzle_migrations` (0021 and 0022 had been
-  applied by hand), so `pnpm db:migrate` starts from 0050. Slash commands are registered
+  applied by hand), so `pnpm db:migrate` starts from 0051. Slash commands are registered
   (26). Quartermaster stays off until `ANTHROPIC_API_KEY` is set as a GitHub secret; it's
   safe to set now (Haiku, daily credits, $5/day cap).
   Still to check on a test server: post a role menu and press its buttons, change Garrison's
@@ -409,7 +409,7 @@ Later phases get their checklists when they start.
 
 ## Open decisions for the owner
 
-- **Price** (proposed 2026-11-13, `docs/pricing.md`; waiting on the owner's yes): **Pro
+- **Price** (approved 2026-11-13 by deploying, `docs/pricing.md`): **Pro
   $8.99/mo or $79.99/yr per server**, and a new **Agency** plan, Pro on up to 5 servers for
   **$34.99/mo or $349.99/yr**. Worst-case AI use leaves $7.20 (Pro) and $27.53 (Agency) a month
   after Stripe. Prices live in `PRICING` (`packages/db/src/plans.ts`); `PAID_PLANS_LIVE`
@@ -601,7 +601,7 @@ Decided (2026-11-12, owner):
   the parser reads (lib/slots.ts, tested). Checked in the preview: questions, blocked words
   (saved), raid roles, template roles (saved and reloaded). Trusted IDs are owner-only, so
   they weren't tried in the preview. Deployed (run 43475488699).
-- 2026-11-13: Agency plan and pricing (committed, not deployed): `docs/pricing.md` proposes
+- 2026-11-13: Agency plan and pricing (deployed in run 43483886544; 0050 applied and recorded in production): `docs/pricing.md` proposes
   Pro $8.99 and Agency $34.99 for 5 servers, checked against worst-case AI use. Migration
   `0050_plan_bundles` (not yet applied in production): `plan_bundles`,
   `guild_plans.bundle_id`, `plan_source` gains `bundle`, and functions that let only a plan's
@@ -610,13 +610,13 @@ Decided (2026-11-12, owner):
   side with this server's plan and an owner's seat button; the account page lists your seats;
   the staff page gives Agency plans; the landing page shows the three plans as "at launch".
   Tested in `repo/agency.test.ts` and in the local preview.
-- 2026-11-13: Subscription polish (impeccable polish, committed, not deployed): plan cards show
+- 2026-11-13: Subscription polish (impeccable polish, deployed in run 43483886544): plan cards show
   "$0" and "save N%" the same way on the dashboard and the landing page, ticks in the page's
   color, "Opens at launch" on paid cards, a plain "This server is on Free / has Pro" line and
   "All 5 seats free". The staff page gets a readout of plan counts, labeled Agency rows and a
   plain notice. Pro features on Free share one slot (`ProUpsell`) and every plans link says
   "See plans". The landing flag reads "Recommended" (no usage claim).
-- 2026-11-13: American spelling everywhere (committed, not deployed): color, center, gray,
+- 2026-11-13: American spelling everywhere (deployed in run 43483886544): color, center, gray,
   labeled, canceled, defense, armor, neighbor, humor, anymore, math, toward and the -ize forms,
   across the dashboard, bot replies, landing page, docs and comments. Saved status values
   (`cancelled` in the database) and `aria-labelledby` are unchanged, as they must be.
