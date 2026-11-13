@@ -1,12 +1,12 @@
 "use client";
 
 import {
-  CARD_PRO_FIELDS,
   type Entitlements,
   type LinkButton,
   lockedCardFields,
   MESSAGE_LIMITS,
   type Repeat,
+  restoreLockedCard,
   type SavedMessage,
 } from "@garrison/db/cards";
 import { useMemo, useState } from "react";
@@ -88,9 +88,7 @@ export function MessageEditor({
   ];
   const undoPro = () =>
     setM((x) => {
-      const card = { ...x.card };
-      for (const f of CARD_PRO_FIELDS)
-        if (lockedCard.some((l) => l.key === f.key)) card[f.key] = saved.card[f.key];
+      const card = restoreLockedCard(x.card, saved.card, lockedCard);
       return {
         ...x,
         card,
@@ -137,6 +135,7 @@ export function MessageEditor({
                 accent: ent["cards.accent"],
                 images: ent["cards.images"],
                 footer: ent["cards.footer"],
+                embed: ent["cards.embed"],
               }}
             />
 

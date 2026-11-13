@@ -14,6 +14,79 @@ export interface RankCardField {
   /** Stable ID: members' answers are stored under it, so renaming keeps them. */
   id: string;
   label: string;
+  /**
+   * Where the value comes from. Null: the member types it (/rankcard or their Account
+   * page). Otherwise read from a game account they share with the server.
+   */
+  from: RankDetailSource | null;
+  /** For details members type: an example shown in the empty box, like "Holy Paladin". */
+  hint: string | null;
+}
+
+/**
+ * Details a rank card can read from a member's shared game accounts instead of asking
+ * for them. Each reads the first shared account of that game; no account, no line.
+ */
+export const RANK_DETAIL_SOURCES = {
+  "wow:class": { label: "WoW class", short: "Class", provider: "wow", sample: "Paladin" },
+  "wow:character": {
+    label: "WoW character name",
+    short: "Character",
+    provider: "wow",
+    sample: "Lightbringer",
+  },
+  "wow:level": { label: "WoW character level", short: "Level", provider: "wow", sample: "80" },
+  "osrs:name": { label: "OSRS name", short: "RSN", provider: "osrs", sample: "Zezima" },
+  "osrs:total": { label: "OSRS total level", short: "Total", provider: "osrs", sample: "2277" },
+  "osrs:combat": { label: "OSRS combat level", short: "Combat", provider: "osrs", sample: "126" },
+  "rs3:total": { label: "RuneScape total level", short: "Total", provider: "rs3", sample: "2898" },
+} as const;
+export type RankDetailSource = keyof typeof RANK_DETAIL_SOURCES;
+
+interface LinkFacts {
+  provider: string;
+  displayName: string;
+  details: Record<string, unknown>;
+}
+
+function readSource(source: RankDetailSource, link: LinkFacts): string | null {
+  const d = link.details;
+  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+  const num = (v: unknown) => (typeof v === "number" ? String(v) : null);
+  switch (source) {
+    case "wow:class":
+      return str(d.className);
+    case "wow:character":
+      return str(d.name) ?? link.displayName;
+    case "wow:level":
+      return num(d.level);
+    case "osrs:name":
+      return link.displayName;
+    case "osrs:total":
+    case "rs3:total":
+      return num(d.totalLevel);
+    case "osrs:combat":
+      return num(d.combatLevel);
+  }
+}
+
+/** The details members type themselves (the rest come from linked accounts). */
+export const memberFields = (fields: RankCardField[]) => fields.filter((f) => !f.from);
+
+/** The lines a member's card shows: typed answers, and values from their shared accounts. */
+export function rankDetailLines(
+  fields: RankCardField[],
+  answers: Record<string, string>,
+  links: LinkFacts[],
+): { label: string; value: string }[] {
+  return fields.flatMap((f) => {
+    if (!f.from) return answers[f.id] ? [{ label: f.label, value: answers[f.id] as string }] : [];
+    const source = f.from;
+    const provider = RANK_DETAIL_SOURCES[source].provider;
+    const link = links.find((l) => l.provider === provider);
+    const value = link ? readSource(source, link) : null;
+    return value ? [{ label: f.label, value: value.slice(0, RANK_CARD_LIMITS.value) }] : [];
+  });
 }
 
 export interface RankCardStyle {
@@ -26,7 +99,7 @@ export interface RankCardStyle {
   showLinked: boolean;
 }
 
-export const RANK_CARD_LIMITS = { fields: 4, label: 24, value: 40 } as const;
+export const RANK_CARD_LIMITS = { fields: 4, label: 24, value: 40, hint: 40 } as const;
 
 /** Gradient backgrounds, top-left to bottom-right. "garrison" is the standard look. */
 export const RANK_BACKGROUNDS: Record<string, { label: string; from: string; to: string }> = {
@@ -94,7 +167,13 @@ export function parseRankCard(raw: unknown): Parsed<RankCardStyle> {
       return { ok: false, error: `Labels can be ${RANK_CARD_LIMITS.label} characters.` };
     if (fields.some((y) => y.id === x.id || y.label.toLowerCase() === label.toLowerCase()))
       return { ok: false, error: `Two details are called ${label}.` };
-    fields.push({ id: x.id, label });
+    const from =
+      typeof x.from === "string" && Object.hasOwn(RANK_DETAIL_SOURCES, x.from)
+        ? (x.from as RankDetailSource)
+        : null;
+    if (x.from && !from) return { ok: false, error: "Pick where each detail comes from." };
+    const hint = from ? null : line(x.hint).slice(0, RANK_CARD_LIMITS.hint) || null;
+    fields.push({ id: x.id, label, from, hint });
   }
   return { ok: true, value: { background, accent, fields, showLinked: r.showLinked === true } };
 }
@@ -117,7 +196,7 @@ export function lockedRankCard(
     out.push("Background");
   if (style.accent && style.accent !== before.accent) out.push("Accent colour");
   if (style.fields.length && JSON.stringify(style.fields) !== JSON.stringify(before.fields))
-    out.push("Details members fill in");
+    out.push("Details on the card");
   if (style.showLinked && !before.showLinked) out.push("Linked game accounts");
   return out;
 }

@@ -39,6 +39,76 @@ export class DiscordError extends Error {
   }
 }
 
+// --- Shared, short-lived reads -------------------------------------------------
+// Every dashboard page asks about the same server. One fetch per server every 30 s
+// serves the access check, the role, emoji and channel pickers and the layout
+// preview, and a request already on its way is shared rather than sent again.
+
+const READ_TTL_MS = 30_000;
+const READ_MAX_KEYS = 2000;
+
+interface Shared<T> {
+  at: number;
+  value: Promise<T>;
+}
+
+function shared<T>(store: Map<string, Shared<T>>, key: string, load: () => Promise<T>): Promise<T> {
+  const hit = store.get(key);
+  if (hit && Date.now() - hit.at < READ_TTL_MS) return hit.value;
+  const value = load();
+  store.set(key, { at: Date.now(), value });
+  // A failed read isn't kept: the next page asks again.
+  value.catch(() => {
+    if (store.get(key)?.value === value) store.delete(key);
+  });
+  if (store.size > READ_MAX_KEYS) {
+    const oldest = store.keys().next().value;
+    if (oldest !== undefined) store.delete(oldest);
+  }
+  return value;
+}
+
+interface RawGuild {
+  id: string;
+  owner_id: string;
+  roles: {
+    id: string;
+    name: string;
+    position: number;
+    color?: number;
+    managed?: boolean;
+    mentionable?: boolean;
+    permissions?: string;
+  }[];
+  emojis?: { id: string | null; name: string | null; animated?: boolean; available?: boolean }[];
+}
+
+interface RawChannel {
+  id: string;
+  name: string;
+  type: number;
+  position: number;
+  parent_id?: string | null;
+  permission_overwrites?: { id: string; deny: string }[];
+}
+
+const guildReads = new Map<string, Shared<RawGuild>>();
+const channelReads = new Map<string, Shared<RawChannel[]>>();
+
+const rawGuild = (guildId: string) =>
+  shared(guildReads, guildId, () =>
+    discord<RawGuild>(`/guilds/${guildId}`, {
+      headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` },
+    }),
+  );
+
+const rawChannels = (guildId: string) =>
+  shared(channelReads, guildId, () =>
+    discord<RawChannel[]>(`/guilds/${guildId}/channels`, {
+      headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` },
+    }),
+  );
+
 /** Exchange an OAuth code for a token. The token is used for two reads, then revoked. */
 export async function exchangeCode(code: string, codeVerifier: string) {
   const { DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, APP_URL } = env();
@@ -90,62 +160,42 @@ export const fetchMyGuilds = (token: string) =>
 
 // --- Live permission checks, with the bot token ------------------------------
 
-const ACCESS_TTL_MS = 30_000;
-const accessCache = new Map<string, { ok: boolean; at: number }>();
+const accessReads = new Map<string, Shared<boolean>>();
 
 /**
  * Can this user manage this server right now? Asked of Discord with the bot
  * token, not taken from the login snapshot, so losing the role locks them out
- * within ACCESS_TTL_MS. Fails closed on any error.
+ * within READ_TTL_MS (30 s). Fails closed on any error.
  */
-export async function canManageGuildNow(guildId: string, userId: string): Promise<boolean> {
-  const key = `${guildId}:${userId}`;
-  const hit = accessCache.get(key);
-  if (hit && Date.now() - hit.at < ACCESS_TTL_MS) return hit.ok;
-
-  const bot = { headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` } };
-  let ok = false;
-  try {
-    const [guild, member] = await Promise.all([
-      discord<{ id: string; owner_id: string; roles: { id: string; permissions: string }[] }>(
-        `/guilds/${guildId}`,
-        bot,
-      ),
-      discord<{ roles: string[] }>(`/guilds/${guildId}/members/${userId}`, bot),
-    ]);
-    const snapshot: GuildSnapshot = {
-      ownerId: guild.owner_id,
-      everyoneRoleId: guild.id,
-      roles: guild.roles,
-    };
-    ok = canManage(memberPermissions(snapshot, userId, member.roles));
-  } catch {
-    ok = false;
-  }
-  accessCache.set(key, { ok, at: Date.now() });
-  return ok;
+export function canManageGuildNow(guildId: string, userId: string): Promise<boolean> {
+  return shared(accessReads, `${guildId}:${userId}`, async () => {
+    try {
+      const [guild, member] = await Promise.all([
+        rawGuild(guildId),
+        discord<{ roles: string[] }>(`/guilds/${guildId}/members/${userId}`, {
+          headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` },
+        }),
+      ]);
+      const snapshot: GuildSnapshot = {
+        ownerId: guild.owner_id,
+        everyoneRoleId: guild.id,
+        roles: guild.roles.map((r) => ({ id: r.id, permissions: r.permissions ?? "0" })),
+      };
+      return canManage(memberPermissions(snapshot, userId, member.roles));
+    } catch {
+      return false;
+    }
+  });
 }
 
 // --- Server channels, for settings pickers -----------------------------------
 
-const channelCache = new Map<string, { channels: { id: string; name: string }[]; at: number }>();
-
 /** The server's text and announcement channels, in Discord's order. Cached 30 s. */
 export async function listTextChannels(guildId: string) {
-  const hit = channelCache.get(guildId);
-  if (hit && Date.now() - hit.at < ACCESS_TTL_MS) return hit.channels;
-  const raw = await discord<{ id: string; name: string; type: number; position: number }[]>(
-    `/guilds/${guildId}/channels`,
-    {
-      headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` },
-    },
-  );
-  const channels = raw
+  return (await rawChannels(guildId))
     .filter((c) => c.type === 0 || c.type === 5)
     .sort((a, b) => a.position - b.position)
     .map(({ id, name }) => ({ id, name }));
-  channelCache.set(guildId, { channels, at: Date.now() });
-  return channels;
 }
 
 export interface GuildRole {
@@ -157,11 +207,6 @@ export interface GuildRole {
   /** Permission bits as a decimal string, as Discord sends them. */
   permissions: string;
 }
-
-const roleCache = new Map<
-  string,
-  { roles: GuildRole[]; emojis: ServerEmoji[]; ownerId: string; at: number }
->();
 
 /** Every role except @everyone, highest first, as Discord shows them. Cached 30 s. */
 export async function listGuildRoles(guildId: string): Promise<GuildRole[]> {
@@ -185,21 +230,7 @@ export async function guildOwnerId(guildId: string): Promise<string> {
 }
 
 async function guildInfo(guildId: string) {
-  const hit = roleCache.get(guildId);
-  if (hit && Date.now() - hit.at < ACCESS_TTL_MS) return hit;
-  const guild = await discord<{
-    id: string;
-    owner_id: string;
-    roles: {
-      id: string;
-      name: string;
-      position: number;
-      managed?: boolean;
-      mentionable?: boolean;
-      permissions?: string;
-    }[];
-    emojis?: { id: string | null; name: string | null; animated?: boolean; available?: boolean }[];
-  }>(`/guilds/${guildId}`, { headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` } });
+  const guild = await rawGuild(guildId);
   const roles = guild.roles
     .filter((r) => r.id !== guild.id)
     .sort((a, b) => b.position - a.position)
@@ -216,9 +247,7 @@ async function guildInfo(guildId: string) {
       ? [{ id: e.id, name: e.name, animated: e.animated === true }]
       : [],
   );
-  const entry = { roles, emojis, ownerId: guild.owner_id, at: Date.now() };
-  roleCache.set(guildId, entry);
-  return entry;
+  return { roles, emojis, ownerId: guild.owner_id };
 }
 
 /**
@@ -393,28 +422,9 @@ export interface ServerLayout {
 }
 
 const VIEW_CHANNEL = 1n << 10n;
-const layoutCache = new Map<string, { layout: ServerLayout; at: number }>();
-
 /** Every category, channel and role, in Discord's order. Cached 30 s. */
 export async function getServerLayout(guildId: string): Promise<ServerLayout> {
-  const hit = layoutCache.get(guildId);
-  if (hit && Date.now() - hit.at < ACCESS_TTL_MS) return hit.layout;
-  const [raw, guild] = await Promise.all([
-    discord<
-      {
-        id: string;
-        name: string;
-        type: number;
-        position: number;
-        parent_id?: string | null;
-        permission_overwrites?: { id: string; deny: string }[];
-      }[]
-    >(`/guilds/${guildId}/channels`, botAuth()),
-    discord<{
-      id: string;
-      roles: { id: string; name: string; position: number; color?: number; managed?: boolean }[];
-    }>(`/guilds/${guildId}`, botAuth()),
-  ]);
+  const [raw, guild] = await Promise.all([rawChannels(guildId), rawGuild(guildId)]);
   const isVoice = (t: number) => t === 2 || t === 13;
   const channel = (c: (typeof raw)[number]): LayoutChannel => {
     const everyone = c.permission_overwrites?.find((o) => o.id === guildId);
@@ -450,6 +460,5 @@ export async function getServerLayout(guildId: string): Promise<ServerLayout> {
       .sort((a, b) => b.position - a.position)
       .map((r) => ({ id: r.id, name: r.name, color: r.color ?? 0, managed: r.managed === true })),
   };
-  layoutCache.set(guildId, { layout, at: Date.now() });
   return layout;
 }

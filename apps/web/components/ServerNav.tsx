@@ -1,38 +1,28 @@
 "use client";
 
-import { modules } from "@garrison/brand";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLayoutEffect, useRef, ViewTransition } from "react";
 
+/** Plain names first: the address keeps each module's original path. */
 const ITEMS = [
-  { group: null, href: "", name: "Overview", plain: null },
-  { group: "Guard", href: "/watch", name: modules.watch.name, plain: modules.watch.plain },
-  { group: null, href: "/gatehouse", name: modules.gatehouse.name, plain: modules.gatehouse.plain },
-  { group: null, href: "/ledger", name: modules.ledger.name, plain: modules.ledger.plain },
-  { group: "Rally", href: "/rally", name: modules.rally.name, plain: "LFG and events" },
-  { group: null, href: "/barracks", name: modules.barracks.name, plain: modules.barracks.plain },
-  { group: null, href: "/ranks", name: modules.ranks.name, plain: modules.ranks.plain },
-  { group: null, href: "/insignia", name: modules.insignia.name, plain: modules.insignia.plain },
-  { group: null, href: "/herald", name: modules.herald.name, plain: modules.herald.plain },
-  { group: null, href: "/parley", name: modules.parley.name, plain: modules.parley.plain },
-  { group: null, href: "/beacon", name: modules.beacon.name, plain: modules.beacon.plain },
-  { group: null, href: "/spoils", name: modules.spoils.name, plain: modules.spoils.plain },
-  { group: null, href: "/honors", name: modules.honors.name, plain: modules.honors.plain },
-  {
-    group: null,
-    href: "/dispatch",
-    name: modules.dispatch.name,
-    plain: modules.dispatch.plain,
-  },
-  {
-    group: "Configure",
-    href: "/quartermaster",
-    name: modules.quartermaster.name,
-    plain: modules.quartermaster.plain,
-  },
-  { group: null, href: "/settings", name: "Settings", plain: null },
-  { group: null, href: "/plan", name: "Plan", plain: null },
+  { group: null, href: "", name: "Overview" },
+  { group: "Safety", href: "/watch", name: "Moderation" },
+  { group: null, href: "/gatehouse", name: "Security" },
+  { group: null, href: "/ledger", name: "Logs" },
+  { group: "Community", href: "/herald", name: "Welcome" },
+  { group: null, href: "/insignia", name: "Role menus" },
+  { group: null, href: "/parley", name: "Tickets" },
+  { group: null, href: "/ranks", name: "Leveling" },
+  { group: null, href: "/spoils", name: "Giveaways" },
+  { group: null, href: "/honors", name: "Starboard" },
+  { group: null, href: "/beacon", name: "Stream alerts" },
+  { group: null, href: "/dispatch", name: "Messages" },
+  { group: "Gaming", href: "/rally", name: "Groups and raids" },
+  { group: null, href: "/barracks", name: "Game accounts" },
+  { group: "Server", href: "/quartermaster", name: "AI builder" },
+  { group: null, href: "/settings", name: "Settings" },
+  { group: null, href: "/plan", name: "Plan" },
 ];
 
 export function ServerNav({ guildId }: { guildId: string }) {
@@ -54,7 +44,7 @@ export function ServerNav({ guildId }: { guildId: string }) {
     <nav className="g-nav" aria-label="Server" ref={nav}>
       {ITEMS.map((item) => {
         const href = `${base}${item.href}`;
-        // Sub-pages (Rally templates) keep their module lit.
+        // Sub-pages (LFG templates, a ticket) keep their module lit.
         const current = pathname === href || Boolean(item.href && pathname.startsWith(`${href}/`));
         return (
           <div key={item.name}>
@@ -76,7 +66,6 @@ export function ServerNav({ guildId }: { guildId: string }) {
                 </ViewTransition>
               ) : null}
               <span className="g-nav__name">{item.name}</span>
-              {item.plain ? <span className="g-nav__plain">{item.plain}</span> : null}
             </Link>
           </div>
         );

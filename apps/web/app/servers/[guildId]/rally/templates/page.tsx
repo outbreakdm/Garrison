@@ -17,7 +17,7 @@ import { contentKey, readFlash } from "@/lib/flash";
 import { requireGuildAccess } from "@/lib/session";
 import { addTemplate, removeTemplate, saveTemplate } from "./actions";
 
-export const metadata: Metadata = { title: "Rally templates" };
+export const metadata: Metadata = { title: "LFG templates" };
 
 const WORDING_FIELDS = [
   ["group", "What a group is called", "squad, party, fireteam, raid"],

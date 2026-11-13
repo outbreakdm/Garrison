@@ -68,7 +68,16 @@ export function CardPreview({
           </div>
           <div className="dc-card" ref={box}>
             <div className={thumb ? "dc-card__head dc-card__head--thumb" : "dc-card__head"}>
-              <div className="dc-h dc-h3">{card.title || "Untitled card"}</div>
+              <div className="dc-card__titles">
+                {card.author ? <div className="dc-sub dc-card__author">{card.author}</div> : null}
+                <div className="dc-h dc-h3">
+                  {card.url ? (
+                    <span className="dc-card__link">{card.title || "Untitled card"}</span>
+                  ) : (
+                    card.title || "Untitled card"
+                  )}
+                </div>
+              </div>
               {thumb ? (
                 <PreviewImage url={thumb} className="dc-card__thumb" label="Thumbnail" />
               ) : null}
@@ -78,6 +87,12 @@ export function CardPreview({
               b.kind === "divider" ? (
                 // biome-ignore lint/suspicious/noArrayIndexKey: blocks have no IDs; order is the identity
                 <hr className="dc-card__rule" key={i} />
+              ) : b.kind === "field" ? (
+                // biome-ignore lint/suspicious/noArrayIndexKey: as above
+                <div className="dc-card__text dc-card__field" key={i}>
+                  <strong>{b.name || "Field name"}</strong>
+                  <DiscordMarkdown text={b.value || "Value"} names={names} />
+                </div>
               ) : (
                 // biome-ignore lint/suspicious/noArrayIndexKey: as above
                 <div className="dc-card__text" key={i}>

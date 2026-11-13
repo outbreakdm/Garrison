@@ -5,6 +5,7 @@ import {
   type Entitlements,
   fillWelcome,
   lockedCardFields,
+  restoreLockedCard,
   WELCOME_PLACEHOLDERS,
 } from "@garrison/db/cards";
 import { useMemo, useState } from "react";
@@ -71,9 +72,7 @@ export function WelcomeCardForm({
     ...(partLocked && enabled && !saved.enabled ? ["The welcome DM"] : []),
   ];
   const undoPro = () => {
-    const next = { ...card };
-    for (const f of lockedCard) next[f.key] = saved.card[f.key];
-    setCard(next);
+    setCard(restoreLockedCard(card, saved.card, lockedCard));
     if (partLocked && !saved.enabled) setEnabled(false);
   };
   const needsChannel = part !== "dm" && enabled && !channelId;
@@ -144,6 +143,7 @@ export function WelcomeCardForm({
               accent: ent["cards.accent"],
               images: ent["cards.images"],
               footer: ent["cards.footer"],
+              embed: ent["cards.embed"],
             }}
           />
           <p className="g-help">

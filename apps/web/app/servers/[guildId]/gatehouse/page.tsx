@@ -25,7 +25,7 @@ import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
 import { saveAntiRaid, saveBackupWeekly, saveVerification } from "../settings/actions";
 
-export const metadata: Metadata = { title: "Gatehouse" };
+export const metadata: Metadata = { title: "Security" };
 
 const KINDS = [
   "lockdown_start",

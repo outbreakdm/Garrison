@@ -3,7 +3,7 @@ import { isStaff, listActiveGuilds } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ViewTransition } from "react";
-import { Art } from "@/components/Art";
+import { EmptyState } from "@/components/EmptyState";
 import { InviteDialog } from "@/components/InviteDialog";
 import { Topbar } from "@/components/Topbar";
 import { getDb } from "@/lib/db";
@@ -104,13 +104,14 @@ export default async function ServersPage() {
               ))}
             </ul>
           ) : (
-            <div className="g-card picker__empty">
-              <Art slot="empty" className="empty-art" decorative />
-              <div>
-                <h3 className="card-title">Garrison isn't in any of your servers yet</h3>
-                <p>Add it to one below. It asks only for the permissions it uses.</p>
-              </div>
-            </div>
+            <EmptyState
+              mark="server"
+              title="Garrison isn't in any of your servers yet"
+              headingLevel={3}
+            >
+              Pick one under Add Garrison below. It asks only for the permissions it uses, never
+              Administrator.
+            </EmptyState>
           )}
         </section>
 

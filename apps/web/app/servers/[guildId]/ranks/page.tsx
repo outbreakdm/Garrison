@@ -15,8 +15,8 @@ import {
   SEASON_NAME_MAX,
 } from "@garrison/db";
 import type { Metadata } from "next";
-import { Art } from "@/components/Art";
 import { ProTag } from "@/components/cards/CardEditor";
+import { EmptyState } from "@/components/EmptyState";
 import { formatTime } from "@/components/format";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { RequestsPanel } from "@/components/RequestsPanel";
@@ -46,7 +46,7 @@ const ANNOUNCE: Record<string, string> = {
   channel: "One channel",
 };
 
-export const metadata: Metadata = { title: "Ranks" };
+export const metadata: Metadata = { title: "Leveling" };
 
 export default async function RanksPage({
   params,
@@ -99,7 +99,7 @@ export default async function RanksPage({
     ...(card.background !== "garrison" || card.accent || card.fields.length || card.showLinked
       ? ent["ranks.cards"]
         ? []
-        : [{ label: "Pro look", value: "Paused on Free" }]
+        : [{ label: "Requires Pro", value: "custom look saved, paused on Free" }]
       : []),
   ];
   const roleName = new Map(roles.map((r) => [r.id, r.name]));
@@ -109,19 +109,19 @@ export default async function RanksPage({
     <>
       <div className="page-head">
         <div>
-          <h1>Leaderboard</h1>
+          <h1>Leveling</h1>
           <p>
             {settings.enabled
               ? settings.voiceXp
                 ? "Members earn XP for chatting and for time in voice, once a minute at most."
                 : "Members earn XP for chatting, once a minute at most."
-              : "Ranks are off: members earn no XP."}{" "}
+              : "XP is off: members earn none."}{" "}
             Garrison counts who posted and when, never what they wrote.
           </p>
         </div>
         <a className="g-btn g-btn--secondary" href="?edit=settings#settings">
           <GearIcon />
-          Ranks settings
+          Leveling settings
         </a>
       </div>
       <SettingsNotice query={query} />
@@ -138,7 +138,7 @@ export default async function RanksPage({
       ) : null}
 
       <SettingsPanel
-        title="Ranks settings"
+        title="Leveling settings"
         open={isEditing(query, "settings")}
         facts={[
           { label: "XP", value: settings.enabled ? "On" : "Off" },
@@ -193,7 +193,7 @@ export default async function RanksPage({
               </label>
             </div>
           </div>
-          <FormFoot label="Save Ranks settings" guildId={guild.id} />
+          <FormFoot label="Save Leveling settings" guildId={guild.id} />
         </form>
       </SettingsPanel>
 
@@ -226,7 +226,7 @@ export default async function RanksPage({
               : "None",
           },
           ...(boosts.length && !ent["ranks.boosts"]
-            ? [{ label: "Pro", value: "Paused on Free" }]
+            ? [{ label: "Requires Pro", value: "saved, paused on Free" }]
             : []),
         ]}
       >
@@ -431,15 +431,20 @@ export default async function RanksPage({
               })}
             </ol>
           ) : (
-            <div className="board__empty">
-              <Art slot="empty" className="empty-art" decorative />
-              <p>
-                Nobody has XP yet.
-                {settings.enabled
-                  ? " Members earn it by chatting."
-                  : " Turn Ranks on in Ranks settings and members start earning it."}
-              </p>
-            </div>
+            <EmptyState
+              compact
+              mark="leaderboard"
+              title="Nobody has XP yet"
+              action={
+                settings.enabled
+                  ? undefined
+                  : { label: "Turn on XP", href: "?edit=settings#settings" }
+              }
+            >
+              {settings.enabled
+                ? "Members earn XP by chatting (and in voice, if it's on). The top 25 show here."
+                : "XP is off, so nobody earns it. Turn it on in Leveling settings."}
+            </EmptyState>
           )}
         </section>
         <form

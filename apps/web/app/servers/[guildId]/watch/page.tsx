@@ -16,8 +16,8 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Art } from "@/components/Art";
 import { ProTag } from "@/components/cards/CardEditor";
+import { EmptyState } from "@/components/EmptyState";
 import { ActionBadge, formatDuration, plainMentions } from "@/components/format";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { RequestsPanel } from "@/components/RequestsPanel";
@@ -48,7 +48,7 @@ import { requestAction } from "../requests";
 import { saveLadder, saveWatch } from "../settings/actions";
 import { decide, saveAutomod } from "./actions";
 
-export const metadata: Metadata = { title: "Watch" };
+export const metadata: Metadata = { title: "Moderation" };
 
 /** Cases Discord can reverse: a warning is withdrawn, a timeout lifted, a ban removed. */
 const UNDOABLE = new Set(["warn", "timeout", "ban"]);
@@ -96,7 +96,7 @@ export default async function WatchPage({
     <>
       <div className="page-head">
         <div>
-          <h1>Watch</h1>
+          <h1>Moderation</h1>
           <p>Moderate members, set the escalation ladder, and review or undo every case.</p>
         </div>
         <a className="g-btn g-btn--secondary" href="?edit=settings#settings">
@@ -355,7 +355,7 @@ export default async function WatchPage({
           },
           {
             label: "AI",
-            value: am.aiEnabled ? (ent["automod.ai"] ? "On" : "Paused on Free") : "Off",
+            value: am.aiEnabled ? (ent["automod.ai"] ? "On" : "Requires Pro, paused") : "Off",
           },
         ]}
       >
@@ -692,10 +692,10 @@ export default async function WatchPage({
             </tbody>
           </table>
           {cases.length === 0 ? (
-            <div className="table-card__head muted">
-              <Art slot="empty" className="empty-art" decorative />
-              No cases yet.
-            </div>
+            <EmptyState compact mark="cases" title="No cases yet">
+              Every warn, timeout, kick and ban gets a numbered case here, with who did it and an
+              Undo. Search for a member above to act from the dashboard.
+            </EmptyState>
           ) : null}
         </div>
       </div>

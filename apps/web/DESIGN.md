@@ -5,22 +5,22 @@ colors:
   volt: "#d4ff3a"
   volt-ink: "#0b0d10"
   olive: "#4d6b00"
-  dash-bg: "#0b0d10"
-  dash-surface: "#12161b"
-  dash-surface-raised: "#1a2028"
-  dash-line: "#2a323d"
-  dash-text: "#e8ecf1"
-  dash-text-muted: "#8c96a3"
+  dash-bg: "#08090c"
+  dash-surface: "#161b22"
+  dash-surface-raised: "#212933"
+  dash-line: "#3b4653"
+  dash-text: "#eef1f5"
+  dash-text-muted: "#a7b1be"
   go: "#2bd99f"
   caution: "#ffb547"
   alert: "#ff5c5c"
   intel: "#5ab0ff"
-  dash-bg-light: "#f4f6f8"
+  dash-bg-light: "#e8ecf0"
   dash-surface-light: "#ffffff"
-  dash-surface-raised-light: "#edf0f3"
-  dash-line-light: "#d5dbe2"
-  dash-text-light: "#11151a"
-  dash-text-muted-light: "#5a6472"
+  dash-surface-raised-light: "#eef1f5"
+  dash-line-light: "#bcc5d0"
+  dash-text-light: "#0e1216"
+  dash-text-muted-light: "#4b5563"
   go-light: "#0b7a57"
   caution-light: "#9a5b00"
   alert-light: "#c62828"
@@ -479,6 +479,7 @@ The dashboard is tonal first: depth comes from the ground, plate and raised-plat
 - **Landing pills:** 48px tall (38px small), 24px side padding, 15px Geist 600. Primary is volt with the volt glow, brightening to Volt Flash on hover; ghost is a strong glass hairline over a 70% graphite fill, warming to Lifted Graphite on hover. Add to Discord always comes first.
 
 ### Chips and Badges
+- **Pro badge (dashboard):** shown only where the server's plan lacks a feature: a lock icon and "Requires Pro" in Saira 11px uppercase, accent-strong text and border over a 9% volt wash. Never just "Pro".
 - **Status badge (dashboard):** Saira 11px uppercase, 1px border in the current colour, 2px radius, a 6px square pip before the label. Tone comes from the status colour; neutral badges use Fog Grey; an accent badge marks open seats.
 - **Suggestion chip (dashboard, Quartermaster only):** pill, slate hairline, 13px text, volt/olive border and text on hover.
 - **Live chip (landing):** glass-hairline pill, Geist Mono 13px, a go-green dot with a soft halo, linking to `/status`; shown only when live data exists.
@@ -498,14 +499,14 @@ The dashboard is tonal first: depth comes from the ground, plate and raised-plat
 
 ### Navigation
 - **Top bar (dashboard):** Hull Plate bar with a bottom hairline, sticky from 721px; logo, server switcher (a secondary button that drops a menu), search, theme toggle, the signed-in person as an avatar plate, sign out.
-- **Side nav (dashboard):** a 220px plate of 14px items grouped under uppercase labels (Guard, Rally, Configure), each module named with its plain label beside it in 12px Fog Grey. Hover and current fill with Raised Plate; the current item is bold with a 6px volt square pip in the gutter that slides between items on navigation. On phones the nav is one scrolling row and the pip becomes a 14 x 3px bar under the item.
+- **Side nav (dashboard):** a 220px plate of 14px items grouped under uppercase labels (Safety, Community, Gaming, Server), each module named by its plain name only. Hover and current fill with Raised Plate; the current item is bold with a 6px volt square pip in the gutter that slides between items on navigation. On phones the nav is one scrolling row and the pip becomes a 14 x 3px bar under the item.
 - **Landing nav:** 64px sticky frosted bar, pill links in Mist that fill Lifted Graphite on hover, Sign in, and a small primary pill.
 
 ### Readout (dashboard signature)
 The numbers of a page in one instrument strip: four (or three) cells split by 1px hairline gaps, each a caption over a 32px mono value with an optional muted unit and help line. Values can take a status tone; text values switch to 22px Saira. Folds to two columns at 900px.
 
 ### Settings panel (dashboard signature)
-A disclosure card whose summary is one row of current values (title, facts, chevron cue). Opening it squares the corners, locks HUD brackets on, rules off the summary, and folds the form open by height. Forms end in a footer rule with the primary save button first.
+A disclosure card whose summary is one row: a gear in a small raised plate, the title, the current values, and a bordered "Change" control ("Close" when open) with the chevron cue. Opening it squares the corners, locks HUD brackets on, rules off the summary, and folds the form open by height. Forms end in a footer rule with the primary save button first.
 
 ### Needs attention list (dashboard signature)
 A caution-tinted card listing what to fix first; each row is an 8px tone square, a bold line with a muted reason, and a "go" link with a chevron that leans forward on hover. Alert rows ping their square.

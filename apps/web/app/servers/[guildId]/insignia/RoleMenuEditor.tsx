@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  CARD_PRO_FIELDS,
   DEFAULT_PLACEHOLDER,
   type Entitlements,
   isCustomEmoji,
@@ -12,6 +11,7 @@ import {
   ROLE_MENU_LIMITS,
   type RoleMenu,
   type RoleMenuOption,
+  restoreLockedCard,
 } from "@garrison/db/cards";
 import { useMemo, useState } from "react";
 import { CardEditor, move, ProNotice, ProTag, RowTools } from "@/components/cards/CardEditor";
@@ -110,9 +110,7 @@ export function RoleMenuEditor({
   ];
   const undoPro = () =>
     setMenu((m) => {
-      const card = { ...m.card };
-      for (const f of CARD_PRO_FIELDS)
-        if (lockedCard.some((l) => l.key === f.key)) card[f.key] = saved.card[f.key];
+      const card = restoreLockedCard(m.card, saved.card, lockedCard);
       return {
         ...m,
         card,
@@ -203,6 +201,7 @@ export function RoleMenuEditor({
                 accent: ent["cards.accent"],
                 images: ent["cards.images"],
                 footer: ent["cards.footer"],
+                embed: ent["cards.embed"],
               }}
             />
 

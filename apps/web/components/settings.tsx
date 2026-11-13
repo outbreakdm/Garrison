@@ -9,12 +9,12 @@ import type { ReactNode } from "react";
 type Query = Record<string, string | string[] | undefined>;
 
 const SAVED: Record<string, string> = {
-  watch: "Saved Watch settings.",
+  watch: "Saved moderation settings.",
   antiraid: "Saved anti-raid settings.",
   verification: "Saved verification settings.",
   ops: "Saved the raid time zone.",
-  ranks: "Saved Ranks settings.",
-  ledger: "Saved Ledger settings.",
+  ranks: "Saved leveling settings.",
+  ledger: "Saved log settings.",
   escalation: "Saved the escalation ladder. It applies from the next warning.",
   rewards: "Saved level rewards. Members get them at their next level-up.",
   undo: "Undone.",
@@ -108,8 +108,10 @@ export function SettingsPanel({
 }) {
   return (
     <details className="g-card panel" id={id} open={open}>
-      <summary className="panel__summary">
-        <GearIcon />
+      <summary className="panel__summary panel__summary--settings">
+        <span className="panel__icon">
+          <GearIcon />
+        </span>
         <span className="panel__title">{title}</span>
         <span className="panel__facts">
           {facts.map((f) => (
@@ -118,7 +120,11 @@ export function SettingsPanel({
             </span>
           ))}
         </span>
-        <span className="panel__cue" aria-hidden="true" />
+        <span className="panel__action" aria-hidden="true">
+          <span className="panel__action-open">Change</span>
+          <span className="panel__action-close">Close</span>
+          <span className="panel__cue" />
+        </span>
       </summary>
       <div className="panel__body">{children}</div>
     </details>

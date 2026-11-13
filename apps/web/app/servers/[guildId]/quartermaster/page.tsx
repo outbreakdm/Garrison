@@ -22,7 +22,7 @@ import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
 import { removeTemplate } from "./actions";
 
-export const metadata: Metadata = { title: "Quartermaster" };
+export const metadata: Metadata = { title: "AI builder" };
 
 /** Plans wait this long to be built, as the bot enforces. */
 const PLAN_TTL_MS = 15 * 60_000;
@@ -103,7 +103,7 @@ export default async function QuartermasterPage({
     <>
       <div className="page-head">
         <div>
-          <h1>Quartermaster</h1>
+          <h1>AI builder</h1>
           <p>
             Describe the channels and roles you want. See your server with the changes, then build
             it in one click. Every build is versioned and can be undone.

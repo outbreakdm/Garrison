@@ -1,13 +1,13 @@
 "use client";
 
 import {
-  CARD_PRO_FIELDS,
   type Entitlements,
   isCustomEmoji,
   isEmoji,
   lockedCardFields,
   newCustomEmoji,
   newId,
+  restoreLockedCard,
   TICKET_LIMITS,
   type TicketPanel,
   type TicketTopic,
@@ -90,9 +90,7 @@ export function TicketPanelEditor({
   ];
   const undoPro = () =>
     setPanel((p) => {
-      const card = { ...p.card };
-      for (const f of CARD_PRO_FIELDS)
-        if (lockedCard.some((l) => l.key === f.key)) card[f.key] = saved.card[f.key];
+      const card = restoreLockedCard(p.card, saved.card, lockedCard);
       const topics = p.topics
         .map((t) => {
           const was = saved.topics.find((s) => s.id === t.id);
@@ -160,6 +158,7 @@ export function TicketPanelEditor({
                 accent: ent["cards.accent"],
                 images: ent["cards.images"],
                 footer: ent["cards.footer"],
+                embed: ent["cards.embed"],
               }}
             />
 

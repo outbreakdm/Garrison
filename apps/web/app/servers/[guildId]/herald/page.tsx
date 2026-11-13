@@ -297,7 +297,7 @@ export default async function WelcomePage({
         title="Welcome DM"
         facts={[
           w.dmEnabled ? (ent["welcome.dm"] ? "On" : "Paused: Pro") : "Off",
-          ent["welcome.dm"] ? `“${w.dmCard.title}”` : "Pro",
+          ent["welcome.dm"] ? `“${w.dmCard.title}”` : "Requires Pro",
         ]}
         open={editing === "dm"}
       >

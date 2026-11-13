@@ -140,6 +140,7 @@ export default async function AccountPage({
                               id={`${r.guildId}-${f.id}`}
                               name={`f_${f.id}`}
                               defaultValue={r.answers[f.id] ?? ""}
+                              placeholder={f.hint ?? undefined}
                               maxLength={RANK_CARD_LIMITS.value}
                             />
                           </label>

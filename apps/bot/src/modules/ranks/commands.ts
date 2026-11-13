@@ -8,8 +8,10 @@ import {
   getSharedLinks,
   levelForXp,
   listRankRewards,
+  memberFields,
   RANK_CARD_LIMITS,
   rankCardForPlan,
+  rankDetailLines,
   readRankCard,
   saveRankDetails,
   setRankReward,
@@ -133,17 +135,17 @@ async function rankImage(
     style.fields.length
       ? getRankDetails(ctx.db, guildId, user.id)
       : Promise.resolve<Record<string, string>>({}),
-    style.showLinked ? getSharedLinks(ctx.db, guildId, user.id) : Promise.resolve([]),
+    style.showLinked || style.fields.some((f) => f.from)
+      ? getSharedLinks(ctx.db, guildId, user.id)
+      : Promise.resolve([]),
   ]);
   return rankCardPng({
     style,
     name: member?.displayName ?? user.displayName,
     avatarUrl: (member ?? user).displayAvatarURL({ extension: "png", size: 256 }),
     ...numbers,
-    details: style.fields.flatMap((f) =>
-      answers[f.id] ? [{ label: f.label, value: answers[f.id] as string }] : [],
-    ),
-    linked: links.map((l) => plainLink(l, { proof: false })),
+    details: rankDetailLines(style.fields, answers, links),
+    linked: style.showLinked ? links.map((l) => plainLink(l, { proof: false })) : [],
   });
 }
 
@@ -160,9 +162,12 @@ export const rankcard: Command = {
       return;
     }
     const style = rankCardForPlan(readRankCard(settings.card), entitlements(plan));
-    if (!style.fields.length) {
+    const typed = memberFields(style.fields);
+    if (!typed.length) {
       await interaction.reply({
-        content: "This server's rank cards have no details to fill in.",
+        content: style.fields.length
+          ? "This server's rank card reads your details from game accounts you share here. Link one with `/link`."
+          : "This server's rank cards have no details to fill in.",
         ...ephemeral,
       });
       return;
@@ -173,17 +178,17 @@ export const rankcard: Command = {
         .setCustomId("rankcard:edit")
         .setTitle("Your rank card")
         .addComponents(
-          style.fields.map((f) =>
-            new ActionRowBuilder<TextInputBuilder>().addComponents(
-              new TextInputBuilder()
-                .setCustomId(f.id)
-                .setLabel(f.label)
-                .setStyle(TextInputStyle.Short)
-                .setMaxLength(RANK_CARD_LIMITS.value)
-                .setRequired(false)
-                .setValue(answers[f.id] ?? ""),
-            ),
-          ),
+          typed.map((f) => {
+            const input = new TextInputBuilder()
+              .setCustomId(f.id)
+              .setLabel(f.label)
+              .setStyle(TextInputStyle.Short)
+              .setMaxLength(RANK_CARD_LIMITS.value)
+              .setRequired(false)
+              .setValue(answers[f.id] ?? "");
+            if (f.hint) input.setPlaceholder(f.hint);
+            return new ActionRowBuilder<TextInputBuilder>().addComponents(input);
+          }),
         ),
     );
   },
@@ -193,10 +198,10 @@ export const rankcardModals: ModalHandler = {
   prefix: "rankcard",
   async execute(interaction, ctx) {
     const settings = await cachedRanksSettings(ctx, interaction.guild.id);
-    const style = readRankCard(settings.card);
+    const typed = memberFields(readRankCard(settings.card).fields);
     // Checked against the fields saved now: answers for removed fields are dropped.
     const raw = Object.fromEntries(
-      style.fields.map((f) => {
+      typed.map((f) => {
         let v = "";
         try {
           v = interaction.fields.getTextInputValue(f.id);
@@ -210,7 +215,7 @@ export const rankcardModals: ModalHandler = {
       ctx.db,
       interaction.guild.id,
       interaction.user.id,
-      cleanRankDetails(style.fields, raw),
+      cleanRankDetails(typed, raw),
     );
     await interaction.reply({ content: "Saved. Your card shows them on `/rank`.", ...ephemeral });
   },

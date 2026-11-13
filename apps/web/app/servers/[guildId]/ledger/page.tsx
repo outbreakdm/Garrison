@@ -8,7 +8,7 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Art } from "@/components/Art";
+import { EmptyState } from "@/components/EmptyState";
 import {
   ChannelSelect,
   FormFoot,
@@ -24,7 +24,7 @@ import { isSnowflake } from "@/lib/security";
 import { requireGuildAccess } from "@/lib/session";
 import { saveLedger } from "../settings/actions";
 
-export const metadata: Metadata = { title: "Ledger" };
+export const metadata: Metadata = { title: "Logs" };
 
 const PAGE = 50;
 
@@ -64,7 +64,7 @@ export default async function LedgerPage({
     <>
       <div className="page-head">
         <div>
-          <h1>Event log</h1>
+          <h1>Logs</h1>
           <p>
             Who did what, kept {settings.retentionDays} days.{" "}
             {settings.keepMessageText
@@ -80,7 +80,7 @@ export default async function LedgerPage({
       <SettingsNotice query={q} />
 
       <SettingsPanel
-        title="Ledger settings"
+        title="Log settings"
         open={isEditing(q, "settings")}
         facts={[
           {
@@ -99,7 +99,7 @@ export default async function LedgerPage({
           <input type="hidden" name="guildId" value={guild.id} />
           <div className="settings-grid">
             <label className="g-field" htmlFor="channelId">
-              <span>Ledger channel</span>
+              <span>Log channel</span>
               <ChannelSelect
                 name="channelId"
                 value={settings.channelId}
@@ -128,7 +128,7 @@ export default async function LedgerPage({
             label="Keep the text of deleted and edited messages"
             help="Lets moderators see what was removed or changed. Garrison only has the text of messages it saw since its last restart, and the text goes with the event when it expires."
           />
-          <FormFoot label="Save Ledger settings" guildId={guild.id} />
+          <FormFoot label="Save log settings" guildId={guild.id} />
         </form>
       </SettingsPanel>
 
@@ -268,10 +268,20 @@ export default async function LedgerPage({
             </tbody>
           </table>
           {events.length === 0 ? (
-            <div className="table-card__head muted">
-              <Art slot="empty" className="empty-art" decorative />
-              No events{user || type ? " match these filters" : " yet"}.
-            </div>
+            <EmptyState
+              compact
+              mark="log"
+              title={user || type ? "No events match these filters" : "No events yet"}
+              action={
+                user || type
+                  ? { label: "Clear filters", href: `/servers/${guild.id}/ledger` }
+                  : undefined
+              }
+            >
+              {user || type
+                ? "Try another member or event type."
+                : "Joins, leaves, bans, role and channel changes appear here as they happen."}
+            </EmptyState>
           ) : null}
         </div>
       </div>

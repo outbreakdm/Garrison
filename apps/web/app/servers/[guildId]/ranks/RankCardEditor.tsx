@@ -10,7 +10,10 @@ import {
   progressShare,
   RANK_BACKGROUNDS,
   RANK_CARD_LIMITS,
+  RANK_DETAIL_SOURCES,
+  type RankCardField,
   type RankCardStyle,
+  type RankDetailSource,
   rankAccent,
   STANDARD_ACCENT,
 } from "@garrison/db/cards";
@@ -87,8 +90,12 @@ export function RankCardEditor({
 
   const sampleDetails = style.fields.map((f, i) => ({
     label: f.label || `Detail ${i + 1}`,
-    value: ["Holy Paladin", "Silvermoon", "Raid leader", "EU evenings"][i] ?? "…",
+    value: f.from
+      ? RANK_DETAIL_SOURCES[f.from].sample
+      : f.hint || (["Holy Paladin", "Silvermoon", "Raid leader", "EU evenings"][i] ?? "…"),
   }));
+  const setField = (i: number, patch: Partial<RankCardField>) =>
+    set({ fields: style.fields.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
 
   return (
     <form action={action}>
@@ -188,29 +195,70 @@ export function RankCardEditor({
 
           <fieldset className="editor-group">
             <legend className="g-label">
-              Details members fill in <ProTag on={ent["ranks.cards"]} />
+              Details on the card <ProTag on={ent["ranks.cards"]} />
             </legend>
             <p className="g-help">
-              Like Main, Realm or Role. Members write theirs with <code>/rankcard</code>; the card
-              shows what they've filled in.
+              Up to {RANK_CARD_LIMITS.fields} short lines under the name. Each has a label, and its
+              value is either typed by the member (with <code>/rankcard</code> or on their Account
+              page) or read from a game account they share with this server, so it stays up to date.
             </p>
-            <div className="option-list">
+            <div className="detail-list">
               {style.fields.map((f, i) => (
-                <div className="option option--detail" key={f.id}>
-                  <input
-                    className="g-input"
-                    aria-label={`Detail ${i + 1}`}
-                    placeholder="Label, like Main"
-                    value={f.label}
-                    maxLength={RANK_CARD_LIMITS.label}
-                    onChange={(e) =>
-                      set({
-                        fields: style.fields.map((x, j) =>
-                          j === i ? { ...x, label: e.target.value } : x,
-                        ),
-                      })
-                    }
-                  />
+                <div className="detail-row" key={f.id}>
+                  <label className="g-field" htmlFor={`${f.id}-label`}>
+                    <span className="field-label">Label</span>
+                    <input
+                      className="g-input"
+                      id={`${f.id}-label`}
+                      placeholder="Main, Realm, Class…"
+                      value={f.label}
+                      maxLength={RANK_CARD_LIMITS.label}
+                      onChange={(e) => setField(i, { label: e.target.value })}
+                    />
+                  </label>
+                  <label className="g-field" htmlFor={`${f.id}-from`}>
+                    <span className="field-label">Filled in by</span>
+                    <select
+                      className="g-input"
+                      id={`${f.id}-from`}
+                      value={f.from ?? ""}
+                      onChange={(e) => {
+                        const from = (e.target.value || null) as RankDetailSource | null;
+                        setField(i, {
+                          from,
+                          hint: from ? null : f.hint,
+                          label: f.label || (from ? RANK_DETAIL_SOURCES[from].short : ""),
+                        });
+                      }}
+                    >
+                      <option value="">The member types it</option>
+                      <optgroup label="From a linked game account">
+                        {Object.entries(RANK_DETAIL_SOURCES).map(([key, src]) => (
+                          <option key={key} value={key}>
+                            {src.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                    </select>
+                  </label>
+                  {f.from ? (
+                    <p className="g-help detail-row__note">
+                      Read from the first {RANK_DETAIL_SOURCES[f.from].label.split(" ")[0]} account
+                      the member shares here. No account linked, no line.
+                    </p>
+                  ) : (
+                    <label className="g-field" htmlFor={`${f.id}-hint`}>
+                      <span className="field-label">Example</span>
+                      <input
+                        className="g-input"
+                        id={`${f.id}-hint`}
+                        placeholder="Shown in the empty box, e.g. Holy Paladin"
+                        value={f.hint ?? ""}
+                        maxLength={RANK_CARD_LIMITS.hint}
+                        onChange={(e) => setField(i, { hint: e.target.value || null })}
+                      />
+                    </label>
+                  )}
                   <RowTools
                     index={i}
                     count={style.fields.length}
@@ -226,7 +274,11 @@ export function RankCardEditor({
                 type="button"
                 className="g-btn g-btn--secondary g-btn--sm"
                 disabled={style.fields.length >= RANK_CARD_LIMITS.fields}
-                onClick={() => set({ fields: [...style.fields, { id: newId(), label: "" }] })}
+                onClick={() =>
+                  set({
+                    fields: [...style.fields, { id: newId(), label: "", from: null, hint: null }],
+                  })
+                }
               >
                 Add detail
               </button>
@@ -245,7 +297,7 @@ export function RankCardEditor({
                   Show game accounts members share <ProTag on={ent["ranks.cards"]} />
                 </span>
                 <span className="g-help">
-                  Only accounts a member chose to share with this server's roster (Barracks).
+                  Only accounts a member chose to share with this server (Game accounts).
                 </span>
               </span>
             </label>

@@ -55,6 +55,12 @@ export const FEATURES = {
     free: false,
     pro: true,
   },
+  "cards.embed": {
+    module: "cards",
+    about: "Embed extras on cards: an author line, a linked title and name and value fields",
+    free: false,
+    pro: true,
+  },
   "cards.footer": {
     module: "cards",
     about: "Your own footer on cards, or none",

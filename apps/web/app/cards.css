@@ -92,14 +92,6 @@
 }
 
 /* Pro tag: a quiet marker on controls this plan doesn't include. */
-.pro-tag {
-  padding: 0 6px;
-  line-height: 14px;
-}
-.pro-tag::before {
-  width: 4px;
-  height: 4px;
-}
 
 /* Text and divider blocks, in order, each with its own move and remove tools. */
 .block-list {
@@ -1589,5 +1581,61 @@
   }
   .stat-row > :last-child {
     grid-column: 1 / -1;
+  }
+}
+
+/* Embed extras: an author line over the title, a linked title, and fields. */
+.dc-card__titles {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.dc-card__author {
+  font-weight: 600;
+}
+.dc-card__link {
+  color: var(--dc-link);
+}
+.dc-card__field {
+  display: grid;
+  gap: 2px;
+}
+.block--field {
+  align-items: flex-start;
+}
+.block__field {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+/* Rank card details: label, where the value comes from, and an example or a note. */
+.detail-list {
+  display: grid;
+  gap: var(--space-3);
+}
+.detail-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr) minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: end;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+}
+.detail-row__note {
+  margin: 0;
+  align-self: center;
+}
+@media (max-width: 1100px) {
+  .detail-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+@media (max-width: 520px) {
+  .detail-row {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

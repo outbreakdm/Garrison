@@ -171,7 +171,9 @@ export function customCardContainer(
     return new TextDisplayBuilder().setContent(clipped || "​");
   };
 
-  const head = `### ${card.title}`;
+  // A link in the title only when it's a plain https link (parseCard checked it).
+  const title = card.url ? `[${card.title.replace(/[[\]]/g, "")}](${card.url})` : card.title;
+  const head = `${card.author ? `-# **${card.author}**\n` : ""}### ${title}`;
   if (card.thumbnail) {
     container.addSectionComponents(
       new SectionBuilder()
@@ -184,6 +186,8 @@ export function customCardContainer(
   if (card.blocks.length) container.addSeparatorComponents(rule());
   for (const block of card.blocks) {
     if (block.kind === "divider") container.addSeparatorComponents(rule());
+    else if (block.kind === "field")
+      container.addTextDisplayComponents(text(`**${block.name}**\n${block.value}`));
     else container.addTextDisplayComponents(text(block.text));
   }
   if (card.image)

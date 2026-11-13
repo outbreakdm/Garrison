@@ -5,6 +5,7 @@ import {
   getRankDetails,
   getRanksSettings,
   listRankGuildsForUser,
+  memberFields,
   type RankCardField,
   rankCardForPlan,
   readRankCard,
@@ -37,12 +38,13 @@ export async function rankDetailsForms(userId: string, onlyGuildId?: string) {
       getGuildPlan(db, guild.id),
     ]);
     const style = rankCardForPlan(readRankCard(settings.card), entitlements(plan));
-    if (!settings.enabled || !style.fields.length) continue;
+    const fields = memberFields(style.fields);
+    if (!settings.enabled || !fields.length) continue;
     if (!(await isGuildMember(guild.id, userId))) continue;
     out.push({
       guildId: guild.id,
       guildName: guild.name,
-      fields: style.fields,
+      fields,
       answers: await getRankDetails(db, guild.id, userId),
     });
   }

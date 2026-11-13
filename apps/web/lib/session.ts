@@ -2,6 +2,7 @@ import "server-only";
 import { getActiveGuild, getWebSession, touchWebSession } from "@garrison/db";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import { after } from "next/server";
 import { cache } from "react";
 import { getDb } from "./db";
 import { canManageGuildNow } from "./discord";
@@ -28,7 +29,10 @@ export const getSession = cache(async () => {
   const hash = hashToken(token);
   const session = await getWebSession(await getDb(), hash);
   if (session && Date.now() - session.lastSeenAt.getTime() > 5 * 60_000) {
-    await touchWebSession(await getDb(), hash).catch(() => {});
+    // After the response: the page shouldn't wait on a "last seen" write.
+    after(async () => {
+      await touchWebSession(await getDb(), hash).catch(() => {});
+    });
   }
   return session;
 });

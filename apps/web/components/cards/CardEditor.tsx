@@ -23,17 +23,42 @@ export interface CardPlan {
   accent: boolean;
   images: boolean;
   footer: boolean;
+  /** Author line, title link and fields. */
+  embed: boolean;
 }
 
 type FooterMode = "standard" | "custom" | "none";
 const footerMode = (f: string | null): FooterMode =>
   f === null ? "standard" : f === "" ? "none" : "custom";
 
+/**
+ * Marks something this server's plan doesn't include. Shown only when it's locked,
+ * and always in words: a Garrison Pro subscription for this server is required.
+ */
 export function ProTag({ on }: { on: boolean }) {
   return on ? null : (
-    <span className="g-badge pro-tag" title="Part of Garrison Pro">
-      Pro
+    <span className="pro-tag" title="Needs a Garrison Pro subscription for this server">
+      <LockIcon />
+      Requires Pro
     </span>
+  );
+}
+
+export function LockIcon() {
+  return (
+    <svg
+      className="pro-tag__lock"
+      viewBox="0 0 12 12"
+      width="12"
+      height="12"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      aria-hidden="true"
+    >
+      <path d="M3.75 5.25V3.75a2.25 2.25 0 0 1 4.5 0v1.5" />
+      <rect x="2.25" y="5.25" width="7.5" height="5.25" rx="0.75" />
+    </svg>
   );
 }
 
@@ -164,6 +189,7 @@ export function CardEditor({
   const id = (name: string) => `${idPrefix}-${name}`;
   const mode = footerMode(card.footer);
   let textCount = 0;
+  let fieldCount = 0;
 
   return (
     <>
@@ -183,7 +209,12 @@ export function CardEditor({
 
         <div className="block-list">
           {card.blocks.map((block, i) => {
-            const what = block.kind === "divider" ? "divider" : `text ${++textCount}`;
+            const what =
+              block.kind === "divider"
+                ? "divider"
+                : block.kind === "field"
+                  ? `field ${++fieldCount}`
+                  : `text ${++textCount}`;
             const tools = (
               <RowTools
                 key="tools"
@@ -194,6 +225,44 @@ export function CardEditor({
                 onRemove={() => setBlocks(card.blocks.filter((_, j) => j !== i))}
               />
             );
+            if (block.kind === "field")
+              return (
+                // biome-ignore lint/suspicious/noArrayIndexKey: blocks have no IDs; order is the identity
+                <div className="block block--field" key={i}>
+                  <div className="block__field">
+                    <input
+                      className="g-input"
+                      aria-label={`Field ${fieldCount} name`}
+                      placeholder="Name, e.g. Opening hours"
+                      value={block.name}
+                      maxLength={CARD_LIMITS.fieldName}
+                      onChange={(e) =>
+                        setBlocks(
+                          card.blocks.map((b, j) =>
+                            j === i && b.kind === "field" ? { ...b, name: e.target.value } : b,
+                          ),
+                        )
+                      }
+                    />
+                    <textarea
+                      className="g-input block__text"
+                      aria-label={`Field ${fieldCount} value`}
+                      placeholder="Value"
+                      value={block.value}
+                      maxLength={CARD_LIMITS.fieldValue}
+                      rows={2}
+                      onChange={(e) =>
+                        setBlocks(
+                          card.blocks.map((b, j) =>
+                            j === i && b.kind === "field" ? { ...b, value: e.target.value } : b,
+                          ),
+                        )
+                      }
+                    />
+                  </div>
+                  {tools}
+                </div>
+              );
             return block.kind === "divider" ? (
               // biome-ignore lint/suspicious/noArrayIndexKey: blocks have no IDs; order is the identity
               <div className="block block--divider" key={i}>
@@ -240,6 +309,14 @@ export function CardEditor({
           >
             Add divider
           </button>
+          <button
+            type="button"
+            className="g-btn g-btn--ghost g-btn--sm"
+            disabled={full}
+            onClick={() => setBlocks([...card.blocks, { kind: "field", name: "", value: "" }])}
+          >
+            Add field <ProTag on={plan.embed} />
+          </button>
           <span className={`meter mono${used > CARD_LIMITS.text * 0.9 ? " meter--near" : ""}`}>
             {used.toLocaleString()} / {CARD_LIMITS.text.toLocaleString()}
           </span>
@@ -250,6 +327,42 @@ export function CardEditor({
           <code>[links](https://…)</code>. Mentions show but never ping.
           {full ? ` A card holds ${CARD_LIMITS.blocks} parts.` : ""}
         </p>
+      </fieldset>
+
+      <fieldset className="editor-group">
+        <legend className="g-label">Embed extras</legend>
+        <div className="field-row">
+          <label className="g-field" htmlFor={id("author")}>
+            <span className="field-label">
+              Author line <ProTag on={plan.embed} />
+            </span>
+            <input
+              className="g-input"
+              id={id("author")}
+              placeholder="e.g. Iron Vanguard support"
+              value={card.author ?? ""}
+              maxLength={CARD_LIMITS.author}
+              onChange={(e) => set({ author: e.target.value || null })}
+            />
+            <span className="g-help">Small bold text above the title.</span>
+          </label>
+          <label className="g-field" htmlFor={id("url")}>
+            <span className="field-label">
+              Title link <ProTag on={plan.embed} />
+            </span>
+            <input
+              className="g-input"
+              id={id("url")}
+              type="url"
+              inputMode="url"
+              placeholder="https://…"
+              value={card.url ?? ""}
+              maxLength={CARD_LIMITS.url}
+              onChange={(e) => set({ url: e.target.value.trim() || null })}
+            />
+            <span className="g-help">Clicking the title opens it.</span>
+          </label>
+        </div>
       </fieldset>
 
       <fieldset className="editor-group">
@@ -386,16 +499,16 @@ export function ProNotice({
   return (
     <div className="notice notice--pro" role="status">
       <span>
-        {list} {labels.length === 1 ? "is" : "are"} part of Garrison Pro. The preview shows{" "}
-        {labels.length === 1 ? "it" : "them"}; Free servers can't save{" "}
-        {labels.length === 1 ? "it" : "them"}.
+        <strong>Requires Garrison Pro:</strong> {list}. The preview shows{" "}
+        {labels.length === 1 ? "it" : "them"}, but this server is on Free, so{" "}
+        {labels.length === 1 ? "it" : "they"} won't be saved.
       </span>
       <span className="notice__actions">
         <button type="button" className="g-btn g-btn--secondary g-btn--sm" onClick={onReset}>
           Undo Pro changes
         </button>
         <a className="g-btn g-btn--ghost g-btn--sm" href={planHref}>
-          See Pro
+          See what Pro includes
         </a>
       </span>
     </div>

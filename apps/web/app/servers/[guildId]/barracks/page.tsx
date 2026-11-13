@@ -8,8 +8,8 @@ import {
   STAT_SOURCES,
 } from "@garrison/db";
 import type { Metadata } from "next";
-import { Art } from "@/components/Art";
 import { ProTag } from "@/components/cards/CardEditor";
+import { EmptyState } from "@/components/EmptyState";
 import { GameMark, linkDetail, providerLabel } from "@/components/GameMark";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { FormFoot, isEditing, SettingsPanel } from "@/components/settings";
@@ -20,7 +20,7 @@ import { isDangerousRole } from "@/lib/permissions";
 import { requireGuildAccess } from "@/lib/session";
 import { saveStatRoles } from "./actions";
 
-export const metadata: Metadata = { title: "Barracks" };
+export const metadata: Metadata = { title: "Game accounts" };
 
 export default async function BarracksPage({
   params,
@@ -49,7 +49,7 @@ export default async function BarracksPage({
     <>
       <div className="page-head">
         <div>
-          <h1>Roster</h1>
+          <h1>Game accounts</h1>
           <p>
             Game accounts members chose to share here with /link. Verified accounts were proven
             through Discord or Battle.net; claimed ones weren't.
@@ -90,7 +90,7 @@ export default async function BarracksPage({
               : "None",
           },
           ...(rules.length && !ent["barracks.statRoles"]
-            ? [{ label: "Pro", value: "Paused on Free" }]
+            ? [{ label: "Requires Pro", value: "saved, paused on Free" }]
             : []),
         ]}
       >
@@ -193,16 +193,11 @@ export default async function BarracksPage({
           })}
         </ul>
       ) : (
-        <div className="g-card picker__empty">
-          <Art slot="empty" className="empty-art" decorative />
-          <div>
-            <h2 className="card-title">Nobody has shared accounts here yet</h2>
-            <p>
-              Members run /link in this server to share the game accounts on their Account page.
-              They can stop sharing at any time.
-            </p>
-          </div>
-        </div>
+        <EmptyState mark="accounts" title="No game accounts shared here yet">
+          Members run <code>/link</code> in this server to share the accounts on their Account page:
+          Steam, Battle.net, Xbox, World of Warcraft, RuneScape and more. Each member chooses, and
+          can stop sharing at any time.
+        </EmptyState>
       )}
     </>
   );

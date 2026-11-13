@@ -224,7 +224,7 @@ export default async function SettingsPage({
           <div className="places">
             <Place
               href={`${base}/watch?edit=settings#settings`}
-              name="Watch"
+              name="Moderation"
               value={`Log ${channel(w?.logChannelId, "off")} · DMs ${(w?.dmMembers ?? true) ? "on" : "off"}`}
             />
             <Place
@@ -257,7 +257,7 @@ export default async function SettingsPage({
             />
             <Place
               href={`${base}/ledger?edit=settings#settings`}
-              name="Ledger"
+              name="Logs"
               value={`${channel(ledger.channelId, "Dashboard only")} · kept ${ledger.retentionDays} days`}
             />
             <Place

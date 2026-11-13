@@ -18,6 +18,7 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ProTag } from "@/components/cards/CardEditor";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { FormFoot, FormPanel, SettingsPanel } from "@/components/settings";
 import { getDb } from "@/lib/db";
@@ -243,9 +244,8 @@ export default async function TicketsPage({
           </>
         ) : (
           <p className="g-help queue-stats__pro">
-            <span className="g-badge pro-tag">Pro</span> Ticket stats: opened and closed each month,
-            and how long members wait for a first reply.{" "}
-            <Link href={`/servers/${guild.id}/plan`}>See Pro</Link>
+            <ProTag on={false} /> Ticket stats: opened and closed each month, and how long members
+            wait for a first reply. <Link href={`/servers/${guild.id}/plan`}>See Pro</Link>
           </p>
         )}
       </section>
@@ -372,7 +372,7 @@ export default async function TicketsPage({
             <span className="switch__text">
               <span className="field-label">
                 Hand each new ticket to the staff member with the fewest open{" "}
-                {ent["tickets.autoAssign"] ? null : <span className="g-badge pro-tag">Pro</span>}
+                {ent["tickets.autoAssign"] ? null : <ProTag on={false} />}
               </span>
               <span className="g-help">
                 {ent["tickets.autoAssign"]

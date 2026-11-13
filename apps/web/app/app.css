@@ -70,7 +70,8 @@ h2 {
   flex: 0 0 220px;
 }
 .main {
-  flex: 999 1 560px;
+  /* Beside the menu at every width above phones: it shrinks rather than wrapping under it. */
+  flex: 1 1 0%;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -3042,11 +3043,12 @@ form[data-pending] [aria-busy="true"]::after {
     filter: blur(calc(0.5 * var(--m-blur)));
   }
 }
+/* Quick on purpose: switching pages is work, not a show. */
 ::view-transition-old(.page-out) {
-  animation: vt-out 0.14s var(--ease-out) both;
+  animation: vt-out 0.1s var(--ease-out) both;
 }
 ::view-transition-new(.page-in) {
-  animation: vt-in 0.34s var(--ease-out) 0.06s both;
+  animation: vt-in 0.2s var(--ease-out) both;
 }
 ::view-transition-group(.morph) {
   animation-duration: 0.44s;
@@ -3133,4 +3135,230 @@ form[data-pending] [aria-busy="true"]::after {
 .g-btn--primary:focus-visible {
   outline: 2px solid var(--accent-ink);
   outline-offset: -5px;
+}
+
+/* --- Loading ---------------------------------------------------------------------
+   Shown the moment a page is picked, while the server reads it: the page's frame in
+   plate tones, so the switch feels instant and nothing jumps when it arrives. */
+.skeleton {
+  display: grid;
+  gap: var(--space-6);
+}
+.skeleton__head {
+  display: grid;
+  gap: var(--space-3);
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--line);
+}
+.skeleton__bar {
+  display: block;
+  height: 14px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--text) 6%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-sweep 1.4s var(--ease-out) infinite;
+}
+.skeleton__bar--title {
+  width: min(320px, 60%);
+  height: 34px;
+}
+.skeleton__bar--line {
+  width: min(560px, 90%);
+}
+.skeleton__bar--short {
+  width: 40%;
+}
+.skeleton__cells {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.skeleton__cell {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface);
+}
+.skeleton__card {
+  display: grid;
+  gap: var(--space-3);
+  min-height: 160px;
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+@keyframes skeleton-sweep {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton__bar {
+    animation: none;
+  }
+}
+
+/* --- Pro and settings, said plainly ------------------------------------------------
+   "Requires Pro" in words with a lock, so nobody wonders what a badge means; settings
+   rows carry a gear plate and a real "Change" control instead of a bare chevron. */
+.pro-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px 1px 6px;
+  border: 1px solid color-mix(in srgb, var(--accent-strong) 55%, var(--line));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  color: var(--accent-strong);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.pro-tag__lock {
+  flex: none;
+}
+.notice--pro strong {
+  color: var(--accent-strong);
+}
+
+.panel__icon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text-muted);
+}
+.panel__summary--settings .panel__title {
+  font-size: 15px;
+}
+.panel__action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    border-color 0.15s var(--ease-out),
+    background-color 0.15s var(--ease-out);
+}
+.panel__summary:hover .panel__action {
+  border-color: var(--text-muted);
+  background: var(--surface);
+}
+.panel__action .panel__cue {
+  margin-right: 0;
+}
+.panel__action-close,
+.panel[open] .panel__action-open {
+  display: none;
+}
+.panel[open] .panel__action-close {
+  display: inline;
+}
+.panel[open] .panel__icon {
+  border-color: color-mix(in srgb, var(--accent-strong) 55%, var(--line));
+  color: var(--accent-strong);
+}
+@media (max-width: 520px) {
+  .panel__action-open,
+  .panel[open] .panel__action-close {
+    display: none;
+  }
+}
+
+/* --- Empty states --------------------------------------------------------------------
+   A drawn mark in a bracketed plate, what will show up here, and the one thing to do. */
+.empty {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: var(--space-6);
+}
+.empty--compact {
+  padding: var(--space-6) var(--space-4);
+}
+.empty__mark {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 56px;
+  height: 56px;
+  background: var(--surface-raised);
+  color: var(--accent-strong);
+}
+.empty__mark::before,
+.empty__mark::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 0 solid var(--accent-strong);
+}
+.empty__mark::before {
+  top: 0;
+  left: 0;
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+.empty__mark::after {
+  right: 0;
+  bottom: 0;
+  border-right-width: 2px;
+  border-bottom-width: 2px;
+}
+.empty__text {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  max-width: 62ch;
+}
+.empty__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 24px;
+  letter-spacing: 0.01em;
+}
+.empty__body {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+.empty__action {
+  margin-top: var(--space-2);
+}
+@media (max-width: 520px) {
+  .empty {
+    flex-direction: column;
+  }
 }

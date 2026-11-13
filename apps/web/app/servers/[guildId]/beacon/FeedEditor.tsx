@@ -92,6 +92,8 @@ export function FeedEditor({
         image: null,
         thumbnail: null,
         footer: "",
+        author: null,
+        url: null,
       },
       ping: feed.roleId ? (roles.find((r) => r.id === feed.roleId)?.name ?? "role") : null,
     };

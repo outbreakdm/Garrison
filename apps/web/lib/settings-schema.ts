@@ -235,7 +235,7 @@ export const FIELD_LABELS: Record<string, string> = {
   enabled: "Ranks",
   announce: "Level-ups",
   announceChannelId: "Level-up channel",
-  channelId: "Ledger channel",
+  channelId: "Log channel",
   retentionDays: "Keep events (days)",
   keepMessageText: "Keep message text",
   rules: "Escalation ladder",

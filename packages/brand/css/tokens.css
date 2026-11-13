@@ -1,14 +1,15 @@
-/* Garrison design tokens. Source of truth: the Garrison design system (tokens.json). */
+/* Garrison design tokens. Mirrored in packages/brand/src/index.ts (colors). Plates, hairlines
+   and muted text were raised on 2026-11-12 so cards, borders and secondary text read clearly. */
 :root, [data-theme="dark"] {
   --accent: #d4ff3a;
   --accent-strong: #d4ff3a;
   --accent-ink: #0b0d10;
-  --bg: #0b0d10;
-  --surface: #12161b;
-  --surface-raised: #1a2028;
-  --line: #2a323d;
-  --text: #e8ecf1;
-  --text-muted: #8c96a3;
+  --bg: #08090c;
+  --surface: #161b22;
+  --surface-raised: #212933;
+  --line: #3b4653;
+  --text: #eef1f5;
+  --text-muted: #a7b1be;
   --go: #2bd99f;
   --caution: #ffb547;
   --alert: #ff5c5c;
@@ -20,12 +21,12 @@
   --accent: #d4ff3a;
   --accent-strong: #4d6b00;
   --accent-ink: #0b0d10;
-  --bg: #f4f6f8;
+  --bg: #e8ecf0;
   --surface: #ffffff;
-  --surface-raised: #edf0f3;
-  --line: #d5dbe2;
-  --text: #11151a;
-  --text-muted: #5a6472;
+  --surface-raised: #eef1f5;
+  --line: #bcc5d0;
+  --text: #0e1216;
+  --text-muted: #4b5563;
   --go: #0b7a57;
   --caution: #9a5b00;
   --alert: #c62828;

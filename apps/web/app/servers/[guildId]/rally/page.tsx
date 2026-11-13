@@ -20,6 +20,7 @@ import {
 import type { Metadata } from "next";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { ProTag } from "@/components/cards/CardEditor";
+import { EmptyState } from "@/components/EmptyState";
 import { formatTime } from "@/components/format";
 import { OpsCalendar } from "@/components/OpsCalendar";
 import { FormPanel } from "@/components/settings";
@@ -64,7 +65,7 @@ const ATTENDANCE: Record<string, string> = {
   marked: "Attendance updated.",
 };
 
-export const metadata: Metadata = { title: "Rally" };
+export const metadata: Metadata = { title: "Groups and raids" };
 
 export default async function RallyPage({
   params,
@@ -124,7 +125,7 @@ export default async function RallyPage({
     <>
       <div className="page-head">
         <div>
-          <h1>Rally and Ops</h1>
+          <h1>Groups and raids</h1>
           <p>
             Post groups, schedule raids, and join or sign up without leaving the dashboard. Members
             without Manage Server join on the <a href={`/play/${guild.id}`}>player page</a>.
@@ -462,12 +463,14 @@ export default async function RallyPage({
               );
             })
           ) : (
-            <div className="g-card empty-block">
-              <p>No open groups right now.</p>
-              <a className="g-btn g-btn--secondary" href="?post=1#post-group">
-                Post a group
-              </a>
-            </div>
+            <EmptyState
+              mark="groups"
+              title="No open groups right now"
+              headingLevel={3}
+              action={{ label: "Post a group", href: "?post=1#post-group" }}
+            >
+              Members post one with <code>/lfg</code> in Discord, or you can post one here.
+            </EmptyState>
           )}
         </section>
         <section aria-labelledby="upcoming-raids" className="block">
@@ -652,12 +655,14 @@ export default async function RallyPage({
               );
             })
           ) : (
-            <div className="g-card empty-block">
-              <p>No raids scheduled.</p>
-              <a className="g-btn g-btn--secondary" href="?create=1#create-raid">
-                Create a raid
-              </a>
-            </div>
+            <EmptyState
+              mark="raids"
+              title="No raids scheduled"
+              headingLevel={3}
+              action={{ label: "Create a raid", href: "?create=1#create-raid" }}
+            >
+              A raid gets a roster with role caps, a bench and reminders before it starts.
+            </EmptyState>
           )}
         </section>
       </div>

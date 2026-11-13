@@ -7,8 +7,12 @@ import {
   DEFAULT_RANK_CARD,
   isRankImage,
   lockedRankCard,
+  memberFields,
   parseRankCard,
+  type RankCardField,
+  type RankCardStyle,
   rankCardForPlan,
+  rankDetailLines,
   readRankCard,
 } from "./rank-cards";
 import { upsertGuild } from "./repo/guilds";
@@ -19,10 +23,10 @@ import { createTestDb } from "./testing";
 
 const free = entitlements("free");
 const pro = entitlements("pro");
-const custom = {
+const custom: RankCardStyle = {
   background: "dusk",
   accent: "#5ab0ff",
-  fields: [{ id: "field00001", label: "Main" }],
+  fields: [{ id: "field00001", label: "Main", from: null, hint: "Holy Paladin" }],
   showLinked: true,
 };
 
@@ -32,7 +36,7 @@ describe("rank card rules", () => {
     expect(lockedRankCard(custom, free)).toEqual([
       "Background",
       "Accent colour",
-      "Details members fill in",
+      "Details on the card",
       "Linked game accounts",
     ]);
     expect(checkRankCard(custom, pro, DEFAULT_RANK_CARD).ok).toBe(true);
@@ -120,5 +124,41 @@ describe("rank card storage, under each role's grants", () => {
     );
     expect(err).toMatch(/permission denied/);
     await exec("RESET ROLE");
+  });
+});
+
+describe("details from linked accounts", () => {
+  const fields: RankCardField[] = [
+    { id: "field00001", label: "Main", from: null, hint: "Holy Paladin" },
+    { id: "field00002", label: "Class", from: "wow:class", hint: null },
+    { id: "field00003", label: "Total", from: "osrs:total", hint: null },
+  ];
+  const links = [
+    { provider: "wow", displayName: "Lightbringer", details: { className: "Paladin", level: 80 } },
+    { provider: "steam", displayName: "x", details: {} },
+  ];
+
+  it("parses a source, and drops the hint where the value isn't typed", () => {
+    const parsed = parseRankCard({ ...custom, fields });
+    expect(parsed.ok && parsed.value.fields.map((f) => [f.from, f.hint])).toEqual([
+      [null, "Holy Paladin"],
+      ["wow:class", null],
+      ["osrs:total", null],
+    ]);
+    expect(
+      parseRankCard({ ...custom, fields: [{ id: "field00004", label: "X", from: "steam:hours" }] })
+        .ok,
+    ).toBe(false);
+    // Details saved before sources existed are typed ones.
+    const old = parseRankCard({ ...custom, fields: [{ id: "field00001", label: "Main" }] });
+    expect(old.ok && old.value.fields[0]).toMatchObject({ from: null, hint: null });
+  });
+
+  it("asks members only for typed details, and reads the rest from their accounts", () => {
+    expect(memberFields(fields).map((f) => f.label)).toEqual(["Main"]);
+    expect(rankDetailLines(fields, { field00001: "Holy" }, links)).toEqual([
+      { label: "Main", value: "Holy" },
+      { label: "Class", value: "Paladin" },
+    ]);
   });
 });

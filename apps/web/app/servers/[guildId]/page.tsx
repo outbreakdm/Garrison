@@ -113,7 +113,7 @@ export default async function OverviewPage({
       title: "The server is locked down",
       detail: "@everyone can't post until the lockdown is lifted. Staff roles still can.",
       href: `${base}/gatehouse`,
-      go: "Gatehouse",
+      go: "Security",
     });
   if (o.quarantines24h > 0)
     attention.push({
@@ -121,7 +121,7 @@ export default async function OverviewPage({
       title: `${plural(o.quarantines24h, "member", "members")} quarantined by anti-nuke`,
       detail: "Their roles were removed and saved. Restore them if it was a mistake.",
       href: `${base}/gatehouse`,
-      go: "Gatehouse",
+      go: "Security",
     });
   const failing = health?.checks.filter((c) => c.status !== "ok") ?? [];
   if (failing.length)
@@ -135,7 +135,7 @@ export default async function OverviewPage({
   if (build?.status === "pending")
     attention.push({
       tone: "caution",
-      title: `Quartermaster plan v${build.version} is waiting`,
+      title: `AI builder plan v${build.version} is waiting`,
       detail: "Nothing changes in Discord until someone builds it. Plans expire after 15 minutes.",
       href: `${base}/quartermaster`,
       go: "Review plan",
@@ -152,7 +152,7 @@ export default async function OverviewPage({
           .map((s) => `${s.n} ${s.name}`)
           .join(", ")}`,
         href: `${base}/rally`,
-        go: "Rally",
+        go: "Groups and raids",
       });
   }
   const failed = actions.filter(
@@ -185,7 +185,7 @@ export default async function OverviewPage({
         {build ? (
           <div className="build-line">
             <span className="mono">
-              v{build.version} · {ago(build.createdAt)} by Quartermaster ·{" "}
+              v{build.version} · {ago(build.createdAt)} by the AI builder ·{" "}
               {build.status.replace("_", " ")}
             </span>
             {build.status === "applied" ? (
@@ -272,10 +272,10 @@ export default async function OverviewPage({
         <section className="g-card g-card--hud card-col" aria-labelledby="next-op">
           <div className="card-head">
             <h2 className="card-title" id="next-op">
-              Next op
+              Next raid
             </h2>
             <Link href={`${base}/rally`} transitionTypes={["nav"]}>
-              Rally
+              Groups and raids
             </Link>
           </div>
           {o.nextOp ? (
@@ -315,7 +315,7 @@ export default async function OverviewPage({
         <section className="g-card card-col" aria-labelledby="gatehouse-title">
           <div className="card-head">
             <h2 className="card-title" id="gatehouse-title">
-              Gatehouse
+              Security
             </h2>
             <Link href={`${base}/gatehouse`} transitionTypes={["nav"]}>
               Manage
@@ -426,12 +426,12 @@ export default async function OverviewPage({
               Open groups
             </h2>
             <Link href={`${base}/rally`} transitionTypes={["nav"]}>
-              Rally
+              Groups and raids
             </Link>
           </div>
           <div className="readout__value">{o.openGroups}</div>
           <div className="g-help">
-            LFG posts players can join right now, from Discord or from the Rally page.
+            LFG posts players can join right now, from Discord or from the Groups and raids page.
           </div>
         </section>
       </div>
