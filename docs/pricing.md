@@ -80,8 +80,9 @@ buttons, until all of these are set. Do it in Stripe's test mode first, then rep
 keys.
 
 1. **Products in Stripe:** "Garrison Pro" with a monthly ($8.99) and a yearly ($79.99) price,
-   and "Garrison Agency" with a monthly ($34.99) and a yearly ($349.99) price. Copy the four
-   price IDs (price_...).
+   and "Garrison Agency" with a monthly ($34.99) and a yearly ($349.99) price. Give both
+   products the tax code `txcd_10103000` (Software as a service, personal use): Stripe now
+   refuses checkout for a product without one. Copy the four price IDs (price_...).
 2. **Webhook in Stripe:** endpoint `https://dash.garrisonbot.com/api/stripe/webhook`, events
    `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
    `customer.subscription.created`, `customer.subscription.updated`,
@@ -100,6 +101,9 @@ keys.
    access to Invoices, Invoice payments, Charges, Disputes and Prices.
 6. **Sales tax:** if you sell to US states or the EU that require it, turn on Stripe Tax and
    add your registrations before switching checkout on; until then no tax is collected.
+   Stripe also switches on **Managed Payments** by default (Settings, Managed payments):
+   Stripe becomes the seller of record and handles sales tax for you, for an extra fee.
+   Decide whether to keep it before going live; Garrison works either way.
 7. **GitHub secrets:** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
    `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_YEARLY`, `STRIPE_PRICE_AGENCY_MONTHLY`,
    `STRIPE_PRICE_AGENCY_YEARLY`, `BILLING_DATABASE_URL`. Then deploy.
@@ -108,7 +112,8 @@ keys.
 `garrison_pro_monthly`, `garrison_pro_yearly`, `garrison_agency_monthly`,
 `garrison_agency_yearly`) and a customer portal that switches between them. A test subscription
 turned a server's Pro on, cancel-at-period-end kept it on, and canceling turned it off, all
-through the webhook. For local testing: `apps/web/.env.local` (gitignored) holds the test keys,
+through the webhook. A full checkout from the Upgrade button with the 4242 test card then
+turned Pro on through `checkout.session.completed`, and the billing portal opened for it. For local testing: `apps/web/.env.local` (gitignored) holds the test keys,
 and `stripe listen --forward-to localhost:3100/api/stripe/webhook` forwards events.
 
 How it works: Upgrade opens Stripe Checkout with the buyer's Discord ID (and the server, for

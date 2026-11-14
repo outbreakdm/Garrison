@@ -80,20 +80,28 @@ export async function checkoutAction(form: FormData) {
   const metadata: Record<string, string> =
     tier === "pro" ? { tier, userId: user, guildId: access.guild.id } : { tier, userId: user };
   const base = env().APP_URL;
-  const session = await stripe().checkout.sessions.create({
-    mode: "subscription",
-    line_items: [{ price, quantity: 1 }],
-    client_reference_id: user,
-    metadata,
-    subscription_data: { metadata },
-    allow_promotion_codes: true,
-    // Tags these sessions in the Stripe dashboard, to compare checkout flows over time.
-    integration_identifier: "garrison_plans_qhwkzmtr",
-    success_url: `${base}${back}?done=checkout`,
-    cancel_url: `${base}${back}`,
-  });
-  if (!session.url) redirect(`${back}?done=checkout_failed`);
-  redirect(session.url);
+  // A refused session (a product setting missing in Stripe, say) shows a notice, not a
+  // crashed page. redirect() throws, so it stays outside the try.
+  let url: string | null = null;
+  try {
+    const session = await stripe().checkout.sessions.create({
+      mode: "subscription",
+      line_items: [{ price, quantity: 1 }],
+      client_reference_id: user,
+      metadata,
+      subscription_data: { metadata },
+      allow_promotion_codes: true,
+      // Tags these sessions in the Stripe dashboard, to compare checkout flows over time.
+      integration_identifier: "garrison_plans_qhwkzmtr",
+      success_url: `${base}${back}?done=checkout`,
+      cancel_url: `${base}${back}`,
+    });
+    url = session.url;
+  } catch (e) {
+    console.error("Stripe checkout refused:", e instanceof Error ? e.message : e);
+  }
+  if (!url) redirect(`${back}?done=checkout_failed`);
+  redirect(url);
 }
 
 /**
@@ -119,9 +127,16 @@ export async function portalAction(form: FormData) {
         ? details.stripeCustomerId
         : null;
   if (!customer) redirect(`${back}?done=not_payer`);
-  const portal = await stripe().billingPortal.sessions.create({
-    customer,
-    return_url: `${env().APP_URL}${back}`,
-  });
-  redirect(portal.url);
+  let url: string | null = null;
+  try {
+    const portal = await stripe().billingPortal.sessions.create({
+      customer,
+      return_url: `${env().APP_URL}${back}`,
+    });
+    url = portal.url;
+  } catch (e) {
+    console.error("Stripe portal refused:", e instanceof Error ? e.message : e);
+  }
+  if (!url) redirect(`${back}?done=portal_failed`);
+  redirect(url);
 }

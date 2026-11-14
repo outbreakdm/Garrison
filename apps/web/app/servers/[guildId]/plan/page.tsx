@@ -36,6 +36,10 @@ const DONE: Record<string, { text: string; ok: boolean }> = {
     text: "Stripe didn't open a checkout. Nothing was charged; try again.",
     ok: false,
   },
+  portal_failed: {
+    text: "Stripe didn't open the billing page. Nothing changed; try again.",
+    ok: false,
+  },
   already_paid: { text: "This server already pays for Pro.", ok: false },
   not_payer: { text: "Only the person who pays can manage this plan's billing.", ok: false },
 };

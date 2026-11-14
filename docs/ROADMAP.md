@@ -715,3 +715,8 @@ Decided (2026-11-12, owner):
   retention. `insights_prune()` (owner-run, no arguments) folds per-member days into plain
   daily counts after 35 days and drops everything past 400. Migration `0055_insights`.
   Counting starts at deploy: there's no history before it.
+- 2026-11-14: Stripe recheck. Checkout had started failing: Stripe turned on Managed Payments
+  by default, which refuses products without a tax code. Test products now use
+  `txcd_10103000`; the setup notes say to do the same live and to decide on Managed Payments.
+  A refused checkout or portal now shows a notice instead of a crashed page. A full test
+  checkout turned Pro on and cancelling turned it off.
