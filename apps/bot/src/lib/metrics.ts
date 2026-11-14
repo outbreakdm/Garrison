@@ -1,4 +1,4 @@
-import { addMessageCounts, heartbeat, markSeen, saveLatencyHour } from "@garrison/db";
+import { addActivity, addMessageCounts, heartbeat, markSeen, saveLatencyHour } from "@garrison/db";
 import type { BotContext } from "../commands/types.js";
 
 /** Nearest-rank percentile of a sample, 0 for none. */
@@ -18,14 +18,24 @@ const MAX_SAMPLES = 2000;
  */
 export class Metrics {
   private messages = new Map<string, number>();
+  /** Server insights: "guild|day|channel", "guild|hourMs" and "guild|day|user" -> messages. */
+  private channels = new Map<string, number>();
+  private hours = new Map<string, number>();
+  private members = new Map<string, number>();
   private seenAt = new Map<string, number>();
   private pendingSeen = new Map<string, { guildId: string; userId: string; at: Date }>();
   /** hour start (ms) -> guild ('' = all) -> response times in ms */
   private latency = new Map<number, Map<string, number[]>>();
   readonly startedAt = new Date();
 
-  message(guildId: string, userId: string, now = Date.now()) {
+  /** One message. `channelId` is the parent channel for a thread; counts only, never text. */
+  message(guildId: string, userId: string, now = Date.now(), channelId?: string) {
     this.messages.set(guildId, (this.messages.get(guildId) ?? 0) + 1);
+    const day = new Date(now).toISOString().slice(0, 10);
+    const bump = (map: Map<string, number>, key: string) => map.set(key, (map.get(key) ?? 0) + 1);
+    if (channelId) bump(this.channels, `${guildId}|${day}|${channelId}`);
+    bump(this.hours, `${guildId}|${Math.floor(now / 3_600_000) * 3_600_000}`);
+    bump(this.members, `${guildId}|${day}|${userId}`);
     const key = `${guildId}:${userId}`;
     if (now - (this.seenAt.get(key) ?? 0) >= SEEN_EVERY_MS) {
       this.seenAt.set(key, now);
@@ -52,6 +62,11 @@ export class Metrics {
     const seen = [...this.pendingSeen.values()];
     this.pendingSeen.clear();
     await addMessageCounts(ctx.db, counts);
+    const activity = { channels: this.channels, hours: this.hours, members: this.members };
+    this.channels = new Map();
+    this.hours = new Map();
+    this.members = new Map();
+    await addActivity(ctx.db, activity);
     for (const s of seen) await markSeen(ctx.db, s.guildId, s.userId, s.at);
 
     for (const [hour, byGuild] of this.latency) {

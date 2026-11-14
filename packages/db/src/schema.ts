@@ -859,6 +859,85 @@ export const guildActivityDaily = pgTable(
   (t) => [primaryKey({ columns: [t.guildId, t.day] })],
 ).enableRLS();
 
+/** Messages per channel per day. Counts only; a thread counts toward its parent channel. */
+export const channelActivityDaily = pgTable(
+  "channel_activity_daily",
+  {
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    day: date("day").notNull(),
+    channelId: text("channel_id").notNull(),
+    messages: integer("messages").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.guildId, t.day, t.channelId] })],
+).enableRLS();
+
+/** Messages per server per hour (UTC), for "busiest hours". Counts only. */
+export const guildActivityHourly = pgTable(
+  "guild_activity_hourly",
+  {
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    hour: timestamp("hour", { withTimezone: true }).notNull(),
+    messages: integer("messages").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.guildId, t.hour] })],
+).enableRLS();
+
+/**
+ * Who posted on which day and how many messages, for active members. Kept 35 days;
+ * insights_prune() folds each day into active_members_daily first.
+ */
+export const memberActivityDaily = pgTable(
+  "member_activity_daily",
+  {
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    day: date("day").notNull(),
+    userId: text("user_id").notNull(),
+    messages: integer("messages").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.guildId, t.day, t.userId] })],
+).enableRLS();
+
+/** How many members posted each day: a count, kept a year after the per-member rows go. */
+export const activeMembersDaily = pgTable(
+  "active_members_daily",
+  {
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    day: date("day").notNull(),
+    members: integer("members").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.guildId, t.day] })],
+).enableRLS();
+
+/** Joins and leaves, with the invite a join came through when Garrison could tell. */
+export const memberFlow = pgTable(
+  "member_flow",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    kind: text("kind").notNull(),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+    inviteCode: text("invite_code"),
+    inviterId: text("inviter_id"),
+    inviterName: text("inviter_name"),
+  },
+  (t) => [
+    index("member_flow_guild_at").on(t.guildId, t.at),
+    index("member_flow_guild_user").on(t.guildId, t.userId, t.at),
+    check("member_flow_kind", sql`${t.kind} IN ('join', 'leave')`),
+  ],
+).enableRLS();
+
 /** When each member last posted, for "active members". Updated at most every 15 minutes per member. */
 export const memberLastSeen = pgTable(
   "member_last_seen",

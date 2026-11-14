@@ -191,6 +191,11 @@ export function canManageGuildNow(guildId: string, userId: string): Promise<bool
 // --- Server channels, for settings pickers -----------------------------------
 
 /** The server's text and announcement channels, in Discord's order. Cached 30 s. */
+/** Every channel's name by ID (text, voice, forum, announcement), for labeling counts. */
+export async function channelNames(guildId: string): Promise<Map<string, string>> {
+  return new Map((await rawChannels(guildId)).map((c) => [c.id, c.name]));
+}
+
 export async function listTextChannels(guildId: string) {
   return (await rawChannels(guildId))
     .filter((c) => c.type === 0 || c.type === 5)

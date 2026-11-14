@@ -16,7 +16,7 @@ describe("Metrics", () => {
     const m = new Metrics();
     m.message("g", "u", 0);
     m.message("g", "u", 1000);
-    m.message("g", "u", 16 * 60_000);
+    m.message("g", "u", 16 * 60_000, "c");
     m.response("g", 120, 0);
     m.response(null, 90, 0);
     m.response("g", -5, 0); // ignored: clock skew
@@ -37,8 +37,9 @@ describe("Metrics", () => {
       },
       0,
     );
-    // 1 message count, 1 last-seen (the same member's updates collapse to the latest),
+    // 1 message count, 3 insight upserts (channel, hour, member: one batch each),
+    // 1 last-seen (the same member's updates collapse to the latest),
     // 2 latency rows ('' and 'g'), 2 heartbeat writes.
-    expect(calls.length).toBe(6);
+    expect(calls.length).toBe(9);
   });
 });

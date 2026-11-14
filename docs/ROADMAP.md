@@ -427,7 +427,7 @@ the effort.
 4. **Suggestions board.** [x] Built 2026-11-14 (migration 0054). Members post ideas with a button or `/suggest`; a card with up and
    down votes; staff mark Planned, Done or Declined from a dashboard queue. Reuses the card
    editor and the ticket queue. Free: 1 board. Pro: several boards, custom look, anonymous mode.
-5. **Server insights.** Joins and leaves, active members, messages by channel and hour, who
+5. **Server insights.** [x] Built 2026-11-14 (migration 0055). Joins and leaves, active members, messages by channel and hour, who
    stays after a week, invite sources (Logs already tracks most of it). Free: 30 days. Pro: a
    year and CSV export. A strong reason to pay that costs almost nothing to run.
 
@@ -705,3 +705,13 @@ Decided (2026-11-12, owner):
   note per suggestion that the bot writes onto the card; Done and Declined close voting. Pro:
   anonymous mode (the card hides the author; staff still see it). One board per server for
   now; several boards and a custom look were left for later. Migration `0054_suggestions`.
+- 2026-11-14: Server insights (committed, not deployed): a new Insights page (Server group)
+  with totals (messages, active members, net joins, the share who stayed a week), messages per
+  day, joins above and leaves below one axis, busiest hours in the reader's own time, busiest
+  channels and where members come from (inviter, joins, stayed a week). Free: 7 or 30 days.
+  Pro: 90 days or a year, and a CSV of every day. The bot's once-a-minute metrics flush now
+  also counts messages per channel per day, per hour and per member per day (counts only,
+  never content), and joins and leaves are kept with their invite apart from the log's
+  retention. `insights_prune()` (owner-run, no arguments) folds per-member days into plain
+  daily counts after 35 days and drops everything past 400. Migration `0055_insights`.
+  Counting starts at deploy: there's no history before it.

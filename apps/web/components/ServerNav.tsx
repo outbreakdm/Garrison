@@ -26,7 +26,8 @@ const ITEMS = [
   { group: "Gaming", id: "volt", href: "/rally", name: "Groups and raids" },
   { group: null, id: "volt", href: "/voice", name: "Voice rooms" },
   { group: null, id: "volt", href: "/barracks", name: "Game accounts" },
-  { group: "Server", id: "steel", href: "/quartermaster", name: "AI builder" },
+  { group: "Server", id: "steel", href: "/insights", name: "Insights" },
+  { group: null, id: "steel", href: "/quartermaster", name: "AI builder" },
   { group: null, id: "steel", href: "/settings", name: "Settings" },
   { group: null, id: "steel", href: "/plan", name: "Plan" },
 ] as const;

@@ -20,6 +20,7 @@ import { sweepGiveaways } from "./modules/giveaways/service.js";
 import { snapshotAllHealth } from "./modules/health/command.js";
 import { primeInvites } from "./modules/ledger/invites.js";
 import {
+  maybePruneInsights,
   maybePruneLedger,
   onAuditEntry,
   onMemberJoin,
@@ -164,6 +165,9 @@ client.once(Events.ClientReady, async (ready) => {
     );
     await sweepTickets(ctx, ready).catch((error) => logger.error("Ticket sweep failed", { error }));
     await maybePruneLedger(ctx).catch((error) => logger.error("Ledger prune failed", { error }));
+    await maybePruneInsights(ctx).catch((error) =>
+      logger.error("Insights prune failed", { error }),
+    );
     await refreshOsrs(ctx).catch((error) => logger.error("OSRS refresh failed", { error }));
     await ctx.metrics?.flush(ctx).catch((error) => logger.error("Metrics flush failed", { error }));
     if (Date.now() - lastHealthSnapshot > HEALTH_EVERY_MS) {
@@ -207,7 +211,14 @@ client.on(Events.GuildAuditLogEntryCreate, (entry, guild) => {
 
 client.on(Events.MessageCreate, (message) => {
   if (message.inGuild() && !message.author.bot && !message.webhookId)
-    ctx.metrics?.message(message.guildId, message.author.id);
+    ctx.metrics?.message(
+      message.guildId,
+      message.author.id,
+      Date.now(),
+      message.channel.isThread()
+        ? (message.channel.parentId ?? message.channelId)
+        : message.channelId,
+    );
   handleMessage(ctx, message).catch((error) =>
     logger.error("Ranks failed", { guildId: message.guildId, error }),
   );

@@ -2,8 +2,10 @@ import type { EmbedTone } from "@garrison/brand";
 import {
   getLedgerSettings,
   type LedgerSettings,
+  pruneInsights,
   pruneLedger,
   recordLedgerEvent,
+  recordMemberFlow,
 } from "@garrison/db";
 import type {
   Guild,
@@ -116,6 +118,17 @@ export async function onMemberJoin(ctx: BotContext, member: GuildMember) {
   const via = invite
     ? ` · invite ${invite.code}${invite.inviterName ? ` by ${invite.inviterName}` : ""}`
     : "";
+  // Server insights: joins and where they came from, kept apart from the log's retention.
+  await recordMemberFlow(ctx.db, {
+    guildId: member.guild.id,
+    userId: member.id,
+    kind: "join",
+    inviteCode: invite?.code ?? null,
+    inviterId: invite?.inviterId ?? null,
+    inviterName: invite?.inviterName ?? null,
+  }).catch((error: unknown) =>
+    ctx.logger.warn("Insights join failed", { guildId: member.guild.id, error }),
+  );
   return record(
     ctx,
     member.guild,
@@ -131,6 +144,13 @@ export async function onMemberJoin(ctx: BotContext, member: GuildMember) {
 
 export function onMemberLeave(ctx: BotContext, member: GuildMember | PartialGuildMember) {
   const name = member.user?.username ?? "A member";
+  void recordMemberFlow(ctx.db, {
+    guildId: member.guild.id,
+    userId: member.id,
+    kind: "leave",
+  }).catch((error: unknown) =>
+    ctx.logger.warn("Insights leave failed", { guildId: member.guild.id, error }),
+  );
   return record(ctx, member.guild, draft("member_leave", `${name} left`, { targetId: member.id }));
 }
 
@@ -217,6 +237,15 @@ export function onVoiceUpdate(ctx: BotContext, before: VoiceState, after: VoiceS
 
 const PRUNE_EVERY_MS = 3_600_000;
 let lastPrune = 0;
+let lastInsightsPrune = 0;
+
+/** Fold and remove old insight counts, at most hourly. The database decides what goes. */
+export async function maybePruneInsights(ctx: BotContext) {
+  if (Date.now() - lastInsightsPrune < PRUNE_EVERY_MS) return;
+  lastInsightsPrune = Date.now();
+  const removed = await pruneInsights(ctx.db);
+  if (removed) ctx.logger.info("Pruned old insight counts", { removed });
+}
 
 /** Remove expired events, at most hourly. The database decides what's expired. */
 export async function maybePruneLedger(ctx: BotContext) {

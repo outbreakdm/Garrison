@@ -88,7 +88,8 @@ type Module =
   | "barracks"
   | "qm"
   | "voice"
-  | "suggestions";
+  | "suggestions"
+  | "insights";
 
 interface Feature<T> {
   module: Module;
@@ -322,6 +323,18 @@ export const FEATURES = {
     about: "LFG templates",
     free: 3,
     pro: 25,
+  },
+  "insights.days": {
+    module: "insights",
+    about: "How far back server insights go, in days",
+    free: 30,
+    pro: 365,
+  },
+  "insights.export": {
+    module: "insights",
+    about: "Download server insights as a spreadsheet",
+    free: false,
+    pro: true,
   },
   "suggestions.anonymous": {
     module: "suggestions",

@@ -26,6 +26,7 @@ export * from "./repo/cases";
 export * from "./repo/gatehouse";
 export * from "./repo/giveaways";
 export * from "./repo/guilds";
+export * from "./repo/insights";
 export * from "./repo/ledger";
 export * from "./repo/messages";
 export * from "./repo/metrics";
