@@ -49,6 +49,7 @@ import { refreshCard } from "../rally/service.js";
 import { doSeasonStart } from "../ranks/seasons.js";
 import { menuRoleProblem, menuRoleProblemText, roleMenuMessage } from "../roles/menu.js";
 import { loadMenu, roleFacts } from "../roles/service.js";
+import { doSuggestionStatus } from "../suggestions/service.js";
 import { doPostTicketPanel, doTicketAction } from "../tickets/dashboard.js";
 import { undoCase } from "../watch/service.js";
 import {
@@ -509,6 +510,8 @@ export async function runDashboardAction(
       return doTemplateSave(ctx, guild, member, action.payload);
     case "template_apply":
       return doTemplateApply(ctx, guild, member, action.payload);
+    case "suggestion_status":
+      return doSuggestionStatus(ctx, guild, member, action.payload);
     default:
       return fail("Garrison doesn't know that request.");
   }

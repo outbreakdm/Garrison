@@ -87,7 +87,8 @@ type Module =
   | "ledger"
   | "barracks"
   | "qm"
-  | "voice";
+  | "voice"
+  | "suggestions";
 
 interface Feature<T> {
   module: Module;
@@ -321,6 +322,12 @@ export const FEATURES = {
     about: "LFG templates",
     free: 3,
     pro: 25,
+  },
+  "suggestions.anonymous": {
+    module: "suggestions",
+    about: "Anonymous suggestions: cards don't show who posted",
+    free: false,
+    pro: true,
   },
   "voice.creators": {
     module: "voice",

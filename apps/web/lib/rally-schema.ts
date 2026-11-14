@@ -71,6 +71,7 @@ export const ACTION_KIND: Record<string, string> = {
   ticket_action: "Ticket: claim, close or reopen",
   start_giveaway: "Start giveaway",
   giveaway_action: "Giveaway",
+  suggestion_status: "Suggestion decision",
   test_alert: "Test alert",
   backup_create: "Back up the server",
   backup_restore: "Restore a backup",

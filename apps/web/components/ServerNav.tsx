@@ -20,6 +20,7 @@ const ITEMS = [
   { group: null, id: "orchid", href: "/ranks", name: "Leveling" },
   { group: null, id: "orchid", href: "/spoils", name: "Giveaways" },
   { group: null, id: "orchid", href: "/honors", name: "Starboard" },
+  { group: null, id: "orchid", href: "/suggestions", name: "Suggestions" },
   { group: null, id: "orchid", href: "/beacon", name: "Stream alerts" },
   { group: null, id: "orchid", href: "/dispatch", name: "Messages" },
   { group: "Gaming", id: "volt", href: "/rally", name: "Groups and raids" },

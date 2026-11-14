@@ -458,6 +458,7 @@ export const settingsModule = pgEnum("settings_module", [
   "automod",
   "barracks",
   "voice",
+  "suggestions",
 ]);
 
 /** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */
@@ -950,6 +951,7 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "season_start",
   "template_save",
   "template_apply",
+  "suggestion_status",
 ]);
 export const dashboardActionStatus = pgEnum("dashboard_action_status", [
   "pending",
@@ -1886,3 +1888,70 @@ export const voiceRooms = pgTable(
 ).enableRLS();
 
 export type VoiceRoom = typeof voiceRooms.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Suggestions
+// ---------------------------------------------------------------------------
+
+/** A server's suggestions settings, one row, edited on the dashboard with history and undo. */
+export const suggestionSettings = pgTable("suggestion_settings", {
+  guildId: text("guild_id")
+    .primaryKey()
+    .references(() => guilds.id, { onDelete: "cascade" }),
+  enabled: boolean("enabled").notNull().default(false),
+  channelId: text("channel_id"),
+  anonymous: boolean("anonymous").notNull().default(false),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
+
+/**
+ * A member's suggestion: the text they posted (meant to be public, shown on the card), the
+ * vote counts, its status and the staff note. Numbered per server.
+ */
+export const suggestions = pgTable(
+  "suggestions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    number: integer("number").notNull(),
+    authorId: text("author_id").notNull(),
+    authorName: text("author_name").notNull(),
+    text: text("text").notNull(),
+    anonymous: boolean("anonymous").notNull().default(false),
+    status: text("status").notNull().default("open"),
+    up: integer("up").notNull().default(0),
+    down: integer("down").notNull().default(0),
+    channelId: text("channel_id"),
+    messageId: text("message_id"),
+    staffNote: text("staff_note"),
+    decidedBy: text("decided_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("suggestions_number").on(t.guildId, t.number),
+    index("suggestions_recent").on(t.guildId, t.status, t.createdAt),
+    check("suggestions_status", sql`${t.status} IN ('open', 'planned', 'done', 'declined')`),
+    check("suggestions_text", sql`length(${t.text}) BETWEEN 1 AND 1000`),
+  ],
+).enableRLS();
+
+export type Suggestion = typeof suggestions.$inferSelect;
+
+/** One vote per member per suggestion: +1 for, -1 against. */
+export const suggestionVotes = pgTable(
+  "suggestion_votes",
+  {
+    suggestionId: uuid("suggestion_id")
+      .notNull()
+      .references(() => suggestions.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    value: integer("value").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.suggestionId, t.userId] }),
+    check("suggestion_votes_value", sql`${t.value} IN (-1, 1)`),
+  ],
+).enableRLS();

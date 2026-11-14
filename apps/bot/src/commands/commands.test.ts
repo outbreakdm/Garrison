@@ -40,6 +40,7 @@ describe("command definitions", () => {
       "roster",
       "ticket",
       "giveaway",
+      "suggest",
     ]);
     expect(new Set(names).size).toBe(names.length);
   });
@@ -55,6 +56,7 @@ describe("command definitions", () => {
       "roster",
       "ticket",
       "rankcard",
+      "suggest",
     ]);
     for (const { data } of commands) {
       expect(data.contexts).toEqual([0]);

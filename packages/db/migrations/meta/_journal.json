@@ -379,6 +379,13 @@
       "when": 1794684812152,
       "tag": "0053_scam_links",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1794684978906,
+      "tag": "0054_suggestions",
+      "breakpoints": true
     }
   ]
 }

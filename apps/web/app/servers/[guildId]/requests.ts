@@ -18,6 +18,7 @@ import {
   getQmBuildByVersion,
   getQuarantine,
   getRoleMenus,
+  getSuggestion,
   getTemplate,
   getTicket,
   getTicketConfig,
@@ -29,6 +30,8 @@ import {
   readMessages,
   readRoleMenus,
   SEASON_NAME_MAX,
+  SUGGESTION_LIMITS,
+  SUGGESTION_STATUSES,
   TEMPLATE_NAME_MAX,
   TICKET_LIMITS,
 } from "@garrison/db";
@@ -61,6 +64,7 @@ const PAGES = new Set([
   "spoils",
   "beacon",
   "ranks",
+  "suggestions",
 ]);
 /** A member's page under Watch is the one page with an ID in its path. */
 const MEMBER_PAGE = /^watch\/member\/\d{17,20}$/;
@@ -259,6 +263,15 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       const g = uuid.safeParse(id).success ? await getGiveaway(db, guildId, id) : null;
       if (!g) return { ok: false, error: "not_found" };
       return { ok: true, input: { kind, payload: { giveawayId: g.id, op } } };
+    }
+    case "suggestion_status": {
+      const status = SUGGESTION_STATUSES.find((s) => s === field(form, "status"));
+      if (!status) return { ok: false, error: "invalid" };
+      const id = field(form, "id");
+      const s = uuid.safeParse(id).success ? await getSuggestion(db, guildId, id) : null;
+      if (!s) return { ok: false, error: "not_found" };
+      const note = field(form, "note").slice(0, SUGGESTION_LIMITS.note) || null;
+      return { ok: true, input: { kind, payload: { id: s.id, status, note } } };
     }
     case "ticket_action": {
       const op = field(form, "op");

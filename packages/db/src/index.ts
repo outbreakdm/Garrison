@@ -39,6 +39,7 @@ export * from "./repo/role-menus";
 export * from "./repo/search";
 export * from "./repo/settings";
 export * from "./repo/starboard";
+export * from "./repo/suggestions";
 export * from "./repo/templates";
 export * from "./repo/tickets";
 export * from "./repo/voice";
@@ -100,6 +101,7 @@ export type {
   SettingsModule,
   StarboardPost,
   StartGiveawayPayload,
+  Suggestion,
   Ticket,
   TicketActionPayload,
   TicketAnswer,
@@ -114,6 +116,7 @@ export * as schema from "./schema";
 export * from "./server-templates";
 export * from "./starboard";
 export * from "./stat-roles";
+export * from "./suggestions";
 export * from "./tickets";
 export * from "./time";
 export * from "./voice-rooms";

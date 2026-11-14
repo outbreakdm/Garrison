@@ -424,7 +424,7 @@ the effort.
 3. **Scam and phishing links (Moderation, free).** [x] Built 2026-11-14 (migration 0053). Fake Nitro and Steam-gift links are the most
    common attack on gaming servers. A maintained list of known scam domains plus look-alike
    detection (discorcl, steamcomrnunity); remove the message, open a case, optional timeout.
-4. **Suggestions board.** Members post ideas with a button or `/suggest`; a card with up and
+4. **Suggestions board.** [x] Built 2026-11-14 (migration 0054). Members post ideas with a button or `/suggest`; a card with up and
    down votes; staff mark Planned, Done or Declined from a dashboard queue. Reuses the card
    editor and the ticket queue. Free: 1 board. Pro: several boards, custom look, anonymous mode.
 5. **Server insights.** Joins and leaves, active members, messages by channel and hour, who
@@ -698,3 +698,10 @@ Decided (2026-11-12, owner):
   (discord.js.org, discordbotlist.com) pass. A hit removes the message and times the sender
   out for an hour with a case (usually a hacked account, so no ban). No list to fetch or keep
   fresh (`packages/db/src/scam-links.ts`, tested). Migration `0053_scam_links`.
+- 2026-11-14: Suggestions board (committed, not deployed): `/suggest idea:` posts a numbered
+  card in the chosen channel with For and Against buttons (a second press takes the vote back,
+  the other button switches it; one suggestion a minute per member). The Suggestions page
+  (Community) has the settings, a board filtered by status with counts, and a status plus
+  note per suggestion that the bot writes onto the card; Done and Declined close voting. Pro:
+  anonymous mode (the card hides the author; staff still see it). One board per server for
+  now; several boards and a custom look were left for later. Migration `0054_suggestions`.
