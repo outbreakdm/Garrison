@@ -1183,6 +1183,15 @@ export const planBundles = pgTable(
     source: planSource("source").notNull().default("stripe"),
     grantedBy: text("granted_by"),
     note: text("note"),
+    /** Stripe, when paid: the customer, the subscription and where it stands. */
+    stripeCustomerId: text("stripe_customer_id"),
+    stripeSubscriptionId: text("stripe_subscription_id"),
+    /** Stripe's subscription status: active, trialing, past_due... */
+    stripeStatus: text("stripe_status"),
+    currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+    cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+    /** Discord user ID of whoever pays. */
+    paidBy: text("paid_by"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1209,7 +1218,26 @@ export const guildPlans = pgTable("guild_plans", {
   note: text("note"),
   /** The Agency plan whose seat this server takes (source `bundle`). Freed if it ends. */
   bundleId: uuid("bundle_id").references(() => planBundles.id, { onDelete: "cascade" }),
+  /** Stripe, when paid: the customer, the subscription and where it stands. */
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  /** Stripe's subscription status: active, trialing, past_due... */
+  stripeStatus: text("stripe_status"),
+  currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+  /** Discord user ID of whoever pays. */
+  paidBy: text("paid_by"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
+
+/**
+ * Every Stripe event the webhook has applied, by Stripe's event ID, so a retried event is
+ * never applied twice. Written only by billing_record_event() as garrison_billing.
+ */
+export const billingEvents = pgTable("billing_events", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(),
+  receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
 
 /**

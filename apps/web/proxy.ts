@@ -28,7 +28,8 @@ export function proxy(request: NextRequest) {
     "connect-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
-    "form-action 'self' https://discord.com https://oauth.battle.net",
+    // Upgrading and managing a plan hand off to Stripe's hosted pages.
+    "form-action 'self' https://discord.com https://oauth.battle.net https://checkout.stripe.com https://billing.stripe.com",
     // The website verify page's captcha (Cloudflare Turnstile) runs in a frame.
     ...(request.nextUrl.pathname.startsWith("/verify/")
       ? ["frame-src https://challenges.cloudflare.com"]

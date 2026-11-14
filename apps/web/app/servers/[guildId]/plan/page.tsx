@@ -1,17 +1,11 @@
-import {
-  FEATURES,
-  getPlanDetails,
-  isStaff,
-  listAgencyPlans,
-  PAID_PLANS_LIVE,
-  type PlanTier,
-} from "@garrison/db";
+import { FEATURES, getPlanDetails, isStaff, listAgencyPlans, type PlanTier } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PlanCards } from "@/components/PlanCards";
+import { billingReady } from "@/lib/billing";
 import { getDb } from "@/lib/db";
 import { requireGuildAccess } from "@/lib/session";
-import { seatAction, setCompAction } from "./actions";
+import { checkoutAction, portalAction, seatAction, setCompAction } from "./actions";
 
 export const metadata: Metadata = { title: "Plan" };
 
@@ -34,7 +28,20 @@ const DONE: Record<string, { text: string; ok: boolean }> = {
   seat_paid: { text: "This server already has Pro another way, so it needs no seat.", ok: false },
   seat_taken: { text: "Another Agency plan already covers this server.", ok: false },
   seat_not_owner: { text: "That Agency plan isn't yours, so nothing changed.", ok: false },
+  checkout: {
+    text: "Thanks. Your plan turns on as soon as Stripe confirms the payment, usually within a minute. Refresh to see it.",
+    ok: true,
+  },
+  checkout_failed: {
+    text: "Stripe didn't open a checkout. Nothing was charged; try again.",
+    ok: false,
+  },
+  already_paid: { text: "This server already pays for Pro.", ok: false },
+  not_payer: { text: "Only the person who pays can manage this plan's billing.", ok: false },
 };
+
+const day = (d: Date) =>
+  new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(d);
 
 export default async function PlanPage({
   params,
@@ -59,6 +66,9 @@ export default async function PlanPage({
   const plan = agency[0];
   const used = plan?.servers.length ?? 0;
   const outcome = done ? DONE[done] : undefined;
+  const live = billingReady();
+  const iPay = source === "stripe" && details.paidBy === session.userId;
+  const paidAgency = agency.find((a) => a.source === "stripe");
 
   const where = !pro
     ? "Nothing you set up is lost when you upgrade, or when you come back to Free later."
@@ -68,7 +78,39 @@ export default async function PlanPage({
         ? mySeat
           ? `Pro comes from one of your Agency seats (${mySeat.servers.length} of ${mySeat.seats} used).`
           : "Pro comes from someone's Agency plan. Its owner can move the seat."
-        : "This server pays for Pro itself.";
+        : details.currentPeriodEnd
+          ? `Paid through Stripe. ${details.cancelAtPeriodEnd ? "Ends" : "Renews"} ${day(details.currentPeriodEnd)}.`
+          : "This server pays for Pro itself.";
+
+  // Upgrade buttons, only once checkout is set up: monthly first, yearly beside it.
+  const buy = (tier: "pro" | "agency") => (
+    <form action={checkoutAction} className="tier__buy">
+      <input type="hidden" name="guildId" value={guild.id} />
+      <input type="hidden" name="tier" value={tier} />
+      <button type="submit" name="interval" value="month" className="g-btn g-btn--primary">
+        {tier === "pro" ? "Upgrade this server" : "Get Agency"}
+      </button>
+      <button type="submit" name="interval" value="year" className="g-btn g-btn--secondary">
+        Pay yearly
+      </button>
+    </form>
+  );
+  const manage = (forAgency: boolean) => (
+    <form action={portalAction}>
+      <input type="hidden" name="guildId" value={guild.id} />
+      {forAgency ? <input type="hidden" name="for" value="agency" /> : null}
+      <button type="submit" className="g-btn g-btn--secondary">
+        Manage billing
+      </button>
+    </form>
+  );
+  const tierActions = live
+    ? {
+        // A paying server's "Manage billing" sits in the card above, once.
+        pro: source === "stripe" ? undefined : buy("pro"),
+        agency: paidAgency ? manage(true) : buy("agency"),
+      }
+    : {};
 
   // An Agency owner manages seats right here, on the server they're about.
   const seatControl = plan ? (
@@ -140,7 +182,12 @@ export default async function PlanPage({
           </h2>
           <p className="card-sub">{where}</p>
         </div>
-        {plan ? <div className="plan-now__seat">{seatControl}</div> : null}
+        {plan || (live && iPay) ? (
+          <div className="plan-now__seat">
+            {seatControl}
+            {live && iPay ? manage(false) : null}
+          </div>
+        ) : null}
       </section>
 
       <section className="block" aria-labelledby="plans">
@@ -149,12 +196,12 @@ export default async function PlanPage({
             Plans
           </h2>
           <p>
-            {PAID_PLANS_LIVE
-              ? "Prices in US dollars, before tax. Cancel any time; nothing is deleted."
+            {live
+              ? "Prices in US dollars, before tax. Checkout and billing are run by Stripe. Cancel any time; nothing is deleted."
               : "Garrison is free during early access. These are the prices at launch, and nothing costs money before then."}
           </p>
         </div>
-        <PlanCards current={current} />
+        <PlanCards current={current} live={live} actions={tierActions} />
       </section>
 
       <details className="g-card panel" id="limits">

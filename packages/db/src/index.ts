@@ -21,6 +21,7 @@ export * from "./repo/attendance";
 export * from "./repo/automod";
 export * from "./repo/backups";
 export * from "./repo/barracks";
+export * from "./repo/billing";
 export * from "./repo/cases";
 export * from "./repo/gatehouse";
 export * from "./repo/giveaways";

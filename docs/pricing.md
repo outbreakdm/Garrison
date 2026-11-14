@@ -1,8 +1,9 @@
 # Pricing: Free, Pro and Agency
 
 Proposed 2026-11-13. Every price lives in one place, `PRICING` in `packages/db/src/plans.ts`;
-the landing page, the Plan page and the account page all read it. While `PAID_PLANS_LIVE` is
-false, every page shows the prices as "at launch" and nothing can be bought.
+the landing page, the Plan page and the account page all read it. Until checkout is set up
+(`billingReady()` in `apps/web/lib/billing.ts`), every page shows the prices as "at launch" and
+nothing can be bought.
 
 ## The three plans
 
@@ -61,7 +62,7 @@ servers, which are never stopped by Free use. Logged as a follow-up, not built y
 
 ## What's built now (2026-11-13)
 
-- `PRICING` and `PAID_PLANS_LIVE` in `packages/db/src/plans.ts`.
+- `PRICING` in `packages/db/src/plans.ts`; checkout switches on by itself once Stripe is configured.
 - Migration `0050_plan_bundles`: a `plan_bundles` table (one row per Agency subscription:
   owner, seats, source), `guild_plans.bundle_id`, and database functions that only let the
   bundle's owner fill or empty a seat, never past its seat count and never over a server that
@@ -72,11 +73,48 @@ servers, which are never stopped by Free use. Logged as a follow-up, not built y
 - Staff page: give or remove a complimentary Agency plan for a user.
 - Landing page: the three plans with prices marked "at launch".
 
-## Still to do (Phase 2, Stripe)
+## Turning checkout on (owner, once)
 
-- Two Stripe products (Pro, Agency), each with a monthly and a yearly price.
-- Checkout for Agency carries the buyer's Discord user ID; the webhook creates or updates the
-  `plan_bundles` row (seats 5, source `stripe`) instead of a `guild_plans` row.
-- Canceling an Agency plan frees every seat at period end (the servers drop to Free, paused,
-  nothing deleted).
-- Flip `PAID_PLANS_LIVE` once checkout works end to end in test mode.
+Checkout is built (2026-11-14). It stays off, and every page shows launch prices with no buy
+buttons, until all of these are set. Do it in Stripe's test mode first, then repeat with live
+keys.
+
+1. **Products in Stripe:** "Garrison Pro" with a monthly ($8.99) and a yearly ($79.99) price,
+   and "Garrison Agency" with a monthly ($34.99) and a yearly ($349.99) price. Copy the four
+   price IDs (price_...).
+2. **Webhook in Stripe:** endpoint `https://dash.garrisonbot.com/api/stripe/webhook`, events
+   `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
+   `customer.subscription.created`, `customer.subscription.updated`,
+   `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`,
+   `charge.dispute.created`, `charge.refunded` and `radar.early_fraud_warning.created`. Copy its
+   signing secret (whsec_...). A dispute or early fraud warning cancels that subscription at
+   once; a refund doesn't.
+3. **Customer portal in Stripe:** turn it on (Settings, Billing, Customer portal) and allow
+   switching between the monthly and yearly prices and cancelling at period end.
+4. **Billing database login (Supabase SQL editor):**
+   `ALTER ROLE garrison_billing LOGIN PASSWORD '<a long random password>';` then build its
+   connection string the same way as the dashboard's (pooler host, user
+   `garrison_billing.<project ref>`).
+5. **Use a restricted key in production** (rk_..., Stripe's recommendation), with write access
+   to Checkout Sessions, Customer portal sessions, Customers and Subscriptions, and read
+   access to Invoices, Invoice payments, Charges, Disputes and Prices.
+6. **Sales tax:** if you sell to US states or the EU that require it, turn on Stripe Tax and
+   add your registrations before switching checkout on; until then no tax is collected.
+7. **GitHub secrets:** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
+   `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_YEARLY`, `STRIPE_PRICE_AGENCY_MONTHLY`,
+   `STRIPE_PRICE_AGENCY_YEARLY`, `BILLING_DATABASE_URL`. Then deploy.
+
+**Test mode, done 2026-11-14:** the sandbox has both products and all four prices (lookup keys
+`garrison_pro_monthly`, `garrison_pro_yearly`, `garrison_agency_monthly`,
+`garrison_agency_yearly`) and a customer portal that switches between them. A test subscription
+turned a server's Pro on, cancel-at-period-end kept it on, and canceling turned it off, all
+through the webhook. For local testing: `apps/web/.env.local` (gitignored) holds the test keys,
+and `stripe listen --forward-to localhost:3100/api/stripe/webhook` forwards events.
+
+How it works: Upgrade opens Stripe Checkout with the buyer's Discord ID (and the server, for
+Pro) on the subscription. Stripe calls the webhook; it checks the signature, re-reads the
+subscription from Stripe and applies it through `billing_set_guild` or `billing_set_agency`,
+the only things the `garrison_billing` login can do. Pro stays on through Stripe's payment
+retries (`past_due`) and ends when the subscription is canceled or unpaid; nothing set up on
+the server is deleted. The payer gets "Manage billing" (Stripe's customer portal) on the
+Plan page.

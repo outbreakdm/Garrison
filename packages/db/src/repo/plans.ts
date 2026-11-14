@@ -13,6 +13,11 @@ export interface PlanDetails {
   note: string | null;
   /** The Agency plan whose seat this server takes, when source is `bundle`. */
   bundleId: string | null;
+  /** Stripe, when the server pays for Pro itself. */
+  stripeCustomerId: string | null;
+  paidBy: string | null;
+  currentPeriodEnd: Date | null;
+  cancelAtPeriodEnd: boolean;
   updatedAt: Date | null;
 }
 
@@ -25,6 +30,10 @@ export async function getPlanDetails(db: Db, guildId: string): Promise<PlanDetai
       grantedBy: guildPlans.grantedBy,
       note: guildPlans.note,
       bundleId: guildPlans.bundleId,
+      stripeCustomerId: guildPlans.stripeCustomerId,
+      paidBy: guildPlans.paidBy,
+      currentPeriodEnd: guildPlans.currentPeriodEnd,
+      cancelAtPeriodEnd: guildPlans.cancelAtPeriodEnd,
       updatedAt: guildPlans.updatedAt,
     })
     .from(guildPlans)
@@ -36,6 +45,10 @@ export async function getPlanDetails(db: Db, guildId: string): Promise<PlanDetai
       grantedBy: null,
       note: null,
       bundleId: null,
+      stripeCustomerId: null,
+      paidBy: null,
+      currentPeriodEnd: null,
+      cancelAtPeriodEnd: false,
       updatedAt: null,
     }
   );
@@ -115,6 +128,9 @@ export interface AgencyPlan {
   seats: number;
   source: "stripe" | "comp";
   note: string | null;
+  stripeCustomerId: string | null;
+  currentPeriodEnd: Date | null;
+  cancelAtPeriodEnd: boolean;
   /** The servers in its seats, oldest first. */
   servers: { guildId: string; name: string }[];
 }
@@ -128,6 +144,9 @@ export async function listAgencyPlans(db: Db, ownerId: string): Promise<AgencyPl
       seats: planBundles.seats,
       source: planBundles.source,
       note: planBundles.note,
+      stripeCustomerId: planBundles.stripeCustomerId,
+      currentPeriodEnd: planBundles.currentPeriodEnd,
+      cancelAtPeriodEnd: planBundles.cancelAtPeriodEnd,
     })
     .from(planBundles)
     .where(eq(planBundles.ownerId, ownerId))

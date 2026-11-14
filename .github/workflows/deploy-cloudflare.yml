@@ -92,6 +92,14 @@ jobs:
           BNET_CLIENT_SECRET: ${{ secrets.BNET_CLIENT_SECRET }}
           TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
           TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
+          # Billing (optional until checkout opens): see docs/pricing.md, "Turning checkout on".
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_PRICE_PRO_MONTHLY: ${{ secrets.STRIPE_PRICE_PRO_MONTHLY }}
+          STRIPE_PRICE_PRO_YEARLY: ${{ secrets.STRIPE_PRICE_PRO_YEARLY }}
+          STRIPE_PRICE_AGENCY_MONTHLY: ${{ secrets.STRIPE_PRICE_AGENCY_MONTHLY }}
+          STRIPE_PRICE_AGENCY_YEARLY: ${{ secrets.STRIPE_PRICE_AGENCY_YEARLY }}
+          BILLING_DATABASE_URL: ${{ secrets.BILLING_DATABASE_URL }}
         run: |
           printf '%s' "$DISCORD_TOKEN" | npx wrangler secret put DISCORD_TOKEN
           printf '%s' "$DISCORD_CLIENT_SECRET" | npx wrangler secret put DISCORD_CLIENT_SECRET
@@ -99,6 +107,9 @@ jobs:
           if [ -n "$BNET_CLIENT_SECRET" ]; then printf '%s' "$BNET_CLIENT_SECRET" | npx wrangler secret put BNET_CLIENT_SECRET; fi
           if [ -n "$TURNSTILE_SITE_KEY" ]; then printf '%s' "$TURNSTILE_SITE_KEY" | npx wrangler secret put TURNSTILE_SITE_KEY; fi
           if [ -n "$TURNSTILE_SECRET" ]; then printf '%s' "$TURNSTILE_SECRET" | npx wrangler secret put TURNSTILE_SECRET; fi
+          for v in STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET STRIPE_PRICE_PRO_MONTHLY STRIPE_PRICE_PRO_YEARLY STRIPE_PRICE_AGENCY_MONTHLY STRIPE_PRICE_AGENCY_YEARLY BILLING_DATABASE_URL; do
+            if [ -n "${!v}" ]; then printf '%s' "${!v}" | npx wrangler secret put "$v"; fi
+          done
 
       - name: Deploy bot (builds the container image)
         if: inputs.target != 'dashboard'

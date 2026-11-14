@@ -35,7 +35,7 @@ then updates **Status** and the **Log** before stopping.
 |---|---|---|
 | 0 | This roadmap | **Done** |
 | 1 | Plans foundation: one feature list, one entitlement check, owner bypass, comps, Plan page | **Done**: migration 0022 and the staff row are in production; code not deployed yet |
-| 2 | Stripe in test mode: Checkout, customer portal, webhook, then live keys | Not started |
+| 2 | Stripe in test mode: Checkout, customer portal, webhook, then live keys | **Code done and tested in test mode** (2026-11-14); live keys and migration 0051 in production wait on the owner (`docs/pricing.md`) |
 | 3 | Shared card editor (field editor + live preview + Pro-locked styling) | **Done** (not deployed) |
 | 4 | Role menus (first module on the card editor) | **Code done**, not deployed: needs migration 0023 |
 | 5 | Bot profile per server (name, avatar, banner, bio, card colors) | **Code done** (not deployed); card color and footer defaults moved to later |
@@ -415,7 +415,7 @@ the effort.
 
 **Next (high value, builds on what exists)**
 
-1. **Stripe checkout (Phase 2).** Turns the published prices on. Needs the owner's Stripe
+1. **Stripe checkout (Phase 2).** [x] Built and tested in test mode 2026-11-14. Turns the published prices on. Needs the owner's Stripe
    account, and the Stripe plugin authorized (`/mcp`) to create the products.
 2. **Voice rooms (join to create).** Join a "New room" channel and get your own voice channel,
    deleted when empty; the owner can rename, lock, set a limit and pass ownership. The most
@@ -460,8 +460,8 @@ the effort.
 - **Price** (approved 2026-11-13 by deploying, `docs/pricing.md`): **Pro
   $8.99/mo or $79.99/yr per server**, and a new **Agency** plan, Pro on up to 5 servers for
   **$34.99/mo or $349.99/yr**. Worst-case AI use leaves $7.20 (Pro) and $27.53 (Agency) a month
-  after Stripe. Prices live in `PRICING` (`packages/db/src/plans.ts`); `PAID_PLANS_LIVE`
-  stays false until Stripe works. Earlier research (2026-11-12): MEE6 about $11.99/mo; Dyno
+  after Stripe. Prices live in `PRICING` (`packages/db/src/plans.ts`); checkout
+  turns on once Stripe is configured (`docs/pricing.md`). Earlier research (2026-11-12): MEE6 about $11.99/mo; Dyno
   about $4.99–5.99; Carl-bot $3.99–7.99; Ticket Tool $7.99; Apollo $7.99; Arcane about $7;
   Sesh $5–6.99; Raid-Helper €25/yr.
 - **Free AI pool** (recommended, not built): split `QM_DAILY_BUDGET_USD` into a shared Free
@@ -668,3 +668,15 @@ Decided (2026-11-12, owner):
   labeled, canceled, defense, armor, neighbor, humor, anymore, math, toward and the -ize forms,
   across the dashboard, bot replies, landing page, docs and comments. Saved status values
   (`cancelled` in the database) and `aria-labelledby` are unchanged, as they must be.
+- 2026-11-14: Phase 2, Stripe checkout (committed, not deployed): Upgrade (monthly or yearly)
+  opens Stripe Checkout for Pro on a server or for an Agency plan; the payer gets Manage billing
+  (Stripe's customer portal). A webhook at `/api/stripe/webhook` checks the signature, re-reads
+  the subscription from Stripe and applies it through the new `garrison_billing` login, which
+  can only call `billing_set_guild`, `billing_set_agency` and `billing_record_event` (migration
+  `0051_billing`). Disputes and early fraud warnings cancel the subscription; Pro stays on
+  through payment retries. Checkout switches itself on once the Stripe secrets are set, so
+  `PAID_PLANS_LIVE` is gone. Reviewed against Stripe's best practices (separate products per
+  plan, no payment method list, risk events, an integration label). Tested end to end in the
+  owner's sandbox: subscribe, cancel at period end, cancel. Owner steps left: live products,
+  webhook, portal, a restricted key, Stripe Tax, the billing login's password and the GitHub
+  secrets, then migration 0051 in production.

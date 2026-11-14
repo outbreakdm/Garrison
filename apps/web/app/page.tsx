@@ -1,5 +1,5 @@
 import { brand, inviteUrl, modules } from "@garrison/brand";
-import { formatPrice, PAID_PLANS_LIVE, PRICING, yearlySaving } from "@garrison/db";
+import { formatPrice, PRICING, yearlySaving } from "@garrison/db";
 import type { Metadata } from "next";
 import { Gabarito, Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
@@ -9,6 +9,7 @@ import { Art } from "@/components/Art";
 import { Logo } from "@/components/Logo";
 import { ServerPreview } from "@/components/ServerPreview";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { billingReady } from "@/lib/billing";
 import { siteUrl } from "@/lib/hosts";
 import { publicMetrics } from "@/lib/public-metrics";
 import type { ServerPreview as Preview } from "@/lib/qm-preview";
@@ -769,10 +770,10 @@ export default async function Home() {
         <section className="lp-section lp-price" id="pricing" aria-labelledby="lp-pricing">
           <div className="lp-price__head">
             <h2 className="lp-h2" id="lp-pricing">
-              {PAID_PLANS_LIVE ? "Pricing" : "Free now. Simple prices at launch."}
+              {billingReady() ? "Pricing" : "Free now. Simple prices at launch."}
             </h2>
             <p>
-              {PAID_PLANS_LIVE
+              {billingReady()
                 ? "Everything a server needs to stay safe is free. Pay for the look, the limits and the history."
                 : "Every module is free while Garrison is in early access. These are the prices when paid plans open; nothing costs money before then, and safety stays free for good."}
             </p>
@@ -808,7 +809,7 @@ export default async function Home() {
                   </ul>
                   <p className="lp-tier__cta">
                     {paid
-                      ? PAID_PLANS_LIVE
+                      ? billingReady()
                         ? "Upgrade from any server's Plan page"
                         : "Opens at launch"
                       : "What every server gets"}

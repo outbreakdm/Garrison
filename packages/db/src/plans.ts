@@ -59,12 +59,6 @@ export const PRICING = {
 } as const;
 export type PlanTier = keyof typeof PRICING;
 
-/**
- * False until Stripe checkout works end to end: pages show prices as "at launch" and
- * nothing can be bought. Until then plans are given only by staff (comps).
- */
-export const PAID_PLANS_LIVE = false;
-
 /** "save 26%": what paying yearly saves against twelve monthly payments. */
 export const yearlySaving = (monthly: number, yearly: number) =>
   `save ${Math.round((1 - yearly / (monthly * 12)) * 100)}%`;

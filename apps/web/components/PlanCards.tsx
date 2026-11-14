@@ -1,4 +1,4 @@
-import { formatPrice, PAID_PLANS_LIVE, type PlanTier, PRICING, yearlySaving } from "@garrison/db";
+import { formatPrice, type PlanTier, PRICING, yearlySaving } from "@garrison/db";
 import type { ReactNode } from "react";
 
 const TIERS: PlanTier[] = ["free", "pro", "agency"];
@@ -20,15 +20,18 @@ function Check() {
 
 /**
  * Free, Pro and Agency side by side: the price, who it's for, what it adds, and where
- * this server stands. Prices come from PRICING. Before PAID_PLANS_LIVE the section says
+ * this server stands. Prices come from PRICING. Until checkout is set up the section says
  * once that these are launch prices, and each paid card ends with "Opens at launch".
  * `current` marks this server's plan; `actions` goes at the foot of a tier.
  */
 export function PlanCards({
   current,
+  live = false,
   actions = {},
 }: {
   current?: PlanTier;
+  /** Checkout is set up (lib/billing billingReady): no "Opens at launch". */
+  live?: boolean;
   actions?: Partial<Record<PlanTier, ReactNode>>;
 }) {
   return (
@@ -39,7 +42,7 @@ export function PlanCards({
         const here = current === tier;
         const foot =
           actions[tier] ??
-          (here ? null : paid && !PAID_PLANS_LIVE ? (
+          (here ? null : paid && !live ? (
             <span className="tier__soon">Opens at launch</span>
           ) : null);
         return (
