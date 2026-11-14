@@ -81,6 +81,7 @@ export const EDITABLE_FIELDS = {
   barracks: ["statRoles"],
   // Checked with checkAutomod before it gets here.
   automod: [
+    "scamLinks",
     "enabled",
     "invites",
     "mentionLimit",

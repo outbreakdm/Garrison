@@ -421,7 +421,7 @@ the effort.
    deleted when empty; the owner can rename, lock, set a limit and pass ownership. The most
    common gaming-server bot after moderation. Free: 1 creator channel. Pro: several, per-game
    name templates, rooms that follow the Rally group's game.
-3. **Scam and phishing links (Moderation, free).** Fake Nitro and Steam-gift links are the most
+3. **Scam and phishing links (Moderation, free).** [x] Built 2026-11-14 (migration 0053). Fake Nitro and Steam-gift links are the most
    common attack on gaming servers. A maintained list of known scam domains plus look-alike
    detection (discorcl, steamcomrnunity); remove the message, open a case, optional timeout.
 4. **Suggestions board.** Members post ideas with a button or `/suggest`; a card with up and
@@ -690,3 +690,11 @@ Decided (2026-11-12, owner):
   {user}. The invite now asks for Move Members (existing servers grant it or re-add Garrison);
   the health check lists it as optional. {game} was left out: it needs the privileged Presence
   intent. Migration `0052_voice_rooms`. Not yet tried against a real Discord server.
+- 2026-11-14: Scam and phishing links (committed, not deployed): a new Automod switch, on by
+  default, free, and working even with the rest of Automod off. It reads each link's address
+  and catches look-alikes (steamcomrnunity, discorcl, dicsord), a brand plus bait in someone
+  else's address (discord-nitro, free-steam-gift) and an official address hidden at the front
+  of another (discord.com.gift-claim.xyz), while official sites and ordinary ones
+  (discord.js.org, discordbotlist.com) pass. A hit removes the message and times the sender
+  out for an hour with a case (usually a hacked account, so no ban). No list to fetch or keep
+  fresh (`packages/db/src/scam-links.ts`, tested). Migration `0053_scam_links`.

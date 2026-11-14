@@ -344,6 +344,7 @@ export default async function WatchPage({
         open={isEditing(query, "automod")}
         facts={[
           { label: "Status", value: am.enabled ? "On" : "Off" },
+          { label: "Scam links", value: am.scamLinks ? "Blocked" : "Allowed" },
           { label: "Blocked words", value: String(am.words.length) },
           {
             label: "Then",
@@ -367,6 +368,12 @@ export default async function WatchPage({
             defaultChecked={am.enabled}
             label="Automod on"
             help="Staff with Manage Messages are never checked."
+          />
+          <Switch
+            name="scamLinks"
+            defaultChecked={am.scamLinks}
+            label="Block scam and phishing links"
+            help="Fake Nitro, Steam gifts and look-alike login pages (steamcomrnunity, discorcl). Removes the message and times the sender out for an hour, since it's usually a hacked account. Works even with Automod off. Free."
           />
           <div className="settings-grid">
             <div className="card-col">

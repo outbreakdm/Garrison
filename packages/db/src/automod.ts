@@ -17,6 +17,12 @@ export type AiStrictness = "low" | "medium" | "high";
 
 export interface AutomodConfig {
   enabled: boolean;
+  /**
+   * Remove scam and phishing links (fake Nitro, Steam gifts, login pages) and time the
+   * sender out for an hour. Free, on by default, and works even with the rest of
+   * Automod off: safety never waits for setup.
+   */
+  scamLinks: boolean;
   /** Remove invite links to other servers. */
   invites: boolean;
   /** Most user and role mentions in one message. 0: off. */
@@ -63,6 +69,7 @@ export const WORDS_HARD_MAX = FEATURES["automod.words"].pro;
 
 export const DEFAULT_AUTOMOD: AutomodConfig = {
   enabled: false,
+  scamLinks: true,
   invites: true,
   mentionLimit: 5,
   spamCount: 6,
@@ -104,6 +111,7 @@ export function readAutomod(
   if (!raw) return { ...DEFAULT_AUTOMOD };
   return {
     enabled: raw.enabled === true,
+    scamLinks: raw.scamLinks !== false,
     invites: raw.invites !== false,
     mentionLimit: int(raw.mentionLimit, 0, AUTOMOD_LIMITS.mentionLimit, 5),
     spamCount: int(raw.spamCount, 0, AUTOMOD_LIMITS.spamCount, 6),
@@ -167,6 +175,7 @@ export function checkAutomod(
     ok: true,
     value: {
       enabled: raw.enabled === true,
+      scamLinks: raw.scamLinks === true,
       invites: raw.invites === true,
       mentionLimit: mentionLimit as number,
       spamCount: spamCount as number,
@@ -240,7 +249,8 @@ export function aiFlags(
   );
 }
 
-export const RULE_TEXT: Record<RuleHit["rule"] | "spam" | AiCategory, string> = {
+export const RULE_TEXT: Record<RuleHit["rule"] | "spam" | "scam" | AiCategory, string> = {
+  scam: "a scam or phishing link",
   word: "a blocked word",
   invite: "an invite to another server",
   mentions: "too many mentions",

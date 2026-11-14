@@ -1771,6 +1771,8 @@ export const automodSettings = pgTable(
       .primaryKey()
       .references(() => guilds.id, { onDelete: "cascade" }),
     enabled: boolean("enabled").notNull().default(false),
+    /** Scam and phishing links: on by default, free, and independent of `enabled`. */
+    scamLinks: boolean("scam_links").notNull().default(true),
     invites: boolean("invites").notNull().default(true),
     mentionLimit: integer("mention_limit").notNull().default(5),
     spamCount: integer("spam_count").notNull().default(6),

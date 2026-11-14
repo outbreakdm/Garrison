@@ -4,13 +4,15 @@ import {
   aiFlags,
   checkMessageText,
   entitlements,
+  findScamLink,
   getAutomod,
   getGuildPlan,
   getWatchSettings,
   isSpam,
   RULE_TEXT,
+  type ScamHit,
 } from "@garrison/db";
-import { type Message, PermissionFlagsBits } from "discord.js";
+import { type GuildMember, type Message, PermissionFlagsBits } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
 import { cardMessage } from "../../lib/card.js";
 import { safeText } from "../../lib/text.js";
@@ -99,11 +101,49 @@ async function logToWatch(ctx: BotContext, message: Message<true>, title: string
     .catch(() => null);
 }
 
+/**
+ * A scam or phishing link: remove it and time the sender out for an hour (these come
+ * mostly from hacked accounts, so a ban would punish the victim), with a case so staff
+ * see it and can undo it.
+ */
+async function removeScam(
+  ctx: BotContext,
+  message: Message<true>,
+  member: GuildMember,
+  scam: ScamHit,
+) {
+  const me = message.guild.members.me ?? (await message.guild.members.fetchMe());
+  if (message.channel.permissionsFor(me)?.has(PermissionFlagsBits.ManageMessages))
+    await message.delete().catch(() => null);
+  const key = `${message.guildId}:${message.author.id}`;
+  const now = Date.now();
+  if (now - (lastCase.get(key) ?? 0) < CASE_GAP_MS) return;
+  lastCase.set(key, now);
+  const reason = `Automod: ${RULE_TEXT.scam} (${scam.host} ${scam.why})`;
+  const result = await applyMemberAction(ctx, {
+    guild: message.guild,
+    actor: { id: me.id, tag: me.user.username },
+    target: message.author,
+    member,
+    action: "timeout",
+    reason,
+    durationSeconds: 3600,
+    source: "automod",
+  });
+  if (!result.ok)
+    await logToWatch(
+      ctx,
+      message,
+      "Removed a scam link",
+      `${scam.host} ${scam.why}. ${result.error}`,
+    );
+}
+
 /** Check one message. Never throws: automod must not break the bot. */
 export async function onAutomodMessage(ctx: BotContext, message: Message, keys: AutomodKeys) {
   if (!message.inGuild() || message.author.bot || message.system || message.webhookId) return;
   const config = await automod(ctx, message.guildId);
-  if (!config.enabled) return;
+  if (!config.enabled && !config.scamLinks) return;
   const member = message.member;
   if (!member || member.permissions.has(PermissionFlagsBits.ManageMessages)) return;
   if (config.exemptChannelIds.includes(message.channelId)) return;
@@ -114,6 +154,14 @@ export async function onAutomodMessage(ctx: BotContext, message: Message, keys: 
   const times = [...(recent.get(key) ?? []).filter((t) => now - t < 60_000), now];
   recent.set(key, times);
   if (recent.size > 20_000) recent.clear();
+
+  // Scam and phishing links first: on by default, even with the rest of Automod off.
+  const scam = config.scamLinks ? findScamLink(message.content) : null;
+  if (scam) {
+    await removeScam(ctx, message, member, scam);
+    return;
+  }
+  if (!config.enabled) return;
 
   const mentions = message.mentions.users.size + message.mentions.roles.size;
   let reason: string | null = null;

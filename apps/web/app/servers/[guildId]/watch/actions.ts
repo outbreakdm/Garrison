@@ -124,6 +124,7 @@ export async function saveAutomod(form: FormData) {
   if (!roles || !channels) return back({ error: "Discord didn't answer. Try again." });
   const raw = {
     enabled: form.get("enabled") === "on",
+    scamLinks: form.get("scamLinks") === "on",
     invites: form.get("invites") === "on",
     mentionLimit: Number(form.get("mentionLimit")),
     spamCount: Number(form.get("spamCount")),

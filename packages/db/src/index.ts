@@ -46,6 +46,7 @@ export * from "./repo/web";
 export * from "./repo/welcome";
 export * from "./role";
 export * from "./role-menus";
+export * from "./scam-links";
 export type {
   AlertStateRow,
   Appeal,
