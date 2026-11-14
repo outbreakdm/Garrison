@@ -407,6 +407,54 @@ Later phases get their checklists when they start.
 5. **Stream and video alerts:** Twitch, YouTube, Kick live and upload notifications.
 6. **Giveaways and starboard.**
 
+## Feature pass (proposed 2026-11-14, waiting on the owner's pick)
+
+What gaming servers usually add a second or third bot for, and Garrison doesn't do yet. Each
+follows the plan rule: safety is free, Pro sells look, scale and history. Ranked by value for
+the effort.
+
+**Next (high value, builds on what exists)**
+
+1. **Stripe checkout (Phase 2).** Turns the published prices on. Needs the owner's Stripe
+   account, and the Stripe plugin authorized (`/mcp`) to create the products.
+2. **Voice rooms (join to create).** Join a "New room" channel and get your own voice channel,
+   deleted when empty; the owner can rename, lock, set a limit and pass ownership. The most
+   common gaming-server bot after moderation. Free: 1 creator channel. Pro: several, per-game
+   name templates, rooms that follow the Rally group's game.
+3. **Scam and phishing links (Moderation, free).** Fake Nitro and Steam-gift links are the most
+   common attack on gaming servers. A maintained list of known scam domains plus look-alike
+   detection (discorcl, steamcomrnunity); remove the message, open a case, optional timeout.
+4. **Suggestions board.** Members post ideas with a button or `/suggest`; a card with up and
+   down votes; staff mark Planned, Done or Declined from a dashboard queue. Reuses the card
+   editor and the ticket queue. Free: 1 board. Pro: several boards, custom look, anonymous mode.
+5. **Server insights.** Joins and leaves, active members, messages by channel and hour, who
+   stays after a week, invite sources (Logs already tracks most of it). Free: 30 days. Pro: a
+   year and CSV export. A strong reason to pay that costs almost nothing to run.
+
+**Then (smaller, well understood)**
+
+6. **Auto-responses and saved replies.** A trigger word or `/faq name` posts a card (rules,
+   how to apply, server IP). Free 10, Pro 100 with the card editor's look.
+7. **Member pages (Phase 4 in `docs/DASHBOARD_FIRST.md`).** Members without Manage Server get
+   their rank card, groups and raids, linked accounts and their own cases. Decides the open
+   question; `/play` is already half of it.
+8. **Birthdays and milestones.** Members set a birthday; a message and a role for the day;
+   anniversary roles (1 year in the server). Small, loved by communities.
+9. **Sticky messages and auto-clean channels.** Keep a note at the bottom of a channel;
+   clear an LFG or screenshots channel after N hours.
+10. **Verify with a game account.** A role only after linking a game account (Game accounts),
+    with stat roles already built on top.
+
+**Bigger bets**
+
+11. **Tournaments and scrims.** Sign-ups, check-in, a bracket drawn on the dashboard and in
+    Discord, results that feed ranks. Builds on Groups and raids; a real differentiator.
+12. **AI helpers (Pro, inside the existing credits and spend cap).** Ticket summaries and a
+    suggested first reply; an AI answer in a help channel from the server's own FAQ.
+13. **Game news feeds.** Steam patch notes, a game's server status and subreddit posts, beside
+    stream alerts.
+14. **Kick and YouTube live alerts.** Already planned; waiting on keys and Kick's app review.
+
 ## Open decisions for the owner
 
 - **Price** (approved 2026-11-13 by deploying, `docs/pricing.md`): **Pro
