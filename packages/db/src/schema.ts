@@ -457,6 +457,7 @@ export const settingsModule = pgEnum("settings_module", [
   "starboard",
   "automod",
   "barracks",
+  "voice",
 ]);
 
 /** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */
@@ -1845,3 +1846,41 @@ export const serverBackups = pgTable(
 ).enableRLS();
 
 export type ServerBackupRow = typeof serverBackups.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Voice rooms (join to create)
+// ---------------------------------------------------------------------------
+
+/** A server's voice room settings, one row, edited on the dashboard with history and undo. */
+export const voiceSettings = pgTable(
+  "voice_settings",
+  {
+    guildId: text("guild_id")
+      .primaryKey()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    enabled: boolean("enabled").notNull().default(false),
+    creatorChannelIds: text("creator_channel_ids").array().notNull().default(sql`'{}'::text[]`),
+    nameTemplate: text("name_template"),
+    userLimit: integer("user_limit").notNull().default(0),
+    categoryId: text("category_id"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [check("voice_user_limit", sql`${t.userLimit} BETWEEN 0 AND 99`)],
+).enableRLS();
+
+/** A room Garrison made: kept so a restart still knows which channels to tidy up. */
+export const voiceRooms = pgTable(
+  "voice_rooms",
+  {
+    channelId: text("channel_id").primaryKey(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    ownerId: text("owner_id").notNull(),
+    creatorChannelId: text("creator_channel_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("voice_rooms_guild").on(t.guildId)],
+).enableRLS();
+
+export type VoiceRoom = typeof voiceRooms.$inferSelect;

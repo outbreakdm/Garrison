@@ -365,6 +365,13 @@
       "when": 1794670776815,
       "tag": "0051_billing",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1794684428003,
+      "tag": "0052_voice_rooms",
+      "breakpoints": true
     }
   ]
 }

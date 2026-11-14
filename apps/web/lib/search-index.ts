@@ -45,6 +45,12 @@ export const SEARCH_INDEX: SearchEntry[] = [
   page("/ledger", "Logs", null, "audit log events history joins leaves ledger"),
   page("/rally", "Groups and raids", null, "lfg group raid ops roster signups rally"),
   page(
+    "/voice",
+    "Voice rooms",
+    null,
+    "voice room join to create temp temporary channel vc private room lobby",
+  ),
+  page(
     "/barracks",
     "Game accounts",
     null,

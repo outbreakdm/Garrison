@@ -23,6 +23,7 @@ const ITEMS = [
   { group: null, id: "orchid", href: "/beacon", name: "Stream alerts" },
   { group: null, id: "orchid", href: "/dispatch", name: "Messages" },
   { group: "Gaming", id: "volt", href: "/rally", name: "Groups and raids" },
+  { group: null, id: "volt", href: "/voice", name: "Voice rooms" },
   { group: null, id: "volt", href: "/barracks", name: "Game accounts" },
   { group: "Server", id: "steel", href: "/quartermaster", name: "AI builder" },
   { group: null, id: "steel", href: "/settings", name: "Settings" },

@@ -43,6 +43,7 @@ import {
   onTicketMessage,
   sweepTickets,
 } from "./modules/tickets/service.js";
+import { onVoiceRoomUpdate, sweepVoiceRooms } from "./modules/voice/service.js";
 import { onAutomodMessage } from "./modules/watch/automod.js";
 import { liftExpiredBans } from "./modules/watch/service.js";
 import { welcomeJoin, welcomeLeave } from "./modules/welcome/service.js";
@@ -142,6 +143,9 @@ client.once(Events.ClientReady, async (ready) => {
     await sweepRally(ctx, ready).catch((error) => logger.error("Rally sweep failed", { error }));
     await sweepOps(ctx, ready).catch((error) => logger.error("Ops sweep failed", { error }));
     await sweepVoiceXp(ctx, ready).catch((error) => logger.error("Voice XP failed", { error }));
+    await sweepVoiceRooms(ctx, ready).catch((error) =>
+      logger.error("Voice rooms sweep failed", { error }),
+    );
     await sweepStatRoles(ctx, ready).catch((error) => logger.error("Stat roles failed", { error }));
     await sweepMessages(ctx, ready).catch((error) =>
       logger.error("Scheduled messages failed", { error }),
@@ -272,6 +276,11 @@ client.on(Events.MessageDelete, (message) => {
   );
 });
 client.on(Events.VoiceStateUpdate, (before, after) => void onVoiceUpdate(ctx, before, after));
+client.on(Events.VoiceStateUpdate, (before, after) =>
+  onVoiceRoomUpdate(ctx, before, after).catch((error) =>
+    logger.error("Voice room update failed", { guildId: after.guild.id, error }),
+  ),
+);
 
 client.on(Events.GuildCreate, async (guild) => {
   logger.info("Joined server", { guildId: guild.id, members: guild.memberCount });

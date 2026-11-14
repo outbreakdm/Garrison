@@ -417,7 +417,7 @@ the effort.
 
 1. **Stripe checkout (Phase 2).** [x] Built and tested in test mode 2026-11-14. Turns the published prices on. Needs the owner's Stripe
    account, and the Stripe plugin authorized (`/mcp`) to create the products.
-2. **Voice rooms (join to create).** Join a "New room" channel and get your own voice channel,
+2. **Voice rooms (join to create).** [x] Built 2026-11-14 (migration 0052; needs Move Members). Join a "New room" channel and get your own voice channel,
    deleted when empty; the owner can rename, lock, set a limit and pass ownership. The most
    common gaming-server bot after moderation. Free: 1 creator channel. Pro: several, per-game
    name templates, rooms that follow the Rally group's game.
@@ -680,3 +680,13 @@ Decided (2026-11-12, owner):
   owner's sandbox: subscribe, cancel at period end, cancel. Owner steps left: live products,
   webhook, portal, a restricted key, Stripe Tax, the billing login's password and the GitHub
   secrets, then migration 0051 in production.
+- 2026-11-14: Voice rooms (committed, not deployed): joining a creator voice channel makes the
+  member their own room beside it (or in a chosen category) and moves them in; the owner gets
+  Discord's channel controls on that room only (rename, limit, who joins); it passes to someone
+  still inside when the owner leaves and is deleted once empty, with a sweep that tidies up
+  after restarts. Dashboard page under Gaming with settings (history and undo), the rooms open
+  now, and a warning when Garrison lacks Move Members. Free: 1 creator channel and the
+  standard name; Pro (`voice.creators` 5, `voice.names`): more channels and your own name with
+  {user}. The invite now asks for Move Members (existing servers grant it or re-add Garrison);
+  the health check lists it as optional. {game} was left out: it needs the privileged Presence
+  intent. Migration `0052_voice_rooms`. Not yet tried against a real Discord server.

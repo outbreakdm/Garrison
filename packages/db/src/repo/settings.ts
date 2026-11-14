@@ -20,6 +20,7 @@ import {
   settingsChanges,
   starboardSettings,
   ticketSettings,
+  voiceSettings,
   watchSettings,
   welcomeSettings,
 } from "../schema";
@@ -94,6 +95,8 @@ export const EDITABLE_FIELDS = {
     "aiCategories",
     "aiStrictness",
   ],
+  // Checked with checkVoiceRooms before it gets here.
+  voice: ["enabled", "creatorChannelIds", "nameTemplate", "userLimit", "categoryId"],
   // Checked with checkStarboard before it gets here.
   starboard: [
     "enabled",
@@ -231,6 +234,7 @@ const TABLES = {
   tickets: ticketSettings,
   alerts: alertSettings,
   starboard: starboardSettings,
+  voice: voiceSettings,
   automod: automodSettings,
   barracks: barracksSettings,
 } as const;
@@ -249,6 +253,7 @@ const LAZY = new Set<SettingsModule>([
   "starboard",
   "automod",
   "barracks",
+  "voice",
 ]);
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -359,6 +364,12 @@ async function writeRow(tx: Tx, module: SettingsModule, guildId: string, values:
         .update(barracksSettings)
         .set(set as Partial<typeof barracksSettings.$inferInsert>)
         .where(eq(barracksSettings.guildId, guildId));
+      return;
+    case "voice":
+      await tx
+        .update(voiceSettings)
+        .set(set as Partial<typeof voiceSettings.$inferInsert>)
+        .where(eq(voiceSettings.guildId, guildId));
       return;
     case "starboard":
       await tx

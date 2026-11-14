@@ -269,6 +269,27 @@ export async function botTopPosition(guildId: string): Promise<number | null> {
   }
 }
 
+/**
+ * Garrison's server-wide permissions in a server (its roles plus @everyone), or null when
+ * Discord can't say. For warnings only: the bot checks again before acting.
+ */
+export async function botPermissions(guildId: string): Promise<bigint | null> {
+  try {
+    const [me, guild] = await Promise.all([
+      discord<{ roles: string[] }>(`/guilds/${guildId}/members/${env().DISCORD_CLIENT_ID}`, {
+        headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` },
+      }),
+      rawGuild(guildId),
+    ]);
+    let bits = 0n;
+    for (const r of guild.roles)
+      if (r.id === guildId || me.roles.includes(r.id)) bits |= BigInt(r.permissions ?? "0");
+    return bits;
+  } catch {
+    return null;
+  }
+}
+
 /** How Garrison looks in one server now: its nickname and server-only images. */
 export interface BotLook {
   nick: string | null;

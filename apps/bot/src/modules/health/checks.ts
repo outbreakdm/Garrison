@@ -29,6 +29,12 @@ export const REQUIRED_PERMISSIONS: {
   },
   { module: "Rally", bits: P.Connect, why: "to open voice channels for full squads" },
   {
+    module: "Voice rooms",
+    bits: P.MoveMembers,
+    why: "to move a member into the voice room they just made",
+    optional: true,
+  },
+  {
     module: "Profile",
     bits: P.ChangeNickname,
     why: "to use the nickname set for it on the dashboard",

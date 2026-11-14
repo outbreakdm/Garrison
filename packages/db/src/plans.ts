@@ -86,7 +86,8 @@ type Module =
   | "gatehouse"
   | "ledger"
   | "barracks"
-  | "qm";
+  | "qm"
+  | "voice";
 
 interface Feature<T> {
   module: Module;
@@ -320,6 +321,18 @@ export const FEATURES = {
     about: "LFG templates",
     free: 3,
     pro: 25,
+  },
+  "voice.creators": {
+    module: "voice",
+    about: "Voice channels members join to make their own room",
+    free: 1,
+    pro: 5,
+  },
+  "voice.names": {
+    module: "voice",
+    about: "Your own voice room names, with the owner's name in them",
+    free: false,
+    pro: true,
   },
   "rally.notifyRole": {
     module: "rally",
