@@ -895,3 +895,369 @@ a.g-btn--primary:hover {
 .g-help > span:nth-child(5n + 5) .placeholder {
   --chip: var(--caution);
 }
+
+/* --- Overview: the server at a glance --------------------------------------------------------
+   A header card for the server, the AI assistant's offer until it's been used, what needs
+   you, this week's numbers, then activity, modules and cases, then raids and health. */
+.ov-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 18px 20px;
+  background:
+    radial-gradient(
+      120% 160% at 100% 0%,
+      color-mix(in srgb, var(--id, var(--accent)) 9%, transparent),
+      transparent 60%
+    ),
+    var(--surface);
+}
+.ov-hero__mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--id, var(--accent)) 18%, var(--surface-raised));
+  color: var(--id-text, var(--text));
+  font-size: 22px;
+  font-weight: 750;
+}
+.ov-hero__text {
+  flex: 1;
+  min-width: 0;
+}
+.ov-hero__name {
+  margin: 0;
+  font-size: 22px;
+  font-stretch: 104%;
+  line-height: 28px;
+}
+.ov-hero__meta {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.ov-hero__side {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+.ov-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.ov-live__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--go);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--go) 22%, transparent);
+}
+.ov-hero__build {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+/* The AI assistant's offer: a strip in the Server color, one action. */
+.ov-ai {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 16px 20px;
+  border-color: color-mix(in srgb, var(--go) 28%, var(--line));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--go) 8%, transparent), transparent 70%),
+    var(--surface);
+}
+.ov-ai__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+}
+.ov-ai__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.ov-ai__chips li {
+  padding: 2px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--text-muted);
+  font-size: 12px;
+}
+/* This week's numbers: five cells in one panel, split by hairlines. */
+.ov-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 0;
+  overflow: hidden;
+}
+.ov-stat {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+  padding: 16px 18px;
+  border-left: 1px solid var(--line);
+}
+.ov-stat:first-child {
+  border-left: 0;
+}
+.ov-stat__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.ov-stat__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--id, var(--accent)) 14%, var(--surface-raised));
+  color: var(--id-text, var(--accent-strong));
+}
+.ov-stat__value {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 34px;
+  font-variant-numeric: tabular-nums;
+}
+.ov-stat__note {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 17px;
+}
+.ov-delta {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.ov-delta--up {
+  background: color-mix(in srgb, var(--go) 14%, transparent);
+  color: var(--go);
+}
+.ov-delta--down {
+  background: color-mix(in srgb, var(--alert) 14%, transparent);
+  color: var(--alert);
+}
+.ov-delta--flat {
+  background: var(--surface-raised);
+  color: var(--text-muted);
+}
+/* Activity and top channels side by side; modules beside recent cases. */
+.ov-charts,
+.ov-pair {
+  display: grid;
+  gap: var(--space-4);
+  align-items: stretch;
+}
+.ov-charts {
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+}
+.ov-pair {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+}
+.ov-chart__total {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.ov-chart__total strong {
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.ov-top {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ov-top li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px var(--space-3);
+  font-size: 13.5px;
+}
+.ov-top__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov-top__n {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.ov-top__bar {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 6px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface-raised);
+  overflow: hidden;
+  appearance: none;
+}
+.ov-top__bar::-webkit-meter-bar {
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface-raised);
+}
+.ov-top__bar::-webkit-meter-optimum-value {
+  border-radius: 999px;
+  background: var(--id-text, var(--accent-strong));
+}
+.ov-top__bar::-moz-meter-bar {
+  border-radius: 999px;
+  background: var(--id-text, var(--accent-strong));
+}
+.ov-empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+/* Modules: one row each, a dot that's green when it's on. */
+.ov-modules,
+.ov-cases {
+  display: grid;
+  margin: calc(-1 * var(--space-1)) calc(-1 * var(--space-4)) calc(-1 * var(--space-4));
+  padding: 0;
+  list-style: none;
+}
+.ov-cases > li {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px var(--space-4);
+  font-size: 13.5px;
+}
+.ov-modules > li + li,
+.ov-cases > li + li {
+  border-top: 1px solid var(--line);
+}
+.ov-modules__link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 9px var(--space-4);
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 550;
+  text-decoration: none;
+}
+.ov-modules__link:hover {
+  background: var(--surface-raised);
+}
+.ov-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line-strong);
+}
+.ov-dot--on {
+  background: var(--go);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--go) 18%, transparent);
+}
+.ov-cases__who {
+  font-weight: 600;
+}
+.ov-cases__why {
+  overflow: hidden;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov-cases__when {
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.span-3 {
+  grid-column: 1 / -1;
+}
+@media (max-width: 1100px) {
+  .ov-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .ov-stat:nth-child(4) {
+    border-left: 0;
+  }
+  .ov-stat:nth-child(n + 4) {
+    border-top: 1px solid var(--line);
+  }
+  .ov-charts,
+  .ov-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 720px) {
+  .ov-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ov-stat:nth-child(odd) {
+    border-left: 0;
+  }
+  .ov-stat:nth-child(4) {
+    border-left: 1px solid var(--line);
+  }
+  .ov-stat:nth-child(n + 3) {
+    border-top: 1px solid var(--line);
+  }
+  .ov-hero__side {
+    flex: 1 1 100%;
+    justify-items: start;
+  }
+  .ov-cases > li {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .ov-cases__why {
+    display: none;
+  }
+}
+
+/* A header bar's link: quiet, with an arrow, like "View all". */
+.g-card > :is(.card-head, .queue__head):first-child > a:not([class]) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.g-card > :is(.card-head, .queue__head):first-child > a:not([class])::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-top: 1.5px solid currentColor;
+  border-right: 1.5px solid currentColor;
+  transform: rotate(45deg);
+}
+.g-card > :is(.card-head, .queue__head):first-child > a:not([class]):hover {
+  color: var(--text);
+}

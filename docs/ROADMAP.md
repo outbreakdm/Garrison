@@ -918,3 +918,10 @@ Decided (2026-11-12, owner):
   across the row to edit; Welcome's preview stays in view and its variables are colored
   chips. DESIGN.md and `.impeccable/design.json` rewritten for the Console world. Checked
   locally on desktop and phone (no sideways scroll). Not deployed.
+- 2026-11-15: Deployed the Console redesign (`183d739`, run 43776865566); live with the new
+  rail, header bars and tiles, /healthz and /status answer, bot online. Then the Overview in
+  the same style: a server header card (member and online counts from Discord's
+  `with_counts`), the AI assistant offer until it's first used, a five-stat row with
+  week-over-week changes, a 14-day messages chart beside top channels, a modules list with
+  on/off dots beside recent cases, then raids, security and health. The e2e Discord mock
+  ignores query strings and returns counts. Not deployed.

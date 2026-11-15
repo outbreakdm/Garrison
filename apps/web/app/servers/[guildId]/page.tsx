@@ -3,6 +3,7 @@ import {
   capacity,
   getActivity,
   getHealthSnapshot,
+  getInsights,
   getLatency,
   getOverview,
   listDashboardActions,
@@ -15,8 +16,11 @@ import Link from "next/link";
 import { ViewTransition } from "react";
 import { DurationBar, untilText } from "@/components/DurationBar";
 import { ActionBadge, formatTime, plainMentions } from "@/components/format";
+import { Bars } from "@/components/insights/Bars";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { getDb } from "@/lib/db";
+import { channelNames, guildCounts } from "@/lib/discord";
+import { moduleStates } from "@/lib/module-states";
 import { ACTION_KIND } from "@/lib/rally-schema";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "./requests";
@@ -73,6 +77,64 @@ interface Attention {
 }
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const num = (n: number) => n.toLocaleString("en-US");
+const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+/** "Nov 14" from "2026-11-14", in UTC like the counts. */
+const dayName = (d: string) =>
+  new Date(`${d}T00:00:00Z`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+
+/** This week against the week before, as a signed whole percent; null with nothing to compare. */
+function change(now: number, before: number) {
+  if (!before) return null;
+  return Math.round(((now - before) / before) * 100);
+}
+
+/** A stat's change against last week: up green, down red, flat grey. */
+function Delta({ value, suffix = "vs last week" }: { value: number | null; suffix?: string }) {
+  if (value === null) return <span className="ov-stat__note">{suffix}</span>;
+  const tone = value > 0 ? "up" : value < 0 ? "down" : "flat";
+  return (
+    <span className="ov-stat__note">
+      <span className={`ov-delta ov-delta--${tone}`}>
+        {value > 0 ? "+" : ""}
+        {value}%
+      </span>{" "}
+      {suffix}
+    </span>
+  );
+}
+
+/** Small line icons for the stat tiles, drawn in one stroke weight. */
+const ICONS = {
+  members:
+    "M5.5 7a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm-4 7c0-2.2 1.8-4 4-4s4 1.8 4 4M11 7.5a2 2 0 1 0 0-4m1.5 10.5c0-1.7-.9-3.1-2.2-3.7",
+  messages: "M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z",
+  active: "M1.5 8h3l2-4.5 3 9 2-4.5h3",
+  cases: "M8 1.5 13.5 4v4c0 3-2.4 5.4-5.5 6.5C4.9 13.4 2.5 11 2.5 8V4z",
+  reply: "M9 1.5 3 9h4.5L7 14.5 13 7H8.5z",
+} as const;
+
+function Icon({ d }: { d: string }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      width="15"
+      height="15"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={d} />
+    </svg>
+  );
+}
 
 export default async function OverviewPage({
   params,
@@ -85,15 +147,30 @@ export default async function OverviewPage({
   const query = await searchParams;
   const { guild } = await requireGuildAccess(guildId);
   const db = await getDb();
-  const [o, cases, activity, latency, health, [build], actions] = await Promise.all([
-    getOverview(db, guild.id),
-    listRecentCases(db, guild.id, 5),
-    getActivity(db, guild.id),
-    getLatency(db, guild.id),
-    getHealthSnapshot(db, guild.id),
-    listQmBuilds(db, guild.id, 1),
-    listDashboardActions(db, guild.id, 30),
-  ]);
+  const [o, cases, activity, latency, health, [build], actions, ins, counts, mods, names] =
+    await Promise.all([
+      getOverview(db, guild.id),
+      listRecentCases(db, guild.id, 6),
+      getActivity(db, guild.id),
+      getLatency(db, guild.id),
+      getHealthSnapshot(db, guild.id),
+      listQmBuilds(db, guild.id, 1),
+      listDashboardActions(db, guild.id, 30),
+      getInsights(db, guild.id, 14),
+      guildCounts(guild.id).catch(() => null),
+      moduleStates(db, guild.id),
+      channelNames(guild.id).catch(() => new Map<string, string>()),
+    ]);
+  // This week against last: messages, members posting each day, joins less leaves.
+  const week = ins.daily.slice(-7);
+  const before = ins.daily.slice(-14, -7);
+  const messages7 = sum(week.map((d) => d.messages));
+  const messagesChange = change(messages7, sum(before.map((d) => d.messages)));
+  const activeChange = change(sum(week.map((d) => d.active)), sum(before.map((d) => d.active)));
+  const net7 = sum(week.map((d) => d.joins - d.leaves));
+  const topChannels = ins.channels.slice(0, 5);
+  const topMax = Math.max(1, ...topChannels.map((c) => c.messages));
+  const modulesOn = mods.filter((m) => m.on).length;
   const clientId = process.env.DISCORD_CLIENT_ID;
   const fixUrl = clientId && /^\d+$/.test(clientId) ? inviteUrl(clientId, guild.id) : null;
   const now = Date.now();
@@ -176,35 +253,65 @@ export default async function OverviewPage({
 
   return (
     <>
-      <div className="page-head">
-        <div>
+      <section className="g-card ov-hero" aria-label="Server">
+        <span className="ov-hero__mark" aria-hidden="true">
+          {(guild.name.match(/[\p{L}\p{N}]/u)?.[0] ?? "G").toUpperCase()}
+        </span>
+        <div className="ov-hero__text">
           <ViewTransition
             name={`guild-${guild.id}`}
             share={{ nav: "morph", default: "none" }}
             default="none"
           >
-            <h1 className="page-title">{guild.name}</h1>
+            <h1 className="page-title ov-hero__name">{guild.name}</h1>
           </ViewTransition>
-          <p>What needs you first, then how the server is doing.</p>
+          <p className="ov-hero__meta">
+            {counts?.members != null ? `${num(counts.members)} members` : "Members unknown"}
+            {counts?.online != null ? ` · ${num(counts.online)} online` : ""}
+          </p>
         </div>
-        {build ? (
-          <div className="build-line">
-            <span className="mono">
-              v{build.version} · {ago(build.createdAt)} by the AI assistant ·{" "}
+        <div className="ov-hero__side">
+          <span className="ov-live">
+            <span className="ov-live__dot" aria-hidden="true" />
+            Live
+          </span>
+          {build ? (
+            <span className="ov-hero__build">
+              AI assistant v{build.version} · {ago(build.createdAt)} ·{" "}
               {build.status.replace("_", " ")}
+              {build.status === "applied" ? (
+                <>
+                  {" "}
+                  · <a href={`${base}/quartermaster`}>Undo</a>
+                </>
+              ) : null}
             </span>
-            {build.status === "applied" ? (
-              <a
-                className="g-btn g-btn--ghost"
-                href={`${base}/quartermaster`}
-                title={`Review and undo v${build.version}`}
-              >
-                Undo
-              </a>
-            ) : null}
+          ) : null}
+        </div>
+      </section>
+
+      {build ? null : (
+        <section className="g-card ov-ai" aria-labelledby="ov-ai-title">
+          <div className="ov-ai__text">
+            <h2 className="ov-ai__title" id="ov-ai-title">
+              Set up this server by describing it
+            </h2>
+            <ul className="ov-ai__chips" aria-label="What the AI assistant can set up">
+              <li>Channels</li>
+              <li>Roles</li>
+              <li>Module settings</li>
+              <li>Role menus and panels</li>
+            </ul>
           </div>
-        ) : null}
-      </div>
+          <Link
+            className="g-btn g-btn--primary"
+            href={`${base}/quartermaster`}
+            transitionTypes={["nav"]}
+          >
+            Open the AI assistant
+          </Link>
+        </section>
+      )}
 
       {attention.length ? (
         <section className="g-card attention" aria-labelledby="attention-title">
@@ -239,27 +346,65 @@ export default async function OverviewPage({
 
       <RequestsPanel guildId={guild.id} kinds={["run_health"]} query={query} />
 
-      <section className="g-card readout" aria-label="Activity">
-        <div className="readout__cell">
-          <span className="g-label">Active members · 7 d</span>
-          <span className="readout__value">{activity.activeMembers7d.toLocaleString("en-US")}</span>
-          <span className="g-help">Posted at least once</span>
+      <section className="g-card ov-stats" aria-label="This week">
+        <div className="ov-stat">
+          <span className="ov-stat__label">
+            <span className="ov-stat__icon">
+              <Icon d={ICONS.members} />
+            </span>
+            Members
+          </span>
+          <span className="ov-stat__value">
+            {counts?.members != null ? num(counts.members) : "—"}
+          </span>
+          <span className="ov-stat__note">
+            <span className={`ov-delta ov-delta--${net7 > 0 ? "up" : net7 < 0 ? "down" : "flat"}`}>
+              {net7 > 0 ? "+" : ""}
+              {num(net7)}
+            </span>{" "}
+            joined less left, 7 d
+          </span>
         </div>
-        <div className="readout__cell">
-          <span className="g-label">Messages today</span>
-          <span className="readout__value">{activity.messagesToday.toLocaleString("en-US")}</span>
-          <span className="g-help">UTC day · counts only, never content</span>
+        <div className="ov-stat">
+          <span className="ov-stat__label">
+            <span className="ov-stat__icon">
+              <Icon d={ICONS.messages} />
+            </span>
+            Messages · 7 d
+          </span>
+          <span className="ov-stat__value">{num(messages7)}</span>
+          <Delta value={messagesChange} />
         </div>
-        <div className="readout__cell">
-          <span className="g-label">Mod actions · 24 h</span>
-          <span className="readout__value">{o.modActions24h}</span>
-          <span className="g-help">
+        <div className="ov-stat">
+          <span className="ov-stat__label">
+            <span className="ov-stat__icon">
+              <Icon d={ICONS.active} />
+            </span>
+            Active members · 7 d
+          </span>
+          <span className="ov-stat__value">{num(activity.activeMembers7d)}</span>
+          <Delta value={activeChange} />
+        </div>
+        <div className="ov-stat">
+          <span className="ov-stat__label">
+            <span className="ov-stat__icon">
+              <Icon d={ICONS.cases} />
+            </span>
+            Mod actions · 24 h
+          </span>
+          <span className="ov-stat__value">{num(o.modActions24h)}</span>
+          <span className="ov-stat__note">
             {o.automatic24h} automatic · {o.modActions24h - o.automatic24h} by staff
           </span>
         </div>
-        <div className="readout__cell">
-          <span className="g-label">Command reply · p95</span>
-          <span className="readout__value">
+        <div className="ov-stat">
+          <span className="ov-stat__label">
+            <span className="ov-stat__icon">
+              <Icon d={ICONS.reply} />
+            </span>
+            Command reply · p95
+          </span>
+          <span className="ov-stat__value">
             {latency ? (
               <>
                 {latency.p95Ms}
@@ -269,11 +414,128 @@ export default async function OverviewPage({
               "—"
             )}
           </span>
-          <span className="g-help">
-            {latency ? `Target under 200 ms · ${latency.count} in 24 h` : "No commands in 24 h"}
+          <span className="ov-stat__note">
+            {latency ? `${latency.count} commands in 24 h` : "No commands in 24 h"}
           </span>
         </div>
       </section>
+
+      <div className="ov-charts">
+        <section className="g-card card-col" aria-labelledby="ov-messages">
+          <div className="card-head">
+            <h2 className="card-title" id="ov-messages">
+              Messages <span className="count">14 days</span>
+            </h2>
+            <Link href={`${base}/insights`} transitionTypes={["nav"]}>
+              Insights
+            </Link>
+          </div>
+          <p className="ov-chart__total">
+            <strong>{num(ins.totals.messages)}</strong> messages ·{" "}
+            {ins.totals.activePerDay.toLocaleString("en-US", { maximumFractionDigits: 1 })} members
+            posting a day
+          </p>
+          <Bars
+            bars={ins.daily.map((d) => ({
+              title: `${dayName(d.day)}: ${num(d.messages)} messages`,
+              value: d.messages,
+            }))}
+            height={150}
+            label="Messages each day, last 14 days"
+            axis={[
+              dayName(ins.daily[0]?.day ?? ""),
+              dayName(ins.daily[7]?.day ?? ""),
+              dayName(ins.daily.at(-1)?.day ?? ""),
+            ]}
+          />
+        </section>
+
+        <section className="g-card card-col" aria-labelledby="ov-channels">
+          <div className="card-head">
+            <h2 className="card-title" id="ov-channels">
+              Top channels <span className="count">14 days</span>
+            </h2>
+          </div>
+          {topChannels.length ? (
+            <ol className="ov-top">
+              {topChannels.map((c) => (
+                <li key={c.channelId}>
+                  <span className="ov-top__name">
+                    #{names.get(c.channelId) ?? "deleted-channel"}
+                  </span>
+                  <span className="ov-top__n">{num(c.messages)}</span>
+                  <meter
+                    className="ov-top__bar"
+                    min={0}
+                    max={topMax}
+                    value={c.messages}
+                    aria-label={`${c.messages} messages`}
+                  />
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="ov-empty">
+              No channel activity yet. Counts build up as members post; Garrison counts, never
+              reads.
+            </p>
+          )}
+        </section>
+      </div>
+
+      <div className="ov-pair">
+        <section className="g-card card-col" aria-labelledby="ov-modules">
+          <div className="card-head">
+            <h2 className="card-title" id="ov-modules">
+              Modules{" "}
+              <span className="count">
+                {modulesOn}/{mods.length}
+              </span>
+            </h2>
+          </div>
+          <ul className="ov-modules">
+            {mods.map((m) => (
+              <li key={m.name}>
+                <Link
+                  className="ov-modules__link"
+                  href={`${base}${m.href}`}
+                  transitionTypes={["nav"]}
+                >
+                  <span>{m.name}</span>
+                  <span className={`ov-dot ${m.on ? "ov-dot--on" : ""}`}>
+                    <span className="sr-only">{m.on ? "On" : "Off"}</span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="g-card card-col" aria-labelledby="cases-title">
+          <div className="card-head">
+            <h2 className="card-title" id="cases-title">
+              Recent cases <span className="count">{cases.length}</span>
+            </h2>
+            <Link href={`${base}/watch`} transitionTypes={["nav"]}>
+              All cases
+            </Link>
+          </div>
+          {cases.length ? (
+            <ul className="ov-cases">
+              {cases.map((c) => (
+                <li key={c.id}>
+                  <ActionBadge action={c.action} />
+                  <span className="ov-cases__who">{c.targetTag ?? "channel"}</span>
+                  <span className="ov-cases__why">{c.reason ?? "No reason given"}</span>
+                  <span className="ov-cases__when">{ago(c.createdAt)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="ov-empty">No cases yet. Warnings, timeouts and bans show up here.</p>
+          )}
+        </section>
+      </div>
 
       <div className="overview-grid">
         <section className="g-card card-col" aria-labelledby="next-op">
@@ -370,32 +632,22 @@ export default async function OverviewPage({
           </div>
         </section>
 
-        <section className="g-card card-col" aria-labelledby="cases-title">
+        <section className="g-card card-col" aria-labelledby="groups-title">
           <div className="card-head">
-            <h2 className="card-title" id="cases-title">
-              Recent cases
+            <h2 className="card-title" id="groups-title">
+              Open groups
             </h2>
-            <Link href={`${base}/watch`} transitionTypes={["nav"]}>
-              All cases
+            <Link href={`${base}/rally`} transitionTypes={["nav"]}>
+              Groups and raids
             </Link>
           </div>
-          {cases.length ? (
-            <div>
-              {cases.map((c) => (
-                <div className="list-row" key={c.id}>
-                  <span>
-                    <ActionBadge action={c.action} /> {c.targetTag ?? "channel"}
-                  </span>
-                  <span className="mono">#{c.caseNumber}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="muted">No cases yet. Warnings, timeouts and bans show up here.</div>
-          )}
+          <div className="readout__value">{o.openGroups}</div>
+          <div className="g-help">
+            LFG posts players can join right now, from Discord or from the Groups and raids page.
+          </div>
         </section>
 
-        <section className="g-card card-col span-2" id="health" aria-labelledby="health-title">
+        <section className="g-card card-col span-3" id="health" aria-labelledby="health-title">
           <div className="card-head">
             <h2 className="card-title" id="health-title">
               Health checks
@@ -432,21 +684,6 @@ export default async function OverviewPage({
                 Run health check
               </button>
             </form>
-          </div>
-        </section>
-
-        <section className="g-card card-col" aria-labelledby="groups-title">
-          <div className="card-head">
-            <h2 className="card-title" id="groups-title">
-              Open groups
-            </h2>
-            <Link href={`${base}/rally`} transitionTypes={["nav"]}>
-              Groups and raids
-            </Link>
-          </div>
-          <div className="readout__value">{o.openGroups}</div>
-          <div className="g-help">
-            LFG posts players can join right now, from Discord or from the Groups and raids page.
           </div>
         </section>
       </div>

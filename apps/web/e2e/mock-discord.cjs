@@ -71,7 +71,8 @@ http
       return user[1] === "700000000000000009"
         ? json(200, { id: user[1], username: "gone.raider", avatar: null })
         : json(404, {});
-    const m = req.url.match(/^\/guilds\/(\d+)(\/members\/(\w+)|\/channels)?$/);
+    // Query strings (with_counts) don't change which guild is asked for.
+    const m = req.url.split("?")[0].match(/^\/guilds\/(\d+)(\/members\/(\w+)|\/channels)?$/);
     const g = m && guilds[m[1]];
     if (!g) return json(404, {});
     if (m[2] === "/channels") {
@@ -102,6 +103,8 @@ http
       owner_id: g.owner_id,
       roles: g.roles,
       emojis: [{ id: "320000000000000001", name: "raid", animated: false }],
+      approximate_member_count: 128,
+      approximate_presence_count: 37,
     });
   })
   .listen(4100);

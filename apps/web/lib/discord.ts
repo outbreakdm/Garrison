@@ -71,6 +71,9 @@ function shared<T>(store: Map<string, Shared<T>>, key: string, load: () => Promi
 interface RawGuild {
   id: string;
   owner_id: string;
+  /** With `with_counts`: members, and members online right now (approximate). */
+  approximate_member_count?: number;
+  approximate_presence_count?: number;
   roles: {
     id: string;
     name: string;
@@ -97,7 +100,7 @@ const channelReads = new Map<string, Shared<RawChannel[]>>();
 
 const rawGuild = (guildId: string) =>
   shared(guildReads, guildId, () =>
-    discord<RawGuild>(`/guilds/${guildId}`, {
+    discord<RawGuild>(`/guilds/${guildId}?with_counts=true`, {
       headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` },
     }),
   );
@@ -230,6 +233,17 @@ export async function listGuildEmojis(guildId: string): Promise<ServerEmoji[]> {
 }
 
 /** The server's owner, asked of Discord (cached 30 s). Anti-nuke controls are theirs alone. */
+/** How many members the server has, and how many are online now; Discord's approximations. */
+export async function guildCounts(
+  guildId: string,
+): Promise<{ members: number | null; online: number | null }> {
+  const g = await rawGuild(guildId);
+  return {
+    members: g.approximate_member_count ?? null,
+    online: g.approximate_presence_count ?? null,
+  };
+}
+
 export async function guildOwnerId(guildId: string): Promise<string> {
   return (await guildInfo(guildId)).ownerId;
 }
