@@ -824,3 +824,13 @@ Decided (2026-11-12, owner):
   every settings table, tested). At most 4 model rounds a message, the last must answer; the
   budget hold covers all 4. It can't change settings yet: it says which page does it. Page
   copy mentions asking about the setup. No migration. Not deployed.
+- 2026-11-15: AI builder changes settings (docs/AI_ASSISTANT.md phase 3). A chat plan can
+  change settings in Suggestions, Starboard, Voice rooms, Automod, Welcome (switches,
+  channels, join roles), Leveling, Logs and the mod log, each field checked by the
+  dashboard's own rules (`checkQmSettings`), never with a role that has moderation or admin
+  powers. Each field costs a supply. Checked again at build, applied after the structure
+  with the plan's new channels and roles swapped in, recorded in the settings history, and
+  undone through it (a field someone changed since is left). The plan preview lists every
+  setting from → to. Migration 0058: `qm_builds.settings`, and bot grants on exactly those
+  fields plus `settings_changes` (read and add only). Not deployed; 0058 must be applied in
+  production first.

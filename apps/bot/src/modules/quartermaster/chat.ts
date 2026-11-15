@@ -14,10 +14,11 @@ import {
 import type { Guild } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
-import { displayName, MAX_OPERATIONS, validatePlan } from "./plan.js";
+import { displayName, MAX_OPERATIONS } from "./plan.js";
 import { type ChatTurn, DEFAULT_MODEL, type Planner } from "./planner.js";
 import {
   canContinue,
+  checkDraft,
   continuationFor,
   limitMessage,
   snapshot,
@@ -145,7 +146,7 @@ export async function chatTurn(
       planFailed = true;
       if (room < 1) reply = `${reply} ${suppliesMessage(allowance)}`;
       else {
-        const checked = validatePlan(result.plan, snap.server, maxOperations);
+        const checked = await checkDraft(ctx, guild, result.plan, snap.server, maxOperations);
         if (!checked.ok) {
           ctx.logger.info("AI builder chat plan rejected", {
             guildId: guild.id,

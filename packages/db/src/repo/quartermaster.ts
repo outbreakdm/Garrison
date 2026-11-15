@@ -6,6 +6,7 @@ import {
   type QmCreated,
   type QmMessage,
   type QmOperation,
+  type QmSettingChange,
   qmBuilds,
   qmMessages,
 } from "../schema";
@@ -17,6 +18,8 @@ export interface CreatePlanInput {
   prompt: string;
   summary: string;
   plan: QmOperation[];
+  /** Settings it changes, one entry per field. */
+  settings?: QmSettingChange[];
   model: string;
   notes?: string | null;
   continuesId?: string | null;
@@ -28,13 +31,18 @@ export const QM_PLAN_TTL_MS = 15 * 60_000;
 /**
  * Changes a build counts against the day: what it built (all of a built plan, what got
  * made before a failure or an undo), or what a waiting plan holds until it expires.
- * Discarded and expired plans count nothing.
+ * Structure and settings count alike, one per item or field. Discarded and expired plans
+ * count nothing.
  */
 const changesCounted = (now: Date) => sql<number>`coalesce(sum(case
-  when ${qmBuilds.status} = 'applied' then jsonb_array_length(${qmBuilds.plan})
+  when ${qmBuilds.status} = 'applied' then jsonb_array_length(${qmBuilds.plan}) + jsonb_array_length(${qmBuilds.settings})
   when ${qmBuilds.status} in ('failed', 'rolled_back') then jsonb_array_length(${qmBuilds.created})
-  when ${qmBuilds.status} = 'pending' and ${qmBuilds.createdAt} > ${new Date(now.getTime() - QM_PLAN_TTL_MS).toISOString()}::timestamptz then jsonb_array_length(${qmBuilds.plan})
+  when ${qmBuilds.status} = 'pending' and ${qmBuilds.createdAt} > ${new Date(now.getTime() - QM_PLAN_TTL_MS).toISOString()}::timestamptz then jsonb_array_length(${qmBuilds.plan}) + jsonb_array_length(${qmBuilds.settings})
   else 0 end), 0)::int`;
+
+/** A build's changes: its structure and each settings field. */
+export const qmChangeCount = (b: Pick<QmBuild, "plan" | "settings">) =>
+  b.plan.length + (b.settings?.length ?? 0);
 
 /** Builds on a server that is on Free right now (no Pro row). */
 const onFreeServer = sql`not exists (select 1 from ${guildPlans} where ${guildPlans.guildId} = ${qmBuilds.guildId} and ${guildPlans.plan} = 'pro')`;

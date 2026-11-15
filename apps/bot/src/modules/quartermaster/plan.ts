@@ -5,6 +5,9 @@ import {
   type QmCreated,
   type QmOperation,
   type QmRolePermission,
+  type QmSettingChange,
+  qmSettingLabel,
+  qmSettingValueText,
 } from "@garrison/db";
 import { z } from "zod";
 
@@ -115,6 +118,8 @@ export function validatePlan(
   server: ServerSnapshot,
   /** The most changes this plan may make: 20, or fewer when the day's allowance is short. */
   maxOperations = MAX_OPERATIONS,
+  /** Settings fields the plan also changes, already checked; they count as changes too. */
+  settingsCount = 0,
 ): ValidationResult {
   const errors: string[] = [];
   const ops: QmOperation[] = [];
@@ -124,12 +129,13 @@ export function validatePlan(
     server.roles.filter((r) => !r.managed && r.id !== server.everyoneId).map((r) => r.id),
   );
 
-  if (!raw.operations.length) errors.push("The plan has no changes.");
-  if (raw.operations.length > maxOperations)
+  const total = raw.operations.length + settingsCount;
+  if (!total) errors.push("The plan has no changes.");
+  if (total > maxOperations)
     errors.push(
       maxOperations < MAX_OPERATIONS
-        ? `The plan has ${raw.operations.length} changes, but only ${maxOperations} supplies are left for changes today.`
-        : `The plan has ${raw.operations.length} changes; the most a build can make is ${MAX_OPERATIONS}.`,
+        ? `The plan has ${total} changes, but only ${maxOperations} supplies are left for changes today.`
+        : `The plan has ${total} changes; the most a build can make is ${MAX_OPERATIONS}.`,
     );
 
   raw.operations.slice(0, maxOperations).forEach((op, i) => {
@@ -285,8 +291,38 @@ export function describePlan(ops: QmOperation[], server: ServerSnapshot) {
   });
 }
 
-/** Undo order: channels first, then categories (once empty), then roles. */
+/** Undo order: channels first, then categories (once empty), then roles. Settings are undone apart. */
 export function rollbackOrder(created: QmCreated[]) {
   const rank = { channel: 0, category: 1, role: 2 } as const;
-  return [...created].sort((a, b) => rank[a.kind] - rank[b.kind]);
+  return created
+    .filter((c): c is QmCreated & { kind: keyof typeof rank } => c.kind !== "setting")
+    .sort((a, b) => rank[a.kind] - rank[b.kind]);
+}
+
+/** Lines for the preview of a plan's settings: "~ Automod · Scam links: Off → On". */
+export function describeSettings(
+  changes: QmSettingChange[],
+  ops: QmOperation[],
+  server: ServerSnapshot,
+  channelName: (id: string) => string | undefined,
+) {
+  const made = new Map(ops.map((o) => [o.ref, o]));
+  const roles = new Map(server.roles.map((r) => [r.id, r.name]));
+  const name = (v: string) => {
+    const op = made.get(v);
+    if (op)
+      return op.kind === "create_role"
+        ? `@${op.name}`
+        : op.kind === "create_category"
+          ? op.name
+          : `#${op.name}`;
+    const role = roles.get(v);
+    if (role) return `@${role}`;
+    const channel = channelName(v);
+    return channel ? `#${channel}` : "a deleted channel";
+  };
+  return changes.map(
+    (c) =>
+      `~ ${qmSettingLabel(c.module, c.field)}: ${qmSettingValueText(c.module, c.field, c.from, name)} → ${qmSettingValueText(c.module, c.field, c.to, name)}`,
+  );
 }

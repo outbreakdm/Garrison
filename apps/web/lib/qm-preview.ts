@@ -1,4 +1,11 @@
-import { QM_ROLE_PERMISSIONS, type QmOperation, type QmRolePermission } from "@garrison/db";
+import {
+  QM_ROLE_PERMISSIONS,
+  type QmOperation,
+  type QmRolePermission,
+  type QmSettingChange,
+  qmSettingLabel,
+  qmSettingValueText,
+} from "@garrison/db";
 import type { LayoutChannel, ServerLayout } from "./discord";
 
 /**
@@ -191,4 +198,50 @@ export function planLines(plan: QmOperation[]) {
         return `+ Role @${o.name} · ${permissionText(o.permissions).toLowerCase()}`;
     }
   });
+}
+
+export interface SettingDiff {
+  /** "Automod · Scam links" */
+  label: string;
+  from: string;
+  to: string;
+}
+
+/**
+ * A plan's settings as the admin reads them: one row per field, from → to, with channel and
+ * role names (the plan's new items by name too). An id that's gone shows as such.
+ */
+export function settingDiffs(
+  layout: ServerLayout | null,
+  plan: QmOperation[],
+  settings: QmSettingChange[],
+): SettingDiff[] {
+  const made = new Map(plan.map((o) => [o.ref, o]));
+  const channels = new Map<string, string>();
+  for (const c of layout?.loose ?? []) channels.set(c.id, `#${c.name}`);
+  for (const cat of layout?.categories ?? []) {
+    channels.set(cat.id, cat.name);
+    for (const c of cat.channels) channels.set(c.id, c.kind === "voice" ? c.name : `#${c.name}`);
+  }
+  const roles = new Map((layout?.roles ?? []).map((r) => [r.id, `@${r.name}`]));
+  const name = (v: string) => {
+    const o = made.get(v);
+    if (o)
+      return o.kind === "create_role"
+        ? `@${o.name} (new)`
+        : o.kind === "create_text_channel"
+          ? `#${o.name} (new)`
+          : `${o.name} (new)`;
+    return channels.get(v) ?? roles.get(v) ?? "a deleted channel or role";
+  };
+  return settings.map((c) => ({
+    label: qmSettingLabel(c.module, c.field),
+    from: qmSettingValueText(c.module, c.field, c.from, name),
+    to: qmSettingValueText(c.module, c.field, c.to, name),
+  }));
+}
+
+/** One line per setting, for a build's history entry. */
+export function settingLines(settings: QmSettingChange[]) {
+  return settings.map((c) => `~ ${qmSettingLabel(c.module, c.field)}`);
 }

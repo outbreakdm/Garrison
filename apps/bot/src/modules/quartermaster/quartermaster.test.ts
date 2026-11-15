@@ -1,8 +1,12 @@
 import {
   aiAllowance,
   aiSpendSince,
+  applySettingsChange,
   costMicros,
+  listSettingsChanges,
+  type QmSettingProposal,
   qmReserveMicros,
+  readSettings,
   schema,
   suppliesUsed,
   upsertGuild,
@@ -207,7 +211,13 @@ describe("Quartermaster end to end", () => {
     expect(stored?.status).toBe("failed");
     if (!stored) throw new Error("build missing");
     const undone = await undoBuild(ctx, f.guild, stored, "2");
-    expect(undone).toEqual({ ok: true, removed: 2, missing: 0, failed: 0 });
+    expect(undone).toEqual({
+      ok: true,
+      removed: 2,
+      missing: 0,
+      failed: 0,
+      settings: { undone: 0, changedSince: 0 },
+    });
     expect(f.deleted).toEqual(["q3-2", "q3-1"]); // category before role
     expect(f.channels.has("pre-existing")).toBe(true);
     expect(await undoBuild(ctx, f.guild, { ...stored, status: "applied" }, "2")).toMatchObject({
@@ -470,7 +480,11 @@ describe("channel overwrites", () => {
 describe("AI builder chat", () => {
   /** A chat model that answers each turn from a script, recording what it was told. */
   const scripted = (
-    turns: { reply: string; choices?: string[]; plan?: AiPlan | null }[],
+    turns: {
+      reply: string;
+      choices?: string[];
+      plan?: (AiPlan & { settings?: QmSettingProposal[] }) | null;
+    }[],
     seen: ChatInput[] = [],
   ): Planner => {
     let i = 0;
@@ -483,7 +497,7 @@ describe("AI builder chat", () => {
           ok: true,
           reply: t?.reply ?? "",
           choices: t?.choices ?? [],
-          plan: t?.plan ?? null,
+          plan: t?.plan ? { settings: [], ...t.plan } : null,
           model: "stub",
         };
       },
@@ -636,6 +650,114 @@ describe("AI builder chat", () => {
     // Anti-nuke isn't readable or editable here: it stays an owner-only command.
     expect(looked.bad).toMatch(/Unknown module/);
     expect(await suppliesUsed(ctx.db, { guildId: "q21" })).toBe(3);
+  });
+
+  it("drafts a channel and turns Suggestions on in it, builds both, and undoes both", async () => {
+    const f = fakeGuild("q22");
+    await upsertGuild(ctx.db, { id: "q22", name: "q22" });
+    const me = asker(f);
+    const plan = {
+      summary: "Suggestions",
+      notes: "",
+      operations: [op({ kind: "create_text_channel", ref: "Ideas", name: "ideas" })],
+      settings: [
+        { module: "suggestions", field: "enabled", value: true },
+        { module: "suggestions", field: "channelId", value: "ideas" },
+      ],
+    };
+    const turn = await chatTurn(ctx, scripted([{ reply: "Here.", plan }]), f.guild, me, {
+      message: "add suggestions",
+    });
+    if (!turn.ok || !turn.build) throw new Error(turn.ok ? "no plan" : turn.error);
+    expect(turn.build.settings).toEqual([
+      { module: "suggestions", field: "enabled", from: false, to: true },
+      { module: "suggestions", field: "channelId", from: null, to: "ideas" },
+    ]);
+    // The message, the channel and two settings.
+    expect(await suppliesUsed(ctx.db, { guildId: "q22" })).toBe(6);
+
+    const built = await applyBuild(ctx, f.guild, turn.build);
+    if (!built.ok) throw new Error(built.error);
+    expect(built.failed).toBeNull();
+    expect(built.created.map((c) => c.kind)).toEqual(["channel", "setting", "setting"]);
+    expect(await readSettings(ctx.db, "q22", "suggestions")).toEqual({
+      enabled: true,
+      channelId: "q22-1",
+      anonymous: false,
+    });
+    const [change] = await listSettingsChanges(ctx.db, "q22");
+    expect(change?.username).toMatch(/AI builder v1/);
+
+    const { getQmBuild } = await import("@garrison/db");
+    const stored = await getQmBuild(ctx.db, "q22", turn.build.id);
+    if (!stored) throw new Error("missing");
+    const undone = await undoBuild(ctx, f.guild, stored, me.id, "owner");
+    expect(undone).toMatchObject({
+      ok: true,
+      removed: 1,
+      settings: { undone: 1, changedSince: 0 },
+    });
+    expect(await readSettings(ctx.db, "q22", "suggestions")).toMatchObject({
+      enabled: false,
+      channelId: null,
+    });
+  });
+
+  it("refuses a settings plan that uses a role with admin powers, and gives the message back", async () => {
+    const f = fakeGuild("q23");
+    const admin = "123456789012345023";
+    f.roles.set(admin, {
+      id: admin,
+      name: "Admins",
+      managed: false,
+      position: 5,
+      delete: async () => {},
+      permissions: { bitfield: PermissionFlagsBits.Administrator },
+    } as never);
+    const plan = {
+      summary: "x",
+      notes: "",
+      operations: [],
+      settings: [{ module: "automod", field: "exemptRoleIds", value: [admin] }],
+    };
+    const turn = await chatTurn(ctx, scripted([{ reply: "Done.", plan }]), f.guild, asker(f), {
+      message: "exempt admins",
+    });
+    expect(turn).toMatchObject({ ok: true, build: null });
+    expect(turn.ok && turn.reply).toMatch(/@Admins has moderation or admin powers/);
+    expect(await suppliesUsed(ctx.db, { guildId: "q23" })).toBe(0);
+  });
+
+  it("leaves a setting alone on undo when someone changed it since", async () => {
+    const f = fakeGuild("q24");
+    await upsertGuild(ctx.db, { id: "q24", name: "q24" });
+    const me = asker(f);
+    const plan = {
+      summary: "Leveling",
+      notes: "",
+      operations: [],
+      settings: [{ module: "ranks", field: "enabled", value: true }],
+    };
+    const turn = await chatTurn(ctx, scripted([{ reply: "On.", plan }]), f.guild, me, {
+      message: "turn on leveling",
+    });
+    if (!turn.ok || !turn.build) throw new Error("no plan");
+    const built = await applyBuild(ctx, f.guild, turn.build);
+    expect(built.ok && built.failed).toBeNull();
+    await applySettingsChange(ctx.db, {
+      guildId: "q24",
+      module: "ranks",
+      patch: { enabled: false },
+      userId: "2",
+      username: "someone",
+    });
+    const { getQmBuild } = await import("@garrison/db");
+    const stored = await getQmBuild(ctx.db, "q24", turn.build.id);
+    if (!stored) throw new Error("missing");
+    expect(await undoBuild(ctx, f.guild, stored, me.id)).toMatchObject({
+      ok: true,
+      settings: { undone: 0, changedSince: 1 },
+    });
   });
 
   it("gives a message's supplies back when its plan couldn't be made safely", async () => {

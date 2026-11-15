@@ -6,6 +6,7 @@ import {
   joinLfg,
   leaveLfg,
   listActiveMembers,
+  qmChangeCount,
   renderWording,
   setLfgMessage,
   signUp,
@@ -348,7 +349,7 @@ export async function doQmPlan(ctx: BotContext, guild: Guild, member: GuildMembe
     { continues: continues ?? undefined },
   );
   if (!outcome.ok) return fail(outcome.error.replace(/\n- /g, " · ").replace(/\n/g, " "));
-  const n = outcome.build.plan.length;
+  const n = qmChangeCount(outcome.build);
   const what = outcome.replaced
     ? `replaces v${outcome.replaced.version}`
     : continues
@@ -394,7 +395,7 @@ export async function doQmApply(ctx: BotContext, guild: Guild, member: GuildMemb
   const result = await applyBuild(ctx, guild, build);
   if (!result.ok)
     return fail(result.error.replace("ask again with /qm build", "describe it again"));
-  const made = `${result.created.length} of ${build.plan.length}`;
+  const made = `${result.created.length} of ${qmChangeCount(build)}`;
   return result.failed
     ? fail(`v${build.version}: built ${made}, then stopped. ${result.failed}`)
     : { ok: true, message: `Built v${build.version}: ${result.created.length} created.` };

@@ -1,7 +1,7 @@
 import type { QmOperation } from "@garrison/db";
 import { describe, expect, it } from "vitest";
 import type { ServerLayout } from "./discord";
-import { addedText, planLines, previewServer } from "./qm-preview";
+import { addedText, planLines, previewServer, settingDiffs } from "./qm-preview";
 
 const op = (o: Partial<QmOperation> & Pick<QmOperation, "kind" | "ref" | "name">): QmOperation => ({
   parent: null,
@@ -108,6 +108,27 @@ describe("plan wording", () => {
       "+ Category Valorant",
       "+ Voice Stack in Valorant",
       "+ #ranked in Valorant · private",
+    ]);
+  });
+});
+
+describe("settingDiffs", () => {
+  it("shows each setting from and to, with names for channels, roles and new items", () => {
+    const plan = [op({ kind: "create_text_channel", ref: "ideas", name: "ideas" })];
+    expect(
+      settingDiffs(layout, plan, [
+        { module: "suggestions", field: "enabled", from: false, to: true },
+        { module: "suggestions", field: "channelId", from: "c1", to: "ideas" },
+        { module: "automod", field: "words", from: [], to: ["a", "b"] },
+        { module: "ranks", field: "announce", from: "same_channel", to: "off" },
+        { module: "watch", field: "logChannelId", from: "gone", to: null },
+      ]),
+    ).toEqual([
+      { label: "Suggestions · On", from: "Off", to: "On" },
+      { label: "Suggestions · Channel", from: "#general", to: "#ideas (new)" },
+      { label: "Automod · Blocked words", from: "none", to: "2 words" },
+      { label: "Leveling · Level-ups", from: "same channel", to: "off" },
+      { label: "Moderation · Mod log", from: "a deleted channel or role", to: "none" },
     ]);
   });
 });

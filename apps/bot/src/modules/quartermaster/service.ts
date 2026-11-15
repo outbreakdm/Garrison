@@ -4,9 +4,13 @@ import {
   type AiAllowance,
   type AiTier,
   aiAllowance,
+  applySettingsChange,
+  checkQmSettings,
   costMicros,
   createQmPlan,
+  entitlements,
   finishAiCall,
+  getGuildPlan,
   getQmBuild,
   nextUtcDayStart,
   QM_ATTEMPTS_PER_HOUR,
@@ -17,17 +21,28 @@ import {
   type QmCreated,
   type QmOperation,
   type QmRolePermission,
+  type QmSettingChange,
+  type QmSettingProposal,
+  type QmSettingsLookup,
   qmReserveMicros,
   recordQmCreated,
   reserveAiCall,
+  resolveQmSettingRefs,
+  type SettingsModule,
   transitionQmBuild,
+  undoSettingsChange,
 } from "@garrison/db";
 import { ChannelType, type Guild, type OverwriteResolvable, PermissionFlagsBits } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
+import { DANGEROUS_PERMISSIONS } from "../gatehouse/nuke.js";
+import { invalidateLedgerSettings } from "../ledger/service.js";
+import { invalidateRanksSettings } from "../ranks/service.js";
+import { invalidateVoiceRooms } from "../voice/service.js";
 import { MAX_OPERATIONS, rollbackOrder, type ServerSnapshot, validatePlan } from "./plan.js";
 import {
   DEFAULT_MODEL,
+  type DraftPlan,
   type Planner,
   type PlannerContinuation,
   type PlannerInput,
@@ -196,15 +211,20 @@ export async function continuationFor(
       history,
       notes: build.notes,
       operations: asAiOperations(build.plan),
+      settings: (build.settings ?? []).map((c) => ({
+        module: c.module,
+        field: c.field,
+        value_json: JSON.stringify(c.to),
+      })),
     };
-  const exists = (c: QmCreated) =>
-    c.kind === "role" ? guild.roles.cache.has(c.id) : guild.channels.cache.has(c.id);
-  return {
-    mode: "extend",
-    history,
-    notes: build.notes,
-    built: build.created.filter(exists).map(({ kind, id, name }) => ({ kind, id, name })),
-  };
+  const built = build.created.flatMap((c) =>
+    c.kind === "setting"
+      ? []
+      : (c.kind === "role" ? guild.roles.cache.has(c.id) : guild.channels.cache.has(c.id))
+        ? [{ kind: c.kind, id: c.id, name: c.name }]
+        : [],
+  );
+  return { mode: "extend", history, notes: build.notes, built };
 }
 
 /**
@@ -218,7 +238,12 @@ export async function storePlan(
   guildId: string,
   requester: { id: string; tag: string },
   request: string,
-  checked: { summary: string; operations: QmOperation[]; notes: string },
+  checked: {
+    summary: string;
+    operations: QmOperation[];
+    notes: string;
+    settings?: QmSettingChange[];
+  },
   model: string,
   line: { continues: QmBuild | null; replacing: QmBuild | null },
 ): Promise<
@@ -228,10 +253,11 @@ export async function storePlan(
   const now = await aiAllowance(ctx.db, guildId, requester.id, {
     exceptId: line.replacing?.id,
   });
-  if (checked.operations.length > now.suppliesLeft)
+  const changes = checked.operations.length + (checked.settings?.length ?? 0);
+  if (changes > now.suppliesLeft)
     return {
       ok: false,
-      error: `This plan needs ${checked.operations.length} supplies, but only ${now.suppliesLeft} are left today. Ask for less, or wait for tomorrow's.`,
+      error: `This plan needs ${changes} supplies, but only ${now.suppliesLeft} are left today. Ask for less, or wait for tomorrow's.`,
     };
   const build = await createQmPlan(ctx.db, {
     guildId,
@@ -240,6 +266,7 @@ export async function storePlan(
     prompt: request,
     summary: checked.summary,
     plan: checked.operations,
+    settings: checked.settings ?? [],
     notes: checked.notes || null,
     continuesId: line.continues?.id ?? null,
     model,
@@ -252,9 +279,93 @@ export async function storePlan(
   return {
     ok: true,
     build,
-    suppliesLeft: Math.max(0, now.suppliesLeft - checked.operations.length),
+    suppliesLeft: Math.max(0, now.suppliesLeft - changes),
     replaced,
   };
+}
+
+/** What a plan's settings may point at: this server's channels and roles, and what the plan makes. */
+export function settingsLookup(guild: Guild, ops: QmOperation[]): QmSettingsLookup {
+  const made = new Map(
+    ops.map((o) => [
+      o.ref,
+      o.kind === "create_role"
+        ? ("role" as const)
+        : o.kind === "create_category"
+          ? ("category" as const)
+          : o.kind === "create_voice_channel"
+            ? ("voice" as const)
+            : ("text" as const),
+    ]),
+  );
+  return {
+    channel: (id) => {
+      const c = guild.channels.cache.get(id);
+      if (!c) return null;
+      if (c.type === ChannelType.GuildText || c.type === ChannelType.GuildAnnouncement)
+        return "text";
+      if (c.type === ChannelType.GuildVoice || c.type === ChannelType.GuildStageVoice)
+        return "voice";
+      return c.type === ChannelType.GuildCategory ? "category" : "other";
+    },
+    role: (id) => {
+      const role = guild.roles.cache.get(id);
+      if (!role) return null;
+      if (role.id === guild.roles.everyone.id || role.managed)
+        return { name: role.name, status: "fixed" };
+      const bits = (role.permissions as { bitfield?: bigint } | undefined)?.bitfield ?? 0n;
+      return {
+        name: role.name,
+        status: (bits & DANGEROUS_PERMISSIONS) !== 0n ? "dangerous" : "ok",
+      };
+    },
+    created: (ref) => made.get(ref) ?? null,
+  };
+}
+
+const proposalsOf = (changes: QmSettingChange[]): QmSettingProposal[] =>
+  changes.map((c) => ({ module: c.module, field: c.field, value: c.to }));
+
+/**
+ * Check a drafted plan whole: its structure (validatePlan) and the settings it changes
+ * (checkQmSettings, with the dashboard's own rules). Both count toward the plan's changes.
+ */
+export async function checkDraft(
+  ctx: BotContext,
+  guild: Guild,
+  draft: DraftPlan,
+  server: ServerSnapshot,
+  maxOperations: number,
+): Promise<
+  | {
+      ok: true;
+      summary: string;
+      operations: QmOperation[];
+      notes: string;
+      settings: QmSettingChange[];
+    }
+  | { ok: false; errors: string[] }
+> {
+  const structure = validatePlan(draft, server, maxOperations, draft.settings.length);
+  if (!structure.ok) return structure;
+  if (!draft.settings.length) return { ...structure, settings: [] };
+  const ent = entitlements(await getGuildPlan(ctx.db, guild.id));
+  const settings = await checkQmSettings(
+    ctx.db,
+    guild.id,
+    draft.settings,
+    settingsLookup(guild, structure.operations),
+    ent,
+  );
+  if (!settings.ok) return settings;
+  const total = structure.operations.length + settings.changes.length;
+  if (!total) return { ok: false, errors: ["Everything in that plan is already set that way."] };
+  if (total > maxOperations)
+    return {
+      ok: false,
+      errors: [`The plan has ${total} changes, but only ${maxOperations} fit in this one.`],
+    };
+  return { ...structure, settings: settings.changes };
 }
 
 /**
@@ -390,12 +501,32 @@ export async function applyBuild(
     };
   }
   const me = guild.members.me ?? (await guild.members.fetchMe());
-  if (!me.permissions.has([PermissionFlagsBits.ManageChannels, PermissionFlagsBits.ManageRoles])) {
+  if (
+    build.plan.length &&
+    !me.permissions.has([PermissionFlagsBits.ManageChannels, PermissionFlagsBits.ManageRoles])
+  ) {
     return {
       ok: false,
       error:
         "I'm missing Manage Channels or Manage Roles, so I can't build. Run /health for a fix link.",
     };
+  }
+  const settings = build.settings ?? [];
+  const ent = settings.length ? entitlements(await getGuildPlan(ctx.db, guild.id)) : null;
+  if (ent) {
+    // Settings may have changed since the plan was drafted; check them again before building.
+    const now = await checkQmSettings(
+      ctx.db,
+      guild.id,
+      proposalsOf(settings),
+      settingsLookup(guild, build.plan),
+      ent,
+    );
+    if (!now.ok)
+      return {
+        ok: false,
+        error: `This plan's settings can't be applied now: ${now.errors.slice(0, 2).join(" ")}`,
+      };
   }
   const claimed = await transitionQmBuild(ctx.db, build.id, "pending", "applied", {
     appliedAt: new Date(),
@@ -453,7 +584,6 @@ export async function applyBuild(
       created.push(item);
       await recordQmCreated(ctx.db, build.id, item);
     }
-    return { ok: true, build: claimed, created, failed: null };
   } catch (error) {
     ctx.logger.warn("Quartermaster build failed partway", {
       guildId: guild.id,
@@ -465,10 +595,91 @@ export async function applyBuild(
     await transitionQmBuild(ctx.db, build.id, "applied", "failed", { error: failed });
     return { ok: true, build: claimed, created, failed };
   }
+  if (!ent) return { ok: true, build: claimed, created, failed: null };
+
+  // Settings, once the channels and roles they point at exist: checked against the values
+  // as they are now, then the plan's refs swapped for what the build just made.
+  try {
+    const checked = await checkQmSettings(
+      ctx.db,
+      guild.id,
+      proposalsOf(settings),
+      settingsLookup(guild, build.plan),
+      ent,
+    );
+    if (!checked.ok) throw new SettingsRefused(checked.errors.slice(0, 2).join(" "));
+    const changes = checked.changes.map((c) => ({ ...c, to: resolveQmSettingRefs(c, ids) }));
+    const modules = [...new Set(changes.map((c) => c.module))];
+    for (const module of modules) {
+      const patch = Object.fromEntries(
+        changes.filter((c) => c.module === module).map((c) => [c.field, c.to]),
+      );
+      const result = await applySettingsChange(ctx.db, {
+        guildId: guild.id,
+        module,
+        patch,
+        userId: build.requestedById,
+        username: `${build.requestedByTag} (AI builder v${build.version})`,
+      });
+      if (!result.ok) {
+        if (result.reason === "unchanged") continue;
+        throw new SettingsRefused(`${module} settings weren't ready.`);
+      }
+      refreshSettings(module, guild.id);
+      for (const field of Object.keys(result.change.changes)) {
+        const item: QmCreated = {
+          kind: "setting",
+          id: result.change.id,
+          name: `${module}.${field}`,
+        };
+        created.push(item);
+        await recordQmCreated(ctx.db, build.id, item);
+      }
+    }
+    return { ok: true, build: claimed, created, failed: null };
+  } catch (error) {
+    ctx.logger.warn("Quartermaster settings failed", {
+      guildId: guild.id,
+      version: build.version,
+      error,
+    });
+    const failed = `The settings couldn't be changed${
+      error instanceof SettingsRefused ? `: ${error.message}` : ""
+    }. Use Undo to remove what was created.`;
+    await transitionQmBuild(ctx.db, build.id, "applied", "failed", { error: failed });
+    return { ok: true, build: claimed, created, failed };
+  }
+}
+
+class SettingsRefused extends Error {}
+
+/** What an undo did to settings, as a sentence, or "" when the build changed none. */
+export function undoSettingsNote(s: { undone: number; changedSince: number }) {
+  const parts = [
+    s.undone ? `put back ${s.undone} module${s.undone === 1 ? "'s" : "s'"} settings` : null,
+    s.changedSince
+      ? `left ${s.changedSince} as they are, because someone changed them since`
+      : null,
+  ].filter(Boolean);
+  return parts.length ? ` Settings: ${parts.join("; ")}.` : "";
+}
+
+/** The bot keeps some settings for a minute; a change from a build should show straight away. */
+function refreshSettings(module: SettingsModule, guildId: string) {
+  if (module === "ledger") invalidateLedgerSettings(guildId);
+  else if (module === "ranks") invalidateRanksSettings(guildId);
+  else if (module === "voice") invalidateVoiceRooms(guildId);
 }
 
 export type UndoOutcome =
-  | { ok: true; removed: number; missing: number; failed: number }
+  | {
+      ok: true;
+      removed: number;
+      missing: number;
+      failed: number;
+      /** Settings changes put back, and ones left because someone changed them since. */
+      settings: { undone: number; changedSince: number };
+    }
   | { ok: false; error: string };
 
 /** Remove exactly what a build created, and nothing else. */
@@ -477,6 +688,7 @@ export async function undoBuild(
   guild: Guild,
   build: QmBuild,
   actorId: string,
+  actorName = "AI builder",
 ): Promise<UndoOutcome> {
   if (build.status !== "applied" && build.status !== "failed") {
     return {
@@ -495,6 +707,27 @@ export async function undoBuild(
   let removed = 0;
   let missing = 0;
   let failed = 0;
+  const settings = { undone: 0, changedSince: 0 };
+  // Newest first, so a later change to the same module comes off before an earlier one.
+  const changeIds = [
+    ...new Set(claimed.created.filter((c) => c.kind === "setting").map((c) => c.id)),
+  ].reverse();
+  for (const id of changeIds) {
+    try {
+      const result = await undoSettingsChange(ctx.db, guild.id, id, {
+        userId: actorId,
+        username: `${actorName} (undo AI builder v${build.version})`,
+      });
+      if (result.ok) {
+        settings.undone++;
+        refreshSettings(result.change.module, guild.id);
+      } else if (result.reason === "conflict") settings.changedSince++;
+      else if (result.reason !== "already_undone") failed++;
+    } catch (error) {
+      failed++;
+      ctx.logger.warn("Quartermaster settings undo failed", { guildId: guild.id, id, error });
+    }
+  }
   for (const item of rollbackOrder(claimed.created)) {
     try {
       if (item.kind === "role") {
@@ -518,5 +751,5 @@ export async function undoBuild(
       ctx.logger.warn("Quartermaster undo step failed", { guildId: guild.id, id: item.id, error });
     }
   }
-  return { ok: true, removed, missing, failed };
+  return { ok: true, removed, missing, failed, settings };
 }

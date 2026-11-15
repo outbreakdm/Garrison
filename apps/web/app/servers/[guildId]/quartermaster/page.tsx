@@ -12,6 +12,7 @@ import {
   QM_CHANGES_PER_PLAN,
   QM_PLAN_TTL_MS,
   type QmBuild,
+  qmChangeCount,
   TEMPLATE_NAME_MAX,
   TEMPLATES_PER_USER,
 } from "@garrison/db";
@@ -24,7 +25,7 @@ import { ServerPreview } from "@/components/ServerPreview";
 import { getDb } from "@/lib/db";
 import { getServerLayout, guildOwnerId } from "@/lib/discord";
 import { readFlash } from "@/lib/flash";
-import { addedText, planLines, previewServer } from "@/lib/qm-preview";
+import { addedText, planLines, previewServer, settingDiffs, settingLines } from "@/lib/qm-preview";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
 import { removeTemplate } from "./actions";
@@ -53,7 +54,7 @@ const STARTERS = [
 
 /** Changes a build counts against its day: what it built, or what it plans while it waits. */
 function changesOf(b: QmBuild) {
-  return b.status === "failed" || b.status === "rolled_back" ? b.created.length : b.plan.length;
+  return b.status === "failed" || b.status === "rolled_back" ? b.created.length : qmChangeCount(b);
 }
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -104,6 +105,7 @@ export default async function QuartermasterPage({
       )
     : false;
   const preview = layout ? previewServer(layout, plan?.plan ?? []) : null;
+  const diffs = plan ? settingDiffs(layout, plan.plan, plan.settings ?? []) : [];
   const minutesLeft = plan
     ? Math.max(1, Math.ceil((plan.createdAt.getTime() + QM_PLAN_TTL_MS - now) / 60_000))
     : 0;
@@ -235,7 +237,7 @@ export default async function QuartermasterPage({
                         >
                           <span className="g-badge g-badge--accent">Plan v{drafted.version}</span>
                           <span>
-                            {plural(drafted.plan.length, "change")} ·{" "}
+                            {plural(qmChangeCount(drafted), "change")} ·{" "}
                             {drafted === plan
                               ? "preview below"
                               : STATUS[drafted.status === "pending" ? "expired" : drafted.status]
@@ -350,7 +352,27 @@ export default async function QuartermasterPage({
                 {/* The request is user text; React escapes it. */}
                 <p className="muted">“{plan.prompt}”</p>
               </div>
-              <ServerPreview name={guild.name} preview={preview} planned />
+              {plan.plan.length || !diffs.length ? (
+                <ServerPreview name={guild.name} preview={preview} planned />
+              ) : null}
+              {diffs.length ? (
+                <div className="qm-settings">
+                  <h3 className="g-label">Settings it changes</h3>
+                  <dl className="qm-settings__list">
+                    {diffs.map((d) => (
+                      <div key={d.label}>
+                        <dt>{d.label}</dt>
+                        <dd>
+                          <span className="qm-settings__from">{d.from}</span>
+                          <span aria-hidden="true"> → </span>
+                          <span className="sr-only"> becomes </span>
+                          <strong>{d.to}</strong>
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              ) : null}
               {plan.notes ? (
                 <div className="qm-notes">
                   <h3 className="g-label">Notes from the AI builder</h3>
@@ -359,9 +381,20 @@ export default async function QuartermasterPage({
               ) : null}
               <div className="qm-plan__foot">
                 <p>
-                  Building this adds <strong>{addedText(preview.added)}</strong> to {guild.name}. It
-                  uses {plural(plan.plan.length, "supply", "supplies")}, held from today's until
-                  it's built or expires.
+                  Building this{" "}
+                  {plan.plan.length ? (
+                    <>
+                      adds <strong>{addedText(preview.added)}</strong> to {guild.name}
+                      {diffs.length ? " and " : ""}
+                    </>
+                  ) : null}
+                  {diffs.length ? (
+                    <>
+                      changes <strong>{plural(diffs.length, "setting")}</strong>
+                    </>
+                  ) : null}
+                  . It uses {plural(qmChangeCount(plan), "supply", "supplies")}, held from today's
+                  until it's built or expires.
                   {mine
                     ? ""
                     : ` Only ${plan.requestedByTag} can build it; you can change or discard it.`}
@@ -498,10 +531,14 @@ export default async function QuartermasterPage({
               How it builds
             </h2>
             <ul className="qm-rules">
-              <li>Adds only: nothing you have is edited or deleted</li>
+              <li>Adds channels and roles; nothing you have is edited or deleted</li>
+              <li>
+                Changes settings only where you see them in the plan, with the same checks as their
+                pages
+              </li>
               <li>New roles get only member permissions, never moderation or admin</li>
               <li>Nothing is built until you approve the plan</li>
-              <li>Undo removes exactly what a build made</li>
+              <li>Undo removes what a build made and puts its settings back</li>
             </ul>
           </section>
         </aside>
@@ -544,7 +581,9 @@ export default async function QuartermasterPage({
                     <details className="qm-build__more">
                       <summary>Request and changes</summary>
                       <p className="muted">“{b.prompt}”</p>
-                      <pre className="diff">{planLines(b.plan).join("\n")}</pre>
+                      <pre className="diff">
+                        {[...planLines(b.plan), ...settingLines(b.settings ?? [])].join("\n")}
+                      </pre>
                       {b.notes ? <p className="g-help">Notes: {b.notes}</p> : null}
                     </details>
                     {b.error && !replaced ? <span className="notice">{b.error}</span> : null}

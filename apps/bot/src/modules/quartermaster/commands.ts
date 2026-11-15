@@ -3,6 +3,7 @@ import {
   getQmBuildByVersion,
   listQmBuilds,
   type QmBuild,
+  qmChangeCount,
   transitionQmBuild,
 } from "@garrison/db";
 import { ButtonBuilder, ButtonStyle, PermissionFlagsBits } from "discord.js";
@@ -11,7 +12,14 @@ import type { ButtonHandler, Command } from "../../commands/types.js";
 import { type Card, cardEdit, cardMessage, cardReply, ts } from "../../lib/card.js";
 import { safeText } from "../../lib/text.js";
 import { describePlan, type ServerSnapshot } from "./plan.js";
-import { applyBuild, PLAN_TTL_MS, planBuild, REQUEST_MAX, undoBuild } from "./service.js";
+import {
+  applyBuild,
+  PLAN_TTL_MS,
+  planBuild,
+  REQUEST_MAX,
+  undoBuild,
+  undoSettingsNote,
+} from "./service.js";
 
 export const QM_PREFIX = "qm";
 const UUID = /^[0-9a-f-]{36}$/;
@@ -32,7 +40,7 @@ export function planCard(
   return {
     tone: "intel",
     title: `Plan v${build.version}`,
-    status: `${build.plan.length} ${build.plan.length === 1 ? "change" : "changes"}`,
+    status: `${qmChangeCount(build)} ${qmChangeCount(build) === 1 ? "change" : "changes"}`,
     lead: safeText(build.summary),
     blocks: [
       { text: `\`\`\`diff\n${lines.join("\n").replaceAll("```", "'''")}\n\`\`\`` },
@@ -257,7 +265,13 @@ export const qmButtons: ButtonHandler = {
 
     if (action === "undo") {
       await interaction.deferReply(ephemeral);
-      const result = await undoBuild(ctx, interaction.guild, build, interaction.user.id);
+      const result = await undoBuild(
+        ctx,
+        interaction.guild,
+        build,
+        interaction.user.id,
+        interaction.user.username,
+      );
       if (!result.ok) {
         await interaction.editReply(result.error);
         return;
@@ -267,7 +281,7 @@ export const qmButtons: ButtonHandler = {
         result.failed ? `${result.failed} couldn't be removed: check my role position` : null,
       ].filter(Boolean);
       await interaction.editReply(
-        `Undone v${build.version}. Removed ${result.removed}.${extra.length ? ` ${extra.join("; ")}.` : ""}`,
+        `Undone v${build.version}. Removed ${result.removed}.${extra.length ? ` ${extra.join("; ")}.` : ""}${undoSettingsNote(result.settings)}`,
       );
     }
   },

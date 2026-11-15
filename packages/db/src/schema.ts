@@ -704,9 +704,24 @@ export interface QmOperation {
   permissions?: string[];
 }
 
-/** Something a build created, recorded as it happens so Undo works even after a partial failure. */
+/**
+ * One setting a plan changes: one field of one module (qm-settings.ts), as the admin saw it.
+ * `to` may name items the same plan creates by their ref; they become ids when it's built.
+ */
+export interface QmSettingChange {
+  module: SettingsModule;
+  field: string;
+  from: unknown;
+  to: unknown;
+}
+
+/**
+ * Something a build created or changed, recorded as it happens so Undo works even after a
+ * partial failure. A setting is one entry per field, all with the settings change's id, and
+ * named "module.field".
+ */
 export interface QmCreated {
-  kind: "category" | "channel" | "role";
+  kind: "category" | "channel" | "role" | "setting";
   id: string;
   name: string;
 }
@@ -758,6 +773,8 @@ export const qmBuilds = pgTable(
     prompt: text("prompt").notNull(),
     summary: text("summary").notNull(),
     plan: jsonb("plan").$type<QmOperation[]>().notNull(),
+    /** Settings it changes, applied after the structure. Each field is one change. */
+    settings: jsonb("settings").$type<QmSettingChange[]>().notNull().default([]),
     /** What the model left out or would add next, shown with the plan and used to continue it. */
     notes: text("notes"),
     /** The build this one continues: a revised plan, or more added onto a built one. */

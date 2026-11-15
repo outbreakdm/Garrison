@@ -44,6 +44,7 @@ const answer = (reply: string) => ({
         plan_summary: "",
         operations: [],
         plan_notes: "",
+        settings: [],
       }),
     },
   ],

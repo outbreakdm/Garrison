@@ -42,7 +42,7 @@ import { MAX_SCHEDULED } from "../ops/commands.js";
 import { announcePromotion, refreshOpsCard } from "../ops/service.js";
 import { parseWhen } from "../ops/when.js";
 import { applyBotProfile } from "../profile/apply.js";
-import { undoBuild } from "../quartermaster/service.js";
+import { undoBuild, undoSettingsNote } from "../quartermaster/service.js";
 import { doTemplateApply, doTemplateSave } from "../quartermaster/templates.js";
 import { parseSlots } from "../rally/parse.js";
 import { refreshCard } from "../rally/service.js";
@@ -284,11 +284,11 @@ async function doUndoBuild(ctx: BotContext, guild: Guild, member: GuildMember, r
   if (!p.success) return fail("That request wasn't valid.");
   const build = await getQmBuildByVersion(ctx.db, guild.id, p.data.version);
   if (!build) return fail(`There's no build v${p.data.version}.`);
-  const res = await undoBuild(ctx, guild, build, member.id);
+  const res = await undoBuild(ctx, guild, build, member.id, member.user.username);
   return res.ok
     ? {
         ok: true,
-        message: `Undid v${p.data.version}: removed ${res.removed}${res.missing ? `, ${res.missing} already gone` : ""}.`,
+        message: `Undid v${p.data.version}: removed ${res.removed}${res.missing ? `, ${res.missing} already gone` : ""}.${undoSettingsNote(res.settings)}`,
       }
     : fail(res.error);
 }

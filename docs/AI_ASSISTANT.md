@@ -112,8 +112,11 @@ approved it, like a dashboard save.
 through the history, which already refuses to undo a field someone has changed since. Posts
 are listed as "can't be undone" in the preview, the same rule as messages today.
 
-**Database access (decision for the owner):** the dashboard role writes settings today; the
-bot role can't, for most modules. Two ways to let a build apply settings:
+**Database access:** *decided 2026-11-15: option 1, narrowed (migration 0058).* The bot role
+gets column `UPDATE` only on the fields the AI builder may change, `INSERT` so a module's row
+can be made on first use, and `SELECT, INSERT` on `settings_changes` (history stays
+append-only). The dashboard role writes settings today; the bot role couldn't, for most
+modules. The two ways considered:
 
 1. **Recommended:** grant the bot role the same column-level `UPDATE` on the settings tables
    that the dashboard role has, and `INSERT` on `settings_changes`. One Build button, the
@@ -145,8 +148,21 @@ bot role can't, for most modules. Two ways to let a build apply settings:
    `EDITABLE_FIELDS`, so anti-nuke stays out of reach); channel and role ids come back as
    names; at most 4 rounds a message, the last forced to answer; a message still costs 3
    supplies. *Medium.*
-3. **Settings plans.** `change_settings` proposals, the settings diff in the preview, the
-   grants migration, apply in order with refs, and undo through the history. *Large.*
+3. **Settings plans.** *Done 2026-11-15, not deployed; needs migration 0058.* A chat plan can
+   change settings in eight modules (`QM_SETTINGS` in `packages/db/src/qm-settings.ts`):
+   Suggestions, Starboard, Voice rooms, Automod (not AI moderation), Welcome (switches,
+   channels and join roles, not card text), Leveling (on, where level-ups go), Logs, and
+   Moderation's log channel and DMs. Each field is checked by the dashboard's own function
+   for that module (`checkSuggestions`, `checkAutomod`...; simple checks in the file for
+   Leveling, Logs and Moderation), channels and roles must be in the server or made by the
+   same plan, and a role with moderation or admin powers is refused. Stored in
+   `qm_builds.settings` (one entry per field, each costing a supply), checked again before
+   building, applied after the structure with refs swapped for the new ids, through
+   `applySettingsChange` under "<admin> (AI builder vN)", and undone newest first through
+   the history, which leaves a field someone changed since. The preview lists each setting
+   from → to. `/qm build` in Discord stays structure-only. The rest (anti-raid,
+   verification, tickets, role menus, messages, alerts, raid templates, the warning ladder,
+   rewards, game accounts) stays on its page. *Large.*
 4. **Safe posts.** `post` proposals for role menus, ticket panels and saved messages. *Small.*
 5. **Rename and polish.** "AI builder" becomes "Assistant" in the menu if it now does more
    than build; starter prompts for common jobs ("set up moderation", "welcome new members");

@@ -11,6 +11,7 @@ export * from "./messages";
 export * from "./ops-calendar";
 export * from "./plans";
 export * from "./profile";
+export * from "./qm-settings";
 export * from "./rally";
 export * from "./rank-boosts";
 export * from "./rank-cards";
@@ -89,6 +90,7 @@ export type {
   QmBuild,
   QmCreated,
   QmOperation,
+  QmSettingChange,
   QmStatus,
   Quarantine,
   RaidResponse,

@@ -294,7 +294,10 @@ describe("dashboard settings, as garrison_web", () => {
     await denied(db.delete(settingsChanges));
     await exec("RESET ROLE");
     await exec("SET ROLE garrison_bot");
-    await denied(db.select().from(settingsChanges));
+    // The bot reads and adds history for the AI builder's settings, but can't rewrite it.
+    expect((await db.select().from(settingsChanges)).length).toBeGreaterThan(5);
+    await denied(db.update(settingsChanges).set({ username: "someone else" }));
+    await denied(db.delete(settingsChanges));
     expect((await getWatchSettings(db, G)).dmMembers).toBe(true);
     await exec("RESET ROLE");
     await exec("SET ROLE garrison_web");
