@@ -784,3 +784,8 @@ Decided (2026-11-12, owner):
   plan with notes and "Change this plan"), a rail with today's changes as a plan-segmented
   gauge and the rules, and a compact Builds timeline. Needs migration `0056_qm_continue`
   (notes, continues_id on qm_builds) in production before deploying. Not deployed.
+- 2026-11-15: Deployed `bd9ae40` (run 43678760337) after applying migration 0056 in production
+  (recorded; 57 rows). Live: Battle.net sign-in fix with the version choice, the AI builder's
+  fuller designs, change allowance, continuing plans and new page. Bot online; checked the
+  live pages, the form-action header and the new plan wording. Not yet tried with Battle.net
+  or the real AI model.
