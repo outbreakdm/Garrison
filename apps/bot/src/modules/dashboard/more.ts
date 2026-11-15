@@ -19,6 +19,7 @@ import { cardMessage } from "../../lib/card.js";
 import { formatDuration, MAX_TIMEOUT_SECONDS } from "../../lib/duration.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { announcePromotion, refreshOpsCard } from "../ops/service.js";
+import { chatTurn } from "../quartermaster/chat.js";
 import { applyBuild, planBuild, REQUEST_MAX } from "../quartermaster/service.js";
 import { lfgCard } from "../rally/card.js";
 import { notifyTemplateRole } from "../rally/commands.js";
@@ -80,6 +81,12 @@ const raidSignup = z.object({
   spec: z.string().trim().max(20).nullable(),
 });
 const raidWithdraw = z.object({ eventId: uuid });
+const qmChat = z.object({
+  message: z.string().trim().min(1).max(REQUEST_MAX),
+  threadId: uuid.optional(),
+  fresh: z.boolean().optional(),
+  continues: uuid.optional(),
+});
 const qmPlan = z.object({
   request: z.string().trim().min(1).max(REQUEST_MAX),
   continues: uuid.optional(),
@@ -350,6 +357,29 @@ export async function doQmPlan(ctx: BotContext, guild: Guild, member: GuildMembe
   return {
     ok: true,
     message: `Plan v${outcome.build.version} ${what}: ${n} ${n === 1 ? "change" : "changes"}, ${outcome.changesLeft} left today. Nothing is built until you apply it.`,
+  };
+}
+
+/** A message to the AI builder's chat: it answers, asks, or drafts the next plan. */
+export async function doQmChat(ctx: BotContext, guild: Guild, member: GuildMember, raw: unknown) {
+  const p = qmChat.safeParse(raw);
+  if (!p.success) return fail("Write a message of 500 characters or fewer.");
+  if (!ctx.planner?.chat)
+    return fail("The AI builder isn't set up on this Garrison: the bot has no Claude API key.");
+  const continues = p.data.continues ? await getQmBuild(ctx.db, guild.id, p.data.continues) : null;
+  const outcome = await chatTurn(
+    ctx,
+    ctx.planner,
+    guild,
+    { id: member.id, tag: member.user.username },
+    { ...p.data, continues },
+  );
+  if (!outcome.ok) return fail(outcome.error.replace(/\n/g, " "));
+  return {
+    ok: true,
+    message: outcome.build
+      ? `Garrison drafted plan v${outcome.build.version}. Preview it below.`
+      : "Garrison replied.",
   };
 }
 

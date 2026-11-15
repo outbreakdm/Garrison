@@ -1,4 +1,4 @@
-import type { QmOperation } from "@garrison/db";
+import { QM_ROLE_PERMISSIONS, type QmOperation, type QmRolePermission } from "@garrison/db";
 import type { LayoutChannel, ServerLayout } from "./discord";
 
 /**
@@ -57,8 +57,18 @@ export function previewServer(layout: ServerLayout, plan: QmOperation[]): Server
   ]);
   const made = (o: QmOperation): PreviewChannel => {
     const details: string[] = [];
-    if (o.privateTo.length)
-      details.push(`Only ${o.privateTo.map((r) => `@${roleName.get(r) ?? "?"}`).join(", ")}`);
+    const at = (list: string[]) => list.map((r) => `@${roleName.get(r) ?? "?"}`).join(", ");
+    if (o.privateTo.length) details.push(`Only ${at(o.privateTo)}`);
+    if (o.readOnly)
+      details.push(
+        o.kind === "create_voice_channel"
+          ? o.posters?.length
+            ? `Only ${at(o.posters)} can speak`
+            : "Listen only"
+          : o.posters?.length
+            ? `Read-only: ${at(o.posters)} can post`
+            : "Read-only",
+      );
     if (o.topic) details.push(o.topic);
     if (o.slowmodeSeconds) details.push(`Slowmode ${o.slowmodeSeconds} s`);
     if (o.userLimit) details.push(`Limit ${o.userLimit}`);
@@ -127,7 +137,7 @@ export function previewServer(layout: ServerLayout, plan: QmOperation[]): Server
           color: o.color ?? 0,
           isNew: true,
           details: [
-            "No permissions",
+            permissionText(o.permissions),
             ...(o.hoist ? ["Shown separately"] : []),
             ...(o.mentionable ? ["Anyone can mention"] : []),
           ],
@@ -139,6 +149,14 @@ export function previewServer(layout: ServerLayout, plan: QmOperation[]): Server
       roles: plan.filter((o) => o.kind === "create_role").length,
     },
   };
+}
+
+/** A new role's permissions in words: "Attach files, Create threads", or "No permissions". */
+export function permissionText(permissions: string[] | undefined) {
+  const labels = (permissions ?? [])
+    .map((p) => QM_ROLE_PERMISSIONS[p as QmRolePermission]?.label)
+    .filter(Boolean);
+  return labels.length ? labels.join(", ") : "No permissions";
 }
 
 /** "2 categories, 5 channels and 1 role", leaving out what the plan doesn't add. */
@@ -159,7 +177,9 @@ export function planLines(plan: QmOperation[]) {
   const names = new Map(plan.map((o) => [o.ref, o.name]));
   return plan.map((o) => {
     const where = o.parent && names.has(o.parent) ? ` in ${names.get(o.parent)}` : "";
-    const lock = o.privateTo.length ? " · private" : "";
+    const lock = `${o.privateTo.length ? " · private" : ""}${
+      o.readOnly ? (o.kind === "create_voice_channel" ? " · listen only" : " · read-only") : ""
+    }`;
     switch (o.kind) {
       case "create_category":
         return `+ Category ${o.name}`;
@@ -168,7 +188,7 @@ export function planLines(plan: QmOperation[]) {
       case "create_voice_channel":
         return `+ Voice ${o.name}${where}${lock}`;
       default:
-        return `+ Role @${o.name} · no permissions`;
+        return `+ Role @${o.name} · ${permissionText(o.permissions).toLowerCase()}`;
     }
   });
 }

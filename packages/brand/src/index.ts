@@ -157,7 +157,18 @@ export const inviteSettings = {
     bit(24) | // Move Members (voice rooms: move a member into the room they just made)
     bit(26) | // Change Nickname
     bit(28) | // Manage Roles
-    bit(40), // Moderate Members
+    bit(40) | // Moderate Members
+    // The AI builder gives new roles and channels these member permissions, and Discord
+    // only lets a bot grant what it holds itself (QM_ROLE_PERMISSIONS, read-only rules).
+    bit(6) | // Add Reactions
+    bit(9) | // Video
+    bit(15) | // Attach Files
+    bit(18) | // Use External Emojis
+    bit(21) | // Speak
+    bit(25) | // Use Voice Activity
+    bit(35) | // Create Public Threads
+    bit(37) | // Use External Stickers
+    bit(38), // Send Messages in Threads
 } as const;
 
 export function inviteUrl(clientId: string, guildId?: string) {

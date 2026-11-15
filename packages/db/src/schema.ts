@@ -694,6 +694,14 @@ export interface QmOperation {
   color: number | null;
   hoist: boolean;
   mentionable: boolean;
+  /**
+   * Channels: members can read (text) or listen (voice) but not post or speak, except the
+   * `posters` roles. Absent on plans from before 2026-11-15.
+   */
+  readOnly?: boolean;
+  posters?: string[];
+  /** Roles: member-level permissions from QM_ROLE_PERMISSIONS. Absent means none. */
+  permissions?: string[];
 }
 
 /** Something a build created, recorded as it happens so Undo works even after a partial failure. */
@@ -772,6 +780,37 @@ export const qmBuilds = pgTable(
 ).enableRLS();
 
 export type QmBuild = typeof qmBuilds.$inferSelect;
+
+/**
+ * The AI builder's chat: one row per message, grouped by thread. Each person has their own
+ * threads on a server. Written only by the bot; the dashboard reads them.
+ */
+export const qmMessages = pgTable(
+  "qm_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    threadId: uuid("thread_id").notNull(),
+    /** The person whose conversation this is. */
+    authorId: text("author_id").notNull(),
+    /** `user` or `assistant`. */
+    role: text("role").notNull(),
+    text: text("text").notNull(),
+    /** Quick replies the assistant offered. */
+    choices: jsonb("choices").$type<string[]>().notNull().default([]),
+    /** The plan this reply drafted. */
+    buildId: uuid("build_id").references(() => qmBuilds.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("qm_messages_thread").on(t.guildId, t.threadId, t.createdAt),
+    index("qm_messages_author").on(t.guildId, t.authorId, t.createdAt),
+  ],
+).enableRLS();
+
+export type QmMessage = typeof qmMessages.$inferSelect;
 export type QmStatus = (typeof qmStatus.enumValues)[number];
 
 // ---------------------------------------------------------------------------
@@ -1038,6 +1077,7 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "template_save",
   "template_apply",
   "suggestion_status",
+  "qm_chat",
 ]);
 export const dashboardActionStatus = pgEnum("dashboard_action_status", [
   "pending",
@@ -1181,6 +1221,15 @@ export interface RaidSignupPayload {
 }
 export interface RaidWithdrawPayload {
   eventId: string;
+}
+/** Talk to the AI builder: it answers, asks, or drafts a plan in the same thread. */
+export interface QmChatPayload {
+  message: string;
+  /** The conversation to continue. Omitted, or `fresh`, starts a new one. */
+  threadId?: string;
+  fresh?: boolean;
+  /** Start the conversation from this build (continue a built plan). */
+  continues?: string;
 }
 /** Ask Quartermaster for a plan. Nothing is built until the plan is applied. */
 export interface QmPlanPayload {

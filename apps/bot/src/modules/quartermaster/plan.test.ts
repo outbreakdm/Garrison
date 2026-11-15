@@ -28,9 +28,12 @@ const op = (o: Partial<Op> & Pick<Op, "kind" | "ref" | "name">): Op => ({
   slowmode_seconds: null,
   user_limit: null,
   private_to: [],
+  read_only: null,
+  posters: [],
   color_hex: null,
   hoist: null,
   mentionable: null,
+  permissions: [],
   ...o,
 });
 const plan = (operations: Op[]): AiPlan => ({
@@ -147,6 +150,63 @@ describe("validatePlan", () => {
     expect(
       validatePlan(plan([op({ kind: "create_role", ref: "x", name: "@@@" })]), server).ok,
     ).toBe(false);
+  });
+});
+
+describe("channel rules and role permissions", () => {
+  it("accepts read-only channels with posters, and allowlisted role permissions", () => {
+    const r = validatePlan(
+      plan([
+        op({
+          kind: "create_role",
+          ref: "clips",
+          name: "Clipper",
+          permissions: ["attach_files", "stream"],
+        }),
+        op({
+          kind: "create_text_channel",
+          ref: "news",
+          name: "announcements",
+          read_only: true,
+          posters: ["200000000000000001", "clips"],
+        }),
+        op({ kind: "create_voice_channel", ref: "stage", name: "Briefing", read_only: true }),
+      ]),
+      server,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.operations[0]?.permissions).toEqual(["attach_files", "stream"]);
+    expect(r.operations[1]).toMatchObject({
+      readOnly: true,
+      posters: ["200000000000000001", "clips"],
+    });
+    expect(describePlan(r.operations, server)).toEqual([
+      "+ Role @Clipper · Attach files, Video and screen share",
+      "+ #announcements · read-only, @Members, @Clipper can post",
+      "+ Voice Briefing · listen-only",
+    ]);
+  });
+
+  it("refuses posters without read-only, permissions on channels, and ones Garrison lacks", () => {
+    const r = validatePlan(
+      plan([
+        op({ kind: "create_text_channel", ref: "a", name: "a", posters: ["200000000000000001"] }),
+        op({
+          kind: "create_text_channel",
+          ref: "b",
+          name: "b",
+          permissions: ["attach_files"],
+        }),
+        op({ kind: "create_role", ref: "c", name: "C", permissions: ["stream"] }),
+      ]),
+      { ...server, grantable: ["attach_files"] },
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.errors.join(" ")).toMatch(/lists who can post, but isn't read-only/);
+    expect(r.errors.join(" ")).toMatch(/only roles get permissions/);
+    expect(r.errors.join(" ")).toMatch(/can't give "Video and screen share" yet/);
   });
 });
 

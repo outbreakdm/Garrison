@@ -46,6 +46,7 @@ const REQUEST_PAGE: Record<string, string> = {
   mod_action: "/watch",
   purge: "/watch",
   qm_plan: "/quartermaster",
+  qm_chat: "/quartermaster",
   qm_apply: "/quartermaster",
   qm_cancel: "/quartermaster",
   undo_build: "/quartermaster",

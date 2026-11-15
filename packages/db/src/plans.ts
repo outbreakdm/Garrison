@@ -38,6 +38,36 @@ export const AI_CHANGES_PER_DAY = {
 } as const satisfies Record<AiTier, number>;
 
 /**
+ * Member-level permissions the AI builder may give a new role. Never Administrator,
+ * anything that manages, moderates or mentions everyone: those stay a deliberate step in
+ * Discord. `flag` is discord.js's PermissionFlagsBits name. Garrison can only grant what it
+ * holds itself, so these are also in the invite (packages/brand inviteSettings).
+ */
+export const QM_ROLE_PERMISSIONS = {
+  attach_files: { flag: "AttachFiles", label: "Attach files" },
+  embed_links: { flag: "EmbedLinks", label: "Embed links" },
+  add_reactions: { flag: "AddReactions", label: "Add reactions" },
+  external_emoji: { flag: "UseExternalEmojis", label: "Use external emoji" },
+  external_stickers: { flag: "UseExternalStickers", label: "Use external stickers" },
+  create_threads: { flag: "CreatePublicThreads", label: "Create threads" },
+  send_in_threads: { flag: "SendMessagesInThreads", label: "Talk in threads" },
+  stream: { flag: "Stream", label: "Video and screen share" },
+  voice_activity: { flag: "UseVAD", label: "Voice activity" },
+  change_nickname: { flag: "ChangeNickname", label: "Change nickname" },
+} as const;
+export type QmRolePermission = keyof typeof QM_ROLE_PERMISSIONS;
+export const QM_ROLE_PERMISSION_KEYS = Object.keys(QM_ROLE_PERMISSIONS) as QmRolePermission[];
+
+/**
+ * Messages a day with the AI builder's chat, counted like requests. A chat reply is short and
+ * cheap; one that drafts a plan also uses changes. Free counts per person as well as per server.
+ */
+export const AI_CHAT_TURNS_PER_DAY = { free: 20, pro: 100, agency: 150 } as const satisfies Record<
+  AiTier,
+  number
+>;
+
+/**
  * AI requests a day, counted like the changes. Every request costs the same to run however
  * few changes it makes, so this keeps a string of tiny plans from running up the AI bill
  * (docs/pricing.md). A request that fails gives its slot back.

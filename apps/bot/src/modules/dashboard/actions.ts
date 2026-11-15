@@ -60,6 +60,7 @@ import {
   doPurge,
   doQmApply,
   doQmCancel,
+  doQmChat,
   doQmPlan,
   doRaidSignup,
   doRaidWithdraw,
@@ -480,6 +481,8 @@ export async function runDashboardAction(
       return doRaidWithdraw(ctx, guild, member, action.payload);
     case "qm_plan":
       return doQmPlan(ctx, guild, member, action.payload);
+    case "qm_chat":
+      return doQmChat(ctx, guild, member, action.payload);
     case "qm_apply":
       return doQmApply(ctx, guild, member, action.payload);
     case "qm_cancel":

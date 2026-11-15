@@ -1,6 +1,14 @@
 import { and, count, desc, eq, gte, max, ne, type SQL, sql } from "drizzle-orm";
 import type { Db } from "../client";
-import { guildPlans, type QmBuild, type QmCreated, type QmOperation, qmBuilds } from "../schema";
+import {
+  guildPlans,
+  type QmBuild,
+  type QmCreated,
+  type QmMessage,
+  type QmOperation,
+  qmBuilds,
+  qmMessages,
+} from "../schema";
 
 export interface CreatePlanInput {
   guildId: string;
@@ -125,4 +133,59 @@ export async function recordQmCreated(db: Db, id: string, item: QmCreated) {
     .update(qmBuilds)
     .set({ created: sql`${qmBuilds.created} || ${JSON.stringify([item])}::jsonb` })
     .where(eq(qmBuilds.id, id));
+}
+
+/** Add one message to an AI builder conversation. */
+export async function addQmMessage(
+  db: Db,
+  input: {
+    guildId: string;
+    threadId: string;
+    authorId: string;
+    role: "user" | "assistant";
+    text: string;
+    choices?: string[];
+    buildId?: string | null;
+  },
+): Promise<QmMessage> {
+  const [row] = await db
+    .insert(qmMessages)
+    .values({ ...input, choices: input.choices ?? [], buildId: input.buildId ?? null })
+    .returning();
+  if (!row) throw new Error("Couldn't save the message");
+  return row;
+}
+
+/** The newest conversation this person has on this server, or null. */
+export async function latestQmThread(db: Db, guildId: string, authorId: string) {
+  const [row] = await db
+    .select({ threadId: qmMessages.threadId })
+    .from(qmMessages)
+    .where(and(eq(qmMessages.guildId, guildId), eq(qmMessages.authorId, authorId)))
+    .orderBy(desc(qmMessages.createdAt))
+    .limit(1);
+  return row?.threadId ?? null;
+}
+
+/** A conversation's messages, oldest first, the most recent `limit`. Only the author's own. */
+export async function listQmThread(
+  db: Db,
+  guildId: string,
+  authorId: string,
+  threadId: string,
+  limit = 40,
+): Promise<QmMessage[]> {
+  const rows = await db
+    .select()
+    .from(qmMessages)
+    .where(
+      and(
+        eq(qmMessages.guildId, guildId),
+        eq(qmMessages.authorId, authorId),
+        eq(qmMessages.threadId, threadId),
+      ),
+    )
+    .orderBy(desc(qmMessages.createdAt))
+    .limit(limit);
+  return rows.reverse();
 }

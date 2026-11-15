@@ -477,6 +477,35 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
         return { ok: false, error: "qm_cant_continue" };
       return { ok: true, input: { kind, payload: { request, continues: from.id } } };
     }
+    case "qm_chat": {
+      const message = field(form, "message");
+      if (!message || message.length > 500) return { ok: false, error: "qm_request" };
+      const thread = uuid.safeParse(field(form, "threadId"));
+      const fresh = field(form, "fresh") === "1";
+      const raw = field(form, "continues");
+      let continues: string | undefined;
+      if (raw) {
+        const id = uuid.safeParse(raw);
+        const from = id.success ? await getQmBuild(db, guildId, id.data) : null;
+        const fresh15 =
+          from?.status === "pending" && Date.now() - from.createdAt.getTime() < QM_PLAN_TTL_MS;
+        if (!from || !(fresh15 || from.status === "applied" || from.status === "failed"))
+          return { ok: false, error: "qm_cant_continue" };
+        continues = from.id;
+      }
+      return {
+        ok: true,
+        input: {
+          kind,
+          payload: {
+            message,
+            ...(thread.success && !fresh ? { threadId: thread.data } : {}),
+            ...(fresh ? { fresh: true } : {}),
+            ...(continues ? { continues } : {}),
+          },
+        },
+      };
+    }
     case "qm_apply":
     case "qm_cancel": {
       const id = uuid.safeParse(field(form, "id"));
@@ -509,5 +538,7 @@ export async function requestAction(form: FormData) {
   );
   wakeBot();
   if (!result.ok) redirect(`${base}?${new URLSearchParams({ error: result.reason })}#requests`);
-  redirect(`${base}?${new URLSearchParams({ queued: built.input.kind })}#requests`);
+  // A chat message stays in the chat; other requests show their progress in the list.
+  const anchor = built.input.kind === "qm_chat" ? "#describe" : "#requests";
+  redirect(`${base}?${new URLSearchParams({ queued: built.input.kind })}${anchor}`);
 }

@@ -105,7 +105,7 @@ const sections: LegalSection[] = [
           We keep the server’s settings, a history of who changed which setting and when, requests
           sent from the dashboard to the bot, server backups you take (roles, channels and
           permissions, not messages), templates you save, and AI builder requests (what was asked,
-          by whom, and how much AI it used).
+          by whom, and how much AI it used), and your conversations with the AI builder.
         </p>
 
         <h3>When you pay</h3>

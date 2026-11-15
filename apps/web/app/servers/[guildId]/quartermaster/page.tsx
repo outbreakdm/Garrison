@@ -2,8 +2,10 @@ import {
   aiAllowance,
   entitlements,
   getGuildPlan,
+  latestQmThread,
   listDashboardActions,
   listQmBuilds,
+  listQmThread,
   listTemplates,
   QM_CHANGES_PER_PLAN,
   QM_PLAN_TTL_MS,
@@ -12,6 +14,7 @@ import {
   TEMPLATES_PER_USER,
 } from "@garrison/db";
 import type { Metadata } from "next";
+import { AutoRefresh } from "@/components/AutoRefresh";
 import { ProTag } from "@/components/cards/CardEditor";
 import { formatTime } from "@/components/format";
 import { RequestsPanel } from "@/components/RequestsPanel";
@@ -38,23 +41,12 @@ const STATUS: Record<QmBuild["status"], { label: string; tone: string }> = {
   rolled_back: { label: "Undone", tone: "g-badge--caution" },
 };
 
-const IDEAS = [
-  {
-    label: "A game section",
-    text: "A Valorant section for our players: ranked and casual LFG, strategy, clips, team voice rooms, and rank roles where only Gold+ can see ranked.",
-  },
-  {
-    label: "A WoW guild",
-    text: "Set this server up for our WoW raiding guild: announcements, raid sign-ups and strategy, Mythic+ LFG, a raid voice channel, and Tank, Healer and DPS roles.",
-  },
-  {
-    label: "A staff area",
-    text: "A staff category only Mods can see, with mod-chat, a reports channel, a mod log and a staff voice room.",
-  },
-  {
-    label: "An events corner",
-    text: "An events category with announcements, sign-ups with 30 second slowmode, an events voice stage, and an Event Ping role anyone can mention.",
-  },
+/** First messages to tap when a conversation is empty. */
+const STARTERS = [
+  "Set up a section for a game we play",
+  "Organize my whole server",
+  "We're a WoW raiding guild",
+  "Add a staff area",
 ];
 
 /** Changes a build counts against its day: what it built, or what it plans while it waits. */
@@ -75,7 +67,8 @@ export default async function QuartermasterPage({
   const query = await searchParams;
   const { guild, session } = await requireGuildAccess(guildId);
   const db = await getDb();
-  const [builds, actions, layout, templates, guildPlan, ownerId, flash, allowance] =
+  const fresh = query.fresh === "1";
+  const [builds, actions, layout, templates, guildPlan, ownerId, flash, allowance, threadId] =
     await Promise.all([
       listQmBuilds(db, guild.id, 25),
       listDashboardActions(db, guild.id, 30),
@@ -85,7 +78,9 @@ export default async function QuartermasterPage({
       guildOwnerId(guild.id).catch(() => null),
       readFlash(),
       aiAllowance(db, guild.id, session.userId),
+      fresh ? null : latestQmThread(db, guild.id, session.userId),
     ]);
+  const messages = threadId ? await listQmThread(db, guild.id, session.userId, threadId) : [];
   const ent = entitlements(guildPlan);
   const isOwner = ownerId === session.userId;
   const now = Date.now();
@@ -117,24 +112,48 @@ export default async function QuartermasterPage({
   const cont =
     history.find((b) => b.version === asked && (b.status === "applied" || b.status === "failed")) ??
     null;
-  const idea = cont ? undefined : IDEAS[Number(query.idea) - 1];
-  const prefill = cont
-    ? query.use === "notes" && cont.notes
+  const prefill =
+    cont && query.use === "notes" && cont.notes
       ? `Add what you suggested next: ${cont.notes}`.slice(0, REQUEST_MAX)
-      : ""
-    : (idea?.text ?? "");
+      : "";
+  // A message on its way: queued (shown as sent) or being answered (Garrison is typing).
+  const myChat = actions.filter(
+    (a) =>
+      a.kind === "qm_chat" &&
+      a.requestedById === session.userId &&
+      (a.status === "pending" || a.status === "running"),
+  );
+  const queued = myChat
+    .filter((a) => a.status === "pending")
+    .map((a) => String((a.payload as { message?: string }).message ?? ""))
+    .reverse();
+  const thinking = myChat.length > 0;
+  const lastBot = [...messages].reverse().find((m) => m.role === "assistant");
+  const choices = thinking
+    ? []
+    : messages.length === 0 && !cont
+      ? STARTERS
+      : messages.at(-1)?.role === "assistant"
+        ? (lastBot?.choices ?? [])
+        : [];
+  // Where the next message goes: this conversation, or a new one (fresh or continuing).
+  const newThread = fresh || cont !== null;
+  const chatHidden = (
+    <>
+      <input type="hidden" name="guildId" value={guild.id} />
+      <input type="hidden" name="page" value="quartermaster" />
+      <input type="hidden" name="kind" value="qm_chat" />
+      {threadId && !newThread ? <input type="hidden" name="threadId" value={threadId} /> : null}
+      {newThread ? <input type="hidden" name="fresh" value="1" /> : null}
+      {cont ? <input type="hidden" name="continues" value={cont.id} /> : null}
+    </>
+  );
 
   const { changesLeft, changesPerDay, requestsLeft, requestsPerDay, perPerson } = allowance;
   const fullPlans = Math.floor(changesLeft / QM_CHANGES_PER_PLAN);
   const spare = changesLeft % QM_CHANGES_PER_PLAN;
-  const blocked = planning
-    ? "Planning…"
-    : changesLeft === 0
-      ? "No changes left today"
-      : requestsLeft === 0
-        ? "No requests left today"
-        : null;
-  const cap = Math.min(QM_CHANGES_PER_PLAN, changesLeft);
+  const { chatLeft, chatPerDay } = allowance;
+  const blocked = thinking ? "Sending…" : chatLeft === 0 ? "No messages left today" : null;
 
   return (
     <>
@@ -151,79 +170,152 @@ export default async function QuartermasterPage({
       <div className="qm-layout">
         <div className="qm-main">
           <section
-            className={`g-card qm-compose${cont ? " qm-compose--continue" : ""}`}
+            className={`g-card qm-chat${cont ? " qm-chat--continue" : ""}`}
             id="describe"
-            aria-label={cont ? `Continue v${cont.version}` : "Describe a build"}
+            aria-labelledby="qm-chat-title"
           >
+            {thinking ? <AutoRefresh every={2000} forMs={90_000} /> : null}
+            <div className="qm-chat__head">
+              <div>
+                <h2 className="qm-chat__title" id="qm-chat-title">
+                  {cont ? `Keep building v${cont.version}` : "Talk it through"}
+                </h2>
+                <p className="g-help">
+                  Tell Garrison what your community is about. It asks what it needs, suggests ideas,
+                  and drafts a plan you can preview and build.
+                </p>
+              </div>
+              {messages.length || cont ? (
+                <a className="g-btn g-btn--ghost g-btn--sm" href="?fresh=1#describe">
+                  New conversation
+                </a>
+              ) : null}
+            </div>
+            {cont ? (
+              <div className="qm-thread">
+                <span className="g-badge g-badge--accent">Continuing v{cont.version}</span>
+                <span className="qm-thread__what">{cont.summary}</span>
+                <a className="qm-thread__clear" href="?#describe">
+                  Back to your conversation
+                </a>
+              </div>
+            ) : null}
+            <ol className="qm-chat__log" aria-live="polite" aria-label="Conversation">
+              {messages.length === 0 && !queued.length ? (
+                <li className="qm-msg qm-msg--bot">
+                  <span className="qm-msg__mark" aria-hidden="true" />
+                  <div className="qm-msg__bubble">
+                    <p>
+                      {cont
+                        ? `v${cont.version} is built. What should it get next? I can also suggest what's missing.`
+                        : "Hi! What's your server about? Tell me the games you play and what you need, and I'll design the channels and roles. Nothing changes until you build it."}
+                    </p>
+                  </div>
+                </li>
+              ) : null}
+              {messages.map((m) => {
+                const drafted = m.buildId ? builds.find((b) => b.id === m.buildId) : undefined;
+                return (
+                  <li
+                    key={m.id}
+                    className={`qm-msg ${m.role === "user" ? "qm-msg--me" : "qm-msg--bot"}`}
+                  >
+                    {m.role === "user" ? null : (
+                      <span className="qm-msg__mark" aria-hidden="true" />
+                    )}
+                    <div className="qm-msg__bubble">
+                      <p>{m.text}</p>
+                      {drafted ? (
+                        <a
+                          className="qm-msg__plan"
+                          href={drafted === plan ? "#plan" : "#qm-builds-title"}
+                        >
+                          <span className="g-badge g-badge--accent">Plan v{drafted.version}</span>
+                          <span>
+                            {plural(drafted.plan.length, "change")} ·{" "}
+                            {drafted === plan
+                              ? "preview below"
+                              : STATUS[drafted.status === "pending" ? "expired" : drafted.status]
+                                  .label}
+                          </span>
+                        </a>
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
+              {queued.map((text, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: queued messages have no id yet
+                <li key={`q${i}`} className="qm-msg qm-msg--me qm-msg--queued">
+                  <div className="qm-msg__bubble">
+                    <p>{text}</p>
+                  </div>
+                </li>
+              ))}
+              {thinking ? (
+                <li className="qm-msg qm-msg--bot" role="status">
+                  <span className="qm-msg__mark" aria-hidden="true" />
+                  <div className="qm-msg__bubble qm-msg__typing">
+                    <span className="qm-typing" aria-hidden="true">
+                      <i />
+                      <i />
+                      <i />
+                    </span>
+                    <span className="sr-only">Garrison is replying</span>
+                  </div>
+                </li>
+              ) : null}
+            </ol>
+            {choices.length ? (
+              <form action={requestAction} className="qm-chat__choices">
+                {chatHidden}
+                {choices.map((c) => (
+                  <button
+                    key={c}
+                    type="submit"
+                    name="message"
+                    value={c}
+                    className="chip"
+                    disabled={blocked !== null}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </form>
+            ) : null}
             <form
               action={requestAction}
-              className="card-col"
-              key={`${cont?.id ?? "new"}:${idea?.label ?? ""}:${String(query.use ?? "")}`}
+              className="qm-chat__composer"
+              key={`${threadId ?? "new"}:${messages.length}:${cont?.id ?? ""}`}
             >
-              <input type="hidden" name="guildId" value={guild.id} />
-              <input type="hidden" name="page" value="quartermaster" />
-              <input type="hidden" name="kind" value="qm_plan" />
-              {cont ? <input type="hidden" name="continues" value={cont.id} /> : null}
-              {cont ? (
-                <div className="qm-thread">
-                  <span className="g-badge g-badge--accent">Continuing v{cont.version}</span>
-                  <span className="qm-thread__what">{cont.summary}</span>
-                  <a className="qm-thread__clear" href="?#describe">
-                    Start a new plan instead
-                  </a>
-                </div>
-              ) : null}
-              <label className="qm-compose__label" htmlFor="qm-request">
-                {cont ? `What should v${cont.version} get next?` : "What should Garrison build?"}
+              {chatHidden}
+              <label className="sr-only" htmlFor="qm-message">
+                Message the AI builder
               </label>
               <textarea
-                className="g-input qm-compose__input"
-                id="qm-request"
-                name="request"
-                rows={3}
+                className="g-input qm-chat__input"
+                id="qm-message"
+                name="message"
+                rows={2}
                 maxLength={REQUEST_MAX}
                 required
                 placeholder={
                   cont
                     ? "A clips channel, a ranked voice room and a Diamond role"
-                    : "A Valorant section with ranked and casual LFG, team voice rooms and rank roles"
+                    : messages.length
+                      ? "Answer, or ask for changes"
+                      : "We play Valorant and Apex, about 200 members, mostly ranked"
                 }
                 defaultValue={prefill}
               />
-              <div className="qm-compose__foot">
-                <div className="chip-row">
-                  {cont ? (
-                    cont.notes ? (
-                      <a className="chip" href={`?continue=${cont.version}&use=notes#describe`}>
-                        Use its suggestions
-                      </a>
-                    ) : null
-                  ) : (
-                    <>
-                      <span className="g-label">Try</span>
-                      {IDEAS.map((it, i) => (
-                        <a
-                          className="chip"
-                          href={`?idea=${i + 1}#describe`}
-                          key={it.label}
-                          aria-current={idea === it ? "true" : undefined}
-                        >
-                          {it.label}
-                        </a>
-                      ))}
-                    </>
-                  )}
-                </div>
-                <button type="submit" className="g-btn g-btn--primary" disabled={blocked !== null}>
-                  {blocked ?? (cont ? `Plan v${nextVersion}` : "Draw up a plan")}
-                </button>
-              </div>
-              <p className="qm-compose__left">
-                {changesLeft > 0
-                  ? `Up to ${plural(cap, "change")} in this plan · ${changesLeft} of ${changesPerDay} left today`
-                  : `All ${changesPerDay} of today's changes are used. They come back at midnight UTC.`}
-              </p>
+              <button type="submit" className="g-btn g-btn--primary" disabled={blocked !== null}>
+                {blocked ?? "Send"}
+              </button>
             </form>
+            <p className="qm-compose__left">
+              {chatLeft} of {chatPerDay} messages and {changesLeft} of {changesPerDay} changes left
+              today
+            </p>
           </section>
 
           <RequestsPanel
@@ -332,8 +424,8 @@ export default async function QuartermasterPage({
             <section className="card-col" aria-label="Your server">
               {planning ? (
                 <div className="notice notice--ok" role="status">
-                  Garrison is drawing up the plan. The preview appears here by itself, usually
-                  within 30 seconds.
+                  Garrison is revising the plan. The preview appears here by itself, usually within
+                  30 seconds.
                 </div>
               ) : null}
               {preview ? (
@@ -375,10 +467,16 @@ export default async function QuartermasterPage({
                 <dd>Up to {QM_CHANGES_PER_PLAN} changes. A plan uses only what it makes.</dd>
               </div>
               <div>
-                <dt>AI requests</dt>
+                <dt>Chat messages</dt>
                 <dd>
-                  {requestsLeft} of {requestsPerDay} left
+                  {chatLeft} of {chatPerDay} left
                   {perPerson ? ", across all your Free servers" : ""}
+                </dd>
+              </div>
+              <div>
+                <dt>Quick revisions</dt>
+                <dd>
+                  {requestsLeft} of {requestsPerDay} left, for “Change this plan” and /qm build
                 </dd>
               </div>
             </dl>

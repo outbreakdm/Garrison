@@ -1440,30 +1440,151 @@ select[multiple].g-input option {
   flex-direction: column;
   gap: var(--space-4);
 }
-.qm-compose {
+/* The chat: Garrison on the left with the page's gem, you on the right in its tint. */
+.qm-chat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
   border-color: color-mix(in srgb, var(--accent-strong) 45%, var(--line));
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--accent) 5%, transparent), transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 5%, transparent), transparent 40%),
     var(--surface);
   scroll-margin-top: 80px;
 }
-.qm-compose__label {
+.qm-chat__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.qm-chat__head p {
+  max-width: 60ch;
+  margin: var(--space-1) 0 0;
+}
+.qm-chat__title {
+  margin: 0;
   font: 700 20px / 28px var(--font-display);
   font-stretch: 106%;
 }
-.qm-compose__input {
-  min-height: 96px;
+.qm-chat__log {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.qm-msg {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-end;
+  animation: pop-in 0.25s var(--ease-out) both;
+}
+.qm-msg--me {
+  justify-content: flex-end;
+}
+.qm-msg__mark {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin: 0 3px 14px;
+  border-radius: 2px;
+  background: var(--accent-strong);
+  transform: rotate(45deg);
+}
+.qm-msg__bubble {
+  display: grid;
+  gap: var(--space-2);
+  max-width: min(78%, 60ch);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: 14px 14px 14px 4px;
+  background: var(--surface-raised);
+  font-size: 15px;
+  line-height: 22px;
+}
+.qm-msg__bubble p {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.qm-msg--me .qm-msg__bubble {
+  border-color: color-mix(in srgb, var(--accent-strong) 35%, var(--line));
+  border-radius: 14px 14px 4px;
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+}
+.qm-msg--queued {
+  opacity: 0.7;
+}
+.qm-msg__plan {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  width: fit-content;
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  text-decoration: none;
+}
+.qm-msg__plan:hover {
+  border-color: var(--accent-strong);
+}
+.qm-msg__typing {
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-3);
+}
+.qm-typing {
+  display: inline-flex;
+  gap: 5px;
+}
+.qm-typing i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  animation: typing 1.2s var(--ease-out) infinite;
+}
+.qm-typing i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.qm-typing i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes typing {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: none;
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+.qm-chat__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-left: 26px;
+}
+.qm-chat__composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: end;
+}
+.qm-chat__input {
+  min-height: 48px;
   padding: var(--space-3) var(--space-4);
   font-size: 15px;
   line-height: 22px;
   resize: vertical;
-}
-.qm-compose__foot {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  align-items: center;
-  justify-content: space-between;
 }
 /* The rail says it on wide screens; below them the compose card carries the count. */
 .qm-compose__left {
@@ -1504,6 +1625,16 @@ select[multiple].g-input option {
 .chip:hover {
   border-color: var(--accent-strong);
   color: var(--accent-strong);
+}
+.qm-chat__choices .chip {
+  background: var(--surface);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.qm-chat__choices .chip:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 /* Today's allowance: changes left as a gauge cut into plan-sized segments. */
@@ -1793,6 +1924,15 @@ select[multiple].g-input option {
   }
 }
 @media (max-width: 720px) {
+  .qm-msg__bubble {
+    max-width: 88%;
+  }
+  .qm-chat__choices {
+    padding-left: 0;
+  }
+  .qm-chat__composer {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .qm-build {
     grid-template-columns: 36px minmax(0, 1fr);
   }
@@ -3384,6 +3524,9 @@ form[data-pending] [aria-busy="true"]::after {
   .template::details-content,
   .sp-cat::details-content {
     transition-duration: 0s;
+  }
+  .qm-typing i {
+    animation-name: blink;
   }
   .board .xpbar,
   .op-bar .xpbar,

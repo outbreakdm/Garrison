@@ -62,6 +62,7 @@ export const ACTION_KIND: Record<string, string> = {
   raid_signup: "Raid signup",
   raid_withdraw: "Withdraw from raid",
   qm_plan: "Plan build",
+  qm_chat: "Message the AI builder",
   qm_apply: "Apply build",
   qm_cancel: "Discard plan",
   post_role_menu: "Post role menu",

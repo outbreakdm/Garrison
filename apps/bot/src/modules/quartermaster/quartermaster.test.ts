@@ -12,9 +12,10 @@ import { ChannelType, Collection, type Guild, PermissionFlagsBits } from "discor
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { BotContext } from "../../commands/types.js";
 import { createLogger } from "../../lib/logger.js";
+import { chatTurn } from "./chat.js";
 import type { AiPlan } from "./plan.js";
-import type { Planner, PlannerInput } from "./planner.js";
-import { applyBuild, planBuild, undoBuild } from "./service.js";
+import type { ChatInput, Planner, PlannerInput } from "./planner.js";
+import { applyBuild, channelOverwrites, planBuild, undoBuild } from "./service.js";
 
 type Op = AiPlan["operations"][number];
 const op = (o: Partial<Op> & Pick<Op, "kind" | "ref" | "name">): Op => ({
@@ -23,9 +24,12 @@ const op = (o: Partial<Op> & Pick<Op, "kind" | "ref" | "name">): Op => ({
   slowmode_seconds: null,
   user_limit: null,
   private_to: [],
+  read_only: null,
+  posters: [],
   color_hex: null,
   hoist: null,
   mentionable: null,
+  permissions: [],
   ...o,
 });
 const stub = (plan: AiPlan): Planner => ({ plan: async () => ({ ok: true, plan, model: "stub" }) });
@@ -401,5 +405,163 @@ describe("AI costs", () => {
     expect(costMicros("claude-opus-5-5", 1000, 1000)).toBe(24000);
     expect(costMicros("some-new-model", 1000, 1000)).toBe(24000);
     expect(qmReserveMicros("claude-haiku-5-5")).toBe(3600);
+  });
+});
+
+describe("channel overwrites", () => {
+  const P = PermissionFlagsBits;
+  const ids = { everyone: "e", me: "me", resolve: (r: string) => `id:${r}` };
+  const base = {
+    ref: "x",
+    name: "x",
+    parent: null,
+    topic: null,
+    slowmodeSeconds: null,
+    userLimit: null,
+    privateTo: [] as string[],
+    color: null,
+    hoist: false,
+    mentionable: false,
+  };
+  const of = (rows: ReturnType<typeof channelOverwrites>, id: string) =>
+    rows.find((r) => r.id === id) as { allow: bigint[]; deny: bigint[] } | undefined;
+
+  it("makes a public channel read-only, with posters, keeping Garrison able to post", () => {
+    const rows = channelOverwrites(
+      { ...base, kind: "create_text_channel", readOnly: true, posters: ["mods"] },
+      ids,
+      () => true,
+    );
+    expect(of(rows, "e")?.deny).toEqual([
+      P.SendMessages,
+      P.SendMessagesInThreads,
+      P.CreatePublicThreads,
+    ]);
+    expect(of(rows, "id:mods")?.allow).toContain(P.SendMessages);
+    expect(of(rows, "me")?.allow).toContain(P.SendMessages);
+  });
+
+  it("keeps a private listen-only voice room private, and sets only what Garrison holds", () => {
+    const rows = channelOverwrites(
+      {
+        ...base,
+        kind: "create_voice_channel",
+        privateTo: ["raiders"],
+        readOnly: true,
+        posters: ["lead"],
+      },
+      ids,
+      (bit) => bit !== P.Stream,
+    );
+    expect(of(rows, "e")?.deny).toEqual([P.ViewChannel]);
+    expect(of(rows, "id:raiders")?.allow).toContain(P.Connect);
+    expect(of(rows, "id:raiders")?.deny).toEqual([P.Speak]);
+    expect(of(rows, "id:lead")?.allow).toContain(P.Speak);
+    expect(rows.flatMap((r) => [...(r.allow as bigint[]), ...(r.deny as bigint[])])).not.toContain(
+      P.Stream,
+    );
+  });
+});
+
+describe("AI builder chat", () => {
+  /** A chat model that answers each turn from a script, recording what it was told. */
+  const scripted = (
+    turns: { reply: string; choices?: string[]; plan?: AiPlan | null }[],
+    seen: ChatInput[] = [],
+  ): Planner => {
+    let i = 0;
+    return {
+      plan: async () => ({ ok: false, error: "not used" }),
+      chat: async (input) => {
+        seen.push(input);
+        const t = turns[Math.min(i++, turns.length - 1)];
+        return {
+          ok: true,
+          reply: t?.reply ?? "",
+          choices: t?.choices ?? [],
+          plan: t?.plan ?? null,
+          model: "stub",
+        };
+      },
+    };
+  };
+
+  it("asks, then drafts a plan, then revises it in the same conversation", async () => {
+    const f = fakeGuild("q16");
+    const me = asker(f);
+    const seen: ChatInput[] = [];
+    const bot = scripted(
+      [
+        { reply: "Casual, ranked or both?", choices: ["Both", "Ranked"] },
+        { reply: "Here's a section.", plan: sectionPlan },
+        { reply: "Added two roles.", plan: rolesPlan(6) },
+      ],
+      seen,
+    );
+    const first = await chatTurn(ctx, bot, f.guild, me, { message: "We play Valorant" });
+    expect(first).toMatchObject({ ok: true, build: null });
+    if (!first.ok) return;
+    const second = await chatTurn(ctx, bot, f.guild, me, {
+      message: "Both",
+      threadId: first.threadId,
+    });
+    expect(second).toMatchObject({ ok: true, threadId: first.threadId });
+    if (!second.ok || !second.build) throw new Error("no plan drafted");
+    expect(seen[1]?.history.map((t) => t.role)).toEqual(["user", "assistant", "user"]);
+    const third = await chatTurn(ctx, bot, f.guild, me, {
+      message: "Add roles",
+      threadId: first.threadId,
+    });
+    if (!third.ok || !third.build) throw new Error("no revision");
+    expect(third.build.continuesId).toBe(second.build.id);
+    expect(seen[2]?.continuation?.mode).toBe("revise");
+    const { listQmThread, getQmBuild } = await import("@garrison/db");
+    const thread = await listQmThread(ctx.db, "q16", me.id, first.threadId);
+    expect(thread.map((m) => m.role)).toEqual([
+      "user",
+      "assistant",
+      "user",
+      "assistant",
+      "user",
+      "assistant",
+    ]);
+    expect(thread[1]?.choices).toEqual(["Both", "Ranked"]);
+    expect(thread[3]?.buildId).toBe(second.build.id);
+    expect((await getQmBuild(ctx.db, "q16", second.build.id))?.status).toBe("cancelled");
+  });
+
+  it("keeps someone else's thread private: a stranger's thread id starts a new one", async () => {
+    const f = fakeGuild("q17");
+    const bot = scripted([{ reply: "Hi" }]);
+    const mine = await chatTurn(ctx, bot, f.guild, asker(f), { message: "hello" });
+    if (!mine.ok) throw new Error(mine.error);
+    const theirs = await chatTurn(
+      ctx,
+      bot,
+      f.guild,
+      { id: "97000", tag: "other" },
+      { message: "hello", threadId: mine.threadId },
+    );
+    expect(theirs.ok && theirs.threadId).not.toBe(mine.threadId);
+  });
+
+  it("explains an unsafe plan in the chat instead of storing it", async () => {
+    const f = fakeGuild("q18");
+    const bad: AiPlan = {
+      summary: "x",
+      notes: "",
+      operations: [op({ kind: "create_role", ref: "Bad Ref!", name: "x" })],
+    };
+    const outcome = await chatTurn(
+      ctx,
+      scripted([{ reply: "Here.", plan: bad }]),
+      f.guild,
+      asker(f),
+      {
+        message: "go",
+      },
+    );
+    expect(outcome).toMatchObject({ ok: true, build: null });
+    expect(outcome.ok && outcome.reply).toMatch(/couldn't make that plan safely/);
   });
 });

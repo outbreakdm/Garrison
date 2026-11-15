@@ -1,7 +1,16 @@
 import { and, count, eq, gte, isNull, or, sql } from "drizzle-orm";
 import { utcDayStart } from "../ai-usage";
 import type { Db } from "../client";
-import { AI_CHANGES_PER_DAY, AI_REQUESTS_PER_DAY, type AiTier } from "../plans";
+import {
+  AI_CHANGES_PER_DAY,
+  AI_CHAT_TURNS_PER_DAY,
+  AI_REQUESTS_PER_DAY,
+  type AiTier,
+} from "../plans";
+
+/** Kinds of AI call: a one-shot plan, or a message in the builder's chat. */
+export type AiFeature = "qm" | "qm_chat";
+
 import { aiUsage, guildPlans } from "../schema";
 import { qmChangesUsed } from "./quartermaster";
 
@@ -29,7 +38,7 @@ export type ReserveResult =
 
 export interface ReserveInput {
   guildId: string;
-  feature: "qm";
+  feature: AiFeature;
   requestedBy: string;
   model: string;
   /** Credits a day for this server's plan. */
@@ -146,7 +155,12 @@ export async function finishAiCall(
 }
 
 /** Credits a server has used today, for the dashboard and /qm. */
-export async function aiCreditsUsedToday(db: Db, guildId: string, feature: "qm", now = new Date()) {
+export async function aiCreditsUsedToday(
+  db: Db,
+  guildId: string,
+  feature: AiFeature,
+  now = new Date(),
+) {
   const [row] = await db
     .select({ n: count() })
     .from(aiUsage)
@@ -179,6 +193,9 @@ export interface AiAllowance {
   /** AI requests a day, and how many are left. */
   requestsPerDay: number;
   requestsLeft: number;
+  /** Chat messages a day, and how many are left. */
+  chatPerDay: number;
+  chatLeft: number;
   /** Free: counted per person across all their Free servers, as well as per server. */
   perPerson: boolean;
 }
@@ -199,32 +216,38 @@ export async function aiAllowance(
   const tier = await aiTier(db, guildId);
   const changesPerDay = AI_CHANGES_PER_DAY[tier];
   const requestsPerDay = AI_REQUESTS_PER_DAY[tier];
+  const chatPerDay = AI_CHAT_TURNS_PER_DAY[tier];
   const perPerson = tier === "free";
-  const [serverChanges, serverRequests, personChanges, personRequests] = await Promise.all([
-    qmChangesUsed(db, { guildId }, since, { ...opts, now }),
-    aiCreditsUsedToday(db, guildId, "qm", now),
-    perPerson ? qmChangesUsed(db, { personId }, since, { ...opts, now }) : 0,
-    perPerson ? aiRequestsByPersonToday(db, personId, now) : 0,
-  ]);
+  const [serverChanges, serverRequests, serverChat, personChanges, personRequests, personChat] =
+    await Promise.all([
+      qmChangesUsed(db, { guildId }, since, { ...opts, now }),
+      aiCreditsUsedToday(db, guildId, "qm", now),
+      aiCreditsUsedToday(db, guildId, "qm_chat", now),
+      perPerson ? qmChangesUsed(db, { personId }, since, { ...opts, now }) : 0,
+      perPerson ? aiRequestsByPersonToday(db, personId, "qm", now) : 0,
+      perPerson ? aiRequestsByPersonToday(db, personId, "qm_chat", now) : 0,
+    ]);
   return {
     tier,
     changesPerDay,
     changesLeft: Math.max(0, changesPerDay - Math.max(serverChanges, personChanges)),
     requestsPerDay,
     requestsLeft: Math.max(0, requestsPerDay - Math.max(serverRequests, personRequests)),
+    chatPerDay,
+    chatLeft: Math.max(0, chatPerDay - Math.max(serverChat, personChat)),
     perPerson,
   };
 }
 
-/** AI builder requests one person made today on servers that are on Free. */
-async function aiRequestsByPersonToday(db: Db, personId: string, now: Date) {
+/** AI calls of one kind that one person made today on servers that are on Free. */
+async function aiRequestsByPersonToday(db: Db, personId: string, feature: AiFeature, now: Date) {
   const [row] = await db
     .select({ n: count() })
     .from(aiUsage)
     .where(
       and(
         eq(aiUsage.requestedBy, personId),
-        eq(aiUsage.feature, "qm"),
+        eq(aiUsage.feature, feature),
         gte(aiUsage.createdAt, utcDayStart(now)),
         usesCredit(now),
         onFreeServer,

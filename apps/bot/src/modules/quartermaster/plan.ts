@@ -1,4 +1,11 @@
-import { QM_CHANGES_PER_PLAN, type QmCreated, type QmOperation } from "@garrison/db";
+import {
+  QM_CHANGES_PER_PLAN,
+  QM_ROLE_PERMISSION_KEYS,
+  QM_ROLE_PERMISSIONS,
+  type QmCreated,
+  type QmOperation,
+  type QmRolePermission,
+} from "@garrison/db";
 import { z } from "zod";
 
 /**
@@ -32,9 +39,23 @@ export const AiPlanSchema = z.object({
         .describe(
           "Role refs from this plan or existing role ids that may see this channel. Empty = visible to everyone.",
         ),
+      read_only: z
+        .boolean()
+        .nullable()
+        .describe(
+          "Channels only. Text: members can read but not post. Voice: members can listen but not speak. Null or false otherwise.",
+        ),
+      posters: z
+        .array(z.string())
+        .describe(
+          "Read-only channels: role refs or existing role ids that can still post (text) or speak (voice). Empty otherwise.",
+        ),
       color_hex: z.string().nullable().describe("Roles only, e.g. '#d4ff3a'."),
       hoist: z.boolean().nullable(),
       mentionable: z.boolean().nullable(),
+      permissions: z
+        .array(z.enum(QM_ROLE_PERMISSION_KEYS as [QmRolePermission, ...QmRolePermission[]]))
+        .describe("Roles only: member permissions from the allowed list. Empty for none."),
     }),
   ),
   notes: z.string().describe("Anything you could not or would not do, and why. Empty if none."),
@@ -48,6 +69,8 @@ export interface ServerSnapshot {
   roles: { id: string; name: string; managed: boolean }[];
   channelCount: number;
   roleCount: number;
+  /** Role permissions Garrison holds, so can give. Missing: all of them (tests). */
+  grantable?: QmRolePermission[];
 }
 
 /** The most changes one plan can make (QM_CHANGES_PER_PLAN). */
@@ -134,20 +157,43 @@ export function validatePlan(
         );
     }
 
-    const privateTo: string[] = [];
-    if (isChannel) {
-      if (op.private_to.length > MAX_PRIVATE_ROLES)
-        errors.push(`${n}: it can be private to ${MAX_PRIVATE_ROLES} roles at most.`);
-      for (const r of op.private_to.slice(0, MAX_PRIVATE_ROLES)) {
+    /** Role refs from this plan, or normal existing roles; anything else is an error. */
+    const rolesFrom = (list: string[], what: string) => {
+      const out: string[] = [];
+      if (list.length > MAX_PRIVATE_ROLES)
+        errors.push(`${n}: ${what} ${MAX_PRIVATE_ROLES} roles at most.`);
+      for (const r of list.slice(0, MAX_PRIVATE_ROLES)) {
         const t = r.trim();
-        if (refs.get(t.toLowerCase()) === "create_role") privateTo.push(t.toLowerCase());
-        else if (roleIds.has(t)) privateTo.push(t);
+        if (refs.get(t.toLowerCase()) === "create_role") out.push(t.toLowerCase());
+        else if (roleIds.has(t)) out.push(t);
         else
           errors.push(
             `${n}: "${t.slice(0, 40)}" isn't a role in this plan or a normal role in the server.`,
           );
       }
-    }
+      return out;
+    };
+    const privateTo = isChannel ? rolesFrom(op.private_to, "it can be private to") : [];
+    const readOnly = isChannel && op.read_only === true;
+    const posters = readOnly ? rolesFrom(op.posters ?? [], "it can let") : [];
+    if (isChannel && !readOnly && (op.posters ?? []).length)
+      errors.push(`${n}: it lists who can post, but isn't read-only.`);
+
+    const permissions: QmRolePermission[] = [];
+    if (op.kind === "create_role") {
+      const can = new Set(server.grantable ?? QM_ROLE_PERMISSION_KEYS);
+      for (const p of new Set(op.permissions ?? [])) {
+        if (!Object.hasOwn(QM_ROLE_PERMISSIONS, p))
+          errors.push(
+            `${n}: "${String(p).slice(0, 40)}" isn't a permission the AI builder can give.`,
+          );
+        else if (!can.has(p))
+          errors.push(
+            `${n}: Garrison can't give "${QM_ROLE_PERMISSIONS[p].label}" yet. Re-invite it from the dashboard to allow that.`,
+          );
+        else permissions.push(p);
+      }
+    } else if ((op.permissions ?? []).length) errors.push(`${n}: only roles get permissions.`);
 
     let color: number | null = null;
     if (op.kind === "create_role" && op.color_hex) {
@@ -178,6 +224,9 @@ export function validatePlan(
       color,
       hoist: op.kind === "create_role" ? Boolean(op.hoist) : false,
       mentionable: op.kind === "create_role" ? Boolean(op.mentionable) : false,
+      readOnly,
+      posters,
+      permissions,
     });
   });
 
@@ -207,9 +256,13 @@ export function describePlan(ops: QmOperation[], server: ServerSnapshot) {
   return ops.map((o) => {
     const extras: string[] = [];
     if (o.parent) extras.push(`in ${names.get(o.parent) ?? "?"}`);
-    if (o.privateTo.length)
+    const at = (list: string[]) => list.map((r) => `@${names.get(r) ?? "?"}`).join(", ");
+    if (o.privateTo.length) extras.push(`only ${at(o.privateTo)} can see it`);
+    if (o.readOnly)
       extras.push(
-        `only ${o.privateTo.map((r) => `@${names.get(r) ?? "?"}`).join(", ")} can see it`,
+        o.kind === "create_voice_channel"
+          ? `listen-only${o.posters?.length ? `, ${at(o.posters)} can speak` : ""}`
+          : `read-only${o.posters?.length ? `, ${at(o.posters)} can post` : ""}`,
       );
     if (o.slowmodeSeconds) extras.push(`slowmode ${o.slowmodeSeconds} s`);
     if (o.userLimit) extras.push(`limit ${o.userLimit}`);
@@ -223,7 +276,12 @@ export function describePlan(ops: QmOperation[], server: ServerSnapshot) {
       case "create_voice_channel":
         return `+ Voice ${o.name}${tail}`;
     }
-    return `+ Role @${o.name} · no permissions${o.color !== null ? ` · #${o.color.toString(16).padStart(6, "0")}` : ""}${o.hoist ? " · shown separately" : ""}`;
+    const perms = o.permissions?.length
+      ? (o.permissions as QmRolePermission[])
+          .map((p) => QM_ROLE_PERMISSIONS[p]?.label ?? p)
+          .join(", ")
+      : "no permissions";
+    return `+ Role @${o.name} · ${perms}${o.color !== null ? ` · #${o.color.toString(16).padStart(6, "0")}` : ""}${o.hoist ? " · shown separately" : ""}`;
   });
 }
 

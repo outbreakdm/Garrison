@@ -15,6 +15,7 @@ checkout isn't available; the landing page always shows release pricing.
 | Safety (moderation, anti-raid, anti-nuke, verification, logs) | Everything | Everything | Everything |
 | AI builder changes a day (a plan makes up to 20 and uses only what it makes) | 40 per person, across all their Free servers (and 40 per server) | 300 | 400 on each server |
 | AI builder requests a day (a cost cap) | 6 | 40 | 50 on each server |
+| AI builder chat messages a day | 20 | 100 | 150 on each server |
 | Everything in the Free and Pro table | Free column | Pro column | Pro column, on every seat |
 
 Agency is the same Pro on each server. What it sells is the bundle price and one place to

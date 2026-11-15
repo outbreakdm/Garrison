@@ -83,10 +83,13 @@ Discord's 680×240 at 2x).
 - [ ] Installation contexts: Guild Install only (User Install off).
 - [ ] Install link: Discord Provided Link, so the bot's profile gets an Add App button.
 - [ ] Guild Install scopes `bot` and `applications.commands`; permissions integer
-      `1099865091254`. That's exactly `inviteSettings` in `packages/brand` (Kick, Ban, Manage
-      Channels, Manage Server, View Audit Log, View Channel, Send Messages, Manage Messages,
-      Embed Links, Read Message History, Connect, Move Members, Change Nickname, Manage
-      Roles, Moderate Members). Never Administrator. If `inviteSettings` changes, update this.
+      `1546577637110` (changed 2026-11-15, update it if you set the old one). That's exactly
+      `inviteSettings` in `packages/brand`: Kick, Ban, Manage Channels, Manage Server, View
+      Audit Log, View Channel, Send Messages, Manage Messages, Embed Links, Read Message
+      History, Connect, Move Members, Change Nickname, Manage Roles, Moderate Members, plus the
+      member permissions the AI builder can give (Add Reactions, Video, Attach Files, External
+      Emojis and Stickers, Speak, Voice Activity, Create Threads, Talk in Threads). Never
+      Administrator. Servers that added Garrison before get a /health note to re-grant them.
 
 **OAuth2**
 - [ ] Redirect: `https://dash.garrisonbot.com/auth/callback`.

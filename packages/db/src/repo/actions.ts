@@ -20,6 +20,7 @@ import {
   type PostRoleMenuPayload,
   type PostTicketPanelPayload,
   type PurgePayload,
+  type QmChatPayload,
   type QmPlanPayload,
   type RaidSignupPayload,
   type RaidWithdrawPayload,
@@ -51,6 +52,7 @@ export type QueueInput =
   | { kind: "raid_signup"; payload: RaidSignupPayload }
   | { kind: "raid_withdraw"; payload: RaidWithdrawPayload }
   | { kind: "qm_plan"; payload: QmPlanPayload }
+  | { kind: "qm_chat"; payload: QmChatPayload }
   | { kind: "qm_apply"; payload: IdPayload }
   | { kind: "qm_cancel"; payload: IdPayload }
   | { kind: "post_role_menu"; payload: PostRoleMenuPayload }

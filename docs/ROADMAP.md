@@ -789,3 +789,11 @@ Decided (2026-11-12, owner):
   fuller designs, change allowance, continuing plans and new page. Bot online; checked the
   live pages, the form-action header and the new plan wording. Not yet tried with Battle.net
   or the real AI model.
+- 2026-11-15: AI builder chat and permissions. The AI builder page leads with a conversation:
+  Garrison asks one question at a time with quick replies, drafts a plan when it knows enough,
+  and revises it in the same thread (qm_messages, per person; `qm_chat` dashboard action;
+  20/100/150 messages a day). Plans can make channels read-only or listen-only with posters,
+  and give new roles allowlisted member permissions (QM_ROLE_PERMISSIONS); only permissions
+  Garrison holds are set, which also fixes private voice channels asking for Speak. The invite
+  adds those member permissions (integer 1546577637110; /health flags older servers). Needs
+  migration 0057 in production. Not yet tried against the real model. Not deployed.

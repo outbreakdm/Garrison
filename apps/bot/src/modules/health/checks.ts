@@ -35,6 +35,21 @@ export const REQUIRED_PERMISSIONS: {
     optional: true,
   },
   {
+    module: "AI builder",
+    bits:
+      P.AddReactions |
+      P.Stream |
+      P.AttachFiles |
+      P.UseExternalEmojis |
+      P.Speak |
+      P.UseVAD |
+      P.CreatePublicThreads |
+      P.UseExternalStickers |
+      P.SendMessagesInThreads,
+    why: "to give new roles and channels member permissions like files, threads and speaking",
+    optional: true,
+  },
+  {
     module: "Profile",
     bits: P.ChangeNickname,
     why: "to use the nickname set for it on the dashboard",

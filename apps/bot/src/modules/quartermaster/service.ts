@@ -10,9 +10,12 @@ import {
   nextUtcDayStart,
   QM_ATTEMPTS_PER_HOUR,
   QM_PLAN_TTL_MS,
+  QM_ROLE_PERMISSION_KEYS,
+  QM_ROLE_PERMISSIONS,
   type QmBuild,
   type QmCreated,
   type QmOperation,
+  type QmRolePermission,
   qmReserveMicros,
   recordQmCreated,
   reserveAiCall,
@@ -32,14 +35,69 @@ import {
 export const PLAN_TTL_MS = QM_PLAN_TTL_MS;
 export const REQUEST_MAX = 500;
 
+const P = PermissionFlagsBits;
 /** What a private channel's roles may do. Nothing that moderates or manages. */
-const CHANNEL_ACCESS = [
-  PermissionFlagsBits.ViewChannel,
-  PermissionFlagsBits.SendMessages,
-  PermissionFlagsBits.ReadMessageHistory,
-  PermissionFlagsBits.Connect,
-  PermissionFlagsBits.Speak,
-];
+const CHANNEL_ACCESS = [P.ViewChannel, P.SendMessages, P.ReadMessageHistory, P.Connect, P.Speak];
+/** Seeing a channel without posting or speaking in it. */
+const SEE = [P.ViewChannel, P.ReadMessageHistory, P.Connect];
+/** What read-only takes away: posting (text) or speaking (voice). */
+const QUIET_TEXT = [P.SendMessages, P.SendMessagesInThreads, P.CreatePublicThreads];
+const QUIET_VOICE = [P.Speak, P.Stream];
+
+/** The role permissions from QM_ROLE_PERMISSIONS that this member (Garrison) holds. */
+function grantableBy(me: { permissions: { has(bit: bigint): boolean } } | null) {
+  return QM_ROLE_PERMISSION_KEYS.filter((k) =>
+    me ? me.permissions.has(P[QM_ROLE_PERMISSIONS[k].flag]) : false,
+  );
+}
+
+/**
+ * A new channel's overwrites: who sees it (private_to) and who may post or speak in it
+ * (read-only, posters). Only permissions Garrison holds are set, because Discord refuses
+ * an overwrite for any permission the bot doesn't have itself.
+ */
+export function channelOverwrites(
+  op: QmOperation,
+  ids: { everyone: string; me: string; resolve: (refOrId: string) => string },
+  holds: (bit: bigint) => boolean,
+): OverwriteResolvable[] {
+  const voice = op.kind === "create_voice_channel";
+  const quiet = voice ? QUIET_VOICE : QUIET_TEXT;
+  const rows = new Map<string, { allow: Set<bigint>; deny: Set<bigint> }>();
+  const row = (id: string) => {
+    const found = rows.get(id);
+    if (found) return found;
+    const made = { allow: new Set<bigint>(), deny: new Set<bigint>() };
+    rows.set(id, made);
+    return made;
+  };
+  const allow = (id: string, bits: bigint[]) => {
+    const r = row(id);
+    for (const b of bits) {
+      r.allow.add(b);
+      r.deny.delete(b);
+    }
+  };
+  const deny = (id: string, bits: bigint[]) => {
+    const r = row(id);
+    for (const b of bits) if (!r.allow.has(b)) r.deny.add(b);
+  };
+  if (op.privateTo.length) {
+    deny(ids.everyone, [P.ViewChannel]);
+    for (const r of op.privateTo) allow(ids.resolve(r), op.readOnly ? SEE : CHANNEL_ACCESS);
+    if (op.readOnly) for (const r of op.privateTo) deny(ids.resolve(r), quiet);
+  } else if (op.readOnly) {
+    deny(ids.everyone, quiet);
+  }
+  if (op.readOnly) for (const r of op.posters ?? []) allow(ids.resolve(r), [...SEE, ...quiet]);
+  if (op.privateTo.length || op.readOnly)
+    allow(ids.me, [P.ViewChannel, P.Connect, P.SendMessages, P.ReadMessageHistory]);
+  return [...rows].map(([id, r]) => ({
+    id,
+    allow: [...r.allow].filter(holds),
+    deny: [...r.deny].filter(holds),
+  }));
+}
 
 export function snapshot(guild: Guild): {
   server: ServerSnapshot;
@@ -55,6 +113,7 @@ export function snapshot(guild: Guild): {
       roles: guild.roles.cache.map((r) => ({ id: r.id, name: r.name, managed: r.managed })),
       channelCount: channels.length,
       roleCount: guild.roles.cache.size,
+      grantable: grantableBy(guild.members.me),
     },
     channels: channels
       .filter((c) => c.type !== ChannelType.GuildCategory)
@@ -101,9 +160,12 @@ function asAiOperations(plan: QmOperation[]) {
     slowmode_seconds: op.slowmodeSeconds,
     user_limit: op.userLimit,
     private_to: op.privateTo,
+    read_only: op.readOnly ?? null,
+    posters: op.posters ?? [],
     color_hex: op.color === null ? null : `#${op.color.toString(16).padStart(6, "0")}`,
     hoist: op.hoist,
     mentionable: op.mentionable,
+    permissions: (op.permissions ?? []) as QmRolePermission[],
   }));
 }
 
@@ -121,7 +183,7 @@ async function historyOf(ctx: BotContext, guildId: string, build: QmBuild) {
 }
 
 /** What the model is told about the build being continued. Built items that were since deleted are left out. */
-async function continuationFor(
+export async function continuationFor(
   ctx: BotContext,
   guild: Guild,
   build: QmBuild,
@@ -141,6 +203,55 @@ async function continuationFor(
     history,
     notes: build.notes,
     built: build.created.filter(exists).map(({ kind, id, name }) => ({ kind, id, name })),
+  };
+}
+
+/**
+ * Store a checked plan as the next version: check the day's changes again (another plan
+ * may have used some while this one was thought up), then replace the waiting plan it
+ * revises, if any. Shared by the one-shot planner and the chat.
+ */
+export async function storePlan(
+  ctx: BotContext,
+  guildId: string,
+  requester: { id: string; tag: string },
+  request: string,
+  checked: { summary: string; operations: QmOperation[]; notes: string },
+  model: string,
+  line: { continues: QmBuild | null; replacing: QmBuild | null },
+): Promise<
+  | { ok: true; build: QmBuild; changesLeft: number; replaced: QmBuild | null }
+  | { ok: false; error: string }
+> {
+  const now = await aiAllowance(ctx.db, guildId, requester.id, {
+    exceptId: line.replacing?.id,
+  });
+  if (checked.operations.length > now.changesLeft)
+    return {
+      ok: false,
+      error: `This plan needs ${checked.operations.length} changes, but only ${now.changesLeft} are left today. Ask for less, or wait for tomorrow's.`,
+    };
+  const build = await createQmPlan(ctx.db, {
+    guildId,
+    requestedById: requester.id,
+    requestedByTag: requester.tag,
+    prompt: request,
+    summary: checked.summary,
+    plan: checked.operations,
+    notes: checked.notes || null,
+    continuesId: line.continues?.id ?? null,
+    model,
+  });
+  const replaced = line.replacing
+    ? await transitionQmBuild(ctx.db, line.replacing.id, "pending", "cancelled", {
+        error: `Replaced by v${build.version}.`,
+      })
+    : null;
+  return {
+    ok: true,
+    build,
+    changesLeft: Math.max(0, now.changesLeft - checked.operations.length),
+    replaced,
   };
 }
 
@@ -211,38 +322,13 @@ export async function planBuild(
           .join("\n")}`,
       };
     }
-    // Another plan may have used changes while this one was thought up: check again.
-    const now = await aiAllowance(ctx.db, guild.id, requester.id, { exceptId: replacing?.id });
-    if (checked.operations.length > now.changesLeft)
-      return {
-        ok: false,
-        error: `This plan needs ${checked.operations.length} changes, but only ${now.changesLeft} are left today. Ask for less, or wait for tomorrow's.`,
-      };
-    const build = await createQmPlan(ctx.db, {
-      guildId: guild.id,
-      requestedById: requester.id,
-      requestedByTag: requester.tag,
-      prompt: request,
-      summary: checked.summary,
-      plan: checked.operations,
-      notes: checked.notes || null,
-      continuesId: continues?.id ?? null,
-      model: result.model,
+    const stored = await storePlan(ctx, guild.id, requester, request, checked, result.model, {
+      continues,
+      replacing,
     });
-    const replaced = replacing
-      ? await transitionQmBuild(ctx.db, replacing.id, "pending", "cancelled", {
-          error: `Replaced by v${build.version}.`,
-        })
-      : null;
+    if (!stored.ok) return stored;
     keptCredit = true;
-    return {
-      ok: true,
-      build,
-      server: snap.server,
-      notes: checked.notes,
-      changesLeft: Math.max(0, now.changesLeft - checked.operations.length),
-      replaced,
-    };
+    return { ...stored, server: snap.server, notes: checked.notes };
   } finally {
     await finishAiCall(ctx.db, reserved.id, {
       model: usage?.model ?? model,
@@ -331,7 +417,11 @@ export async function applyBuild(
           color: op.color ?? undefined,
           hoist: op.hoist,
           mentionable: op.mentionable,
-          permissions: [], // Never any server-wide permissions.
+          // Only member-level permissions from the allowlist, and only ones Garrison holds.
+          permissions: (op.permissions ?? [])
+            .filter((p): p is QmRolePermission => Object.hasOwn(QM_ROLE_PERMISSIONS, p))
+            .map((p) => P[QM_ROLE_PERMISSIONS[p].flag])
+            .filter((bit) => me.permissions.has(bit)),
           reason,
         });
         item = { kind: "role", id: role.id, name: role.name };
@@ -343,13 +433,11 @@ export async function applyBuild(
         });
         item = { kind: "category", id: category.id, name: category.name };
       } else {
-        const overwrites: OverwriteResolvable[] = op.privateTo.length
-          ? [
-              { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
-              { id: me.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect] },
-              ...op.privateTo.map((r) => ({ id: resolve(r), allow: CHANNEL_ACCESS })),
-            ]
-          : [];
+        const overwrites = channelOverwrites(
+          op,
+          { everyone: guild.roles.everyone.id, me: me.id, resolve },
+          (bit) => me.permissions.has(bit),
+        );
         const channel = await guild.channels.create({
           name: op.name,
           type: op.kind === "create_voice_channel" ? ChannelType.GuildVoice : ChannelType.GuildText,
