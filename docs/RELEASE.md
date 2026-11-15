@@ -28,16 +28,16 @@ be bought. Full steps in `docs/pricing.md`, "Turning checkout on". In **live** m
       Signing secret, Reveal.
 - [x] Customer portal: a default with no plan switching, and one per plan that switches
       monthly and yearly within that plan only (`docs/pricing.md` step 3).
-- [ ] Restricted key (`rk_live_...`) with the permissions in `docs/pricing.md` step 5:
+- [x] Restricted key (`rk_live_...`) with the permissions in `docs/pricing.md` step 5:
       Developers, API keys, Create restricted key.
 - [ ] Decide on Managed Payments (Stripe as seller of record, handles sales tax) or Stripe Tax
       with your own registrations.
 - [ ] Settings, Public details: support email `support@garrisonbot.com`, website
       `https://garrisonbot.com`, Terms `https://garrisonbot.com/terms`, Privacy
       `https://garrisonbot.com/privacy`, Refunds `https://garrisonbot.com/refunds`.
-- [ ] Supabase SQL editor: `ALTER ROLE garrison_billing LOGIN PASSWORD '<long random>';`
+- [x] Supabase SQL editor: `ALTER ROLE garrison_billing LOGIN PASSWORD '<long random>';`
       and build its connection string like the dashboard's.
-- [ ] GitHub secrets: `STRIPE_SECRET_KEY` (the restricted key), `STRIPE_WEBHOOK_SECRET`, the
+- [x] GitHub secrets: `STRIPE_SECRET_KEY` (the restricted key), `STRIPE_WEBHOOK_SECRET`, the
       four `STRIPE_PRICE_*` IDs (find each in the Stripe Dashboard by its lookup key), and
       `BILLING_DATABASE_URL`.
 

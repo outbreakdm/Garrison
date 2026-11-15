@@ -751,3 +751,6 @@ Decided (2026-11-12, owner):
   preview, plain names in bot footers, per-plan billing portals. Live pages checked. Checkout
   stays closed until the four `STRIPE_PRICE_*` secrets and `BILLING_DATABASE_URL` are set and
   the `garrison_billing` login is enabled; then deploy again.
+- 2026-11-15: Deployed again (run 43673660924) with every Stripe secret and
+  `BILLING_DATABASE_URL` set and the `garrison_billing` login enabled, so checkout is on in
+  production. Not yet checked with a real purchase (release-day step in `docs/RELEASE.md`).
