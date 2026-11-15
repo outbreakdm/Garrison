@@ -4534,6 +4534,77 @@ button.list-rows__remove:focus-visible {
   font-weight: 600;
   white-space: nowrap;
 }
+/* AI supplies on the Plan page: this month's pool, then packs to buy. */
+.supplies {
+  display: grid;
+  gap: var(--space-4);
+  scroll-margin-top: 80px;
+}
+.supplies__head {
+  display: grid;
+  gap: var(--space-1);
+}
+.supplies__head .card-sub {
+  margin: 0;
+}
+.supplies__usage {
+  padding-top: 0;
+  border-top: 0;
+}
+.packs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pack {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: 12px 12px 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.pack__what {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 2px;
+  min-width: 0;
+}
+.pack__size {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.pack__about {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.pack__price {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.supplies__note {
+  margin: 0;
+}
+.supplies__toggle {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+.supplies__bought .table-wrap {
+  margin-top: var(--space-3);
+}
+@media (max-width: 720px) {
+  .packs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Upgrade: monthly as the primary, yearly beside it. */
 .tier__buy {
   display: flex;

@@ -15,12 +15,15 @@ import {
   aiAllowance,
   aiDailyBudgetMicros,
   finishAiCall,
+  packsLeft,
   type ReserveInput,
   reserveAiCall,
+  settleBuildSupplies,
   suppliesUsed,
 } from "./repo/ai-usage";
 import { upsertGuild } from "./repo/guilds";
-import { guildPlans, planBundles } from "./schema";
+import { createQmPlan, transitionQmBuild } from "./repo/quartermaster";
+import { aiUsage, guildPlans, planBundles, supplyGrants } from "./schema";
 import { createTestDb } from "./testing";
 
 let db: Db;
@@ -29,7 +32,7 @@ let close: () => Promise<void>;
 beforeAll(async () => {
   ({ db, exec, close } = await createTestDb());
   await exec("SET ROLE garrison_bot");
-  for (const id of ["a1", "a2", "a3", "a4", "a5", "p1", "g1", "g2"])
+  for (const id of ["a1", "a2", "a3", "a4", "a5", "p1", "g1", "g2", "k1"])
     await upsertGuild(db, { id, name: id });
   // Plans are written by billing and staff, never the bot.
   await exec("RESET ROLE");
@@ -163,6 +166,8 @@ describe("AI supplies", () => {
       tier: "pro",
       pool: 3000,
       suppliesLeft: 3000,
+      poolLeft: 3000,
+      packLeft: 0,
       perPerson: false,
       shared: false,
       resetsAt: new Date("2026-12-10T00:00:00Z"),
@@ -178,19 +183,107 @@ describe("AI supplies", () => {
     });
   });
 
+  it("uses a server's packs once its pool runs out, and only for what was really spent", async () => {
+    // 17 November: a day of its own, so the budget test's day doesn't see this spend.
+    const now = at(120);
+    await exec("RESET ROLE");
+    // 198 of this month's 200 used, and a 1,000-supply pack bought.
+    await db.insert(aiUsage).values({
+      guildId: "k1",
+      feature: "qm_chat",
+      requestedBy: "110",
+      model,
+      reservedMicros: 0,
+      costMicros: 198_000,
+      supplies: 198,
+      ok: true,
+      createdAt: now,
+    });
+    await db.insert(supplyGrants).values({
+      guildId: "k1",
+      pack: "small",
+      supplies: 1000,
+      amountCents: 299,
+      stripeSessionId: "cs_k1",
+      createdAt: now,
+      expiresAt: new Date("2099-01-01T00:00:00Z"),
+    });
+    // An expired pack doesn't count.
+    await db.insert(supplyGrants).values({
+      guildId: "k1",
+      pack: "small",
+      supplies: 1000,
+      amountCents: 299,
+      stripeSessionId: "cs_k1_old",
+      createdAt: now,
+      expiresAt: day,
+    });
+    await exec("SET ROLE garrison_bot");
+    expect(await aiAllowance(db, "k1", "110", { now })).toMatchObject({
+      poolLeft: 2,
+      packLeft: 1000,
+      suppliesLeft: 1002,
+    });
+    // A message runs on the pack and is charged 3: 2 from the pool, 1 from the pack.
+    const r = await reserveAiCall(db, input("k1", "110"), now);
+    if (!r.ok) throw new Error(r.reason);
+    expect(r.hold).toBe(14);
+    await finish(r.id);
+    expect(await packsLeft(db, "k1")).toBe(999);
+    expect(await aiAllowance(db, "k1", "110", { now })).toMatchObject({
+      poolLeft: 0,
+      packLeft: 999,
+    });
+    // A plan's changes come out of the pack once they're made, not while they wait.
+    const plan = await createQmPlan(db, {
+      guildId: "k1",
+      requestedById: "110",
+      requestedByTag: "k",
+      prompt: "x",
+      summary: "x",
+      plan: Array.from({ length: 5 }, (_, i) => ({
+        kind: "create_role" as const,
+        ref: `r${i}`,
+        name: `R${i}`,
+        parent: null,
+        topic: null,
+        slowmodeSeconds: null,
+        userLimit: null,
+        privateTo: [],
+        color: null,
+        hoist: false,
+        mentionable: false,
+      })),
+      model,
+    });
+    await exec("RESET ROLE");
+    await exec(`UPDATE qm_builds SET created_at = '${now.toISOString()}' WHERE id = '${plan.id}'`);
+    await exec("SET ROLE garrison_bot");
+    expect(await packsLeft(db, "k1")).toBe(999);
+    expect((await aiAllowance(db, "k1", "110", { now })).packLeft).toBe(994);
+    await transitionQmBuild(db, plan.id, "pending", "applied");
+    await settleBuildSupplies(db, plan.id);
+    expect(await packsLeft(db, "k1")).toBe(994);
+    expect(await aiAllowance(db, "k1", "110", { now })).toMatchObject({
+      poolLeft: 0,
+      packLeft: 994,
+    });
+  });
+
   it("grows the global daily budget with each paying server", async () => {
-    // $2, plus $0.30 a day for the Pro server and $1.30 for the Agency plan.
-    expect(await aiDailyBudgetMicros(db, 2)).toBe(3_600_000);
+    // $2, plus $0.30 a day for the Pro server and $1.30 for the Agency plan, plus the 2,000
+    // supplies in packs bought this week ($2.00).
+    expect(await aiDailyBudgetMicros(db, 2, at(121))).toBe(5_600_000);
   });
 
   it("stops at the day's budget, counting running calls at their hold", async () => {
     // A later day: the budget is shared by every server, so earlier tests' spend would count.
     const budget = (g: string, p: string) => input(g, p, { dailyBudgetMicros: 20_000 });
-    const first = await reserveAiCall(db, budget("a5", "105"), at(74));
+    const first = await reserveAiCall(db, budget("a5", "105"), at(242));
     if (!first.ok) throw new Error("first");
     await finish(first.id); // 2,620 spent
-    expect((await reserveAiCall(db, budget("a5", "105"), at(74.1))).ok).toBe(true); // + 14,000 held
-    expect(await reserveAiCall(db, budget("a1", "106"), at(74.2))).toMatchObject({
+    expect((await reserveAiCall(db, budget("a5", "105"), at(242.1))).ok).toBe(true); // + 14,000 held
+    expect(await reserveAiCall(db, budget("a1", "106"), at(242.2))).toMatchObject({
       ok: false,
       reason: "budget",
     });

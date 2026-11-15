@@ -6,6 +6,9 @@ import {
   isStaff,
   listAgencyPlans,
   releaseSeat,
+  SUPPLY_PACK_DAYS,
+  SUPPLY_PACKS,
+  type SupplyPack,
   setComp,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
@@ -13,6 +16,8 @@ import {
   billingReady,
   type Interval,
   type PaidTier,
+  packCents,
+  packsReady,
   portalConfiguration,
   priceId,
   stripe,
@@ -108,6 +113,55 @@ export async function checkoutAction(form: FormData) {
     console.error("Stripe checkout refused:", e instanceof Error ? e.message : e);
   }
   if (!url) redirect(`${back}?done=checkout_failed`);
+  redirect(url);
+}
+
+/**
+ * Buy a supply pack for this server: a one-time Stripe Checkout. The session says which
+ * server and pack; the webhook adds the supplies once Stripe confirms the payment, never
+ * this action. Anyone who manages the server can buy one, on any plan.
+ */
+export async function buySuppliesAction(form: FormData) {
+  const guildId = String(form.get("guildId") ?? "");
+  const access = await checkGuildAccess(guildId);
+  if (!access) redirect("/servers");
+  const back = `/servers/${access.guild.id}/plan`;
+  const pack = String(form.get("pack") ?? "") as SupplyPack;
+  if (!packsReady() || !Object.hasOwn(SUPPLY_PACKS, pack)) redirect(`${back}#supplies`);
+  const user = access.session.userId;
+  const metadata = { kind: "supplies", pack, guildId: access.guild.id, userId: user };
+  const supplies = SUPPLY_PACKS[pack].supplies.toLocaleString("en-US");
+  const base = env().APP_URL;
+  let url: string | null = null;
+  try {
+    const session = await stripe().checkout.sessions.create({
+      mode: "payment",
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency: "usd",
+            unit_amount: packCents(pack),
+            product_data: {
+              name: `${supplies} AI assistant supplies`,
+              description: `For the Garrison AI assistant on ${access.guild.name.slice(0, 60)}, used after its monthly supplies run out. They last ${SUPPLY_PACK_DAYS / 365} year.`,
+            },
+          },
+        },
+      ],
+      client_reference_id: user,
+      metadata,
+      payment_intent_data: { metadata },
+      // Tags these sessions in the Stripe dashboard, apart from plan checkouts.
+      integration_identifier: "garrison_supplies_vqhtmzkd",
+      success_url: `${base}${back}?done=supplies#supplies`,
+      cancel_url: `${base}${back}#supplies`,
+    });
+    url = session.url;
+  } catch (e) {
+    console.error("Stripe checkout refused:", e instanceof Error ? e.message : e);
+  }
+  if (!url) redirect(`${back}?done=checkout_failed#supplies`);
   redirect(url);
 }
 

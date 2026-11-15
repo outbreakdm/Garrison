@@ -3,8 +3,11 @@ import {
   createDb,
   type Db,
   describeDbRole,
+  grantSupplyPack,
   PRICING,
   roleProblem,
+  SUPPLY_PACKS,
+  type SupplyPack,
   setAgencyBilling,
   setGuildBilling,
 } from "@garrison/db";
@@ -39,6 +42,15 @@ const read = (k: string) => {
 };
 
 export const priceId = (tier: PaidTier, interval: Interval) => read(PRICE_ENV[tier][interval]);
+
+/**
+ * True when supply packs can be bought: they need only the key, since their price is set
+ * here (plans.ts SUPPLY_PACKS) rather than as a Stripe price.
+ */
+export const packsReady = () => Boolean(read("STRIPE_SECRET_KEY"));
+
+/** A pack's price in cents, as Stripe charges it. */
+export const packCents = (pack: SupplyPack) => Math.round(SUPPLY_PACKS[pack].price * 100);
 
 /** True when checkout can run: a key and all four prices are set. */
 export function billingReady(): boolean {
@@ -126,4 +138,28 @@ export async function applySubscription(db: Db, sub: Stripe.Subscription) {
   const state = subscriptionState(sub);
   if (meta.tier === "pro") return setGuildBilling(db, meta.guildId as string, meta.userId, state);
   return setAgencyBilling(db, meta.userId, PRICING.agency.servers, state);
+}
+
+/**
+ * A paid supply pack's Checkout Session: grant the pack, once. Only a session that's paid,
+ * says it's a pack for a server, and charged that pack's price grants anything.
+ */
+export async function applySupplyPack(db: Db, session: Stripe.Checkout.Session) {
+  if (session.payment_status !== "paid") return "waiting" as const;
+  const meta = session.metadata ?? {};
+  const pack = meta.pack as SupplyPack;
+  if (meta.kind !== "supplies" || !Object.hasOwn(SUPPLY_PACKS, pack) || !meta.guildId)
+    return "ignored" as const;
+  if (session.currency !== "usd" || session.amount_subtotal !== packCents(pack))
+    return "ignored" as const;
+  const intent = session.payment_intent;
+  return grantSupplyPack(db, {
+    sessionId: session.id,
+    guildId: meta.guildId,
+    pack,
+    supplies: SUPPLY_PACKS[pack].supplies,
+    amountCents: session.amount_total ?? packCents(pack),
+    paymentIntent: typeof intent === "string" ? intent : (intent?.id ?? null),
+    buyerId: meta.userId ?? null,
+  });
 }

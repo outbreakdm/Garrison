@@ -65,6 +65,38 @@ export async function setAgencyBilling(
   );
 }
 
+export interface SupplyPackPurchase {
+  /** The Checkout Session: a pack is granted once per session. */
+  sessionId: string;
+  guildId: string;
+  pack: string;
+  supplies: number;
+  amountCents: number;
+  paymentIntent: string | null;
+  buyerId: string | null;
+}
+
+/** A paid supply pack. Returns 'granted', 'duplicate' (already granted) or 'ignored'. */
+export async function grantSupplyPack(
+  db: Db,
+  p: SupplyPackPurchase,
+): Promise<"granted" | "duplicate" | "ignored"> {
+  return (
+    (await one<"granted" | "duplicate" | "ignored">(
+      db,
+      sql`SELECT public.billing_grant_supplies(${p.sessionId}, ${p.guildId}, ${p.pack},
+        ${p.supplies}::int, ${p.amountCents}::int, ${p.paymentIntent}, ${p.buyerId}) AS result`,
+    )) ?? "ignored"
+  );
+}
+
+/** A pack's payment was refunded in full or disputed: what's left of it stops working. */
+export async function revokeSupplyPack(db: Db, paymentIntent: string) {
+  return Boolean(
+    await one<boolean>(db, sql`SELECT public.billing_revoke_supplies(${paymentIntent}) AS result`),
+  );
+}
+
 /**
  * Stripe statuses that keep Pro on. `past_due` keeps it through Stripe's payment retries;
  * `unpaid`, `canceled` and `incomplete_expired` end it.

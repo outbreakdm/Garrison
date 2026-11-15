@@ -1,9 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "../client";
-import { platformStaff } from "../schema";
+import { platformStaff, supplyGrants } from "../schema";
 import { createTestDb } from "../testing";
+import { packsLeft } from "./ai-usage";
 import {
+  grantSupplyPack,
   recordBillingEvent,
+  revokeSupplyPack,
   type SubscriptionState,
   setAgencyBilling,
   setGuildBilling,
@@ -103,5 +106,39 @@ describe("billing: only the Stripe webhook's role writes paid plans", () => {
     expect(await setAgencyBilling(db, BUYER, 5, sub("sub_agency", false))).toBe("removed");
     await as("garrison_web");
     expect((await listAgencyPlans(db, BUYER)).some((p) => p.source === "stripe")).toBe(false);
+  });
+
+  it("grants a supply pack once per Checkout Session, and a refund stops what's left", async () => {
+    const purchase = {
+      sessionId: "cs_test_1",
+      guildId: G1,
+      pack: "small",
+      supplies: 1000,
+      amountCents: 299,
+      paymentIntent: "pi_test_1",
+      buyerId: BUYER,
+    };
+    for (const role of ["garrison_web", "garrison_bot"]) {
+      await as(role);
+      expect(await refused(grantSupplyPack(db, purchase))).toMatch(/permission denied/);
+    }
+    await as("garrison_billing");
+    expect(await grantSupplyPack(db, purchase)).toBe("granted");
+    // Stripe retried the event: nothing more.
+    expect(await grantSupplyPack(db, purchase)).toBe("duplicate");
+    // Only the packs Garrison sells.
+    expect(await grantSupplyPack(db, { ...purchase, sessionId: "cs_test_2", supplies: 9999 })).toBe(
+      "ignored",
+    );
+    await as("garrison_bot");
+    expect(await packsLeft(db, G1)).toBe(1000);
+    // The bot counts what packs pay for; it can't give a server more.
+    expect(await refused(db.update(supplyGrants).set({ supplies: 99_999 }))).toMatch(
+      /permission denied/,
+    );
+    await as("garrison_billing");
+    expect(await revokeSupplyPack(db, "pi_test_1")).toBe(true);
+    await as("garrison_bot");
+    expect(await packsLeft(db, G1)).toBe(0);
   });
 });

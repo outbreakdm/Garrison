@@ -875,3 +875,14 @@ Decided (2026-11-12, owner):
   $0.30 a day per Pro server and $1.30 per Agency plan. Plan cards, Refund Policy, chat
   messages and the supplies bar say "a month" and when the pool renews. Migration 0061.
   All checks pass.
+- 2026-11-15: Supplies v2 step 3, supply packs: 1,000 for $2.99 and 5,000 for $11.99, for
+  any server, bought on the Plan page's new "AI assistant supplies" section (this month's
+  pool, packs, Buy buttons, packs bought) through a one-time Stripe Checkout (price set in
+  `plans.ts`, so no new Stripe prices or settings). The webhook grants a pack only when the
+  session is paid and charged that pack's price, once per session
+  (`billing_grant_supplies`); a full refund, dispute or fraud warning stops what's left
+  (`billing_revoke_supplies`). Packs are used after the pool, soonest to expire first, and
+  only for what was really spent (finished calls and made builds, never holds). The assistant
+  page shows pack supplies and a "Buy supplies" link when low; the out-of-supplies message
+  points to the Plan page. Refund Policy: unused packs refunded in full within 14 days.
+  Migration 0062. Checked in the local preview (desktop and phone). All checks pass.

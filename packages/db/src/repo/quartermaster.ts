@@ -35,13 +35,19 @@ export const QM_PLAN_TTL_MS = 15 * 60_000;
  * Changes a build counts against the day: what it built (all of a built plan, what got
  * made before a failure or an undo), or what a waiting plan holds until it expires.
  * Structure and settings count alike, one per item or field. Discarded and expired plans
- * count nothing.
+ * count nothing. What supply packs paid for (`pack_supplies`) isn't the pool's. `settled`
+ * leaves out waiting plans: only what reached the server.
  */
-const changesCounted = (now: Date) => sql<number>`coalesce(sum(case
+const changesCounted = (now: Date, settled: boolean) => sql<number>`coalesce(sum(case
   when ${qmBuilds.status} = 'applied' then jsonb_array_length(${qmBuilds.plan}) + jsonb_array_length(${qmBuilds.settings}) + jsonb_array_length(${qmBuilds.posts})
   when ${qmBuilds.status} in ('failed', 'rolled_back') then jsonb_array_length(${qmBuilds.created})
-  when ${qmBuilds.status} = 'pending' and ${qmBuilds.createdAt} > ${new Date(now.getTime() - QM_PLAN_TTL_MS).toISOString()}::timestamptz then jsonb_array_length(${qmBuilds.plan}) + jsonb_array_length(${qmBuilds.settings}) + jsonb_array_length(${qmBuilds.posts})
-  else 0 end), 0)::int`;
+  when ${qmBuilds.status} = 'pending' and ${settled ? sql`false` : sql`${qmBuilds.createdAt} > ${new Date(now.getTime() - QM_PLAN_TTL_MS).toISOString()}::timestamptz`} then jsonb_array_length(${qmBuilds.plan}) + jsonb_array_length(${qmBuilds.settings}) + jsonb_array_length(${qmBuilds.posts})
+  else 0 end - ${qmBuilds.packSupplies}), 0)::int`;
+
+/** What a built (or partly built) plan counts: everything, or what it made before stopping. */
+export const qmChangesMade = (
+  b: Pick<QmBuild, "status" | "plan" | "settings" | "posts" | "created">,
+) => (b.status === "applied" ? qmChangeCount(b) : b.created.length);
 
 /** A build's changes: its structure, each settings field, and each post. */
 export const qmChangeCount = (b: Pick<QmBuild, "plan" | "settings" | "posts">) =>
@@ -59,7 +65,7 @@ export async function qmChangesUsed(
   db: Db,
   scope: { guildId: string } | { personId: string } | { bundleId: string },
   since: Date,
-  opts: { exceptId?: string; now?: Date } = {},
+  opts: { exceptId?: string; now?: Date; settled?: boolean } = {},
 ) {
   const where: SQL[] = [gte(qmBuilds.createdAt, since)];
   if ("guildId" in scope) where.push(eq(qmBuilds.guildId, scope.guildId));
@@ -70,7 +76,7 @@ export async function qmChangesUsed(
   else where.push(eq(qmBuilds.requestedById, scope.personId), onFreeServer);
   if (opts.exceptId) where.push(ne(qmBuilds.id, opts.exceptId));
   const [row] = await db
-    .select({ n: changesCounted(opts.now ?? new Date()) })
+    .select({ n: changesCounted(opts.now ?? new Date(), opts.settled ?? false) })
     .from(qmBuilds)
     .where(and(...where));
   return Number(row?.n ?? 0);

@@ -7,7 +7,7 @@ export const LEGAL = {
   site: "garrisonbot.com",
   dashboard: "dash.garrisonbot.com",
   state: "Texas",
-  updated: "November 14, 2026",
+  updated: "November 15, 2026",
   /** Days after a first payment in which a refund can be asked for. */
   refundDays: 7,
 } as const;

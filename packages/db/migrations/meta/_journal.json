@@ -435,6 +435,13 @@
       "when": 1794780748619,
       "tag": "0061_ai_pools",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1794781166865,
+      "tag": "0062_supply_packs",
+      "breakpoints": true
     }
   ]
 }

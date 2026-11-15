@@ -1,4 +1,4 @@
-import { and, count, eq, gte, isNull, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, isNull, lt, sql } from "drizzle-orm";
 import {
   billingMonth,
   nextUtcMonthStart,
@@ -13,8 +13,8 @@ import { AI_SUPPLIES_PER_MONTH, type AiTier } from "../plans";
 /** Kinds of AI call: a one-shot plan, or a message in the builder's chat. */
 export type AiFeature = "qm" | "qm_chat";
 
-import { aiUsage, guildPlans, planBundles } from "../schema";
-import { qmChangesUsed } from "./quartermaster";
+import { aiUsage, guildPlans, planBundles, qmBuilds, supplyGrants } from "../schema";
+import { qmChangesMade, qmChangesUsed } from "./quartermaster";
 
 /**
  * One row per AI call. A call holds the most it could cost (`supplies`) before it runs,
@@ -24,16 +24,24 @@ import { qmChangesUsed } from "./quartermaster";
  *
  * Supplies come from a monthly pool (plans.ts AI_SUPPLIES_PER_MONTH): Pro per server,
  * Agency shared by its servers, Free per server and per person. Paid pools renew with the
- * billing period, Free on the 1st (UTC).
+ * billing period, Free on the 1st (UTC). Once a pool runs out, the server's supply packs
+ * (supply_grants) pay, oldest first: when a call is charged or a build is made, whatever
+ * the pool can't cover is taken from packs and recorded as `pack_supplies`, which the pool
+ * no longer counts.
  */
 
 const STALE_MS = 10 * 60_000;
 
-/** Supplies a call counts: its charge, or while it runs (and isn't stale), its hold. */
-const callSupplies = (now: Date) =>
-  sql`case when ${aiUsage.ok} is null and ${aiUsage.createdAt} < ${new Date(
-    now.getTime() - STALE_MS,
-  ).toISOString()}::timestamptz then 0 else ${aiUsage.supplies} end`;
+/**
+ * Supplies a call takes from its pool: its charge, less what packs paid, or while it runs
+ * (and isn't stale), its hold. `settled`: finished calls only.
+ */
+const callSupplies = (now: Date, settled: boolean) =>
+  settled
+    ? sql`case when ${aiUsage.ok} is null then 0 else ${aiUsage.supplies} - ${aiUsage.packSupplies} end`
+    : sql`case when ${aiUsage.ok} is null and ${aiUsage.createdAt} < ${new Date(
+        now.getTime() - STALE_MS,
+      ).toISOString()}::timestamptz then 0 else ${aiUsage.supplies} - ${aiUsage.packSupplies} end`;
 
 /** Calls on a server that is on Free right now (no Pro row), for the per-person Free limit. */
 const onFreeServer = sql`not exists (select 1 from ${guildPlans} where ${guildPlans.guildId} = ${aiUsage.guildId} and ${guildPlans.plan} = 'pro')`;
@@ -180,11 +188,18 @@ export async function finishAiCall(
     .update(aiUsage)
     .set({ ...usageColumns(result), ok: result.ok, supplies })
     .where(eq(aiUsage.id, id));
+  if (supplies) await settleAiCall(db, id);
   return supplies;
 }
 
 /** Supplies AI calls used in a pool since `since`. */
-async function callSuppliesSince(db: Db, scope: PoolScope, since: Date, now: Date) {
+async function callSuppliesSince(
+  db: Db,
+  scope: PoolScope,
+  since: Date,
+  now: Date,
+  settled: boolean,
+) {
   const who =
     "guildId" in scope
       ? eq(aiUsage.guildId, scope.guildId)
@@ -192,7 +207,7 @@ async function callSuppliesSince(db: Db, scope: PoolScope, since: Date, now: Dat
         ? eq(aiUsage.bundleId, scope.bundleId)
         : and(eq(aiUsage.requestedBy, scope.personId), onFreeServer);
   const [row] = await db
-    .select({ n: sql<number>`coalesce(sum(${callSupplies(now)}), 0)::int` })
+    .select({ n: sql<number>`coalesce(sum(${callSupplies(now, settled)}), 0)::int` })
     .from(aiUsage)
     .where(and(who, gte(aiUsage.createdAt, since)));
   return Number(row?.n ?? 0);
@@ -206,13 +221,13 @@ async function callSuppliesSince(db: Db, scope: PoolScope, since: Date, now: Dat
 export async function suppliesUsed(
   db: Db,
   scope: PoolScope,
-  opts: { exceptId?: string; now?: Date; since?: Date } = {},
+  opts: { exceptId?: string; now?: Date; since?: Date; settled?: boolean } = {},
 ) {
   const now = opts.now ?? new Date();
   // The calendar month unless a pool's own period is given.
   const since = opts.since ?? utcMonthStart(now);
   const [calls, changes] = await Promise.all([
-    callSuppliesSince(db, scope, since, now),
+    callSuppliesSince(db, scope, since, now, opts.settled ?? false),
     qmChangesUsed(db, scope, since, { ...opts, now }),
   ]);
   return calls + changes;
@@ -261,9 +276,12 @@ export async function aiTier(db: Db, guildId: string): Promise<AiTier> {
 
 export interface AiAllowance {
   tier: AiTier;
-  /** Supplies in this tier's monthly pool, and how many this person can still use here. */
+  /** Supplies in this tier's monthly pool. */
   pool: number;
+  /** What this person can still use here: what's left of the pool, then of packs. */
   suppliesLeft: number;
+  poolLeft: number;
+  packLeft: number;
   /** Free: counted per person across all their Free servers, as well as per server. */
   perPerson: boolean;
   /** Agency: one pool shared by the plan's servers. */
@@ -284,14 +302,21 @@ async function allowanceFor(
   const pool = AI_SUPPLIES_PER_MONTH[info.tier];
   const perPerson = info.tier === "free";
   const used = { ...opts, now, since: period.start };
-  const [server, person] = await Promise.all([
+  const [server, person, packs] = await Promise.all([
     suppliesUsed(db, info.bundleId ? { bundleId: info.bundleId } : { guildId }, used),
     perPerson ? suppliesUsed(db, { personId }, used) : 0,
+    packsLeft(db, guildId, now),
   ]);
+  // Below zero while holds run past the pool: packs cover that first.
+  const raw = pool - Math.max(server, person);
+  const poolLeft = Math.max(0, raw);
+  const packLeft = Math.max(0, packs + Math.min(0, raw));
   return {
     tier: info.tier,
     pool,
-    suppliesLeft: Math.max(0, pool - Math.max(server, person)),
+    suppliesLeft: poolLeft + packLeft,
+    poolLeft,
+    packLeft,
     perPerson,
     shared: Boolean(info.bundleId),
     resetsAt: period.resetsAt,
@@ -315,22 +340,156 @@ export async function aiAllowance(
 /**
  * The global daily budget: a circuit breaker for a runaway, never an allowance. `baseUsd`
  * plus three times each paid pool's average day (Pro: 3 × $3.00 / 30 = $0.30), so normal
- * use on every paying server at once can't trip it.
+ * use on every paying server at once can't trip it, plus everything in packs bought this
+ * past week, which a server may spend in a day.
  */
-export async function aiDailyBudgetMicros(db: Db, baseUsd: number) {
-  const [[pro], [agency]] = await Promise.all([
+export async function aiDailyBudgetMicros(db: Db, baseUsd: number, now = new Date()) {
+  const [[pro], [agency], [packs]] = await Promise.all([
     db
       .select({ n: count() })
       .from(guildPlans)
       .where(and(eq(guildPlans.plan, "pro"), isNull(guildPlans.bundleId))),
     db.select({ n: count() }).from(planBundles),
+    db
+      .select({ n: sql<number>`coalesce(sum(${supplyGrants.supplies}), 0)::int` })
+      .from(supplyGrants)
+      .where(
+        and(
+          gte(supplyGrants.createdAt, new Date(now.getTime() - 7 * 86_400_000)),
+          isNull(supplyGrants.revokedAt),
+        ),
+      ),
   ]);
   const day = (pool: number) => (3 * pool * QM_MICROS_PER_SUPPLY) / 30;
   return Math.round(
     baseUsd * 1e6 +
       (pro?.n ?? 0) * day(AI_SUPPLIES_PER_MONTH.pro) +
-      (agency?.n ?? 0) * day(AI_SUPPLIES_PER_MONTH.agency),
+      (agency?.n ?? 0) * day(AI_SUPPLIES_PER_MONTH.agency) +
+      Number(packs?.n ?? 0) * QM_MICROS_PER_SUPPLY,
   );
+}
+
+// --- Supply packs --------------------------------------------------------------------
+
+/** Packs a server can still use: bought, not expired, refunded or disputed. */
+const usablePacks = (guildId: string, now: Date) =>
+  and(
+    eq(supplyGrants.guildId, guildId),
+    gt(supplyGrants.expiresAt, now),
+    isNull(supplyGrants.revokedAt),
+    lt(supplyGrants.used, supplyGrants.supplies),
+  );
+
+/** Supplies left in a server's packs. */
+export async function packsLeft(db: Db, guildId: string, now = new Date()) {
+  const [row] = await db
+    .select({
+      n: sql<number>`coalesce(sum(${supplyGrants.supplies} - ${supplyGrants.used}), 0)::int`,
+    })
+    .from(supplyGrants)
+    .where(usablePacks(guildId, now));
+  return Number(row?.n ?? 0);
+}
+
+/** A server's packs, newest first, for the Plan page. */
+export async function listSupplyPacks(db: Db, guildId: string) {
+  return db
+    .select()
+    .from(supplyGrants)
+    .where(eq(supplyGrants.guildId, guildId))
+    .orderBy(desc(supplyGrants.createdAt))
+    .limit(20);
+}
+
+/** Take up to `n` supplies from a server's packs, the soonest to expire first. Returns how many. */
+async function takeFromPacks(db: Db, guildId: string, n: number, now: Date) {
+  const packs = await db
+    .select({
+      id: supplyGrants.id,
+      left: sql<number>`${supplyGrants.supplies} - ${supplyGrants.used}`,
+    })
+    .from(supplyGrants)
+    .where(usablePacks(guildId, now))
+    .orderBy(asc(supplyGrants.expiresAt))
+    .for("update");
+  let taken = 0;
+  for (const pack of packs) {
+    const take = Math.min(n - taken, Number(pack.left));
+    if (take <= 0) break;
+    await db
+      .update(supplyGrants)
+      .set({ used: sql`${supplyGrants.used} + ${take}` })
+      .where(eq(supplyGrants.id, pack.id));
+    taken += take;
+  }
+  return taken;
+}
+
+/**
+ * How far past its pool a server's settled use (finished calls and made builds) is in the
+ * period that `at` falls in: what packs have to pay. Waiting plans and running calls don't
+ * count, so a hold that's never spent never costs a pack anything.
+ */
+async function pastPool(db: Db, info: PoolInfo, guildId: string, personId: string, at: Date) {
+  const period = poolPeriod(info, at);
+  const pool = AI_SUPPLIES_PER_MONTH[info.tier];
+  const used = { since: period.start, settled: true };
+  const [server, person] = await Promise.all([
+    suppliesUsed(db, info.bundleId ? { bundleId: info.bundleId } : { guildId }, used),
+    info.tier === "free" ? suppliesUsed(db, { personId }, used) : 0,
+  ]);
+  return Math.max(0, Math.max(server, person) - pool);
+}
+
+/** The same locks as reserveAiCall, in the same order. */
+async function lockPools(db: Db, guildId: string, personId: string) {
+  await db.execute(lock(`ai:${guildId}`));
+  const info = await poolInfo(db, guildId);
+  if (info.bundleId) await db.execute(lock(`ai:bundle:${info.bundleId}`));
+  if (info.tier === "free") await db.execute(lock(`ai:person:${personId}`));
+  return info;
+}
+
+/** After a call is charged: whatever its pool can't cover comes out of the server's packs. */
+async function settleAiCall(db: Db, id: string) {
+  await db.transaction(async (tx) => {
+    const [row] = await tx
+      .select({
+        guildId: aiUsage.guildId,
+        requestedBy: aiUsage.requestedBy,
+        createdAt: aiUsage.createdAt,
+        supplies: aiUsage.supplies,
+        packSupplies: aiUsage.packSupplies,
+      })
+      .from(aiUsage)
+      .where(eq(aiUsage.id, id));
+    if (!row || row.packSupplies) return;
+    const info = await lockPools(tx, row.guildId, row.requestedBy);
+    const over = await pastPool(tx, info, row.guildId, row.requestedBy, row.createdAt);
+    if (!over) return;
+    const taken = await takeFromPacks(tx, row.guildId, Math.min(row.supplies, over), new Date());
+    if (taken) await tx.update(aiUsage).set({ packSupplies: taken }).where(eq(aiUsage.id, id));
+  });
+}
+
+/**
+ * After a build is made (all of it, or part before it stopped): the changes its pool can't
+ * cover come out of the server's packs.
+ */
+export async function settleBuildSupplies(db: Db, buildId: string) {
+  await db.transaction(async (tx) => {
+    const [build] = await tx.select().from(qmBuilds).where(eq(qmBuilds.id, buildId));
+    if (!build || build.packSupplies || (build.status !== "applied" && build.status !== "failed"))
+      return;
+    const made = qmChangesMade(build);
+    if (!made) return;
+    const info = await lockPools(tx, build.guildId, build.requestedById);
+    const over = await pastPool(tx, info, build.guildId, build.requestedById, build.createdAt);
+    if (!over) return;
+    const taken = await takeFromPacks(tx, build.guildId, Math.min(made, over), new Date());
+    if (taken)
+      await tx.update(qmBuilds).set({ packSupplies: taken }).where(eq(qmBuilds.id, buildId));
+  });
 }
 
 /** Spend across all servers since `since`, in dollars, for the operator. */

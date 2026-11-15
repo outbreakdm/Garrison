@@ -1,4 +1,4 @@
-import { FEATURES } from "@garrison/db";
+import { FEATURES, SUPPLY_PACK_REFUND_DAYS } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalPage, type LegalSection, Mail } from "@/components/legal/LegalPage";
@@ -70,6 +70,24 @@ const sections: LegalSection[] = [
     ),
   },
   {
+    id: "packs",
+    title: "AI supply packs",
+    body: (
+      <>
+        <p>
+          A supply pack is a one-time purchase of AI assistant supplies for one server. If none of
+          it has been used, ask within {SUPPLY_PACK_REFUND_DAYS} days of buying it and we’ll refund
+          it in full. Once any of a pack has been used, it isn’t refunded: that AI has already been
+          paid for as it ran.
+        </p>
+        <p>
+          A refunded or disputed pack stops working; supplies already used from it stay used. Packs
+          last a year from purchase and aren’t refunded when they expire.
+        </p>
+      </>
+    ),
+  },
+  {
     id: "always",
     title: "Always refunded",
     body: (
@@ -99,6 +117,7 @@ const sections: LegalSection[] = [
           Partly used periods after you cancel; your plan simply runs to the end of the period.
         </li>
         <li>Plans ended because the Terms of Service were broken.</li>
+        <li>A supply pack once any of it has been used, or once it has expired.</li>
         <li>Requests made after the first {DAYS} days, except where the law requires otherwise.</li>
       </ul>
     ),
@@ -172,6 +191,7 @@ export default function RefundsPage() {
         `New Pro and Agency subscriptions: a full refund if you ask within ${DAYS} days of the first payment.`,
         `Unless the server used more AI assistant supplies than Free allows in a month (${FREE_AI}). That AI costs us as it’s used.`,
         "Renewals aren’t refunded, but you can cancel any time and keep your plan to the end of the period.",
+        `AI supply packs: a full refund within ${SUPPLY_PACK_REFUND_DAYS} days if none of the pack has been used.`,
         "Mistaken charges are always refunded, and your consumer rights where you live always apply.",
       ]}
       sections={sections}

@@ -1,11 +1,31 @@
-import { FEATURES, getPlanDetails, isStaff, listAgencyPlans, type PlanTier } from "@garrison/db";
+import {
+  AI_SUPPLIES_PER_MESSAGE,
+  aiAllowance,
+  FEATURES,
+  formatPrice,
+  getPlanDetails,
+  isStaff,
+  listAgencyPlans,
+  listSupplyPacks,
+  type PlanTier,
+  SUPPLY_PACK_REFUND_DAYS,
+  SUPPLY_PACKS,
+  type SupplyGrant,
+  type SupplyPack,
+} from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PlanCards } from "@/components/PlanCards";
-import { billingReady } from "@/lib/billing";
+import { billingReady, packsReady } from "@/lib/billing";
 import { getDb } from "@/lib/db";
 import { requireGuildAccess } from "@/lib/session";
-import { checkoutAction, portalAction, seatAction, setCompAction } from "./actions";
+import {
+  buySuppliesAction,
+  checkoutAction,
+  portalAction,
+  seatAction,
+  setCompAction,
+} from "./actions";
 
 export const metadata: Metadata = { title: "Plan" };
 
@@ -32,6 +52,10 @@ const DONE: Record<string, { text: string; ok: boolean }> = {
     text: "Thanks. Your plan turns on as soon as Stripe confirms the payment, usually within a minute. Refresh to see it.",
     ok: true,
   },
+  supplies: {
+    text: "Thanks. The supplies are added as soon as Stripe confirms the payment, usually within a minute. Refresh to see them.",
+    ok: true,
+  },
   checkout_failed: {
     text: "Stripe didn't open a checkout. Nothing was charged; try again.",
     ok: false,
@@ -46,6 +70,18 @@ const DONE: Record<string, { text: string; ok: boolean }> = {
 
 const day = (d: Date) =>
   new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(d);
+const num = (n: number) => n.toLocaleString("en-US");
+/** Pools renew at an instant in UTC (the 1st, or the billing day): show that day. */
+const utcDay = (d: Date) =>
+  new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(d);
+
+/** Where a bought pack stands, in a word. */
+function packState(g: SupplyGrant, now: number) {
+  if (g.revokedAt) return "Refunded";
+  if (g.expiresAt.getTime() <= now) return "Expired";
+  if (g.used >= g.supplies) return "Used up";
+  return `${num(g.supplies - g.used)} left`;
+}
 
 export default async function PlanPage({
   params,
@@ -58,11 +94,15 @@ export default async function PlanPage({
   const { guild, session } = await requireGuildAccess(guildId);
   const { done } = await searchParams;
   const db = await getDb();
-  const [details, staff, agency] = await Promise.all([
+  const [details, staff, agency, allowance, packs] = await Promise.all([
     getPlanDetails(db, guild.id),
     isStaff(db, session.userId),
     listAgencyPlans(db, session.userId),
+    aiAllowance(db, guild.id, session.userId),
+    listSupplyPacks(db, guild.id),
   ]);
+  const now = Date.now();
+  const selling = packsReady();
   const pro = details.plan === "pro";
   const source = details.source;
   const mySeat = source === "bundle" ? agency.find((a) => a.id === details.bundleId) : undefined;
@@ -197,6 +237,101 @@ export default async function PlanPage({
             {seatControl}
             {live && iPay ? manage(false) : null}
           </div>
+        ) : null}
+      </section>
+
+      <section className="g-card supplies" id="supplies" aria-labelledby="supplies-title">
+        <div className="supplies__head">
+          <h2 className="card-title" id="supplies-title">
+            AI assistant supplies
+          </h2>
+          <p className="card-sub">
+            What the AI assistant runs on. A message uses what it really costs, about{" "}
+            {AI_SUPPLIES_PER_MESSAGE}; each change a plan makes uses 1.
+          </p>
+        </div>
+        <div className="qm-usage supplies__usage">
+          <progress
+            className="qm-usage__bar"
+            max={allowance.pool}
+            value={allowance.poolLeft}
+            aria-label={`${num(allowance.poolLeft)} of ${num(allowance.pool)} supplies left this month`}
+          />
+          <p className="qm-usage__text">
+            <span>
+              <strong>{num(allowance.poolLeft)}</strong> of {num(allowance.pool)} left this month
+              {allowance.packLeft ? (
+                <>
+                  {" "}
+                  · <strong>{num(allowance.packLeft)}</strong> in packs
+                </>
+              ) : null}
+            </span>
+            <span className="muted">
+              {allowance.perPerson
+                ? "Yours, across your Free servers"
+                : allowance.shared
+                  ? "Shared by your Agency servers"
+                  : "This server's"}{" "}
+              · renews {utcDay(allowance.resetsAt)}
+            </span>
+          </p>
+        </div>
+        <ul className="packs" aria-label="Supply packs">
+          {(Object.keys(SUPPLY_PACKS) as SupplyPack[]).map((key) => {
+            const pack = SUPPLY_PACKS[key];
+            return (
+              <li key={key} className="pack">
+                <div className="pack__what">
+                  <strong className="pack__size">{num(pack.supplies)} supplies</strong>
+                  <span className="pack__about">About {num(pack.messages)} messages</span>
+                </div>
+                <span className="pack__price">{formatPrice(pack.price)}</span>
+                {selling ? (
+                  <form action={buySuppliesAction}>
+                    <input type="hidden" name="guildId" value={guild.id} />
+                    <input type="hidden" name="pack" value={key} />
+                    <button type="submit" className="g-btn g-btn--secondary">
+                      Buy
+                    </button>
+                  </form>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+        <p className="legal-note supplies__note">
+          {selling
+            ? `A one-time payment for this server; nothing renews. Used after the monthly supplies run out, for a year. An unused pack is refunded in full within ${SUPPLY_PACK_REFUND_DAYS} days. `
+            : "Supply packs aren't on sale right now, so nothing can be bought or charged. "}
+          See the <a href="/refunds">Refund Policy</a>.
+        </p>
+        {packs.length ? (
+          <details className="supplies__bought">
+            <summary className="supplies__toggle">Packs bought for this server</summary>
+            <div className="table-wrap">
+              <table className="g-table g-table--fit">
+                <thead>
+                  <tr>
+                    <th scope="col">Bought</th>
+                    <th scope="col">Pack</th>
+                    <th scope="col">Lasts until</th>
+                    <th scope="col">Now</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {packs.map((g) => (
+                    <tr key={g.id}>
+                      <td>{day(g.createdAt)}</td>
+                      <td>{num(g.supplies)} supplies</td>
+                      <td>{day(g.expiresAt)}</td>
+                      <td>{packState(g, now)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </details>
         ) : null}
       </section>
 

@@ -766,6 +766,8 @@ export const aiUsage = pgTable(
     costMicros: integer("cost_micros"),
     /** What the call holds while it runs, then what it was charged: 1 per $0.001 of AI. */
     supplies: integer("supplies").notNull().default(0),
+    /** Of its charge, how much supply packs paid for (the pool ran out). */
+    packSupplies: integer("pack_supplies").notNull().default(0),
     /** True: answered. False: failed (charged what it used). Null: running. */
     ok: boolean("ok"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -807,6 +809,8 @@ export const qmBuilds = pgTable(
     status: qmStatus("status").notNull().default("pending"),
     created: jsonb("created").$type<QmCreated[]>().notNull().default([]),
     error: text("error"),
+    /** Of the changes it made, how many supply packs paid for (the pool ran out). */
+    packSupplies: integer("pack_supplies").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     appliedAt: timestamp("applied_at", { withTimezone: true }),
     rolledBackAt: timestamp("rolled_back_at", { withTimezone: true }),
@@ -1415,6 +1419,43 @@ export const guildPlans = pgTable("guild_plans", {
  * Every Stripe event the webhook has applied, by Stripe's event ID, so a retried event is
  * never applied twice. Written only by billing_record_event() as garrison_billing.
  */
+/**
+ * Supply packs: AI assistant supplies a server bought once (plans.ts SUPPLY_PACKS), used
+ * after its monthly pool runs out, oldest first, for 12 months. Granted only by the Stripe
+ * webhook through billing_grant_supplies(), once per Checkout Session; a refund or dispute
+ * revokes what's left (billing_revoke_supplies). The bot only counts `used` up.
+ */
+export const supplyGrants = pgTable(
+  "supply_grants",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    /** `small` or `large`. */
+    pack: text("pack").notNull(),
+    supplies: integer("supplies").notNull(),
+    used: integer("used").notNull().default(0),
+    /** What was paid, in cents. */
+    amountCents: integer("amount_cents").notNull(),
+    /** Discord user ID of whoever bought it. */
+    boughtBy: text("bought_by"),
+    stripeSessionId: text("stripe_session_id").notNull().unique(),
+    stripePaymentIntent: text("stripe_payment_intent"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    /** Refunded or disputed: what's left can't be used. */
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("supply_grants_guild").on(t.guildId, t.expiresAt),
+    index("supply_grants_payment").on(t.stripePaymentIntent),
+    check("supply_grants_used", sql`${t.used} BETWEEN 0 AND ${t.supplies}`),
+  ],
+).enableRLS();
+
+export type SupplyGrant = typeof supplyGrants.$inferSelect;
+
 export const billingEvents = pgTable("billing_events", {
   id: text("id").primaryKey(),
   type: text("type").notNull(),

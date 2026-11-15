@@ -1,6 +1,12 @@
-import { recordBillingEvent } from "@garrison/db";
+import { recordBillingEvent, revokeSupplyPack } from "@garrison/db";
 import type Stripe from "stripe";
-import { applySubscription, getBillingDb, stripe, verifyEvent } from "@/lib/billing";
+import {
+  applySubscription,
+  applySupplyPack,
+  getBillingDb,
+  stripe,
+  verifyEvent,
+} from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +46,28 @@ function lifecycleSubscription(event: Stripe.Event): string | null {
   };
   if (o.object === "subscription") return o.id;
   return idOf(o.subscription) ?? idOf(o.parent?.subscription_details?.subscription);
+}
+
+/** The payment behind a charge, dispute or fraud warning. */
+async function riskPayment(event: Stripe.Event): Promise<string | null> {
+  const o = event.data.object as unknown as { payment_intent?: Ref; charge?: Ref };
+  const paymentIntent = idOf(o.payment_intent);
+  if (paymentIntent || !o.charge) return paymentIntent;
+  const charge = await stripe().charges.retrieve(idOf(o.charge) as string);
+  return idOf(charge.payment_intent as Ref);
+}
+
+/**
+ * A risk event's effect on a supply pack: a full refund, a dispute or a fraud warning stops
+ * what's left of it. A partial refund is a goodwill gesture and leaves the pack alone.
+ */
+async function revokePack(db: Awaited<ReturnType<typeof getBillingDb>>, event: Stripe.Event) {
+  if (event.type === "charge.refunded") {
+    const charge = event.data.object as Stripe.Charge;
+    if (!charge.refunded) return;
+  }
+  const paymentIntent = await riskPayment(event);
+  if (paymentIntent) await revokeSupplyPack(db, paymentIntent);
 }
 
 /**
@@ -84,6 +112,15 @@ export async function POST(request: Request) {
   if (!lifecycle && !RISK.has(event.type)) return Response.json({ received: true });
 
   const db = await getBillingDb();
+  // A supply pack: a one-time payment, granted only once Stripe says it's paid (at once for
+  // cards, or later for a payment method that settles afterwards).
+  const session = event.data.object as Stripe.Checkout.Session;
+  if (event.type.startsWith("checkout.session.") && session.mode === "payment") {
+    await applySupplyPack(db, session);
+    await recordBillingEvent(db, event.id, event.type);
+    return Response.json({ received: true });
+  }
+  if (!lifecycle) await revokePack(db, event);
   const id = lifecycle ? lifecycleSubscription(event) : await riskSubscription(event);
   if (id) {
     let sub = await stripe().subscriptions.retrieve(id);

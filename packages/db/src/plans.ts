@@ -37,6 +37,21 @@ export const AI_SUPPLIES_PER_MONTH = {
 /** What a typical message costs, for "about N messages". */
 export const AI_SUPPLIES_PER_MESSAGE = 3;
 export const AI_SUPPLIES_PER_CHANGE = 1;
+
+/**
+ * Supply packs: AI supplies a server buys once, used after its monthly pool runs out,
+ * oldest first, for SUPPLY_PACK_DAYS. Any server can buy them, Free included. Worst case,
+ * a pack's AI costs at most 44% of what it brings in after Stripe's fee
+ * (docs/AI_SUPPLIES_V2.md). Prices in US dollars.
+ */
+export const SUPPLY_PACKS = {
+  small: { supplies: 1000, price: 2.99, messages: 330 },
+  large: { supplies: 5000, price: 11.99, messages: 1650 },
+} as const;
+export type SupplyPack = keyof typeof SUPPLY_PACKS;
+export const SUPPLY_PACK_DAYS = 365;
+/** An unused pack is refunded in full within this many days. */
+export const SUPPLY_PACK_REFUND_DAYS = 14;
 /** What one full plan costs: the message that drafts it and its 20 changes. */
 export const AI_SUPPLIES_PER_FULL_PLAN = AI_SUPPLIES_PER_MESSAGE + QM_CHANGES_PER_PLAN;
 

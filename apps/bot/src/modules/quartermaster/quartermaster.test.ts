@@ -342,6 +342,8 @@ describe("Quartermaster end to end", () => {
       tier: "agency",
       pool: 13_000,
       suppliesLeft: 13_000,
+      poolLeft: 13_000,
+      packLeft: 0,
       perPerson: false,
       shared: true,
       resetsAt: expect.any(Date),

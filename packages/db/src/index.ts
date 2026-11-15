@@ -106,6 +106,7 @@ export type {
   StarboardPost,
   StartGiveawayPayload,
   Suggestion,
+  SupplyGrant,
   Ticket,
   TicketActionPayload,
   TicketAnswer,

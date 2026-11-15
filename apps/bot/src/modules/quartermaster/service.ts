@@ -37,6 +37,7 @@ import {
   reserveAiCall,
   resolveQmSettingRefs,
   type SettingsModule,
+  settleBuildSupplies,
   transitionQmBuild,
   undoSettingsChange,
 } from "@garrison/db";
@@ -450,7 +451,11 @@ export async function planBuild(
     attemptsPerHour: QM_ATTEMPTS_PER_HOUR,
     dailyBudgetMicros: await dailyBudgetMicros(ctx),
   });
-  if (!reserved.ok) return { ok: false, error: limitMessage(reserved.reason, reserved.allowance) };
+  if (!reserved.ok)
+    return {
+      ok: false,
+      error: limitMessage(reserved.reason, reserved.allowance, buySuppliesUrl(ctx, guild.id)),
+    };
   const maxOperations = Math.max(
     1,
     Math.min(MAX_OPERATIONS, reserved.allowance.suppliesLeft - AI_SUPPLIES_PER_MESSAGE),
@@ -517,20 +522,28 @@ const upgradeLine = (tier: AiTier) =>
 
 export type SuppliesInfo = Pick<AiAllowance, "tier" | "pool" | "perPerson" | "shared" | "resetsAt">;
 
-/** Not enough supplies left, in plain words. */
-export function suppliesMessage(a: SuppliesInfo) {
+/** Where a server buys supply packs: its Plan page. */
+export const buySuppliesUrl = (ctx: BotContext, guildId: string) =>
+  ctx.appUrl ? `${ctx.appUrl.replace(/\/$/, "")}/servers/${guildId}/plan#supplies` : undefined;
+
+/**
+ * Not enough supplies left, in plain words: when the pool renews, and where to buy a pack
+ * (with a link where one shows as a link, as in Discord).
+ */
+export function suppliesMessage(a: SuppliesInfo, buyUrl?: string) {
   const pool = a.pool.toLocaleString("en-US");
   const renew = `They renew ${when(a.resetsAt)}.`;
+  const buy = ` Need more now? Buy a supply pack on this server's Plan page${buyUrl ? `: ${buyUrl}` : "."}`;
   if (a.perPerson)
-    return `You've used this month's ${pool} AI assistant supplies on Free servers. ${renew}${upgradeLine(a.tier)}`;
+    return `You've used this month's ${pool} AI assistant supplies on Free servers. ${renew}${buy}${upgradeLine(a.tier)}`;
   if (a.shared)
-    return `Your Agency servers have used this month's ${pool} AI assistant supplies. ${renew}`;
-  return `This server has used this month's ${pool} AI assistant supplies. ${renew}`;
+    return `Your Agency servers have used this month's ${pool} AI assistant supplies. ${renew}${buy}`;
+  return `This server has used this month's ${pool} AI assistant supplies. ${renew}${buy}`;
 }
 
 /** Why an AI call can't start, in plain words. */
-export function limitMessage(reason: LimitReason, a: SuppliesInfo) {
-  if (reason === "supplies" || reason === "person") return suppliesMessage(a);
+export function limitMessage(reason: LimitReason, a: SuppliesInfo, buyUrl?: string) {
+  if (reason === "supplies" || reason === "person") return suppliesMessage(a, buyUrl);
   if (reason === "hourly")
     return "That's a lot of AI assistant use in one hour. Try again in a little while.";
   return `The AI assistant has reached its limit for today across all servers. It's back ${when(
@@ -545,13 +558,23 @@ export type ApplyOutcome =
 /**
  * Run a pending plan. It's claimed first (pending -> applied), so a double
  * click applies once. Each created object is recorded as soon as it exists,
- * so Undo can clean up even after a failure partway through.
+ * so Undo can clean up even after a failure partway through. Once it has run, the
+ * changes it made that the pool can't cover come out of the server's supply packs.
  */
 export async function applyBuild(
   ctx: BotContext,
   guild: Guild,
   build: QmBuild,
 ): Promise<ApplyOutcome> {
+  const outcome = await runBuild(ctx, guild, build);
+  if (outcome.ok)
+    await settleBuildSupplies(ctx.db, build.id).catch((error: unknown) =>
+      ctx.logger.warn("Couldn't settle a build's supplies", { guildId: guild.id, error }),
+    );
+  return outcome;
+}
+
+async function runBuild(ctx: BotContext, guild: Guild, build: QmBuild): Promise<ApplyOutcome> {
   if (Date.now() - build.createdAt.getTime() > PLAN_TTL_MS) {
     await transitionQmBuild(ctx.db, build.id, "pending", "expired");
     return {

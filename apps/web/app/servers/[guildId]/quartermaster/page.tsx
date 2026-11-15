@@ -12,6 +12,7 @@ import {
   QM_PLAN_TTL_MS,
   type QmBuild,
   qmChangeCount,
+  qmHoldSupplies,
   TEMPLATE_NAME_MAX,
   TEMPLATES_PER_USER,
 } from "@garrison/db";
@@ -30,6 +31,9 @@ import { requestAction } from "../requests";
 import { removeTemplate } from "./actions";
 
 export const metadata: Metadata = { title: "AI assistant" };
+
+/** What a full chat message holds while it runs: 3 rounds on Haiku (the bot's default). */
+const QM_FULL_MESSAGE_SUPPLIES = qmHoldSupplies("claude-haiku-5-5", 3);
 
 /** A request is at most this long, as the bot enforces. */
 const REQUEST_MAX = 500;
@@ -159,7 +163,10 @@ export default async function QuartermasterPage({
     </>
   );
 
-  const { suppliesLeft, pool, perPerson, shared, resetsAt } = allowance;
+  const { suppliesLeft, poolLeft, packLeft, pool, perPerson, shared, resetsAt } = allowance;
+  const num = (n: number) => n.toLocaleString("en-US");
+  // Less than a full message's hold left: say where more comes from.
+  const low = suppliesLeft < QM_FULL_MESSAGE_SUPPLIES;
   const renews = resetsAt.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -310,13 +317,19 @@ export default async function QuartermasterPage({
             <progress
               className="qm-usage__bar"
               max={pool}
-              value={Math.min(pool, suppliesLeft)}
-              aria-label={`${suppliesLeft.toLocaleString("en-US")} of ${pool.toLocaleString("en-US")} supplies left this month`}
+              value={poolLeft}
+              aria-label={`${num(poolLeft)} of ${num(pool)} supplies left this month`}
             />
             <p className="qm-usage__text">
               <span>
-                <strong>{suppliesLeft.toLocaleString("en-US")}</strong> of{" "}
-                {pool.toLocaleString("en-US")} supplies left this month
+                <strong>{num(poolLeft)}</strong> of {num(pool)} supplies left this month
+                {packLeft ? ` · ${num(packLeft)} in packs` : ""}
+                {low ? (
+                  <>
+                    {" "}
+                    · <a href={`/servers/${guild.id}/plan#supplies`}>Buy supplies</a>
+                  </>
+                ) : null}
               </span>
               <span className="muted">
                 About {AI_SUPPLIES_PER_MESSAGE} a message, 1 a change
