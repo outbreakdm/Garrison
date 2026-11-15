@@ -747,3 +747,7 @@ Decided (2026-11-12, owner):
   to Agency; Manage billing picks the plan's own (`portalConfiguration()`). Still owner-side:
   the restricted live key, the GitHub secrets, the billing login's password, Managed Payments
   and Stripe's public details.
+- 2026-11-15: Deployed `d618d55` (run 43673213974): landing cleanup, release copy, new link
+  preview, plain names in bot footers, per-plan billing portals. Live pages checked. Checkout
+  stays closed until the four `STRIPE_PRICE_*` secrets and `BILLING_DATABASE_URL` are set and
+  the `garrison_billing` login is enabled; then deploy again.
