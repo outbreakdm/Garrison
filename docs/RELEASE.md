@@ -100,9 +100,9 @@ Discord's 680×240 at 2x).
 
 ## 3. Recommended before release
 
-- [ ] `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` (dev.twitch.tv app): stream alerts for
+- [x] `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` (dev.twitch.tv app): stream alerts for
       Twitch. YouTube alerts work without a key.
-- [ ] `BNET_CLIENT_ID` and `BNET_CLIENT_SECRET` (develop.battle.net, redirect
+- [x] `BNET_CLIENT_ID` and `BNET_CLIENT_SECRET` (develop.battle.net, redirect
       `https://dash.garrisonbot.com/auth/battlenet/callback`): verified World of Warcraft
       accounts on Game accounts. Without them the Battle.net button is hidden.
 - [ ] `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET` (Cloudflare Turnstile): a bot check on the

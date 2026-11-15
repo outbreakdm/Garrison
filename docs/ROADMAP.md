@@ -763,3 +763,6 @@ Decided (2026-11-12, owner):
   apart by the seat (`guild_plans.bundle_id`). The AI builder page shows what's left for the
   person asking. Bot replies and audit-log reasons say "AI builder" instead of Quartermaster.
   No migration needed. Not deployed.
+- 2026-11-15: Deployed `1d836a6` (run 43676594148) with the Twitch and Battle.net keys set:
+  new AI builder limits, "AI builder" wording in the bot, Twitch stream alerts and verified
+  Battle.net accounts are live. Bot online after the deploy.
