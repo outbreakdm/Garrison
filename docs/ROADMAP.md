@@ -754,3 +754,7 @@ Decided (2026-11-12, owner):
 - 2026-11-15: Deployed again (run 43673660924) with every Stripe secret and
   `BILLING_DATABASE_URL` set and the `garrison_billing` login enabled, so checkout is on in
   production. Not yet checked with a real purchase (release-day step in `docs/RELEASE.md`).
+- 2026-11-15: Deployed again (run 43674709784) with `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`
+  set, so the AI builder and AI moderation can run in production. The owner set up the bot's
+  Discord profile (icon, banner, About me, tags, policy links). Bot online after the deploy;
+  the AI builder isn't yet checked with a real plan.

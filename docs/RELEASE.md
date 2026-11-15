@@ -42,10 +42,10 @@ be bought. Full steps in `docs/pricing.md`, "Turning checkout on". In **live** m
       `BILLING_DATABASE_URL`.
 
 ### AI
-- [ ] `ANTHROPIC_API_KEY` in GitHub secrets: the AI builder doesn't work without it, and the
+- [x] `ANTHROPIC_API_KEY` in GitHub secrets: the AI builder doesn't work without it, and the
       landing page and every plan advertise it. Set a monthly spend limit in the Anthropic
       console as well as the built-in $5 a day cap.
-- [ ] `OPENAI_API_KEY`: AI moderation (Pro). The OpenAI moderation model is free to call.
+- [x] `OPENAI_API_KEY`: AI moderation (Pro). The OpenAI moderation model is free to call.
 
 ### Support
 - [ ] `support@garrisonbot.com` receives mail. The Terms, Privacy and Refund pages all send
@@ -57,9 +57,9 @@ Assets are in `apps/web/art/discord/`: `avatar.png` (1024 square) and `banner.pn
 Discord's 680×240 at 2x).
 
 **General Information**
-- [ ] App icon: `avatar.png`.
-- [ ] Name: `Garrison`.
-- [ ] Description (it shows as the bot's About me; 400 characters max):
+- [x] App icon: `avatar.png`.
+- [x] Name: `Garrison`.
+- [x] Description (it shows as the bot's About me; 400 characters max):
 
       Run your Discord server from one dashboard. Moderation, anti-raid, logs, tickets, role menus, welcome messages, LFG and raids, and an AI server builder.
 
@@ -68,12 +68,12 @@ Discord's 680×240 at 2x).
       Dashboard: https://dash.garrisonbot.com
       Status: https://garrisonbot.com/status
 
-- [ ] Tags (5 max): `Moderation`, `Security`, `LFG`, `Gaming`, `Utility`.
-- [ ] Terms of Service URL: `https://garrisonbot.com/terms`.
-- [ ] Privacy Policy URL: `https://garrisonbot.com/privacy`.
+- [x] Tags (5 max): `Moderation`, `Security`, `LFG`, `Gaming`, `Utility`.
+- [x] Terms of Service URL: `https://garrisonbot.com/terms`.
+- [x] Privacy Policy URL: `https://garrisonbot.com/privacy`.
 
 **Bot**
-- [ ] Icon: `avatar.png`. Banner: `banner.png`. Username: `Garrison`.
+- [x] Icon: `avatar.png`. Banner: `banner.png`. Username: `Garrison`.
 - [ ] Public Bot on. Requires OAuth2 Code Grant off.
 - [ ] Privileged intents on: Server Members and Message Content (Presence stays off). The bot
       uses Guilds, Members, Moderation, Invites, Voice States, Messages, Reactions, Direct
