@@ -208,7 +208,7 @@ export default async function PlanPage({
           <p>
             {live
               ? "Prices in US dollars, before tax. Checkout and billing are run by Stripe. Cancel any time; nothing is deleted."
-              : "Garrison is free during early access. These are the prices at launch, and nothing costs money before then."}
+              : "Prices in US dollars, before tax. Checkout isn't available right now, so nothing can be bought or charged."}
           </p>
         </div>
         <PlanCards current={current} live={live} actions={tierActions} />

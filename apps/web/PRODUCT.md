@@ -48,7 +48,7 @@ One dashboard runs the whole server: moderation, security, logs, LFG, raid signu
 - Live numbers from `/status`: command reply time (p95, 24 h), 30-day uptime, last heartbeat. Use only when present; the landing hides them when there is no data.
 - The real product: dashboard pages, Discord embed and card wording from the bot, the Quartermaster server preview.
 - Site art in `apps/web/public/art/`, prompts in `apps/web/art/slots.json` (painted for the old night outpost look; the login and 404 pictures still use it).
-- Pricing: free during early access; paid plans will be published with every price and limit before anything costs money.
+- Pricing: Free, Pro ($8.99/mo per server) and Agency ($34.99/mo, up to 5 servers), every price and limit published; everything a server needs to stay safe is free.
 - Absent, never to be invented: server or member counts, testimonials, customer or community logos, benchmarks beyond `/status`, published prices.
 
 ## Product Principles

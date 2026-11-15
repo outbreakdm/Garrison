@@ -734,3 +734,10 @@ Decided (2026-11-12, owner):
   Groups and so on). "Also in the box" (three modules) is replaced by a grouped list of all
   17 modules. Hero, call to action and FAQ follow whether paid plans are open. Times are
   12-hour. Not deployed.
+- 2026-11-15: Release prep. "Early access" is gone from every page: the landing always shows
+  release pricing, and the Plan page says "Checkout isn't available right now" only if Stripe
+  isn't configured. New Discord avatar and profile banner (`apps/web/art/discord/`) and a new
+  link-preview image, drawn from the shield in the landing's colors. `docs/RELEASE.md` lists
+  everything left before release: Stripe live, `ANTHROPIC_API_KEY` (the AI builder has never
+  run in production), `OPENAI_API_KEY`, the support mailbox, and the Developer Portal settings
+  with exact values. Not deployed.

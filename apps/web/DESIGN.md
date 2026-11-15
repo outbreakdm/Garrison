@@ -369,7 +369,7 @@ The cases table becomes one stacked card per case below 640px: each cell a line 
 - **Skip link:** the first stop in the top bar, hidden until focused, jumps to the page (`#content`).
 
 ### Plans (PlanCards) and Pro slots
-- **Plan cards:** Free, Pro and Agency side by side (two columns below 1100px, one on phones with Pro first). Each card: the name (paid plans in foil), the monthly price at 34px tabular, "or $X a year, save N%", a one-line pitch under a rule, ticks in the page's color (never status green), and a muted "Opens at launch" until paid plans are live. This server's plan takes the identity edge and a "This server" badge. Prices come only from `PRICING` in `packages/db/src/plans.ts`.
+- **Plan cards:** Free, Pro and Agency side by side (two columns below 1100px, one on phones with Pro first). Each card: the name (paid plans in foil), the monthly price at 34px tabular, "or $X a year, save N%", a one-line pitch under a rule, ticks in the page's color (never status green), and a muted "Checkout isn't available right now" only if Stripe isn't configured. This server's plan takes the identity edge and a "This server" badge. Prices come only from `PRICING` in `packages/db/src/plans.ts`.
 - **Pro slot (`ProUpsell`):** where a Pro feature sits on a Free server: a dashed, faintly foil-tinted strip with the Requires Pro tag, one sentence on what the feature does, and "See plans". Every link to the plans says "See plans" (`PlansLink`), never "Upgrade" while nothing can be bought.
 
 ### Pro tag

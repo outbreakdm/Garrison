@@ -2,8 +2,8 @@
 
 Proposed 2026-11-13. Every price lives in one place, `PRICING` in `packages/db/src/plans.ts`;
 the landing page, the Plan page and the account page all read it. Until checkout is set up
-(`billingReady()` in `apps/web/lib/billing.ts`), every page shows the prices as "at launch" and
-nothing can be bought.
+(`billingReady()` in `apps/web/lib/billing.ts`), the Plan page has no buy buttons and says
+checkout isn't available; the landing page always shows release pricing.
 
 ## The three plans
 
@@ -71,7 +71,7 @@ servers, which are never stopped by Free use. Logged as a follow-up, not built y
   (for an Agency owner) "Use a seat on this server" / "Free this seat".
 - Account page: your Agency plan, its seats and the servers in them.
 - Staff page: give or remove a complimentary Agency plan for a user.
-- Landing page: the three plans with prices marked "at launch".
+- Landing page: the three plans and their prices.
 
 ## Turning checkout on (owner, once)
 

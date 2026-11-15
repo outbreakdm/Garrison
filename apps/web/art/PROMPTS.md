@@ -23,33 +23,30 @@ text, letters, numbers, words, logo, watermark, signature, frame, border, UI scr
 
 ## Status
 
-| Slot                            | File                         | Size      | Where it shows                                                                                                                                                                                                          | Have it |
-| ------------------------------- | ---------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| lp-hero                         | `lp-hero.webp`               | 2400×2000 | Landing page, behind the whole hero in the dark theme (the headline at the top, the dashboard and Discord windows below). Hidden in the light theme and on phones.                                                      | no      |
-| lp-icon-overview                | `lp-icon-overview.webp`      | 1024×1024 | Landing page, beside 'Open a server and see what needs you' (transparent).                                                                                                                                              | no      |
-| lp-icon-watch                   | `lp-icon-watch.webp`         | 1024×1024 | Landing page, beside the moderation section (transparent).                                                                                                                                                              | no      |
-| lp-icon-gatehouse               | `lp-icon-gatehouse.webp`     | 1024×1024 | Landing page, beside the security section (transparent).                                                                                                                                                                | no      |
-| lp-icon-rally                   | `lp-icon-rally.webp`         | 1024×1024 | Landing page, beside 'From LFG post to full squad' (transparent).                                                                                                                                                       | no      |
-| lp-icon-quartermaster           | `lp-icon-quartermaster.webp` | 1024×1024 | Landing page, beside the Quartermaster section (transparent).                                                                                                                                                           | no      |
-| lp-icon-ledger                  | `lp-icon-ledger.webp`        | 1024×1024 | Landing page, Ledger under 'Also in the box' (transparent).                                                                                                                                                             | no      |
-| lp-icon-ranks                   | `lp-icon-ranks.webp`         | 1024×1024 | Landing page, Ranks under 'Also in the box' (transparent).                                                                                                                                                              | no      |
-| lp-icon-barracks                | `lp-icon-barracks.webp`      | 1024×1024 | Landing page, Barracks under 'Also in the box' (transparent).                                                                                                                                                           | no      |
-| lp-cta                          | `lp-cta.webp`                | 2400×1000 | Landing page, behind the closing 'Add Garrison to your server' band in the dark theme. Hidden in the light theme and on phones.                                                                                         | no      |
-| og                              | `og.jpg`                     | 1200×630  | Link preview image when the site is shared in Discord, X and elsewhere. After generating, add the Garrison logo and 'Run your Discord server from one dashboard.' in Gabarito on the empty right half before exporting. | yes     |
-| login                           | `login.webp`                 | 1200×600  | Banner across the top of the sign-in card.                                                                                                                                                                              | yes     |
-| not-found                       | `not-found.webp`             | 1200×600  | Banner on the 'Nothing here' page.                                                                                                                                                                                      | yes     |
-| empty                           | `empty.webp`                 | 800×800   | Small picture in empty tables (no cases, no events, nobody ranked yet).                                                                                                                                                 | yes     |
-| hero (optional)                 | `hero.webp`                  | 2400×1350 | Not shown since the landing page redesign. Kept so the existing file still has a slot.                                                                                                                                  | yes     |
-| hero-light (optional)           | `hero-light.webp`            | 2400×1350 | Not shown since the landing page redesign. Kept so the existing file still has a slot.                                                                                                                                  | yes     |
-| security (optional)             | `security.webp`              | 1600×1200 | Not shown since the landing page redesign. Kept so the existing file still has a slot.                                                                                                                                  | yes     |
-| module-watch (optional)         | `module-watch.webp`          | 1024×1024 | Not shown since the landing page redesign. Kept so the existing file still has a slot.                                                                                                                                  | yes     |
-| module-gatehouse (optional)     | `module-gatehouse.webp`      | 1024×1024 | Not shown since the landing page redesign. Kept so the existing file still has a slot.                                                                                                                                  | yes     |
-| module-ledger (optional)        | `module-ledger.webp`         | 1024×1024 | Not shown since the landing page redesign. Kept so the existing file still has a slot.                                                                                                                                  | yes     |
-| module-rally (optional)         | `module-rally.webp`          | 1024×1024 | Not shown since the landing page redesign. Kept so the existing file still has a slot.                                                                                                                                  | yes     |
-| module-ops (optional)           | `module-ops.webp`            | 1024×1024 | Not shown since the landing page redesign. Kept so the existing file still has a slot.                                                                                                                                  | yes     |
-| module-barracks (optional)      | `module-barracks.webp`       | 1024×1024 | Not shown since the landing page redesign. Kept so the existing file still has a slot.                                                                                                                                  | yes     |
-| module-ranks (optional)         | `module-ranks.webp`          | 1024×1024 | Not shown since the landing page redesign. Kept so the existing file still has a slot.                                                                                                                                  | yes     |
-| module-quartermaster (optional) | `module-quartermaster.webp`  | 1024×1024 | Not shown since the landing page redesign. Kept so the existing file still has a slot.                                                                                                                                  | yes     |
+| Slot                            | File                         | Size      | Where it shows                                                                                                                                                                                                                              | Have it |
+| ------------------------------- | ---------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| lp-hero                         | `lp-hero.webp`               | 2400×2000 | Landing page, behind the whole hero in the dark theme (the headline at the top, the dashboard and Discord windows below). Hidden in the light theme and on phones.                                                                          | no      |
+| lp-icon-overview                | `lp-icon-overview.webp`      | 1024×1024 | Landing page, beside 'Open a server and see what needs you' (transparent).                                                                                                                                                                  | no      |
+| lp-icon-watch                   | `lp-icon-watch.webp`         | 1024×1024 | Landing page, beside the moderation section (transparent).                                                                                                                                                                                  | no      |
+| lp-icon-gatehouse               | `lp-icon-gatehouse.webp`     | 1024×1024 | Landing page, beside the security section (transparent).                                                                                                                                                                                    | no      |
+| lp-icon-rally                   | `lp-icon-rally.webp`         | 1024×1024 | Landing page, beside 'From LFG post to full squad' (transparent).                                                                                                                                                                           | no      |
+| lp-icon-quartermaster           | `lp-icon-quartermaster.webp` | 1024×1024 | Landing page, beside the AI builder section (transparent).                                                                                                                                                                                  | no      |
+| lp-cta                          | `lp-cta.webp`                | 2400×1000 | Landing page, behind the closing 'Add Garrison to your server' band in the dark theme. Hidden in the light theme and on phones.                                                                                                             | no      |
+| og                              | `og.jpg`                     | 1200×630  | Link preview image when the site is shared in Discord, X and elsewhere. The current file is drawn, not painted: the shield, the Garrison wordmark and 'Run your Discord server from one dashboard.' in Gabarito, matching the landing page. | yes     |
+| login                           | `login.webp`                 | 1200×600  | Banner across the top of the sign-in card.                                                                                                                                                                                                  | yes     |
+| not-found                       | `not-found.webp`             | 1200×600  | Banner on the 'Nothing here' page.                                                                                                                                                                                                          | yes     |
+| empty                           | `empty.webp`                 | 800×800   | Small picture in empty tables (no cases, no events, nobody ranked yet).                                                                                                                                                                     | yes     |
+| hero (optional)                 | `hero.webp`                  | 2400×1350 | Not shown since the landing page redesign. Kept so the existing file still has a slot.                                                                                                                                                      | yes     |
+| hero-light (optional)           | `hero-light.webp`            | 2400×1350 | Not shown since the landing page redesign. Kept so the existing file still has a slot.                                                                                                                                                      | yes     |
+| security (optional)             | `security.webp`              | 1600×1200 | Not shown since the landing page redesign. Kept so the existing file still has a slot.                                                                                                                                                      | yes     |
+| module-watch (optional)         | `module-watch.webp`          | 1024×1024 | Not shown since the landing page redesign. Kept so the existing file still has a slot.                                                                                                                                                      | yes     |
+| module-gatehouse (optional)     | `module-gatehouse.webp`      | 1024×1024 | Not shown since the landing page redesign. Kept so the existing file still has a slot.                                                                                                                                                      | yes     |
+| module-ledger (optional)        | `module-ledger.webp`         | 1024×1024 | Not shown since the landing page redesign. Kept so the existing file still has a slot.                                                                                                                                                      | yes     |
+| module-rally (optional)         | `module-rally.webp`          | 1024×1024 | Not shown since the landing page redesign. Kept so the existing file still has a slot.                                                                                                                                                      | yes     |
+| module-ops (optional)           | `module-ops.webp`            | 1024×1024 | Not shown since the landing page redesign. Kept so the existing file still has a slot.                                                                                                                                                      | yes     |
+| module-barracks (optional)      | `module-barracks.webp`       | 1024×1024 | Not shown since the landing page redesign. Kept so the existing file still has a slot.                                                                                                                                                      | yes     |
+| module-ranks (optional)         | `module-ranks.webp`          | 1024×1024 | Not shown since the landing page redesign. Kept so the existing file still has a slot.                                                                                                                                                      | yes     |
+| module-quartermaster (optional) | `module-quartermaster.webp`  | 1024×1024 | Not shown since the landing page redesign. Kept so the existing file still has a slot.                                                                                                                                                      | yes     |
 
 ## lp-hero
 
@@ -141,66 +138,12 @@ text, letters, numbers, words, logo, watermark, signature, UI screenshot, interf
 
 ## lp-icon-quartermaster
 
-File `lp-icon-quartermaster.webp`, 1024×1024. Landing page, beside the Quartermaster section (transparent).
+File `lp-icon-quartermaster.webp`, 1024×1024. Landing page, beside the AI builder section (transparent).
 
 ```
 Premium 3D product render for a modern software launch page: clean high-end CGI with the polish of a flagship app's marketing art, soft studio lighting, smooth satin graphite and thick smoked-glass materials with rounded, generously bevelled edges, subtle inner glow, crisp reflections, no grunge or wear. Palette: deep ink #07080c, graphite #161a23 and #2a2f3a, smoked glass with cool gray highlights. Exactly one small volt-lime #d4ff3a light per piece, as emitted light or a lit inset, never as paint and never as ambient light. A soft indigo #6f6cf8 rim light from behind and to the left; any ambient glow or floor light is indigo or cool blue. Calm, confident and friendly: shapes simple enough to read at 48 pixels, nothing military.
 
 Three rounded smoked-glass building blocks snapping together into a small tidy structure, with a fourth block hovering just above its slot, glowing volt-lime as the newest addition.
-
-Transparent piece: one object, centered, filling about 72% of the square, three-quarter view from slightly above, on a fully transparent background (PNG with alpha). No floor, no cast shadow plane, no backdrop, no frame. Even margin on all four sides. The lime light sits on the object itself.
-```
-
-Negative prompt for this piece:
-
-```
-text, letters, numbers, words, logo, watermark, signature, UI screenshot, interface, people, faces, hands, characters, mascot, weapons, guns, swords, military, camouflage, concrete, grunge, rust, dirt, scratches, clutter, busy background, orange, red, pink, purple haze, rainbow, neon sign, cyberpunk city, cartoon outlines, flat vector, pixel art, low poly, lens flare, chromatic aberration, oversaturated, blurry
-```
-
-## lp-icon-ledger
-
-File `lp-icon-ledger.webp`, 1024×1024. Landing page, Ledger under 'Also in the box' (transparent).
-
-```
-Premium 3D product render for a modern software launch page: clean high-end CGI with the polish of a flagship app's marketing art, soft studio lighting, smooth satin graphite and thick smoked-glass materials with rounded, generously bevelled edges, subtle inner glow, crisp reflections, no grunge or wear. Palette: deep ink #07080c, graphite #161a23 and #2a2f3a, smoked glass with cool gray highlights. Exactly one small volt-lime #d4ff3a light per piece, as emitted light or a lit inset, never as paint and never as ambient light. A soft indigo #6f6cf8 rim light from behind and to the left; any ambient glow or floor light is indigo or cool blue. Calm, confident and friendly: shapes simple enough to read at 48 pixels, nothing military.
-
-A closed rounded notebook in satin graphite with faint embossed lines across its cover and a glowing volt-lime bookmark ribbon falling from its pages.
-
-Transparent piece: one object, centered, filling about 72% of the square, three-quarter view from slightly above, on a fully transparent background (PNG with alpha). No floor, no cast shadow plane, no backdrop, no frame. Even margin on all four sides. The lime light sits on the object itself.
-```
-
-Negative prompt for this piece:
-
-```
-text, letters, numbers, words, logo, watermark, signature, UI screenshot, interface, people, faces, hands, characters, mascot, weapons, guns, swords, military, camouflage, concrete, grunge, rust, dirt, scratches, clutter, busy background, orange, red, pink, purple haze, rainbow, neon sign, cyberpunk city, cartoon outlines, flat vector, pixel art, low poly, lens flare, chromatic aberration, oversaturated, blurry
-```
-
-## lp-icon-ranks
-
-File `lp-icon-ranks.webp`, 1024×1024. Landing page, Ranks under 'Also in the box' (transparent).
-
-```
-Premium 3D product render for a modern software launch page: clean high-end CGI with the polish of a flagship app's marketing art, soft studio lighting, smooth satin graphite and thick smoked-glass materials with rounded, generously bevelled edges, subtle inner glow, crisp reflections, no grunge or wear. Palette: deep ink #07080c, graphite #161a23 and #2a2f3a, smoked glass with cool gray highlights. Exactly one small volt-lime #d4ff3a light per piece, as emitted light or a lit inset, never as paint and never as ambient light. A soft indigo #6f6cf8 rim light from behind and to the left; any ambient glow or floor light is indigo or cool blue. Calm, confident and friendly: shapes simple enough to read at 48 pixels, nothing military.
-
-Three rounded smoked-glass podium blocks of different heights side by side, the tallest topped by a small glowing volt-lime chevron badge.
-
-Transparent piece: one object, centered, filling about 72% of the square, three-quarter view from slightly above, on a fully transparent background (PNG with alpha). No floor, no cast shadow plane, no backdrop, no frame. Even margin on all four sides. The lime light sits on the object itself.
-```
-
-Negative prompt for this piece:
-
-```
-text, letters, numbers, words, logo, watermark, signature, UI screenshot, interface, people, faces, hands, characters, mascot, weapons, guns, swords, military, camouflage, concrete, grunge, rust, dirt, scratches, clutter, busy background, orange, red, pink, purple haze, rainbow, neon sign, cyberpunk city, cartoon outlines, flat vector, pixel art, low poly, lens flare, chromatic aberration, oversaturated, blurry
-```
-
-## lp-icon-barracks
-
-File `lp-icon-barracks.webp`, 1024×1024. Landing page, Barracks under 'Also in the box' (transparent).
-
-```
-Premium 3D product render for a modern software launch page: clean high-end CGI with the polish of a flagship app's marketing art, soft studio lighting, smooth satin graphite and thick smoked-glass materials with rounded, generously bevelled edges, subtle inner glow, crisp reflections, no grunge or wear. Palette: deep ink #07080c, graphite #161a23 and #2a2f3a, smoked glass with cool gray highlights. Exactly one small volt-lime #d4ff3a light per piece, as emitted light or a lit inset, never as paint and never as ambient light. A soft indigo #6f6cf8 rim light from behind and to the left; any ambient glow or floor light is indigo or cool blue. Calm, confident and friendly: shapes simple enough to read at 48 pixels, nothing military.
-
-A small fan of four rounded game-account cards in graphite and smoked glass, each with a thin soft edge light, the front card carrying a raised volt-lime check mark.
 
 Transparent piece: one object, centered, filling about 72% of the square, three-quarter view from slightly above, on a fully transparent background (PNG with alpha). No floor, no cast shadow plane, no backdrop, no frame. Even margin on all four sides. The lime light sits on the object itself.
 ```
@@ -229,7 +172,7 @@ text, letters, numbers, words, logo, watermark, signature, UI screenshot, interf
 
 ## og
 
-File `og.jpg`, 1200×630. Link preview image when the site is shared in Discord, X and elsewhere. After generating, add the Garrison logo and 'Run your Discord server from one dashboard.' in Gabarito on the empty right half before exporting.
+File `og.jpg`, 1200×630. Link preview image when the site is shared in Discord, X and elsewhere. The current file is drawn, not painted: the shield, the Garrison wordmark and 'Run your Discord server from one dashboard.' in Gabarito, matching the landing page.
 
 ```
 Premium 3D product render for a modern software launch page: clean high-end CGI with the polish of a flagship app's marketing art, soft studio lighting, smooth satin graphite and thick smoked-glass materials with rounded, generously bevelled edges, subtle inner glow, crisp reflections, no grunge or wear. Palette: deep ink #07080c, graphite #161a23 and #2a2f3a, smoked glass with cool gray highlights. Exactly one small volt-lime #d4ff3a light per piece, as emitted light or a lit inset, never as paint and never as ambient light. A soft indigo #6f6cf8 rim light from behind and to the left; any ambient glow or floor light is indigo or cool blue. Calm, confident and friendly: shapes simple enough to read at 48 pixels, nothing military.

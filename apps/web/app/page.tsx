@@ -9,7 +9,6 @@ import { Art } from "@/components/Art";
 import { Logo } from "@/components/Logo";
 import { ServerPreview } from "@/components/ServerPreview";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { billingReady } from "@/lib/billing";
 import { siteUrl } from "@/lib/hosts";
 import { LEGAL } from "@/lib/legal";
 import { publicMetrics } from "@/lib/public-metrics";
@@ -172,11 +171,7 @@ const FAQ: { q: string; a: string }[] = [
   },
 ];
 
-/** The cost answer, which changes once paid plans open. */
-const costAnswer = (paidOpen: boolean) =>
-  paidOpen
-    ? `Every module works on Free, for any number of servers, and everything a server needs to stay safe stays free. Pro adds your own look, higher limits and history for one server; Agency covers up to five you run. A new subscription can be refunded within ${LEGAL.refundDays} days, as the Refund Policy explains.`
-    : "Nothing during early access. When paid plans open, Pro covers one server and Agency up to five you run, at the prices in the pricing section. Everything a server needs to stay safe stays free.";
+const COST_ANSWER = `Every module works on Free, for any number of servers, and everything a server needs to stay safe stays free. Pro adds your own look, higher limits and history for one server; Agency covers up to five you run. A new subscription can be refunded within ${LEGAL.refundDays} days, as the Refund Policy explains.`;
 
 /** The example server in the AI builder shot: today's channels plus one plan's additions. */
 const DEMO_PREVIEW: Preview = {
@@ -375,9 +370,7 @@ export default async function Home() {
   const invite = clientId && /^\d+$/.test(clientId) ? inviteUrl(clientId) : null;
   const [metrics, theme] = await Promise.all([publicMetrics(), currentTheme()]);
   const openLabel = signedIn ? "Open your dashboard" : "Open the dashboard";
-  // Paid plans are open once Stripe is configured; until then everything is free.
-  const paidOpen = billingReady();
-  const faq = [...FAQ, { q: "What does it cost?", a: costAnswer(paidOpen) }];
+  const faq = [...FAQ, { q: "What does it cost?", a: COST_ANSWER }];
 
   const actions = (
     <div className="lp-actions">
@@ -440,10 +433,7 @@ export default async function Home() {
               before every change.
             </p>
             {actions}
-            <p className="lp-assure">
-              {paidOpen ? "Every module free to start" : "Free during early access"} · Never asks
-              for Administrator
-            </p>
+            <p className="lp-assure">Every module free to start · Never asks for Administrator</p>
           </div>
 
           {/* The focal moment: lock the server from the dashboard, and the message lands in Discord. */}
@@ -864,12 +854,11 @@ export default async function Home() {
         <section className="lp-section lp-price" id="pricing" aria-labelledby="lp-pricing">
           <div className="lp-price__head">
             <h2 className="lp-h2" id="lp-pricing">
-              {paidOpen ? "Pricing" : "Free now. Simple prices at launch."}
+              Pricing
             </h2>
             <p>
-              {paidOpen
-                ? "Everything a server needs to stay safe is free. Pay for the look, the limits and the history."
-                : "Every module is free while Garrison is in early access. These are the prices when paid plans open; nothing costs money before then, and safety stays free for good."}
+              Everything a server needs to stay safe is free. Pay for the look, the limits and the
+              history.
             </p>
           </div>
           <ul className="lp-tiers">
@@ -902,11 +891,7 @@ export default async function Home() {
                     ))}
                   </ul>
                   <p className="lp-tier__cta">
-                    {paid
-                      ? paidOpen
-                        ? "Upgrade from any server's Plan page"
-                        : "Opens at launch"
-                      : "What every server gets"}
+                    {paid ? "Upgrade from any server's Plan page" : "What every server gets"}
                   </p>
                 </li>
               );
@@ -939,10 +924,8 @@ export default async function Home() {
               Add Garrison to your server
             </h2>
             <p>
-              {paidOpen
-                ? "Free to start, on as many servers as you like."
-                : "Free during early access."}{" "}
-              It asks only for the permissions it uses, and every change it makes can be undone.
+              Free to start, on as many servers as you like. It asks only for the permissions it
+              uses, and every change it makes can be undone.
             </p>
             {actions}
           </div>

@@ -20,8 +20,8 @@ function Check() {
 
 /**
  * Free, Pro and Agency side by side: the price, who it's for, what it adds, and where
- * this server stands. Prices come from PRICING. Until checkout is set up the section says
- * once that these are launch prices, and each paid card ends with "Opens at launch".
+ * this server stands. Prices come from PRICING. If checkout isn't configured (no Stripe
+ * settings), each paid card ends with a plain note instead of buy buttons.
  * `current` marks this server's plan; `actions` goes at the foot of a tier.
  */
 export function PlanCards({
@@ -30,7 +30,7 @@ export function PlanCards({
   actions = {},
 }: {
   current?: PlanTier;
-  /** Checkout is set up (lib/billing billingReady): no "Opens at launch". */
+  /** Checkout is set up (lib/billing billingReady). */
   live?: boolean;
   actions?: Partial<Record<PlanTier, ReactNode>>;
 }) {
@@ -43,7 +43,7 @@ export function PlanCards({
         const foot =
           actions[tier] ??
           (here ? null : paid && !live ? (
-            <span className="tier__soon">Opens at launch</span>
+            <span className="tier__soon">Checkout isn't available right now</span>
           ) : null);
         return (
           <li
