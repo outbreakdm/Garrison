@@ -855,3 +855,8 @@ Decided (2026-11-12, owner):
   continues from what was built). Polished with impeccable. Not deployed.
 - 2026-11-15: Deployed `9de6e3f` (run 43753878809): the condensed AI assistant page is live.
   Site, /healthz and /status answer; the bot is online.
+- 2026-11-15: Proposed supplies v2 (`docs/AI_SUPPLIES_V2.md`): a supply is $0.001 of AI,
+  charged by what a message really costs; monthly pools (Free 200 per person, Pro 3,000,
+  Agency 13,000 shared); a 13-supply hold per message (3 rounds); supply packs (1,000 for
+  $2.99, 5,000 for $11.99). Worst-case AI under half of net for every plan and pack. Waiting
+  on the owner.
