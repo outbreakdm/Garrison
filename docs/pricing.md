@@ -102,6 +102,16 @@ typical messages now cost about what Pro brings in, so the levers below matter m
 before. The global cap (`QM_DAILY_BUDGET_USD`, $5 a day) is about 1,900 typical messages a
 day across all servers, and it pauses the assistant for everyone when it's reached.
 
+**Measured with supplies v2 and caching (2026-11-15, production, a Pro server):**
+
+| Message | Uncached in | Cache written | Cache read | Out | Cost | Charged |
+|---|---|---|---|---|---|---|
+| "What's missing on my server?" (looked at settings, 2 rounds) | 6 | 8,823 | 7,815 | 487 | $0.0014 | 2 supplies |
+| A staff-and-logs plan, 4 changes (1 round) | 4 | 448 | 7,517 | 1,189 | $0.0007 | 1 supply |
+
+With caching, the instructions, tools and earlier rounds come back from the cache at a tenth
+of the price, so a message now costs a quarter to a half of the $0.0026 measured before.
+
 **Levers, cheapest first:**
 
 1. **Prompt caching** (free, no quality change). The instructions, schema and tools (~4,900

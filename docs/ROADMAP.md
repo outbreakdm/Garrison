@@ -898,3 +898,9 @@ Decided (2026-11-12, owner):
   3 supplies). Landing page shows the monthly pools, the Refund Policy covers packs,
   /healthz and /status answer, and the bot is online. Not yet seen in production: a real
   pack purchase, and cached tokens on a real AI call.
+- 2026-11-15: Supplies v2 tested on the real API in production (GuildWright, Pro): a
+  settings question that looked at settings cost $0.0014 and was charged 2 supplies; a
+  4-change plan cost $0.0007 and was charged 1. The second message read 7,517 tokens from
+  the cache. The pool showed 2,993 of 3,000 (3 for the messages, 4 held by the waiting
+  draft). No build was applied. Also: the dashboard rail scrolls on its own and the phone
+  menu stays pinned (`dd0dfeb`), not deployed.
