@@ -337,7 +337,7 @@ export async function doQmPlan(ctx: BotContext, guild: Guild, member: GuildMembe
   const p = qmPlan.safeParse(raw);
   if (!p.success) return fail("Describe what to build, in 500 characters or fewer.");
   if (!ctx.planner)
-    return fail("The AI builder isn't set up on this Garrison: the bot has no Claude API key.");
+    return fail("The AI assistant isn't set up on this Garrison: the bot has no Claude API key.");
   const continues = p.data.continues ? await getQmBuild(ctx.db, guild.id, p.data.continues) : null;
   if (p.data.continues && !continues) return fail("That plan doesn't exist any more.");
   const outcome = await planBuild(
@@ -361,12 +361,12 @@ export async function doQmPlan(ctx: BotContext, guild: Guild, member: GuildMembe
   };
 }
 
-/** A message to the AI builder's chat: it answers, asks, or drafts the next plan. */
+/** A message to the AI assistant's chat: it answers, asks, or drafts the next plan. */
 export async function doQmChat(ctx: BotContext, guild: Guild, member: GuildMember, raw: unknown) {
   const p = qmChat.safeParse(raw);
   if (!p.success) return fail("Write a message of 500 characters or fewer.");
   if (!ctx.planner?.chat)
-    return fail("The AI builder isn't set up on this Garrison: the bot has no Claude API key.");
+    return fail("The AI assistant isn't set up on this Garrison: the bot has no Claude API key.");
   const continues = p.data.continues ? await getQmBuild(ctx.db, guild.id, p.data.continues) : null;
   const outcome = await chatTurn(
     ctx,

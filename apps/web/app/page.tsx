@@ -129,7 +129,7 @@ const CATALOG: { group: string; items: [name: string, what: string][] }[] = [
         "Messages, active members, joins and leaves, and the busiest hours. Counts only.",
       ],
       [
-        "AI builder",
+        "AI assistant",
         "Describe channels and roles, see them on your server, then build. Any build can be undone.",
       ],
     ],
@@ -143,7 +143,7 @@ const moduleCount = NUMBER_WORDS[MODULE_COUNT] ?? String(MODULE_COUNT);
 const SECURITY = [
   "Garrison asks only for the permissions it uses, never Administrator, and /health tells you when something's off.",
   "Anti-nuke and its trusted list are owner-only, so a compromised admin can't switch them off first.",
-  "The AI builder only adds channels and roles, new roles get only member permissions, and a person approves every plan.",
+  "The AI assistant only adds channels and roles, new roles get only member permissions, and a person approves every plan.",
   "Message text is kept only where it's the point: tickets, suggestions and appeals, and logs if you turn it on. Ticket and log text expires on a schedule.",
   "The dashboard signs in with Discord, keeps no Discord token, and re-checks your permissions on every page.",
 ];
@@ -173,7 +173,7 @@ const FAQ: { q: string; a: string }[] = [
 
 const COST_ANSWER = `Every module works on Free, for any number of servers, and everything a server needs to stay safe stays free. Pro adds your own look, higher limits and history for one server; Agency covers up to five you run. A new subscription can be refunded within ${LEGAL.refundDays} days, as the Refund Policy explains.`;
 
-/** The example server in the AI builder shot: today's channels plus one plan's additions. */
+/** The example server in the AI assistant shot: today's channels plus one plan's additions. */
 const DEMO_PREVIEW: Preview = {
   loose: [],
   categories: [
@@ -599,7 +599,7 @@ export default async function Home() {
                       <li>
                         <span className="attention__item">
                           <span className="attention__text">
-                            <strong>AI builder plan v4 is waiting</strong>
+                            <strong>AI assistant plan v4 is waiting</strong>
                             <span>Nothing changes in Discord until someone builds it.</span>
                           </span>
                           <span className="attention__go">
@@ -789,7 +789,7 @@ export default async function Home() {
             icon="lp-icon-quartermaster"
             title="Describe the channels you want. Review. Build. Undo."
             visual={
-              <AppWindow path="AI builder" className="lp-win--qm">
+              <AppWindow path="AI assistant" className="lp-win--qm">
                 <div className="lp-app lp-app--stack">
                   <p className="lp-qm-ask">
                     “A Valorant section with ranked and casual LFG, a voice room, and a Gold+ role
@@ -801,7 +801,7 @@ export default async function Home() {
             }
           >
             <p>
-              The AI builder turns a sentence into a plan and shows your server with the changes
+              The AI assistant turns a sentence into a plan and shows your server with the changes
               before anything happens. It only adds channels and roles, new roles get no
               permissions, and any build can be undone, even after a partial failure.
             </p>

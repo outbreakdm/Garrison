@@ -37,7 +37,7 @@ export type ChatOutcome =
   | { ok: false; error: string };
 
 /**
- * One turn of the AI builder's chat. The admin's message is saved, the model answers
+ * One turn of the AI assistant's chat. The admin's message is saved, the model answers
  * (asking, suggesting or drafting a plan), and a drafted plan goes through the same
  * checks and supplies as any plan before it's stored as the next version. A message costs
  * a message's supplies; a reply whose plan couldn't be stored gives them back. Every
@@ -51,7 +51,7 @@ export async function chatTurn(
   person: { id: string; tag: string },
   input: { message: string; threadId?: string; fresh?: boolean; continues?: QmBuild | null },
 ): Promise<ChatOutcome> {
-  if (!planner.chat) return { ok: false, error: "The AI builder can't chat on this Garrison." };
+  if (!planner.chat) return { ok: false, error: "The AI assistant can't chat on this Garrison." };
   await ensureGuild(ctx, guild);
 
   // The conversation: the one asked for if it's this person's, otherwise a new one.
@@ -148,7 +148,7 @@ export async function chatTurn(
       else {
         const checked = await checkDraft(ctx, guild, result.plan, snap.server, maxOperations);
         if (!checked.ok) {
-          ctx.logger.info("AI builder chat plan rejected", {
+          ctx.logger.info("AI assistant chat plan rejected", {
             guildId: guild.id,
             errors: checked.errors,
           });
@@ -187,7 +187,7 @@ export async function chatTurn(
       costMicros: usage ? costMicros(usage.model, usage.inputTokens, usage.outputTokens) : 0,
       ok: keptCredit,
     }).catch((error: unknown) =>
-      ctx.logger.warn("Couldn't record an AI builder chat call", { guildId: guild.id, error }),
+      ctx.logger.warn("Couldn't record an AI assistant chat call", { guildId: guild.id, error }),
     );
   }
 }

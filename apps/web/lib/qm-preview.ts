@@ -1,8 +1,10 @@
 import {
   QM_ROLE_PERMISSIONS,
   type QmOperation,
+  type QmPost,
   type QmRolePermission,
   type QmSettingChange,
+  qmPostLabel,
   qmSettingLabel,
   qmSettingValueText,
 } from "@garrison/db";
@@ -244,4 +246,37 @@ export function settingDiffs(
 /** One line per setting, for a build's history entry. */
 export function settingLines(settings: QmSettingChange[]) {
   return settings.map((c) => `~ ${qmSettingLabel(c.module, c.field)}`);
+}
+
+export interface PostPreview {
+  /** "Saved message “Rules”" */
+  what: string;
+  /** "#rules (new)" */
+  where: string;
+}
+
+/** What a plan posts and where, with the plan's new channels by name. */
+export function postPreviews(
+  layout: ServerLayout | null,
+  plan: QmOperation[],
+  posts: QmPost[],
+): PostPreview[] {
+  const made = new Map(plan.map((o) => [o.ref, o.name]));
+  const channels = new Map<string, string>();
+  for (const c of layout?.loose ?? []) channels.set(c.id, c.name);
+  for (const cat of layout?.categories ?? [])
+    for (const c of cat.channels) channels.set(c.id, c.name);
+  return posts.map((p) => ({
+    what: `${qmPostLabel(p.kind)} “${p.name}”`,
+    where: made.has(p.channel)
+      ? `#${made.get(p.channel)} (new)`
+      : channels.has(p.channel)
+        ? `#${channels.get(p.channel)}`
+        : "a deleted channel",
+  }));
+}
+
+/** One line per post, for a build's history entry. */
+export function postLines(posts: QmPost[]) {
+  return posts.map((p) => `> ${qmPostLabel(p.kind)} ${p.name}`);
 }

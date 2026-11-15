@@ -13,11 +13,11 @@ export type GuildPlan = (typeof PLANS)[number];
 /** What a server's AI use is counted under: Agency is Pro from a seat (guild_plans.bundle_id). */
 export type AiTier = GuildPlan | "agency";
 
-/** The most changes one AI builder plan can make. */
+/** The most changes one AI assistant plan can make. */
 export const QM_CHANGES_PER_PLAN = 20;
 
 /**
- * Supplies: the AI builder's one daily currency. Every message to the AI (a chat message,
+ * Supplies: the AI assistant's one daily currency. Every message to the AI (a chat message,
  * a plan, a revision) costs AI_SUPPLIES_PER_MESSAGE because each is a paid AI call; every
  * change a plan makes costs AI_SUPPLIES_PER_CHANGE. A drafted plan holds its changes until
  * it's built, discarded or expires. Pro and Agency count per server. Free counts per server
@@ -34,7 +34,7 @@ export const AI_SUPPLIES_PER_CHANGE = 1;
 export const AI_SUPPLIES_PER_FULL_PLAN = AI_SUPPLIES_PER_MESSAGE + QM_CHANGES_PER_PLAN;
 
 /**
- * Member-level permissions the AI builder may give a new role. Never Administrator,
+ * Member-level permissions the AI assistant may give a new role. Never Administrator,
  * anything that manages, moderates or mentions everyone: those stay a deliberate step in
  * Discord. `flag` is discord.js's PermissionFlagsBits name. Garrison can only grant what it
  * holds itself, so these are also in the invite (packages/brand inviteSettings).
@@ -69,7 +69,7 @@ export const PRICING = {
     highlights: [
       "Moderation, anti-raid, anti-nuke, verification and logs, in full",
       "Every module with the standard look and sensible limits",
-      "AI builder: 40 supplies a day, about 13 messages",
+      "AI assistant: 40 supplies a day, about 13 messages",
       "Undo and history on every change",
     ],
   },
@@ -84,7 +84,7 @@ export const PRICING = {
       "Ticket forms, auto-assign, stats and a year of transcripts",
       "Custom rank cards, XP boosts and seasons",
       "Raid attendance, roles from game stats, scheduled backups",
-      "AI builder: 300 supplies a day (100 messages), and server templates",
+      "AI assistant: 300 supplies a day (100 messages), and server templates",
     ],
   },
   agency: {
@@ -96,7 +96,7 @@ export const PRICING = {
     highlights: [
       "Everything in Pro, on each of 5 servers",
       "Put a server in a seat, or free it, from its Plan page",
-      "AI builder: 400 supplies a day on each server",
+      "AI assistant: 400 supplies a day on each server",
       "One bill: $7.00 a server a month",
     ],
   },
@@ -359,7 +359,7 @@ export const FEATURES = {
   "qm.dailyCredits": {
     module: "qm",
     about:
-      "AI builder supplies a day: a message costs 3, each change a plan makes costs 1 (Agency: 400 on each server; Free: 40 per person across all their servers)",
+      "AI assistant supplies a day: a message costs 3, each change a plan makes costs 1 (Agency: 400 on each server; Free: 40 per person across all their servers)",
     free: AI_SUPPLIES_PER_DAY.free,
     pro: AI_SUPPLIES_PER_DAY.pro,
   },

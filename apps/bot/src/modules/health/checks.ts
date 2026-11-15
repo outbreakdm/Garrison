@@ -35,7 +35,7 @@ export const REQUIRED_PERMISSIONS: {
     optional: true,
   },
   {
-    module: "AI builder",
+    module: "AI assistant",
     bits:
       P.AddReactions |
       P.Stream |

@@ -1,15 +1,18 @@
 import { AUTOMOD_LIMITS, checkAutomod, readAutomod } from "./automod";
 import type { Db } from "./client";
+import { readMessages } from "./messages";
 import type { Entitlements } from "./plans";
 import { readSettings } from "./repo/settings";
-import type { QmSettingChange, SettingsModule } from "./schema";
+import { readRoleMenus } from "./role-menus";
+import type { QmPost, QmSettingChange, SettingsModule } from "./schema";
 import { checkStarboard, readStarboard, STARBOARD_LIMITS } from "./starboard";
 import { checkSuggestions, readSuggestions } from "./suggestions";
+import { readTicketPanels } from "./tickets";
 import { checkVoiceRooms, readVoiceRooms, VOICE_LIMITS } from "./voice-rooms";
 import { checkWelcome, readWelcome } from "./welcome";
 
 /**
- * The settings the AI builder may change, and how each is checked (docs/AI_ASSISTANT.md,
+ * The settings the AI assistant may change, and how each is checked (docs/AI_ASSISTANT.md,
  * phase 3). A subset of EDITABLE_FIELDS: modules whose checks are shared with the dashboard,
  * or simple enough to check here. Everything else stays on its dashboard page, and anti-nuke
  * is never here. Each field a plan changes costs one supply, like a channel or a role.
@@ -422,12 +425,12 @@ export async function checkQmSettings(
     const m = spec(p.module);
     const name = qmSettingLabel(p.module, p.field);
     if (!m) {
-      errors.push(`${p.module} settings can't be changed by the AI builder.`);
+      errors.push(`${p.module} settings can't be changed by the AI assistant.`);
       continue;
     }
     const f = m.fields[p.field];
     if (!f) {
-      errors.push(`${m.label}: "${p.field}" can't be changed by the AI builder.`);
+      errors.push(`${m.label}: "${p.field}" can't be changed by the AI assistant.`);
       continue;
     }
     const module = p.module as QmSettingsModule;
@@ -499,7 +502,7 @@ function shape(
         const role = lookup.role(id);
         if (!role) return `${name}: that role isn't in this server.`;
         if (role.status === "dangerous")
-          return `${name}: @${role.name} has moderation or admin powers, so the AI builder won't use it.`;
+          return `${name}: @${role.name} has moderation or admin powers, so the AI assistant won't use it.`;
         if (role.status === "fixed") return `${name}: @${role.name} can't be used here.`;
       } else if (lookup.channel(id) !== target)
         return `${name}: that isn't a ${TARGET_TEXT[target]} in this server.`;
@@ -572,4 +575,83 @@ export function resolveQmSettingRefs(change: QmSettingChange, ids: Map<string, s
   const swap = (v: unknown): unknown =>
     typeof v === "string" ? (ids.get(v) ?? v) : Array.isArray(v) ? v.map(swap) : v;
   return swap(change.to);
+}
+
+/** The most posts one plan makes. */
+export const QM_POSTS_MAX = 5;
+export const QM_POST_KINDS = ["role_menu", "ticket_panel", "message"] as const;
+const POST_TEXT: Record<QmPost["kind"], string> = {
+  role_menu: "Role menu",
+  ticket_panel: "Ticket panel",
+  message: "Saved message",
+};
+export const qmPostLabel = (kind: QmPost["kind"]) => POST_TEXT[kind];
+
+/** The role menus, ticket panels and saved messages this server has, by id and name. */
+export async function qmPostables(db: Db, guildId: string) {
+  const [menus, tickets, messages] = await Promise.all([
+    readSettings(db, guildId, "roles"),
+    readSettings(db, guildId, "tickets"),
+    readSettings(db, guildId, "messages"),
+  ]);
+  const pick = (list: { id: string; name: string }[]) => list.map(({ id, name }) => ({ id, name }));
+  return {
+    role_menu: pick(readRoleMenus(menus?.menus ?? [])),
+    ticket_panel: pick(readTicketPanels(tickets?.panels ?? [])),
+    message: pick(readMessages(messages?.messages ?? [])),
+  } satisfies Record<QmPost["kind"], { id: string; name: string }[]>;
+}
+
+export interface QmPostProposal {
+  kind: string;
+  itemId: string;
+  channel: string;
+}
+
+/**
+ * Check what a plan proposes to post: saved items this server has, into a text channel in
+ * this server or one the plan creates. Posting itself is checked again when the plan is
+ * built, by the dashboard's own post handlers, with the admin's permissions.
+ */
+export async function checkQmPosts(
+  db: Db,
+  guildId: string,
+  proposals: QmPostProposal[],
+  lookup: QmSettingsLookup,
+): Promise<{ ok: true; posts: QmPost[] } | { ok: false; errors: string[] }> {
+  if (!proposals.length) return { ok: true, posts: [] };
+  const errors: string[] = [];
+  if (proposals.length > QM_POSTS_MAX) errors.push(`A plan posts at most ${QM_POSTS_MAX} things.`);
+  const have = await qmPostables(db, guildId);
+  const posts: QmPost[] = [];
+  const seen = new Set<string>();
+  for (const p of proposals.slice(0, QM_POSTS_MAX)) {
+    if (!(QM_POST_KINDS as readonly string[]).includes(p.kind)) {
+      errors.push(`"${String(p.kind).slice(0, 30)}" isn't something the AI assistant can post.`);
+      continue;
+    }
+    const kind = p.kind as QmPost["kind"];
+    const item = have[kind].find((x) => x.id === p.itemId);
+    if (!item) {
+      errors.push(
+        `${POST_TEXT[kind]} "${String(p.itemId).slice(0, 30)}" isn't saved on this server.`,
+      );
+      continue;
+    }
+    const raw = String(p.channel ?? "").trim();
+    const made = lookup.created(raw.toLowerCase());
+    const channel = made ? raw.toLowerCase() : raw;
+    if (made ? made !== "text" : lookup.channel(raw) !== "text") {
+      errors.push(`${POST_TEXT[kind]} ${item.name}: post it in a text channel in this server.`);
+      continue;
+    }
+    const key = `${kind}:${item.id}`;
+    if (seen.has(key)) {
+      errors.push(`${POST_TEXT[kind]} ${item.name} is posted twice.`);
+      continue;
+    }
+    seen.add(key);
+    posts.push({ kind, itemId: item.id, name: item.name, channel });
+  }
+  return errors.length ? { ok: false, errors } : { ok: true, posts };
 }

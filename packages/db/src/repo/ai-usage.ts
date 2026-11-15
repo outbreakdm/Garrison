@@ -192,7 +192,7 @@ export interface AiAllowance {
 }
 
 /**
- * What this person can still spend on the AI builder on this server today: the lower of
+ * What this person can still spend on the AI assistant on this server today: the lower of
  * the server's supplies and (on Free) the person's. `exceptId` leaves out a waiting plan
  * that's about to be replaced by a revision.
  */

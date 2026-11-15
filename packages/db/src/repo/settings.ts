@@ -302,7 +302,7 @@ async function lockRow(tx: Tx, module: SettingsModule, guildId: string): Promise
 /**
  * A module's editable settings as they are now, read only: exactly the fields in
  * EDITABLE_FIELDS. Null when the module has never been set up here, so its defaults
- * apply (most modules start off). The AI builder's chat reads settings through this.
+ * apply (most modules start off). The AI assistant's chat reads settings through this.
  */
 export async function readSettings(
   db: Db,

@@ -667,7 +667,7 @@ export type LedgerEvent = typeof ledgerEvents.$inferSelect;
 export type NewLedgerEvent = Omit<typeof ledgerEvents.$inferInsert, "id" | "createdAt">;
 
 // ---------------------------------------------------------------------------
-// Quartermaster (AI builder)
+// Quartermaster (AI assistant)
 // ---------------------------------------------------------------------------
 
 export const qmStatus = pgEnum("qm_status", [
@@ -716,12 +716,24 @@ export interface QmSettingChange {
 }
 
 /**
+ * Something a plan posts: a role menu, ticket panel or saved message the server already has,
+ * into a channel (an id, or the ref of a channel the same plan creates).
+ */
+export interface QmPost {
+  kind: "role_menu" | "ticket_panel" | "message";
+  itemId: string;
+  /** The item's name when the plan was drafted, for the preview. */
+  name: string;
+  channel: string;
+}
+
+/**
  * Something a build created or changed, recorded as it happens so Undo works even after a
  * partial failure. A setting is one entry per field, all with the settings change's id, and
- * named "module.field".
+ * named "module.field". A post is the channel it went to; posts aren't undone.
  */
 export interface QmCreated {
-  kind: "category" | "channel" | "role" | "setting";
+  kind: "category" | "channel" | "role" | "setting" | "post";
   id: string;
   name: string;
 }
@@ -775,6 +787,8 @@ export const qmBuilds = pgTable(
     plan: jsonb("plan").$type<QmOperation[]>().notNull(),
     /** Settings it changes, applied after the structure. Each field is one change. */
     settings: jsonb("settings").$type<QmSettingChange[]>().notNull().default([]),
+    /** Saved items it posts, last, once its channels exist. Each is one change. */
+    posts: jsonb("posts").$type<QmPost[]>().notNull().default([]),
     /** What the model left out or would add next, shown with the plan and used to continue it. */
     notes: text("notes"),
     /** The build this one continues: a revised plan, or more added onto a built one. */
@@ -799,7 +813,7 @@ export const qmBuilds = pgTable(
 export type QmBuild = typeof qmBuilds.$inferSelect;
 
 /**
- * The AI builder's chat: one row per message, grouped by thread. Each person has their own
+ * The AI assistant's chat: one row per message, grouped by thread. Each person has their own
  * threads on a server. Written only by the bot; the dashboard reads them.
  */
 export const qmMessages = pgTable(
@@ -1239,7 +1253,7 @@ export interface RaidSignupPayload {
 export interface RaidWithdrawPayload {
   eventId: string;
 }
-/** Talk to the AI builder: it answers, asks, or drafts a plan in the same thread. */
+/** Talk to the AI assistant: it answers, asks, or drafts a plan in the same thread. */
 export interface QmChatPayload {
   message: string;
   /** The conversation to continue. Omitted, or `fresh`, starts a new one. */

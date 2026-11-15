@@ -163,17 +163,25 @@ modules. The two ways considered:
    from → to. `/qm build` in Discord stays structure-only. The rest (anti-raid,
    verification, tickets, role menus, messages, alerts, raid templates, the warning ladder,
    rewards, game accounts) stays on its page. *Large.*
-4. **Safe posts.** `post` proposals for role menus, ticket panels and saved messages. *Small.*
-5. **Rename and polish.** "AI builder" becomes "Assistant" in the menu if it now does more
-   than build; starter prompts for common jobs ("set up moderation", "welcome new members");
-   a short "What I can do" list in the empty chat. *Small.*
+4. **Safe posts.** *Done 2026-11-15, not deployed; needs migration 0059.* A chat plan can
+   post the server's saved role menus, ticket panels and messages (at most 5, each one
+   change) into a text channel, including one the same plan creates. The overview tool lists
+   what can be posted with ids; `checkQmPosts` checks the item is saved and the channel is a
+   text channel. Posts run last, through the dashboard's own post requests
+   (`doPostRoleMenu`, `doPostTicketPanel`, `postMessageNow`) with the requesting admin as the
+   member, so every existing check applies. Stored in `qm_builds.posts`; Undo leaves posts
+   and says so. The preview lists what it posts and where. *Small.*
+5. **Rename and polish.** *Done 2026-11-15, not deployed.* Renamed "AI assistant" (owner's
+   choice) everywhere people read it: menu, page, landing, Plan page, legal pages, bot
+   messages; the URL and `/qm` stay. New starter prompts ("Set up moderation", "Welcome new
+   members", "What's missing on my server?") and an "I can" list in the empty chat. *Small.*
 
 Each phase ends with typecheck, tests (stub model) and a check on the local preview, and is
 deployed only when the owner says so.
 
 ## Open questions
 
-- **Rename:** keep "AI builder", or call it "Assistant" once it manages settings (phase 5)?
+- **Rename:** *decided 2026-11-15: "AI assistant".*
 - **Model:** Haiku 5.5 handles tool use well for this; if plans with many settings come back
   sloppy, route chat to Sonnet 5.5 at about 10x the cost per message, or raise the message
   price.

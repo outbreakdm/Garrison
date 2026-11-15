@@ -1509,6 +1509,16 @@ select[multiple].g-input option {
   white-space: pre-line;
   overflow-wrap: anywhere;
 }
+/* What the assistant can do, in an empty conversation. */
+.qm-msg__can {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: 1.1em;
+}
+.qm-msg__can li::marker {
+  color: var(--accent-strong);
+}
 .qm-msg--me .qm-msg__bubble {
   border-color: color-mix(in srgb, var(--accent-strong) 35%, var(--line));
   border-radius: 14px 14px 4px;

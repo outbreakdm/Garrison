@@ -24,7 +24,7 @@ export function costMicros(model: string, inputTokens: number, outputTokens: num
 }
 
 /**
- * The AI builder's ceiling on one call: the largest snapshot, and the output cap. A full
+ * The AI assistant's ceiling on one call: the largest snapshot, and the output cap. A full
  * 20-change plan with a topic on every channel is about 2,500 tokens, plus reasoning.
  */
 export const QM_MAX_INPUT_TOKENS = 6000;

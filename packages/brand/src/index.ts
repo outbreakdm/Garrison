@@ -87,7 +87,7 @@ export const modules = {
   spoils: { name: "Spoils", plain: "Giveaways" },
   honors: { name: "Honors", plain: "Starboard" },
   forum: { name: "Forum", plain: "Suggestions" },
-  quartermaster: { name: "Quartermaster", plain: "AI builder" },
+  quartermaster: { name: "Quartermaster", plain: "AI assistant" },
 } as const;
 
 export type ModuleKey = keyof typeof modules;
@@ -158,7 +158,7 @@ export const inviteSettings = {
     bit(26) | // Change Nickname
     bit(28) | // Manage Roles
     bit(40) | // Moderate Members
-    // The AI builder gives new roles and channels these member permissions, and Discord
+    // The AI assistant gives new roles and channels these member permissions, and Discord
     // only lets a bot grant what it holds itself (QM_ROLE_PERMISSIONS, read-only rules).
     bit(6) | // Add Reactions
     bit(9) | // Video

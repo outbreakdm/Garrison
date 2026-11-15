@@ -5,9 +5,11 @@ import {
   type AiTier,
   aiAllowance,
   applySettingsChange,
+  checkQmPosts,
   checkQmSettings,
   costMicros,
   createQmPlan,
+  type Entitlements,
   entitlements,
   finishAiCall,
   getGuildPlan,
@@ -20,6 +22,7 @@ import {
   type QmBuild,
   type QmCreated,
   type QmOperation,
+  type QmPost,
   type QmRolePermission,
   type QmSettingChange,
   type QmSettingProposal,
@@ -32,7 +35,13 @@ import {
   transitionQmBuild,
   undoSettingsChange,
 } from "@garrison/db";
-import { ChannelType, type Guild, type OverwriteResolvable, PermissionFlagsBits } from "discord.js";
+import {
+  ChannelType,
+  type Guild,
+  type GuildMember,
+  type OverwriteResolvable,
+  PermissionFlagsBits,
+} from "discord.js";
 import type { BotContext } from "../../commands/types.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { DANGEROUS_PERMISSIONS } from "../gatehouse/nuke.js";
@@ -216,9 +225,14 @@ export async function continuationFor(
         field: c.field,
         value_json: JSON.stringify(c.to),
       })),
+      posts: (build.posts ?? []).map((x) => ({
+        kind: x.kind,
+        item_id: x.itemId,
+        channel: x.channel,
+      })),
     };
   const built = build.created.flatMap((c) =>
-    c.kind === "setting"
+    c.kind === "setting" || c.kind === "post"
       ? []
       : (c.kind === "role" ? guild.roles.cache.has(c.id) : guild.channels.cache.has(c.id))
         ? [{ kind: c.kind, id: c.id, name: c.name }]
@@ -243,6 +257,7 @@ export async function storePlan(
     operations: QmOperation[];
     notes: string;
     settings?: QmSettingChange[];
+    posts?: QmPost[];
   },
   model: string,
   line: { continues: QmBuild | null; replacing: QmBuild | null },
@@ -253,7 +268,8 @@ export async function storePlan(
   const now = await aiAllowance(ctx.db, guildId, requester.id, {
     exceptId: line.replacing?.id,
   });
-  const changes = checked.operations.length + (checked.settings?.length ?? 0);
+  const changes =
+    checked.operations.length + (checked.settings?.length ?? 0) + (checked.posts?.length ?? 0);
   if (changes > now.suppliesLeft)
     return {
       ok: false,
@@ -267,6 +283,7 @@ export async function storePlan(
     summary: checked.summary,
     plan: checked.operations,
     settings: checked.settings ?? [],
+    posts: checked.posts ?? [],
     notes: checked.notes || null,
     continuesId: line.continues?.id ?? null,
     model,
@@ -343,29 +360,33 @@ export async function checkDraft(
       operations: QmOperation[];
       notes: string;
       settings: QmSettingChange[];
+      posts: QmPost[];
     }
   | { ok: false; errors: string[] }
 > {
-  const structure = validatePlan(draft, server, maxOperations, draft.settings.length);
+  const extra = draft.settings.length + draft.posts.length;
+  const structure = validatePlan(draft, server, maxOperations, extra);
   if (!structure.ok) return structure;
-  if (!draft.settings.length) return { ...structure, settings: [] };
+  if (!extra) return { ...structure, settings: [], posts: [] };
+  const lookup = settingsLookup(guild, structure.operations);
   const ent = entitlements(await getGuildPlan(ctx.db, guild.id));
-  const settings = await checkQmSettings(
-    ctx.db,
-    guild.id,
-    draft.settings,
-    settingsLookup(guild, structure.operations),
-    ent,
-  );
-  if (!settings.ok) return settings;
-  const total = structure.operations.length + settings.changes.length;
+  const [settings, posts] = await Promise.all([
+    checkQmSettings(ctx.db, guild.id, draft.settings, lookup, ent),
+    checkQmPosts(ctx.db, guild.id, draft.posts, lookup),
+  ]);
+  if (!settings.ok || !posts.ok)
+    return {
+      ok: false,
+      errors: [...(settings.ok ? [] : settings.errors), ...(posts.ok ? [] : posts.errors)],
+    };
+  const total = structure.operations.length + settings.changes.length + posts.posts.length;
   if (!total) return { ok: false, errors: ["Everything in that plan is already set that way."] };
   if (total > maxOperations)
     return {
       ok: false,
       errors: [`The plan has ${total} changes, but only ${maxOperations} fit in this one.`],
     };
-  return { ...structure, settings: settings.changes };
+  return { ...structure, settings: settings.changes, posts: posts.posts };
 }
 
 /**
@@ -426,7 +447,7 @@ export async function planBuild(
     if (!result.ok) return result;
     const checked = validatePlan(result.plan, snap.server, maxOperations);
     if (!checked.ok) {
-      ctx.logger.info("AI builder plan rejected", { guildId: guild.id, errors: checked.errors });
+      ctx.logger.info("AI assistant plan rejected", { guildId: guild.id, errors: checked.errors });
       return {
         ok: false,
         error: `I couldn't make a safe plan from that:\n${checked.errors
@@ -464,8 +485,8 @@ const upgradeLine = (tier: AiTier) =>
 /** Not enough supplies left today, in plain words. */
 export function suppliesMessage(a: Pick<AiAllowance, "tier" | "suppliesPerDay" | "perPerson">) {
   return a.perPerson
-    ? `You've used your ${a.suppliesPerDay} AI builder supplies for today on Free servers. They come back ${resetAt()}.${upgradeLine(a.tier)}`
-    : `This server has used today's ${a.suppliesPerDay} AI builder supplies. They come back ${resetAt()}.${upgradeLine(a.tier)}`;
+    ? `You've used your ${a.suppliesPerDay} AI assistant supplies for today on Free servers. They come back ${resetAt()}.${upgradeLine(a.tier)}`
+    : `This server has used today's ${a.suppliesPerDay} AI assistant supplies. They come back ${resetAt()}.${upgradeLine(a.tier)}`;
 }
 
 /** Why an AI call can't start, in plain words. */
@@ -475,8 +496,8 @@ export function limitMessage(
 ) {
   if (reason === "supplies" || reason === "person") return suppliesMessage(a);
   if (reason === "hourly")
-    return "That's a lot of AI builder use in one hour. Try again in a little while.";
-  return `The AI builder has reached its limit for today across all servers. It's back ${resetAt()}.`;
+    return "That's a lot of AI assistant use in one hour. Try again in a little while.";
+  return `The AI assistant has reached its limit for today across all servers. It's back ${resetAt()}.`;
 }
 
 export type ApplyOutcome =
@@ -528,6 +549,20 @@ export async function applyBuild(
         error: `This plan's settings can't be applied now: ${now.errors.slice(0, 2).join(" ")}`,
       };
   }
+  const posts = build.posts ?? [];
+  if (posts.length) {
+    const now = await checkQmPosts(
+      ctx.db,
+      guild.id,
+      posts.map((x) => ({ kind: x.kind, itemId: x.itemId, channel: x.channel })),
+      settingsLookup(guild, build.plan),
+    );
+    if (!now.ok)
+      return {
+        ok: false,
+        error: `This plan's posts can't be made now: ${now.errors.slice(0, 2).join(" ")}`,
+      };
+  }
   const claimed = await transitionQmBuild(ctx.db, build.id, "pending", "applied", {
     appliedAt: new Date(),
   });
@@ -535,7 +570,7 @@ export async function applyBuild(
 
   const ids = new Map<string, string>();
   const created: QmCreated[] = [];
-  const reason = `AI builder v${build.version} · requested by ${build.requestedByTag}`;
+  const reason = `AI assistant v${build.version} · requested by ${build.requestedByTag}`;
   const resolve = (refOrId: string) => ids.get(refOrId) ?? refOrId;
 
   try {
@@ -595,15 +630,41 @@ export async function applyBuild(
     await transitionQmBuild(ctx.db, build.id, "applied", "failed", { error: failed });
     return { ok: true, build: claimed, created, failed };
   }
-  if (!ent) return { ok: true, build: claimed, created, failed: null };
+  if (ent) {
+    const failed = await applyPlanSettings(ctx, guild, build, ids, ent, created);
+    if (failed) {
+      await transitionQmBuild(ctx.db, build.id, "applied", "failed", { error: failed });
+      return { ok: true, build: claimed, created, failed };
+    }
+  }
+  if (posts.length) {
+    const failed = await applyPlanPosts(ctx, guild, build, ids, created);
+    if (failed) {
+      await transitionQmBuild(ctx.db, build.id, "applied", "failed", { error: failed });
+      return { ok: true, build: claimed, created, failed };
+    }
+  }
+  return { ok: true, build: claimed, created, failed: null };
+}
 
-  // Settings, once the channels and roles they point at exist: checked against the values
-  // as they are now, then the plan's refs swapped for what the build just made.
+/**
+ * A build's settings, once the channels and roles they point at exist: checked against the
+ * values as they are now, then the plan's refs swapped for what the build just made.
+ * Returns why it stopped, or null.
+ */
+async function applyPlanSettings(
+  ctx: BotContext,
+  guild: Guild,
+  build: QmBuild,
+  ids: Map<string, string>,
+  ent: Entitlements,
+  created: QmCreated[],
+): Promise<string | null> {
   try {
     const checked = await checkQmSettings(
       ctx.db,
       guild.id,
-      proposalsOf(settings),
+      proposalsOf(build.settings ?? []),
       settingsLookup(guild, build.plan),
       ent,
     );
@@ -619,7 +680,7 @@ export async function applyBuild(
         module,
         patch,
         userId: build.requestedById,
-        username: `${build.requestedByTag} (AI builder v${build.version})`,
+        username: `${build.requestedByTag} (AI assistant v${build.version})`,
       });
       if (!result.ok) {
         if (result.reason === "unchanged") continue;
@@ -636,32 +697,86 @@ export async function applyBuild(
         await recordQmCreated(ctx.db, build.id, item);
       }
     }
-    return { ok: true, build: claimed, created, failed: null };
+    return null;
   } catch (error) {
     ctx.logger.warn("Quartermaster settings failed", {
       guildId: guild.id,
       version: build.version,
       error,
     });
-    const failed = `The settings couldn't be changed${
+    return `The settings couldn't be changed${
       error instanceof SettingsRefused ? `: ${error.message}` : ""
     }. Use Undo to remove what was created.`;
-    await transitionQmBuild(ctx.db, build.id, "applied", "failed", { error: failed });
-    return { ok: true, build: claimed, created, failed };
   }
+}
+
+type PostHandler = (
+  ctx: BotContext,
+  guild: Guild,
+  member: GuildMember,
+  raw: unknown,
+) => Promise<{ ok: boolean; message: string }>;
+
+/**
+ * A build's posts, last. Each goes through the dashboard's own post request, with the
+ * admin who asked as the member, so the same checks run: the item still exists, the plan
+ * allows it, its roles are safe, and both they and Garrison can post in the channel.
+ */
+async function applyPlanPosts(
+  ctx: BotContext,
+  guild: Guild,
+  build: QmBuild,
+  ids: Map<string, string>,
+  created: QmCreated[],
+): Promise<string | null> {
+  const posts = build.posts ?? [];
+  // Loaded here: the dashboard's request handlers import this file.
+  const [{ doPostRoleMenu }, { postMessageNow }, { doPostTicketPanel }] = await Promise.all([
+    import("../dashboard/actions.js"),
+    import("../dispatch/service.js"),
+    import("../tickets/dashboard.js"),
+  ]);
+  const handlers: Record<QmPost["kind"], [PostHandler, string]> = {
+    role_menu: [doPostRoleMenu, "menuId"],
+    ticket_panel: [doPostTicketPanel, "panelId"],
+    message: [postMessageNow, "messageId"],
+  };
+  const member = await guild.members.fetch(build.requestedById).catch(() => null);
+  if (!member) return "The admin who asked for this plan has left, so nothing was posted.";
+  let done = 0;
+  for (const post of posts) {
+    const channelId = ids.get(post.channel) ?? post.channel;
+    const [handler, key] = handlers[post.kind];
+    const result = await handler(ctx, guild, member, { [key]: post.itemId, channelId }).catch(
+      (error: unknown) => {
+        ctx.logger.warn("Quartermaster post failed", { guildId: guild.id, error });
+        return { ok: false, message: "Discord refused it." };
+      },
+    );
+    if (!result.ok)
+      return `Posted ${done} of ${posts.length}; ${post.name} wasn't posted: ${result.message}`;
+    done++;
+    const item: QmCreated = { kind: "post", id: channelId, name: `${post.kind}:${post.name}` };
+    created.push(item);
+    await recordQmCreated(ctx.db, build.id, item);
+  }
+  return null;
 }
 
 class SettingsRefused extends Error {}
 
-/** What an undo did to settings, as a sentence, or "" when the build changed none. */
-export function undoSettingsNote(s: { undone: number; changedSince: number }) {
+/** What an undo did to settings and posts, as sentences, or "" when the build had none. */
+export function undoSettingsNote(s: { undone: number; changedSince: number }, posts = 0) {
   const parts = [
     s.undone ? `put back ${s.undone} module${s.undone === 1 ? "'s" : "s'"} settings` : null,
     s.changedSince
       ? `left ${s.changedSince} as they are, because someone changed them since`
       : null,
   ].filter(Boolean);
-  return parts.length ? ` Settings: ${parts.join("; ")}.` : "";
+  const kept = posts
+    ? ` ${posts === 1 ? "Its post stays" : `Its ${posts} posts stay`}; delete in Discord if needed.`
+    : "";
+  return `${parts.length ? ` Settings: ${parts.join("; ")}.` : ""}${kept}`;
 }
 
 /** The bot keeps some settings for a minute; a change from a build should show straight away. */
@@ -679,6 +794,8 @@ export type UndoOutcome =
       failed: number;
       /** Settings changes put back, and ones left because someone changed them since. */
       settings: { undone: number; changedSince: number };
+      /** Posts the build made; they aren't removed. */
+      posts: number;
     }
   | { ok: false; error: string };
 
@@ -688,7 +805,7 @@ export async function undoBuild(
   guild: Guild,
   build: QmBuild,
   actorId: string,
-  actorName = "AI builder",
+  actorName = "AI assistant",
 ): Promise<UndoOutcome> {
   if (build.status !== "applied" && build.status !== "failed") {
     return {
@@ -703,7 +820,7 @@ export async function undoBuild(
   if (!claimed) return { ok: false, error: `v${build.version} was already undone.` };
 
   const me = guild.members.me ?? (await guild.members.fetchMe());
-  const reason = `AI builder: undo v${build.version}`;
+  const reason = `AI assistant: undo v${build.version}`;
   let removed = 0;
   let missing = 0;
   let failed = 0;
@@ -716,7 +833,7 @@ export async function undoBuild(
     try {
       const result = await undoSettingsChange(ctx.db, guild.id, id, {
         userId: actorId,
-        username: `${actorName} (undo AI builder v${build.version})`,
+        username: `${actorName} (undo AI assistant v${build.version})`,
       });
       if (result.ok) {
         settings.undone++;
@@ -751,5 +868,6 @@ export async function undoBuild(
       ctx.logger.warn("Quartermaster undo step failed", { guildId: guild.id, id: item.id, error });
     }
   }
-  return { ok: true, removed, missing, failed, settings };
+  const posted = claimed.created.filter((c) => c.kind === "post").length;
+  return { ok: true, removed, missing, failed, settings, posts: posted };
 }

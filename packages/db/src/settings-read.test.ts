@@ -15,7 +15,7 @@ beforeAll(async () => {
   await db
     .insert(suggestionSettings)
     .values({ guildId: "r1", enabled: true, channelId: "123456789012345678" });
-  // The AI builder's chat reads as the bot.
+  // The AI assistant's chat reads as the bot.
   await exec("SET ROLE garrison_bot");
 });
 afterAll(() => close());

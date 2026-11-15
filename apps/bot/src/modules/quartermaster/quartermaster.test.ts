@@ -2,8 +2,10 @@ import {
   aiAllowance,
   aiSpendSince,
   applySettingsChange,
+  blankCard,
   costMicros,
   listSettingsChanges,
+  type QmPostProposal,
   type QmSettingProposal,
   qmReserveMicros,
   readSettings,
@@ -13,13 +15,28 @@ import {
 } from "@garrison/db";
 import { createTestDb } from "@garrison/db/testing";
 import { ChannelType, Collection, type Guild, PermissionFlagsBits } from "discord.js";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { BotContext } from "../../commands/types.js";
 import { createLogger } from "../../lib/logger.js";
 import { chatTurn } from "./chat.js";
 import type { AiPlan } from "./plan.js";
 import type { ChatInput, Planner, PlannerInput } from "./planner.js";
-import { applyBuild, channelOverwrites, planBuild, undoBuild } from "./service.js";
+import {
+  applyBuild,
+  channelOverwrites,
+  planBuild,
+  undoBuild,
+  undoSettingsNote,
+} from "./service.js";
+
+/** Saved messages a build posts go through the dashboard's post request; here, recorded. */
+const posted = vi.hoisted(() => [] as { member: string; raw: unknown }[]);
+vi.mock("../dispatch/service.js", () => ({
+  postMessageNow: async (_ctx: unknown, _guild: unknown, member: { id: string }, raw: unknown) => {
+    posted.push({ member: member.id, raw });
+    return { ok: true, message: "Posted." };
+  },
+}));
 
 type Op = AiPlan["operations"][number];
 const op = (o: Partial<Op> & Pick<Op, "kind" | "ref" | "name">): Op => ({
@@ -217,6 +234,7 @@ describe("Quartermaster end to end", () => {
       missing: 0,
       failed: 0,
       settings: { undone: 0, changedSince: 0 },
+      posts: 0,
     });
     expect(f.deleted).toEqual(["q3-2", "q3-1"]); // category before role
     expect(f.channels.has("pre-existing")).toBe(true);
@@ -242,7 +260,7 @@ describe("Quartermaster end to end", () => {
     });
     const none = await planBuild(ctx, stub(rolesPlan(1)), f.guild, a, "x");
     expect(!none.ok && none.error).toMatch(
-      /your 40 AI builder supplies for today on Free servers.*Garrison Pro gives a server 300/,
+      /your 40 AI assistant supplies for today on Free servers.*Garrison Pro gives a server 300/,
     );
   });
 
@@ -272,7 +290,7 @@ describe("Quartermaster end to end", () => {
     const second = await planBuild(ctx, stub(rolesPlan(14)), two.guild, owner, "x");
     expect(second).toMatchObject({ ok: true, suppliesLeft: 0 });
     const third = await planBuild(ctx, stub(sectionPlan), three.guild, owner, "x");
-    expect(!third.ok && third.error).toMatch(/your 40 AI builder supplies for today on Free/);
+    expect(!third.ok && third.error).toMatch(/your 40 AI assistant supplies for today on Free/);
     // Someone else can still use the third server's own supplies.
     const other = { id: "98001", tag: "other" };
     expect((await planBuild(ctx, stub(sectionPlan), three.guild, other, "x")).ok).toBe(true);
@@ -284,7 +302,7 @@ describe("Quartermaster end to end", () => {
     for (let i = 0; i < 10; i++)
       expect((await planBuild(ctx, stub(rolesPlan(1)), f.guild, a, "x")).ok).toBe(true);
     const eleventh = await planBuild(ctx, stub(rolesPlan(1)), f.guild, a, "x");
-    expect(!eleventh.ok && eleventh.error).toMatch(/your 40 AI builder supplies/);
+    expect(!eleventh.ok && eleventh.error).toMatch(/your 40 AI assistant supplies/);
   });
 
   it("gives an Agency seat 400 supplies a day, counted per server", async () => {
@@ -379,7 +397,7 @@ describe("Quartermaster end to end", () => {
     for (let i = 0; i < 10; i++)
       expect((await planBuild(ctx, stub(sectionPlan), f.guild, asker(f), "x")).ok).toBe(true);
     const eleventh = await planBuild(ctx, stub(sectionPlan), f.guild, asker(f), "x");
-    expect(!eleventh.ok && eleventh.error).toMatch(/lot of AI builder use in one hour/);
+    expect(!eleventh.ok && eleventh.error).toMatch(/lot of AI assistant use in one hour/);
   });
 
   it("gives the supplies back when a plan fails, but caps attempts per hour", async () => {
@@ -399,7 +417,7 @@ describe("Quartermaster end to end", () => {
     expect(await suppliesUsed(ctx.db, { guildId: "q6" })).toBe(7);
     // But every attempt counts toward 10 an hour, and failures' cost is kept.
     const blocked = await planBuild(ctx, stub(sectionPlan), f.guild, asker(f), "x");
-    expect(!blocked.ok && blocked.error).toMatch(/lot of AI builder use in one hour/);
+    expect(!blocked.ok && blocked.error).toMatch(/lot of AI assistant use in one hour/);
     const spend = await aiSpendSince(ctx.db, new Date(Date.now() - 60_000));
     expect(spend.dollars).toBeCloseTo(9 * 0.00055, 6);
   });
@@ -477,13 +495,13 @@ describe("channel overwrites", () => {
   });
 });
 
-describe("AI builder chat", () => {
+describe("AI assistant chat", () => {
   /** A chat model that answers each turn from a script, recording what it was told. */
   const scripted = (
     turns: {
       reply: string;
       choices?: string[];
-      plan?: (AiPlan & { settings?: QmSettingProposal[] }) | null;
+      plan?: (AiPlan & { settings?: QmSettingProposal[]; posts?: QmPostProposal[] }) | null;
     }[],
     seen: ChatInput[] = [],
   ): Planner => {
@@ -497,7 +515,7 @@ describe("AI builder chat", () => {
           ok: true,
           reply: t?.reply ?? "",
           choices: t?.choices ?? [],
-          plan: t?.plan ? { settings: [], ...t.plan } : null,
+          plan: t?.plan ? { settings: [], posts: [], ...t.plan } : null,
           model: "stub",
         };
       },
@@ -596,7 +614,7 @@ describe("AI builder chat", () => {
     expect(await suppliesUsed(ctx.db, { guildId: "q19" })).toBe(39);
     const out = await chatTurn(ctx, bot, f.guild, me, { message: "hi", threadId: thread });
     expect(!out.ok && out.error).toMatch(
-      /40 AI builder supplies.*Plans you've drafted can still be built/,
+      /40 AI assistant supplies.*Plans you've drafted can still be built/,
     );
     const { listQmThread } = await import("@garrison/db");
     const log = await listQmThread(ctx.db, "q19", me.id, thread ?? "");
@@ -686,7 +704,7 @@ describe("AI builder chat", () => {
       anonymous: false,
     });
     const [change] = await listSettingsChanges(ctx.db, "q22");
-    expect(change?.username).toMatch(/AI builder v1/);
+    expect(change?.username).toMatch(/AI assistant v1/);
 
     const { getQmBuild } = await import("@garrison/db");
     const stored = await getQmBuild(ctx.db, "q22", turn.build.id);
@@ -758,6 +776,70 @@ describe("AI builder chat", () => {
       ok: true,
       settings: { undone: 0, changedSince: 1 },
     });
+  });
+
+  it("posts a saved message into a channel the same plan makes, and Undo leaves the post", async () => {
+    const f = fakeGuild("q25");
+    await upsertGuild(ctx.db, { id: "q25", name: "q25" });
+    await ctx.db.insert(schema.messageSettings).values({
+      guildId: "q25",
+      messages: [
+        {
+          id: "rules01",
+          name: "Rules",
+          card: blankCard("Rules"),
+          buttons: [],
+          channelId: null,
+          schedule: null,
+        },
+      ],
+    });
+    const me = asker(f);
+    const plan = {
+      summary: "Rules",
+      notes: "",
+      operations: [op({ kind: "create_text_channel", ref: "rules", name: "rules" })],
+      posts: [{ kind: "message", itemId: "rules01", channel: "rules" }],
+    };
+    const turn = await chatTurn(ctx, scripted([{ reply: "Here.", plan }]), f.guild, me, {
+      message: "post the rules",
+    });
+    if (!turn.ok || !turn.build) throw new Error(turn.ok ? "no plan" : turn.error);
+    expect(turn.build.posts).toEqual([
+      { kind: "message", itemId: "rules01", name: "Rules", channel: "rules" },
+    ]);
+    // The message, the channel and the post.
+    expect(await suppliesUsed(ctx.db, { guildId: "q25" })).toBe(5);
+
+    Object.assign(f.guild.members, { fetch: async (id: string) => ({ id }) });
+    const built = await applyBuild(ctx, f.guild, turn.build);
+    if (!built.ok) throw new Error(built.error);
+    expect(built.failed).toBeNull();
+    expect(posted).toEqual([{ member: me.id, raw: { messageId: "rules01", channelId: "q25-1" } }]);
+    expect(built.created.map((c) => c.kind)).toEqual(["channel", "post"]);
+
+    const { getQmBuild } = await import("@garrison/db");
+    const stored = await getQmBuild(ctx.db, "q25", turn.build.id);
+    if (!stored) throw new Error("missing");
+    const undone = await undoBuild(ctx, f.guild, stored, me.id);
+    expect(undone).toMatchObject({ ok: true, removed: 1, posts: 1 });
+    expect(undoSettingsNote({ undone: 0, changedSince: 0 }, 1)).toMatch(/Its post stays/);
+  });
+
+  it("refuses to post something the server hasn't saved", async () => {
+    const f = fakeGuild("q26");
+    const plan = {
+      summary: "x",
+      notes: "",
+      operations: [],
+      posts: [{ kind: "role_menu", itemId: "nope01", channel: "123456789012345026" }],
+    };
+    const turn = await chatTurn(ctx, scripted([{ reply: "Done.", plan }]), f.guild, asker(f), {
+      message: "post the menu",
+    });
+    expect(turn).toMatchObject({ ok: true, build: null });
+    expect(turn.ok && turn.reply).toMatch(/isn't saved on this server/);
+    expect(await suppliesUsed(ctx.db, { guildId: "q26" })).toBe(0);
   });
 
   it("gives a message's supplies back when its plan couldn't be made safely", async () => {

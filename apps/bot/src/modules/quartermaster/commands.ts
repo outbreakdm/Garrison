@@ -23,7 +23,7 @@ import {
 
 export const QM_PREFIX = "qm";
 const UUID = /^[0-9a-f-]{36}$/;
-const NOT_SET_UP = "The AI builder isn't set up on this Garrison: the bot has no Claude API key.";
+const NOT_SET_UP = "The AI assistant isn't set up on this Garrison: the bot has no Claude API key.";
 
 const button = (id: string, label: string, style: ButtonStyle) =>
   new ButtonBuilder().setCustomId(id).setLabel(label).setStyle(style);
@@ -64,7 +64,7 @@ export function planCard(
 export const qm: Command = {
   data: guildCommand(
     "qm",
-    "AI builder: describe channels and roles, review the plan, then build it.",
+    "AI assistant: describe channels and roles, review the plan, then build it.",
     PermissionFlagsBits.ManageGuild,
   )
     .addSubcommand((s) =>
@@ -107,7 +107,7 @@ export const qm: Command = {
       );
       await interaction.reply(
         cardReply({
-          title: "AI builder builds",
+          title: "AI assistant builds",
           lead: lines.length ? undefined : "No builds yet. Describe one with `/qm build`.",
           blocks: lines.length ? [{ text: lines.join("\n") }] : [],
           module: "quartermaster",
@@ -281,7 +281,7 @@ export const qmButtons: ButtonHandler = {
         result.failed ? `${result.failed} couldn't be removed: check my role position` : null,
       ].filter(Boolean);
       await interaction.editReply(
-        `Undone v${build.version}. Removed ${result.removed}.${extra.length ? ` ${extra.join("; ")}.` : ""}${undoSettingsNote(result.settings)}`,
+        `Undone v${build.version}. Removed ${result.removed}.${extra.length ? ` ${extra.join("; ")}.` : ""}${undoSettingsNote(result.settings, result.posts)}`,
       );
     }
   },

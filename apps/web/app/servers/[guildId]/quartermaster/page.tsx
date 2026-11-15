@@ -17,6 +17,7 @@ import {
   TEMPLATES_PER_USER,
 } from "@garrison/db";
 import type { Metadata } from "next";
+import { Fragment, type ReactNode } from "react";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { ProTag } from "@/components/cards/CardEditor";
 import { formatTime } from "@/components/format";
@@ -25,12 +26,20 @@ import { ServerPreview } from "@/components/ServerPreview";
 import { getDb } from "@/lib/db";
 import { getServerLayout, guildOwnerId } from "@/lib/discord";
 import { readFlash } from "@/lib/flash";
-import { addedText, planLines, previewServer, settingDiffs, settingLines } from "@/lib/qm-preview";
+import {
+  addedText,
+  planLines,
+  postLines,
+  postPreviews,
+  previewServer,
+  settingDiffs,
+  settingLines,
+} from "@/lib/qm-preview";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
 import { removeTemplate } from "./actions";
 
-export const metadata: Metadata = { title: "AI builder" };
+export const metadata: Metadata = { title: "AI assistant" };
 
 /** A request is at most this long, as the bot enforces. */
 const REQUEST_MAX = 500;
@@ -46,10 +55,18 @@ const STATUS: Record<QmBuild["status"], { label: string; tone: string }> = {
 
 /** First messages to tap when a conversation is empty. */
 const STARTERS = [
+  "Set up moderation",
+  "Welcome new members",
   "Set up a section for a game we play",
-  "Organize my whole server",
-  "We're a WoW raiding guild",
-  "Add a staff area",
+  "What's missing on my server?",
+];
+
+/** What the assistant does, shown in an empty conversation. */
+const CAN_DO = [
+  "Design channels, categories and roles",
+  "Set up modules like Automod, Welcome, Leveling and Suggestions",
+  "Post your saved role menus, ticket panels and messages",
+  "Answer questions about how Garrison is set up here",
 ];
 
 /** Changes a build counts against its day: what it built, or what it plans while it waits. */
@@ -106,6 +123,27 @@ export default async function QuartermasterPage({
     : false;
   const preview = layout ? previewServer(layout, plan?.plan ?? []) : null;
   const diffs = plan ? settingDiffs(layout, plan.plan, plan.settings ?? []) : [];
+  const posts = plan ? postPreviews(layout, plan.plan, plan.posts ?? []) : [];
+  // What building does, in words: "adds …, changes 2 settings and posts 1 saved item".
+  const doing: ReactNode[] = plan
+    ? [
+        plan.plan.length && preview ? (
+          <>
+            adds <strong>{addedText(preview.added)}</strong> to {guild.name}
+          </>
+        ) : null,
+        diffs.length ? (
+          <>
+            changes <strong>{plural(diffs.length, "setting")}</strong>
+          </>
+        ) : null,
+        posts.length ? (
+          <>
+            posts <strong>{plural(posts.length, "saved item")}</strong>
+          </>
+        ) : null,
+      ].filter(Boolean)
+    : [];
   const minutesLeft = plan
     ? Math.max(1, Math.ceil((plan.createdAt.getTime() + QM_PLAN_TTL_MS - now) / 60_000))
     : 0;
@@ -163,11 +201,11 @@ export default async function QuartermasterPage({
     <>
       <div className="page-head">
         <div>
-          <h1>AI builder</h1>
+          <h1>AI assistant</h1>
           <p>
-            Describe the channels and roles you want, or ask how Garrison is set up here. See your
-            server with the changes, then build it in one click. Keep going from any version, and
-            undo any build.
+            Ask for channels, roles and settings in plain words, or ask how Garrison is set up here.
+            See every change before you build it in one click. Keep going from any version, and undo
+            any build.
           </p>
         </div>
       </div>
@@ -186,8 +224,8 @@ export default async function QuartermasterPage({
                   {cont ? `Keep building v${cont.version}` : "Talk it through"}
                 </h2>
                 <p className="g-help">
-                  Tell Garrison what your community is about. It asks what it needs, suggests ideas,
-                  and drafts a plan you can preview and build.
+                  Tell Garrison what you need. It asks what it needs, suggests ideas, and drafts a
+                  plan you can preview and build.
                 </p>
               </div>
               {messages.length || cont ? (
@@ -210,11 +248,22 @@ export default async function QuartermasterPage({
                 <li className="qm-msg qm-msg--bot">
                   <span className="qm-msg__mark" aria-hidden="true" />
                   <div className="qm-msg__bubble">
-                    <p>
-                      {cont
-                        ? `v${cont.version} is built. What should it get next? I can also suggest what's missing.`
-                        : "Hi! What's your server about? Tell me the games you play and what you need, and I'll design the channels and roles. You can also ask me what's set up and what's missing. Nothing changes until you build it."}
-                    </p>
+                    {cont ? (
+                      <p>
+                        v{cont.version} is built. What should it get next? I can also suggest what's
+                        missing.
+                      </p>
+                    ) : (
+                      <>
+                        <p>Hi! What's your community about, and what do you need? I can:</p>
+                        <ul className="qm-msg__can">
+                          {CAN_DO.map((c) => (
+                            <li key={c}>{c}</li>
+                          ))}
+                        </ul>
+                        <p>Nothing changes until you build it.</p>
+                      </>
+                    )}
                   </div>
                 </li>
               ) : null}
@@ -295,7 +344,7 @@ export default async function QuartermasterPage({
             >
               {chatHidden}
               <label className="sr-only" htmlFor="qm-message">
-                Message the AI builder
+                Message the AI assistant
               </label>
               <textarea
                 className="g-input qm-chat__input"
@@ -352,7 +401,7 @@ export default async function QuartermasterPage({
                 {/* The request is user text; React escapes it. */}
                 <p className="muted">“{plan.prompt}”</p>
               </div>
-              {plan.plan.length || !diffs.length ? (
+              {plan.plan.length || (!diffs.length && !posts.length) ? (
                 <ServerPreview name={guild.name} preview={preview} planned />
               ) : null}
               {diffs.length ? (
@@ -373,26 +422,38 @@ export default async function QuartermasterPage({
                   </dl>
                 </div>
               ) : null}
+              {posts.length ? (
+                <div className="qm-settings">
+                  <h3 className="g-label">What it posts</h3>
+                  <dl className="qm-settings__list">
+                    {posts.map((x) => (
+                      <div key={x.what}>
+                        <dt>{x.what}</dt>
+                        <dd>
+                          in <strong>{x.where}</strong>
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <p className="g-help">Posts stay if you undo this build.</p>
+                </div>
+              ) : null}
               {plan.notes ? (
                 <div className="qm-notes">
-                  <h3 className="g-label">Notes from the AI builder</h3>
+                  <h3 className="g-label">Notes from the AI assistant</h3>
                   <p>{plan.notes}</p>
                 </div>
               ) : null}
               <div className="qm-plan__foot">
                 <p>
                   Building this{" "}
-                  {plan.plan.length ? (
-                    <>
-                      adds <strong>{addedText(preview.added)}</strong> to {guild.name}
-                      {diffs.length ? " and " : ""}
-                    </>
-                  ) : null}
-                  {diffs.length ? (
-                    <>
-                      changes <strong>{plural(diffs.length, "setting")}</strong>
-                    </>
-                  ) : null}
+                  {doing.map((d, i) => (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: a fixed, ordered sentence
+                    <Fragment key={i}>
+                      {i ? (i === doing.length - 1 ? " and " : ", ") : ""}
+                      {d}
+                    </Fragment>
+                  ))}
                   . It uses {plural(qmChangeCount(plan), "supply", "supplies")}, held from today's
                   until it's built or expires.
                   {mine
@@ -538,6 +599,7 @@ export default async function QuartermasterPage({
               </li>
               <li>New roles get only member permissions, never moderation or admin</li>
               <li>Nothing is built until you approve the plan</li>
+              <li>Posts only the role menus, ticket panels and messages you've saved</li>
               <li>Undo removes what a build made and puts its settings back</li>
             </ul>
           </section>
@@ -582,7 +644,11 @@ export default async function QuartermasterPage({
                       <summary>Request and changes</summary>
                       <p className="muted">“{b.prompt}”</p>
                       <pre className="diff">
-                        {[...planLines(b.plan), ...settingLines(b.settings ?? [])].join("\n")}
+                        {[
+                          ...planLines(b.plan),
+                          ...settingLines(b.settings ?? []),
+                          ...postLines(b.posts ?? []),
+                        ].join("\n")}
                       </pre>
                       {b.notes ? <p className="g-help">Notes: {b.notes}</p> : null}
                     </details>

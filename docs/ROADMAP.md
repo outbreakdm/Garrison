@@ -838,3 +838,9 @@ Decided (2026-11-12, owner):
   AI builder supplies, settings reads and settings plans (docs/AI_ASSISTANT.md phases 1 to 3)
   are live. Site, /healthz and /status answer; the bot is online. Not yet tried with the real
   model.
+- 2026-11-15: AI assistant posts and rename (docs/AI_ASSISTANT.md phases 4 and 5). A chat
+  plan can post saved role menus, ticket panels and messages (up to 5, one supply each)
+  through the dashboard's own post requests, as the admin who asked; Undo leaves posts. The
+  AI builder is now called the AI assistant everywhere people read it (URL and `/qm` stay),
+  with new starter prompts and an "I can" list in the empty chat. Migration 0059
+  (`qm_builds.posts`). Not deployed; 0059 must be applied in production first.

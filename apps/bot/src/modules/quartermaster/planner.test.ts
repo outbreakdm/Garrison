@@ -45,6 +45,7 @@ const answer = (reply: string) => ({
         operations: [],
         plan_notes: "",
         settings: [],
+        posts: [],
       }),
     },
   ],
@@ -58,7 +59,7 @@ const input = (read?: ReadTool): ChatInput => ({
   read,
 });
 
-describe("the AI builder chat's read tools", () => {
+describe("the AI assistant chat's read tools", () => {
   it("looks at a module's settings, then answers from them", async () => {
     const { planner, sent } = fakeApi([
       look("toolu_1", "module_settings", { module: "suggestions" }),

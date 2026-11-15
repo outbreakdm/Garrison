@@ -288,7 +288,7 @@ async function doUndoBuild(ctx: BotContext, guild: Guild, member: GuildMember, r
   return res.ok
     ? {
         ok: true,
-        message: `Undid v${p.data.version}: removed ${res.removed}${res.missing ? `, ${res.missing} already gone` : ""}.${undoSettingsNote(res.settings)}`,
+        message: `Undid v${p.data.version}: removed ${res.removed}${res.missing ? `, ${res.missing} already gone` : ""}.${undoSettingsNote(res.settings, res.posts)}`,
       }
     : fail(res.error);
 }
@@ -336,7 +336,12 @@ async function doPostVerifyPanel(ctx: BotContext, guild: Guild, member: GuildMem
  * channel moves it: the old message is deleted (it's Garrison's own). Every role
  * must be one a menu may hand out, checked again on every click.
  */
-async function doPostRoleMenu(ctx: BotContext, guild: Guild, member: GuildMember, raw: unknown) {
+export async function doPostRoleMenu(
+  ctx: BotContext,
+  guild: Guild,
+  member: GuildMember,
+  raw: unknown,
+) {
   const p = postRoleMenu.safeParse(raw);
   if (!p.success) return fail("That request wasn't valid.");
   const loaded = await loadMenu(ctx, guild.id, p.data.menuId);

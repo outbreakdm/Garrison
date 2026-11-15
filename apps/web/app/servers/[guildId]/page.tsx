@@ -140,7 +140,7 @@ export default async function OverviewPage({
   if (build?.status === "pending")
     attention.push({
       tone: "caution",
-      title: `AI builder plan v${build.version} is waiting`,
+      title: `AI assistant plan v${build.version} is waiting`,
       detail: "Nothing changes in Discord until someone builds it. Plans expire after 15 minutes.",
       href: `${base}/quartermaster`,
       go: "Review plan",
@@ -190,7 +190,7 @@ export default async function OverviewPage({
         {build ? (
           <div className="build-line">
             <span className="mono">
-              v{build.version} · {ago(build.createdAt)} by the AI builder ·{" "}
+              v{build.version} · {ago(build.createdAt)} by the AI assistant ·{" "}
               {build.status.replace("_", " ")}
             </span>
             {build.status === "applied" ? (

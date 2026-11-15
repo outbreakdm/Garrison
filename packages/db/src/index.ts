@@ -90,6 +90,7 @@ export type {
   QmBuild,
   QmCreated,
   QmOperation,
+  QmPost,
   QmSettingChange,
   QmStatus,
   Quarantine,

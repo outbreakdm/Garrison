@@ -191,7 +191,7 @@ export function validatePlan(
       for (const p of new Set(op.permissions ?? [])) {
         if (!Object.hasOwn(QM_ROLE_PERMISSIONS, p))
           errors.push(
-            `${n}: "${String(p).slice(0, 40)}" isn't a permission the AI builder can give.`,
+            `${n}: "${String(p).slice(0, 40)}" isn't a permission the AI assistant can give.`,
           );
         else if (!can.has(p))
           errors.push(

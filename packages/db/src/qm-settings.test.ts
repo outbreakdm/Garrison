@@ -18,7 +18,7 @@ let close: () => Promise<void>;
 beforeAll(async () => {
   ({ db, exec, close } = await createTestDb());
   for (const id of ["s1", "s2", "s3"]) await upsertGuild(db, { id, name: id });
-  // The bot checks and applies the AI builder's settings.
+  // The bot checks and applies the AI assistant's settings.
   await exec("SET ROLE garrison_bot");
 });
 afterAll(() => close());
@@ -51,7 +51,7 @@ const p = (module: string, field: string, value: unknown): QmSettingProposal => 
   value,
 });
 
-describe("AI builder settings", () => {
+describe("AI assistant settings", () => {
   it("turns on Suggestions in a channel the same plan makes", async () => {
     const out = await checkQmSettings(
       db,
@@ -182,7 +182,7 @@ describe("AI builder settings", () => {
         module: module as SettingsModule,
         patch,
         userId: "1",
-        username: "owner (AI builder v1)",
+        username: "owner (AI assistant v1)",
       });
       if (!r.ok) throw new Error(`${module}: ${r.reason}`);
       applied.push(r.change.id);

@@ -157,7 +157,7 @@ if (env) {
   if (!process.env.DISCORD_CLIENT_SECRET)
     warn("DISCORD_CLIENT_SECRET isn't set: dashboard sign-in won't work.");
   console.log("Optional");
-  if (env.ANTHROPIC_API_KEY) ok("AI builder is on");
+  if (env.ANTHROPIC_API_KEY) ok("AI assistant is on");
   else warn("ANTHROPIC_API_KEY isn't set: /qm build stays off.");
   if (env.OPENAI_API_KEY) ok("AI moderation is available (OpenAI key set)");
   else warn("OPENAI_API_KEY isn't set: AI moderation stays off.");

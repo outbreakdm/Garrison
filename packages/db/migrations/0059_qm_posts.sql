@@ -1,0 +1,1 @@
+ALTER TABLE "qm_builds" ADD COLUMN "posts" jsonb DEFAULT '[]'::jsonb NOT NULL;

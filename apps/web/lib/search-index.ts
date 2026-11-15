@@ -87,7 +87,12 @@ export const SEARCH_INDEX: SearchEntry[] = [
     null,
     "message builder announcement embed card schedule post rules reminder repeat dispatch",
   ),
-  page("/quartermaster", "AI builder", null, "ai build channels roles undo quartermaster"),
+  page(
+    "/quartermaster",
+    "AI assistant",
+    null,
+    "ai assistant builder chat channels roles settings post undo quartermaster",
+  ),
   page("/settings", "Settings", null, "configure history undo account theme sign out"),
   page(
     "/rally/templates",
