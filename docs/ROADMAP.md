@@ -834,3 +834,7 @@ Decided (2026-11-12, owner):
   setting from → to. Migration 0058: `qm_builds.settings`, and bot grants on exactly those
   fields plus `settings_changes` (read and add only). Not deployed; 0058 must be applied in
   production first.
+- 2026-11-15: Deployed `e474e74` (run 43742510546) after applying migration 0058 in production:
+  AI builder supplies, settings reads and settings plans (docs/AI_ASSISTANT.md phases 1 to 3)
+  are live. Site, /healthz and /status answer; the bot is online. Not yet tried with the real
+  model.
