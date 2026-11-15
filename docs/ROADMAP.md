@@ -904,3 +904,11 @@ Decided (2026-11-12, owner):
   the cache. The pool showed 2,993 of 3,000 (3 for the messages, 4 held by the waiting
   draft). No build was applied. Also: the dashboard rail scrolls on its own and the phone
   menu stays pinned (`dd0dfeb`), not deployed.
+- 2026-11-15: Dashboard redesign, the Console world (our own style, heavily inspired by
+  Peak Bot, replacing Card Table). Phase 1 (`731e085`): near-black floor, flat panels,
+  white primary buttons and switches, a full-height server rail (logo, server card, menu
+  with a white current pill, plan at the foot) beside a slim top bar. Phase 2 (`3d0a1f8`):
+  the AI assistant as a workspace, chat beside a live plan panel (counts, tabs, channel
+  tree with New marks, Apply build). Checked locally on desktop, phone and light theme. Not
+  deployed. Next: phase 3, module pages as panels with header bars and editors beside live
+  previews, then DESIGN.md.
