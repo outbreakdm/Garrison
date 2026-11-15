@@ -725,3 +725,7 @@ Decided (2026-11-12, owner):
   Plan page. Refunds: 7 days from the first payment, unless the server used more AI plans in
   a day than Free allows. Owner steps (mailbox, Discord portal URLs, Stripe public details)
   are in `docs/pricing.md`.
+- 2026-11-15: Deployed `3501e1f` (Stripe checkout, voice rooms, scam links, suggestions,
+  insights, policies). Migrations 0051 to 0055 applied in production and recorded. Still
+  owner-side: live Stripe keys and products (with tax code), the billing login's password,
+  Move Members for voice rooms on existing servers, and the policy URLs in Discord and Stripe.
