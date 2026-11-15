@@ -1,7 +1,7 @@
 import { syncLinksFromSource } from "@garrison/db";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { isWowRegion, linksFromWowProfile } from "@/lib/barracks";
+import { isWowFlavor, isWowRegion, linksFromWowProfile, wowAccountPrefix } from "@/lib/barracks";
 import { battlenetConfigured, battlenetExchange, fetchWowProfile } from "@/lib/battlenet";
 import { getDb } from "@/lib/db";
 import { env } from "@/lib/env";
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
-  let saved: { state?: unknown; region?: unknown; purpose?: unknown } = {};
+  let saved: { state?: unknown; region?: unknown; flavor?: unknown; purpose?: unknown } = {};
   try {
     saved = JSON.parse((await cookies()).get(OAUTH_COOKIE)?.value ?? "{}");
   } catch {
@@ -33,21 +33,26 @@ export async function GET(request: Request) {
     saved.purpose !== "battlenet" ||
     typeof saved.state !== "string" ||
     !safeEqual(state, saved.state) ||
-    !isWowRegion(saved.region)
+    !isWowRegion(saved.region) ||
+    !isWowFlavor(saved.flavor ?? "retail")
   ) {
     return back("error=state");
   }
   try {
+    const region = saved.region;
+    const flavor = isWowFlavor(saved.flavor) ? saved.flavor : "retail";
     const token = await battlenetExchange(code);
-    const links = linksFromWowProfile(await fetchWowProfile(token, saved.region), saved.region).map(
-      (l) => ({
-        ...l,
-        userId: session.userId,
-        source: "battlenet" as const,
-      }),
-    );
-    await syncLinksFromSource(await getDb(), session.userId, "battlenet", ["wow"], links);
-    return back(`linked=wow&count=${links.length}`);
+    const profile = await fetchWowProfile(token, region, flavor);
+    const links = linksFromWowProfile(profile, region, flavor).map((l) => ({
+      ...l,
+      userId: session.userId,
+      source: "battlenet" as const,
+    }));
+    // Only this version and region are replaced; other versions' characters stay linked.
+    await syncLinksFromSource(await getDb(), session.userId, "battlenet", ["wow"], links, {
+      accountPrefix: wowAccountPrefix(region, flavor),
+    });
+    return back(links.length ? `linked=wow&count=${links.length}` : "linked=wow-none");
   } catch {
     return back("error=battlenet");
   }

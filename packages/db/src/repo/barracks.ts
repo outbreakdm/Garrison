@@ -50,6 +50,8 @@ export async function syncLinksFromSource(
   source: LinkedAccount["source"],
   providers: string[],
   links: LinkInput[],
+  /** Only links whose account ID starts with this are replaced (one WoW version and region). */
+  opts: { accountPrefix?: string } = {},
 ) {
   for (const link of links) await upsertLink(db, link);
   const keep = links.map((l) => `${l.provider}:${l.accountId}`);
@@ -64,7 +66,10 @@ export async function syncLinksFromSource(
       ),
     );
   const stale = current.filter(
-    (c) => providers.includes(c.provider) && !keep.includes(`${c.provider}:${c.accountId}`),
+    (c) =>
+      providers.includes(c.provider) &&
+      (!opts.accountPrefix || c.accountId.startsWith(opts.accountPrefix)) &&
+      !keep.includes(`${c.provider}:${c.accountId}`),
   );
   if (stale.length) {
     await db

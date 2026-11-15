@@ -16,6 +16,8 @@ export function plainLink(l: LinkFacts, opts: { proof?: boolean } = {}) {
   if (l.provider === "wow" && typeof d.level === "number") {
     parts.push(`${d.level} ${typeof d.className === "string" ? d.className : ""}`.trim());
     if (typeof d.realm === "string") parts.push(d.realm);
+    if (d.flavor === "classic") parts.push("Classic");
+    if (d.flavor === "era") parts.push("Classic Era");
   }
   if (opts.proof !== false) parts.push(l.verified ? "verified" : "claimed");
   return parts.join(" · ");

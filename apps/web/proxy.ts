@@ -28,8 +28,10 @@ export function proxy(request: NextRequest) {
     "connect-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
-    // Upgrading and managing a plan hand off to Stripe's hosted pages.
-    "form-action 'self' https://discord.com https://oauth.battle.net https://checkout.stripe.com https://billing.stripe.com",
+    // Upgrading and managing a plan hand off to Stripe's hosted pages. Battle.net's
+    // authorize page redirects to its sign-in page on other battle.net and blizzard.com
+    // hosts, and browsers check every step of a form's redirects against this list.
+    "form-action 'self' https://discord.com https://*.battle.net https://*.blizzard.com https://checkout.stripe.com https://billing.stripe.com",
     // The website verify page's captcha (Cloudflare Turnstile) runs in a frame.
     ...(request.nextUrl.pathname.startsWith("/verify/")
       ? ["frame-src https://challenges.cloudflare.com"]

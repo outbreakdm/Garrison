@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { isWowRegion, linksFromConnections, linksFromWowProfile } from "./barracks";
+import {
+  isWowFlavor,
+  isWowRegion,
+  linksFromConnections,
+  linksFromWowProfile,
+  wowAccountPrefix,
+} from "./barracks";
 
 describe("linksFromConnections", () => {
   it("keeps verified game accounts only", () => {
@@ -49,6 +55,18 @@ describe("linksFromWowProfile", () => {
       className: "Warrior",
       realm: "Stormrage",
     });
+  });
+  it("keys Classic characters apart from Retail, so linking one never removes the other", () => {
+    const links = linksFromWowProfile(profile, "eu", "classic");
+    expect(links.map((l) => l.accountId)).toEqual([
+      "classic:eu:stormrage:brannoc",
+      "classic:eu:area-52:alty",
+    ]);
+    expect(links[0]?.details).toMatchObject({ flavor: "classic", region: "eu" });
+    expect(wowAccountPrefix("us", "retail")).toBe("us:");
+    expect(wowAccountPrefix("us", "era")).toBe("era:us:");
+    expect(isWowFlavor("era")).toBe(true);
+    expect(isWowFlavor("forever")).toBe(false);
   });
   it("yields nothing for unexpected shapes, and validates regions", () => {
     expect(linksFromWowProfile({ code: 403 }, "eu")).toEqual([]);

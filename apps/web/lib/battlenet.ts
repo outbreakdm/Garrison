@@ -1,5 +1,5 @@
 import "server-only";
-import type { WowRegion } from "./barracks";
+import { WOW_FLAVORS, type WowFlavor, type WowRegion } from "./barracks";
 import { env } from "./env";
 
 /**
@@ -45,8 +45,11 @@ export async function battlenetExchange(code: string) {
   return ((await res.json()) as { access_token: string }).access_token;
 }
 
-export async function fetchWowProfile(token: string, region: WowRegion) {
-  const params = new URLSearchParams({ namespace: `profile-${region}`, locale: "en_US" });
+export async function fetchWowProfile(token: string, region: WowRegion, flavor: WowFlavor) {
+  const params = new URLSearchParams({
+    namespace: `${WOW_FLAVORS[flavor].namespace}-${region}`,
+    locale: "en_US",
+  });
   const res = await fetch(`https://${region}.api.blizzard.com/profile/user/wow?${params}`, {
     headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",

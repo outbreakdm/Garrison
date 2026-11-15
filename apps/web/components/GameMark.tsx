@@ -27,6 +27,10 @@ export function GameMark({ provider, small = false }: { provider: string; small?
   );
 }
 
+/** A non-Retail WoW character says which version it's from. */
+const wowVersion = (flavor: unknown) =>
+  flavor === "classic" ? "Classic" : flavor === "era" ? "Classic Era" : null;
+
 /** Game details a link carries: OSRS levels, or a WoW character's level, class and realm. */
 export function linkDetail(d: Record<string, unknown>) {
   if (typeof d.totalLevel === "number")
@@ -34,6 +38,6 @@ export function linkDetail(d: Record<string, unknown>) {
       ? `total ${d.totalLevel} · combat ${d.combatLevel}`
       : `total ${d.totalLevel}`;
   if (typeof d.level === "number")
-    return [d.level, d.className, d.realm].filter(Boolean).join(" · ");
+    return [d.level, d.className, d.realm, wowVersion(d.flavor)].filter(Boolean).join(" · ");
   return "";
 }

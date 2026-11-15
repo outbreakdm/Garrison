@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { GameMark, linkDetail, providerLabel } from "@/components/GameMark";
 import { Topbar } from "@/components/Topbar";
-import { WOW_REGIONS } from "@/lib/barracks";
+import { WOW_FLAVORS, WOW_REGIONS } from "@/lib/barracks";
 import { battlenetConfigured } from "@/lib/battlenet";
 import { getDb } from "@/lib/db";
 import { rankDetailsForms } from "@/lib/rank-details";
@@ -16,6 +16,8 @@ export const metadata: Metadata = { title: "Your accounts" };
 const MESSAGES: Record<string, string> = {
   "linked=discord": "Linked the game accounts from your Discord Connections.",
   "linked=wow": "Linked your World of Warcraft characters.",
+  "linked=wow-none":
+    "Battle.net found no characters for that version and region. Pick the version and region you play on and try again.",
   "removed=1": "Removed.",
   "unshared=1": "That server's roster no longer shows your accounts.",
   "rank=saved": "Saved. /rank shows them on your card.",
@@ -268,7 +270,21 @@ export default async function AccountPage({
                   </span>
                   <p>
                     Sign in with Battle.net to link your characters with level, class and realm.
+                    Link each version you play; linking one never removes another.
                   </p>
+                  <label className="g-field" htmlFor="flavor">
+                    <span>Version</span>
+                    <select className="g-input" id="flavor" name="flavor" defaultValue="retail">
+                      {Object.entries(WOW_FLAVORS).map(([key, f]) => (
+                        <option key={key} value={key}>
+                          {f.label}
+                        </option>
+                      ))}
+                      <option value="forever" disabled>
+                        Forever (not available from Blizzard yet)
+                      </option>
+                    </select>
+                  </label>
                   <label className="g-field" htmlFor="region">
                     <span>Region</span>
                     <select className="g-input" id="region" name="region" defaultValue="us">
