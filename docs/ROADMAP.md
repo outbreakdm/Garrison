@@ -797,3 +797,7 @@ Decided (2026-11-12, owner):
   Garrison holds are set, which also fixes private voice channels asking for Speak. The invite
   adds those member permissions (integer 1546577637110; /health flags older servers). Needs
   migration 0057 in production. Not yet tried against the real model. Not deployed.
+- 2026-11-15: Deployed `1a0ed4a` (run 43682605713) after applying migration 0057 in production
+  (recorded; 58 rows). Live: the AI builder chat, read-only and listen-only channels, safe role
+  permissions, and the wider invite. Bot online. Not yet tried with the real model; the
+  Developer Portal install link still needs the new permissions integer (1546577637110).
