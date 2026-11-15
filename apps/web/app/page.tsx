@@ -865,6 +865,9 @@ export default async function Home() {
             <a href="#pricing">Pricing</a>
             <a href="/status">Status</a>
             <Link href={dashboard}>Dashboard</Link>
+            <a href="/terms">Terms</a>
+            <a href="/privacy">Privacy</a>
+            <a href="/refunds">Refunds</a>
           </nav>
         </div>
       </footer>

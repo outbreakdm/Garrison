@@ -7,6 +7,8 @@ describe("hostRedirect", () => {
   it("serves the landing and status pages on the public site", () => {
     expect(hostRedirect("garrisonbot.com", "/", "", APP)).toBeNull();
     expect(hostRedirect("garrisonbot.com", "/status", "", APP)).toBeNull();
+    for (const page of ["/terms", "/privacy", "/refunds"])
+      expect(hostRedirect("garrisonbot.com", page, "", APP)).toBeNull();
     expect(hostRedirect("garrisonbot.com", "/_next/static/x.js", "", APP)).toBeNull();
   });
   it("sends dashboard paths from the public site to the dashboard", () => {

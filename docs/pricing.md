@@ -108,6 +108,33 @@ keys.
    `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_YEARLY`, `STRIPE_PRICE_AGENCY_MONTHLY`,
    `STRIPE_PRICE_AGENCY_YEARLY`, `BILLING_DATABASE_URL`. Then deploy.
 
+**Policies (added 2026-11-14):** Terms, Privacy and Refund pages live at
+`garrisonbot.com/terms`, `/privacy` and `/refunds` (text in `apps/web/app/<page>/page.tsx`,
+shared facts in `apps/web/lib/legal.ts`). Before launch:
+
+- Make sure `support@garrisonbot.com` receives mail; every policy sends people there.
+- Discord Developer Portal, General Information: set the Terms of Service URL and Privacy
+  Policy URL to the two pages (needed for bot verification).
+- Stripe, Settings, Public details: support email, website, and the Terms, Privacy and
+  Refund URLs. Stripe shows these on receipts and checks them during account review.
+- Checkout can't carry its own agreement text while Managed Payments is on (Stripe refuses
+  `custom_text`), so the agreement line sits under the Upgrade buttons on the Plan page.
+
+**Handling a refund request** (Refund Policy): full refund within 7 days of the first payment,
+one per person, unless the server ran more Quartermaster plans in a day than Free allows (3).
+Check with (Supabase SQL editor, put in the server ID and the payment time):
+
+```sql
+select date_trunc('day', created_at) as day, count(*) as plans
+from ai_usage
+where guild_id = '<server id>' and ok and created_at >= '<payment time>'
+group by 1 having count(*) > 3;
+```
+
+No rows means eligible. For an Agency plan, run it for each server in its seats. Refund in the
+Stripe dashboard **and cancel the subscription there too**: a refund alone doesn't end the plan
+(the webhook treats refunds as goodwill), but the policy says a refunded plan ends.
+
 **Test mode, done 2026-11-14:** the sandbox has both products and all four prices (lookup keys
 `garrison_pro_monthly`, `garrison_pro_yearly`, `garrison_agency_monthly`,
 `garrison_agency_yearly`) and a customer portal that switches between them. A test subscription

@@ -88,16 +88,22 @@ export default async function PlanPage({
 
   // Upgrade buttons, only once checkout is set up: monthly first, yearly beside it.
   const buy = (tier: "pro" | "agency") => (
-    <form action={checkoutAction} className="tier__buy">
-      <input type="hidden" name="guildId" value={guild.id} />
-      <input type="hidden" name="tier" value={tier} />
-      <button type="submit" name="interval" value="month" className="g-btn g-btn--primary">
-        {tier === "pro" ? "Upgrade this server" : "Get Agency"}
-      </button>
-      <button type="submit" name="interval" value="year" className="g-btn g-btn--secondary">
-        Pay yearly
-      </button>
-    </form>
+    <>
+      <form action={checkoutAction} className="tier__buy">
+        <input type="hidden" name="guildId" value={guild.id} />
+        <input type="hidden" name="tier" value={tier} />
+        <button type="submit" name="interval" value="month" className="g-btn g-btn--primary">
+          {tier === "pro" ? "Upgrade this server" : "Get Agency"}
+        </button>
+        <button type="submit" name="interval" value="year" className="g-btn g-btn--secondary">
+          Pay yearly
+        </button>
+      </form>
+      <p className="legal-note">
+        Renews until you cancel. By upgrading, you agree to the <a href="/terms">Terms</a> and{" "}
+        <a href="/refunds">Refund Policy</a>.
+      </p>
+    </>
   );
   const manage = (forAgency: boolean) => (
     <form action={portalAction}>

@@ -4213,3 +4213,168 @@ button.list-rows__remove:focus-visible {
   align-items: center;
   gap: var(--space-2) var(--space-3);
 }
+
+/* --- Legal pages: Terms, Privacy, Refunds. A reading column, not a dashboard. ---- */
+.legal {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-6) var(--space-12);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  line-height: 1.65;
+}
+.legal__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.legal__head h1 {
+  font-size: clamp(32px, 6vw, 44px);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.legal__lead {
+  font-size: 18px;
+  color: var(--text-muted);
+  max-width: 60ch;
+}
+.legal__summary {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  padding: var(--space-4) var(--space-6);
+}
+.legal__summary h2 {
+  font-size: 17px;
+  margin-bottom: var(--space-2);
+}
+.legal__summary ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-left: 1.2em;
+}
+.legal__fine {
+  margin-top: var(--space-3);
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.legal__toc ol {
+  margin-top: var(--space-2);
+  columns: 2;
+  column-gap: var(--space-8);
+  padding-left: 1.6em;
+}
+.legal__toc li {
+  break-inside: avoid;
+  padding: 2px 0;
+}
+.legal__toc a,
+.legal__body a,
+.legal__foot a {
+  color: var(--accent-strong);
+  text-underline-offset: 3px;
+}
+.legal__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+.legal__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  scroll-margin-top: 80px;
+}
+.legal__section h2 {
+  font-size: 22px;
+  line-height: 1.3;
+}
+.legal__num {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.legal__section h3 {
+  font-size: 16px;
+  margin-top: var(--space-2);
+}
+.legal__section ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-left: 1.2em;
+}
+.legal .legal__section p,
+.legal .legal__section li {
+  max-width: 68ch;
+}
+.legal__section code {
+  font-family: var(--font-code);
+  font-size: 0.9em;
+}
+.legal__caps {
+  font-size: 15px;
+}
+.legal__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.legal .legal__table th,
+.legal .legal__table tr td {
+  text-align: left;
+  vertical-align: top;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+.legal .legal__table th {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.legal__table td:first-child {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.legal__foot {
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  color: var(--text-muted);
+}
+.legal__foot nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+}
+@media (max-width: 640px) {
+  .legal {
+    padding: var(--space-6) var(--space-4) var(--space-8);
+    gap: var(--space-6);
+  }
+  .legal__toc ol {
+    columns: 1;
+  }
+  .legal__summary {
+    padding: var(--space-4);
+  }
+  .legal__table td:first-child {
+    white-space: normal;
+  }
+}
+
+/* The agreement line under sign-in and upgrade buttons. */
+.legal-note {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.legal-note a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

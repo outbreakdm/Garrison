@@ -720,3 +720,8 @@ Decided (2026-11-12, owner):
   `txcd_10103000`; the setup notes say to do the same live and to decide on Managed Payments.
   A refused checkout or portal now shows a notice instead of a crashed page. A full test
   checkout turned Pro on and cancelling turned it off.
+- 2026-11-14: Terms of Service, Privacy Policy and Refund Policy pages (`/terms`, `/privacy`,
+  `/refunds`), served on the public site and linked from the landing footer, sign-in and the
+  Plan page. Refunds: 7 days from the first payment, unless the server used more AI plans in
+  a day than Free allows. Owner steps (mailbox, Discord portal URLs, Stripe public details)
+  are in `docs/pricing.md`.

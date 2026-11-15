@@ -35,6 +35,10 @@ export default async function LoginPage({
         <a className="g-btn g-btn--primary" href={`/auth/login?next=${encodeURIComponent(next)}`}>
           Sign in with Discord
         </a>
+        <p className="legal-note">
+          By signing in, you agree to the <a href="/terms">Terms of Service</a> and{" "}
+          <a href="/privacy">Privacy Policy</a>.
+        </p>
       </div>
     </main>
   );
