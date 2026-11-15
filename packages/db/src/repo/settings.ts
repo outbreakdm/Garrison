@@ -155,7 +155,7 @@ export function normalizeRewards(steps: RewardStep[]): RewardStep[] {
     .map((r) => ({ level: r.level, roleId: r.roleId }));
 }
 
-async function readRewards(tx: Tx, guildId: string) {
+async function readRewards(tx: Db, guildId: string) {
   const rows = await tx
     .select({ level: rankRewards.level, roleId: rankRewards.roleId })
     .from(rankRewards)
@@ -187,7 +187,7 @@ async function writeRewards(tx: Tx, guildId: string, rewards: RewardStep[]) {
     );
 }
 
-async function readLadder(tx: Tx, guildId: string) {
+async function readLadder(tx: Db, guildId: string) {
   const rows = await tx
     .select()
     .from(escalationRules)
@@ -297,6 +297,30 @@ async function lockRow(tx: Tx, module: SettingsModule, guildId: string): Promise
   }
   const [row] = await tx.select().from(table).where(eq(table.guildId, guildId)).for("update");
   return (row as Row | undefined) ?? null;
+}
+
+/**
+ * A module's editable settings as they are now, read only: exactly the fields in
+ * EDITABLE_FIELDS. Null when the module has never been set up here, so its defaults
+ * apply (most modules start off). The AI builder's chat reads settings through this.
+ */
+export async function readSettings(
+  db: Db,
+  guildId: string,
+  module: SettingsModule,
+): Promise<Record<string, unknown> | null> {
+  if (module === "rewards") {
+    const rewards = await readRewards(db, guildId);
+    return rewards.length ? { rewards } : null;
+  }
+  if (module === "escalation") {
+    const rules = await readLadder(db, guildId);
+    return rules.length ? { rules } : null;
+  }
+  const table = TABLES[module];
+  const [row] = (await db.select().from(table).where(eq(table.guildId, guildId))) as Row[];
+  if (!row) return null;
+  return Object.fromEntries(EDITABLE_FIELDS[module].map((f) => [f, row[f] ?? null]));
 }
 
 /** Write whitelisted values. Callers only pass fields from EDITABLE_FIELDS. */

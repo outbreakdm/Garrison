@@ -72,6 +72,14 @@ even 100 a day every day is about $1.50 to $6 a month, and a realistic admin sen
 If real use ever trends toward the cap, raise `AI_SUPPLIES_PER_MESSAGE` first (each step of 1
 cuts the message ceiling by about a quarter); the supplies a day can stay as sold.
 
+Since phase 2 of `docs/AI_ASSISTANT.md` a chat message can look at the server's settings
+first, and each look is another round with the model, at most 4 a message
+(`QM_CHAT_ROUNDS`). The ceiling for one chat message is therefore 4 × $0.0036 = $0.0144, and
+the bot holds that much against the global budget while the message runs. That would
+quadruple the table's chat ceiling, so the hourly limit and the global cap matter more still.
+A look adds a short tool result (at most 6,000 characters), so a typical message that looks
+once costs about $0.001 to $0.003.
+
 **The one real exposure is Free.** Free brings in nothing, so since 2026-11-15 it's counted per
 person: 40 supplies a day across every Free server someone asks from (and the same per
 server), so making more servers doesn't make more free AI. At worst that's $1.40 a month per

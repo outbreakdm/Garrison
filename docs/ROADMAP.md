@@ -817,3 +817,10 @@ Decided (2026-11-12, owner):
   /qm card, pricing lines, Refund Policy (now counts supplies) and docs/pricing.md updated;
   worst-case cost per server is now above the Pro and Agency price, bounded by the hourly and
   global caps. No migration. Not deployed.
+- 2026-11-15: AI builder reads settings (docs/AI_ASSISTANT.md phase 2). The chat can look at
+  how Garrison is set up before answering: `server_overview` (plan, supplies, every module's
+  switches and counts) and `module_settings` (one module in full, channels and roles as
+  names). Read-only, through `readSettings` (the editable fields only; the bot role can read
+  every settings table, tested). At most 4 model rounds a message, the last must answer; the
+  budget hold covers all 4. It can't change settings yet: it says which page does it. Page
+  copy mentions asking about the setup. No migration. Not deployed.

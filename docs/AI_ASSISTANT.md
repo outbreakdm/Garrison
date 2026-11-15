@@ -138,8 +138,13 @@ bot role can't, for most modules. Two ways to let a build apply settings:
    allowances with one supplies balance (`AI_SUPPLIES_PER_DAY`, message 3, change 1),
    counted from `ai_usage` and `qm_builds`. Update the rail, send button, plan cards,
    landing, Plan page, Refund Policy, pricing doc and tests. Shippable alone. *Small.*
-2. **Read tools.** The chat becomes a tool-using conversation that can look at settings to
-   answer questions and suggest what's missing. No new powers yet. *Medium.*
+2. **Read tools.** *Done 2026-11-15, not deployed.* The chat becomes a tool-using
+   conversation that can look at settings to answer questions and suggest what's missing.
+   No new powers yet. `server_overview` and `module_settings` in
+   `apps/bot/src/modules/quartermaster/tools.ts`, read through `readSettings` (exactly the
+   `EDITABLE_FIELDS`, so anti-nuke stays out of reach); channel and role ids come back as
+   names; at most 4 rounds a message, the last forced to answer; a message still costs 3
+   supplies. *Medium.*
 3. **Settings plans.** `change_settings` proposals, the settings diff in the preview, the
    grants migration, apply in order with refs, and undo through the history. *Large.*
 4. **Safe posts.** `post` proposals for role menus, ticket panels and saved messages. *Small.*

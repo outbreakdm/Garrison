@@ -589,6 +589,55 @@ describe("AI builder chat", () => {
     expect(log.at(-1)?.text).toMatch(/Plans you've drafted can still be built/);
   });
 
+  it("lets the chat read this server's settings, with names for channels and roles", async () => {
+    const f = fakeGuild("q21");
+    await upsertGuild(ctx.db, { id: "q21", name: "q21" });
+    const ideas = "123456789012345021";
+    f.channels.set(ideas, {
+      id: ideas,
+      name: "ideas",
+      type: ChannelType.GuildText,
+      delete: async () => {},
+    });
+    await ctx.db
+      .insert(schema.suggestionSettings)
+      .values({ guildId: "q21", enabled: true, channelId: ideas });
+    const looked: Record<string, string> = {};
+    const bot: Planner = {
+      plan: async () => ({ ok: false, error: "not used" }),
+      chat: async (input) => {
+        if (!input.read) throw new Error("no read tools");
+        looked.overview = (await input.read("server_overview", {})).text;
+        looked.module = (await input.read("module_settings", { module: "suggestions" })).text;
+        looked.bad = JSON.stringify(await input.read("module_settings", { module: "antinuke" }));
+        return { ok: true, reply: "Suggestions are on.", choices: [], plan: null, model: "stub" };
+      },
+    };
+    expect((await chatTurn(ctx, bot, f.guild, asker(f), { message: "what's on?" })).ok).toBe(true);
+    const overview = JSON.parse(looked.overview ?? "{}");
+    expect(overview).toMatchObject({ plan: "free", supplies_left_after_this_message: 37 });
+    expect(overview.modules).toContainEqual({
+      module: "suggestions",
+      page: "Suggestions",
+      enabled: true,
+      channelId: `#ideas (${ideas})`,
+      anonymous: false,
+    });
+    expect(overview.modules).toContainEqual({
+      module: "starboard",
+      page: "Starboard",
+      status: "not set up",
+    });
+    expect(JSON.parse(looked.module ?? "{}")).toEqual({
+      module: "suggestions",
+      page: "Suggestions",
+      settings: { enabled: true, channelId: `#ideas (${ideas})`, anonymous: false },
+    });
+    // Anti-nuke isn't readable or editable here: it stays an owner-only command.
+    expect(looked.bad).toMatch(/Unknown module/);
+    expect(await suppliesUsed(ctx.db, { guildId: "q21" })).toBe(3);
+  });
+
   it("gives a message's supplies back when its plan couldn't be made safely", async () => {
     const f = fakeGuild("q20");
     const bad: AiPlan = {

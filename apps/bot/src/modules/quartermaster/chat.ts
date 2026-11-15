@@ -24,6 +24,7 @@ import {
   storePlan,
   suppliesMessage,
 } from "./service.js";
+import { QM_CHAT_ROUNDS, settingsReader } from "./tools.js";
 
 /** Chat messages a server can send in an hour, failures included. */
 export const QM_CHAT_PER_HOUR = 40;
@@ -39,7 +40,8 @@ export type ChatOutcome =
  * (asking, suggesting or drafting a plan), and a drafted plan goes through the same
  * checks and supplies as any plan before it's stored as the next version. A message costs
  * a message's supplies; a reply whose plan couldn't be stored gives them back. Every
- * answer, including a refusal, is saved to the conversation so the page shows it.
+ * answer, including a refusal, is saved to the conversation so the page shows it. Before
+ * answering, the model may look at the server's settings (tools.ts); it can't change them.
  */
 export async function chatTurn(
   ctx: BotContext,
@@ -98,7 +100,8 @@ export async function chatTurn(
     attemptsPerHour: QM_CHAT_PER_HOUR,
     dailyBudgetMicros:
       ctx.qmDailyBudgetUsd === undefined ? null : Math.round(ctx.qmDailyBudgetUsd * 1e6),
-    reserveMicros: qmReserveMicros(model),
+    // A message may look at settings first, and each look is another round with the model.
+    reserveMicros: qmReserveMicros(model) * QM_CHAT_ROUNDS,
   });
   if (!reserved.ok) {
     const error =
@@ -121,7 +124,13 @@ export async function chatTurn(
       role: m.role === "assistant" ? "assistant" : "user",
       text: m.buildId ? `${m.text}\n[You drafted a plan here.]` : m.text,
     }));
-    const result = await planner.chat({ history: turns, ...snap, maxOperations, continuation });
+    const result = await planner.chat({
+      history: turns,
+      ...snap,
+      maxOperations,
+      continuation,
+      read: settingsReader(ctx.db, guild, allowance),
+    });
     usage = result.usage;
     if (!result.ok) {
       await say(result.error);

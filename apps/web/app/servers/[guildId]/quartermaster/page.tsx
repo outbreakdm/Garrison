@@ -163,8 +163,9 @@ export default async function QuartermasterPage({
         <div>
           <h1>AI builder</h1>
           <p>
-            Describe the channels and roles you want. See your server with the changes, then build
-            it in one click. Keep going from any version, and undo any build.
+            Describe the channels and roles you want, or ask how Garrison is set up here. See your
+            server with the changes, then build it in one click. Keep going from any version, and
+            undo any build.
           </p>
         </div>
       </div>
@@ -210,7 +211,7 @@ export default async function QuartermasterPage({
                     <p>
                       {cont
                         ? `v${cont.version} is built. What should it get next? I can also suggest what's missing.`
-                        : "Hi! What's your server about? Tell me the games you play and what you need, and I'll design the channels and roles. Nothing changes until you build it."}
+                        : "Hi! What's your server about? Tell me the games you play and what you need, and I'll design the channels and roles. You can also ask me what's set up and what's missing. Nothing changes until you build it."}
                     </p>
                   </div>
                 </li>
