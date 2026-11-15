@@ -16,15 +16,20 @@ Checked on 2026-11-15:
 
 ### Payments (Stripe live mode)
 Until these are set, the Plan page says "Checkout isn't available right now" and nothing can
-be bought. Full steps in `docs/pricing.md`, "Turning checkout on". In short, in **live** mode:
+be bought. Full steps in `docs/pricing.md`, "Turning checkout on". In **live** mode:
 
-- [ ] Products "Garrison Pro" and "Garrison Agency", tax code `txcd_10103000`, four prices:
-      $8.99/mo, $79.99/yr, $34.99/mo, $349.99/yr (lookup keys `garrison_pro_monthly`,
-      `garrison_pro_yearly`, `garrison_agency_monthly`, `garrison_agency_yearly`).
-- [ ] Webhook to `https://dash.garrisonbot.com/api/stripe/webhook` with the ten events listed
-      in `docs/pricing.md`.
-- [ ] Customer portal on: switch monthly/yearly, cancel at period end.
-- [ ] Restricted key (`rk_live_...`) with the permissions in `docs/pricing.md` step 5.
+- [x] Products "Garrison Pro" and "Garrison Agency", tax code `txcd_10103000`, four prices,
+      tax-exclusive: $8.99/mo, $79.99/yr, $34.99/mo, $349.99/yr (lookup keys
+      `garrison_pro_monthly`, `garrison_pro_yearly`, `garrison_agency_monthly`,
+      `garrison_agency_yearly`). Created 2026-11-15.
+- [x] Webhook "Garrison dashboard: plans and billing" to
+      `https://dash.garrisonbot.com/api/stripe/webhook`, the ten events, API version
+      `2026-10-28.endive`. Its signing secret is under Developers, Webhooks, that endpoint,
+      Signing secret, Reveal.
+- [x] Customer portal: a default with no plan switching, and one per plan that switches
+      monthly and yearly within that plan only (`docs/pricing.md` step 3).
+- [ ] Restricted key (`rk_live_...`) with the permissions in `docs/pricing.md` step 5:
+      Developers, API keys, Create restricted key.
 - [ ] Decide on Managed Payments (Stripe as seller of record, handles sales tax) or Stripe Tax
       with your own registrations.
 - [ ] Settings, Public details: support email `support@garrisonbot.com`, website
@@ -33,7 +38,8 @@ be bought. Full steps in `docs/pricing.md`, "Turning checkout on". In short, in 
 - [ ] Supabase SQL editor: `ALTER ROLE garrison_billing LOGIN PASSWORD '<long random>';`
       and build its connection string like the dashboard's.
 - [ ] GitHub secrets: `STRIPE_SECRET_KEY` (the restricted key), `STRIPE_WEBHOOK_SECRET`, the
-      four `STRIPE_PRICE_*` IDs, `BILLING_DATABASE_URL`.
+      four `STRIPE_PRICE_*` IDs (find each in the Stripe Dashboard by its lookup key), and
+      `BILLING_DATABASE_URL`.
 
 ### AI
 - [ ] `ANTHROPIC_API_KEY` in GitHub secrets: the AI builder doesn't work without it, and the

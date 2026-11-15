@@ -58,6 +58,35 @@ export function stripe(): Stripe {
   return client;
 }
 
+let portalConfigs: Promise<Partial<Record<PaidTier, string>>> | undefined;
+
+/**
+ * The customer portal settings for one plan, found by `metadata.garrison_tier` on the
+ * account's portal configurations. Each lists only its own product's prices, so switching
+ * between monthly and yearly can never turn Pro into Agency (the plan comes from the
+ * subscription's metadata, not its price). Without one, the account's default portal
+ * applies, which doesn't allow switching. See docs/pricing.md.
+ */
+export function portalConfiguration(tier: PaidTier): Promise<string | undefined> {
+  portalConfigs ??= stripe()
+    .billingPortal.configurations.list({ active: true, limit: 20 })
+    .then((list) => {
+      const found: Partial<Record<PaidTier, string>> = {};
+      for (const c of list.data) {
+        const t = c.metadata?.garrison_tier;
+        if ((t === "pro" || t === "agency") && !found[t]) found[t] = c.id;
+      }
+      return found;
+    })
+    .catch((e) => {
+      // Try again next time; the default portal still opens.
+      portalConfigs = undefined;
+      console.error("Stripe portal settings unavailable:", e instanceof Error ? e.message : e);
+      return {};
+    });
+  return portalConfigs.then((found) => found[tier]);
+}
+
 /** Check a webhook's signature (Web Crypto, as Workers need) and parse the event. */
 export async function verifyEvent(body: string, signature: string | null): Promise<Stripe.Event> {
   const secret = read("STRIPE_WEBHOOK_SECRET");

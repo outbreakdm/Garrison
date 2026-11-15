@@ -90,15 +90,19 @@ keys.
    `charge.dispute.created`, `charge.refunded` and `radar.early_fraud_warning.created`. Copy its
    signing secret (whsec_...). A dispute or early fraud warning cancels that subscription at
    once; a refund doesn't.
-3. **Customer portal in Stripe:** turn it on (Settings, Billing, Customer portal) and allow
-   switching between the monthly and yearly prices and cancelling at period end.
+3. **Customer portal in Stripe:** three configurations. The default allows cancelling at
+   period end, card changes and invoices, but **no plan switching**. Two more carry
+   `metadata.garrison_tier` = `pro` / `agency` and each lists only its own product's monthly
+   and yearly prices; Manage billing opens the one for the plan (`portalConfiguration()` in
+   `apps/web/lib/billing.ts`). One portal listing both products would let a Pro subscriber
+   switch to an Agency price while the plan (read from metadata) stays Pro.
 4. **Billing database login (Supabase SQL editor):**
    `ALTER ROLE garrison_billing LOGIN PASSWORD '<a long random password>';` then build its
    connection string the same way as the dashboard's (pooler host, user
    `garrison_billing.<project ref>`).
 5. **Use a restricted key in production** (rk_..., Stripe's recommendation), with write access
-   to Checkout Sessions, Customer portal sessions, Customers and Subscriptions, and read
-   access to Invoices, Invoice payments, Charges, Disputes and Prices.
+   to Checkout Sessions, Customer portal (sessions and configurations), Customers and
+   Subscriptions, and read access to Invoices, Invoice payments, Charges, Disputes and Prices.
 6. **Sales tax:** if you sell to US states or the EU that require it, turn on Stripe Tax and
    add your registrations before switching checkout on; until then no tax is collected.
    Stripe also switches on **Managed Payments** by default (Settings, Managed payments):

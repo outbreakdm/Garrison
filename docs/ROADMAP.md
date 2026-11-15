@@ -741,3 +741,9 @@ Decided (2026-11-12, owner):
   everything left before release: Stripe live, `ANTHROPIC_API_KEY` (the AI builder has never
   run in production), `OPENAI_API_KEY`, the support mailbox, and the Developer Portal settings
   with exact values. Not deployed.
+- 2026-11-15: Stripe live mode set up: both products with the tax code, the four prices
+  (same lookup keys as test), the webhook with all ten events, and the customer portal. The
+  portal is now one configuration per plan, so monthly/yearly switching can't cross from Pro
+  to Agency; Manage billing picks the plan's own (`portalConfiguration()`). Still owner-side:
+  the restricted live key, the GitHub secrets, the billing login's password, Managed Payments
+  and Stripe's public details.

@@ -9,7 +9,14 @@ import {
   setComp,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
-import { billingReady, type Interval, type PaidTier, priceId, stripe } from "@/lib/billing";
+import {
+  billingReady,
+  type Interval,
+  type PaidTier,
+  portalConfiguration,
+  priceId,
+  stripe,
+} from "@/lib/billing";
 import { getDb } from "@/lib/db";
 import { env } from "@/lib/env";
 import { checkGuildAccess } from "@/lib/session";
@@ -120,8 +127,9 @@ export async function portalAction(form: FormData) {
     getPlanDetails(db, access.guild.id),
     listAgencyPlans(db, user),
   ]);
+  const tier: PaidTier = form.get("for") === "agency" ? "agency" : "pro";
   const customer =
-    form.get("for") === "agency"
+    tier === "agency"
       ? agency.find((a) => a.source === "stripe")?.stripeCustomerId
       : details.paidBy === user
         ? details.stripeCustomerId
@@ -129,9 +137,12 @@ export async function portalAction(form: FormData) {
   if (!customer) redirect(`${back}?done=not_payer`);
   let url: string | null = null;
   try {
+    // This plan's own portal: it switches monthly and yearly within the plan only.
+    const configuration = await portalConfiguration(tier);
     const portal = await stripe().billingPortal.sessions.create({
       customer,
       return_url: `${env().APP_URL}${back}`,
+      ...(configuration ? { configuration } : {}),
     });
     url = portal.url;
   } catch (e) {
