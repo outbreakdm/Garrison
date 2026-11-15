@@ -729,3 +729,8 @@ Decided (2026-11-12, owner):
   insights, policies). Migrations 0051 to 0055 applied in production and recorded. Still
   owner-side: live Stripe keys and products (with tax code), the billing login's password,
   Move Members for voice rooms on existing servers, and the policy URLs in Discord and Stripe.
+- 2026-11-15: Landing page cleanup. The themed module names are gone from the landing, the
+  policies and the bot's message footers and `/health` (they now read Moderation, Security,
+  Groups and so on). "Also in the box" (three modules) is replaced by a grouped list of all
+  17 modules. Hero, call to action and FAQ follow whether paid plans are open. Times are
+  12-hour. Not deployed.

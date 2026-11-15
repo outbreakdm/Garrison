@@ -86,7 +86,7 @@ export function capped(lines: string[], max: number) {
 const TEXT_MAX = 3900; // Discord allows 4000 characters of text per message.
 
 function footerText(card: Card) {
-  const parts = [card.module ? modules[card.module].name : null, card.ref ?? null];
+  const parts = [card.module ? modules[card.module].plain : null, card.ref ?? null];
   if (card.at) parts.push(ts(card.at, "f"));
   const line = parts.filter(Boolean).join(" · ");
   return line ? `-# ${line}` : null;
@@ -256,7 +256,7 @@ export function legacyMessage(card: Card) {
         .slice(0, 25)
         .map((f) => ({ name: f.label, value: f.value.slice(0, 1024), inline: true })),
     );
-  const footer = [card.module ? modules[card.module].name : null, card.ref].filter(Boolean);
+  const footer = [card.module ? modules[card.module].plain : null, card.ref].filter(Boolean);
   if (footer.length) embed.setFooter({ text: footer.join(" · ") });
   if (card.at) embed.setTimestamp(card.at);
 

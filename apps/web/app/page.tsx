@@ -1,4 +1,4 @@
-import { brand, inviteUrl, modules } from "@garrison/brand";
+import { brand, inviteUrl } from "@garrison/brand";
 import { formatPrice, PRICING, yearlySaving } from "@garrison/db";
 import type { Metadata } from "next";
 import { Gabarito, Geist, Geist_Mono } from "next/font/google";
@@ -11,6 +11,7 @@ import { ServerPreview } from "@/components/ServerPreview";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { billingReady } from "@/lib/billing";
 import { siteUrl } from "@/lib/hosts";
+import { LEGAL } from "@/lib/legal";
 import { publicMetrics } from "@/lib/public-metrics";
 import type { ServerPreview as Preview } from "@/lib/qm-preview";
 import { SESSION_COOKIE } from "@/lib/session";
@@ -47,15 +48,104 @@ const NUMBER_WORDS = [
   "Fifteen",
   "Sixteen",
 ];
-/** How many modules Garrison has, in words, from the one module list. */
-const MODULE_COUNT = Object.keys(modules).length;
+/**
+ * Every module, in the dashboard's own groups and under the names its menu uses.
+ * The page quotes this list's length, so adding a module here updates the count.
+ */
+const CATALOG: { group: string; items: [name: string, what: string][] }[] = [
+  {
+    group: "Safety",
+    items: [
+      [
+        "Moderation",
+        "Warnings, timeouts and bans as numbered cases, an escalation ladder, and automod for scam links and blocked words.",
+      ],
+      [
+        "Security",
+        "Anti-raid lockdowns, verification for newcomers, and anti-nuke that quarantines a rogue admin.",
+      ],
+      [
+        "Logs",
+        "Who did what and when, kept 7 to 365 days, with deleted and edited messages if you want them.",
+      ],
+    ],
+  },
+  {
+    group: "Community",
+    items: [
+      [
+        "Welcome",
+        "Greet people as they join, see them off, and give new members their first roles.",
+      ],
+      ["Role menus", "Buttons or a dropdown, so members pick their own games, pings and colors."],
+      [
+        "Tickets",
+        "Private channels between a member and your staff, with transcripts and a queue.",
+      ],
+      [
+        "Leveling",
+        "XP and a leaderboard, off until you turn them on. Rewards can't carry admin powers.",
+      ],
+      [
+        "Giveaways",
+        "Post a prize with an Enter button. Garrison draws the winners and announces them.",
+      ],
+      [
+        "Starboard",
+        "Messages that collect enough of one emoji are reposted to a channel of their own.",
+      ],
+      [
+        "Suggestions",
+        "Members post ideas with /suggest and vote For or Against. Staff mark the outcome.",
+      ],
+      [
+        "Stream alerts",
+        "A post when a Twitch channel goes live or a YouTube channel uploads a video.",
+      ],
+      ["Messages", "Announcements, rules and reminders as cards, posted now or on a schedule."],
+    ],
+  },
+  {
+    group: "Gaming",
+    items: [
+      [
+        "Groups and raids",
+        "LFG posts with role slots, and raid rosters with caps, a bench and reminders.",
+      ],
+      [
+        "Voice rooms",
+        "Join “New room” to get a voice channel of your own. It's deleted once empty.",
+      ],
+      [
+        "Game accounts",
+        "Members link their game accounts, and the roster marks which are verified.",
+      ],
+    ],
+  },
+  {
+    group: "Server",
+    items: [
+      [
+        "Insights",
+        "Messages, active members, joins and leaves, and the busiest hours. Counts only.",
+      ],
+      [
+        "AI builder",
+        "Describe channels and roles, see them on your server, then build. Any build can be undone.",
+      ],
+    ],
+  },
+];
+
+/** How many modules Garrison has, in words, from the catalog above. */
+const MODULE_COUNT = CATALOG.reduce((n, g) => n + g.items.length, 0);
 const moduleCount = NUMBER_WORDS[MODULE_COUNT] ?? String(MODULE_COUNT);
 
 const SECURITY = [
   "Garrison asks only for the permissions it uses, never Administrator, and /health tells you when something's off.",
   "Anti-nuke and its trusted list are owner-only, so a compromised admin can't switch them off first.",
-  "AI builds only add channels and roles, new roles get no permissions, and a person approves every plan.",
-  "Message text is kept only for ticket transcripts, and in logs if you turn it on. All of it expires on a schedule you set.",
+  "The AI builder only adds channels and roles, new roles get no permissions, and a person approves every plan.",
+  "Message text is kept only where it's the point: tickets, suggestions and appeals, and logs if you turn it on. Ticket and log text expires on a schedule.",
   "The dashboard signs in with Discord, keeps no Discord token, and re-checks your permissions on every page.",
 ];
 
@@ -74,19 +164,21 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "What does Garrison store about my members?",
-    a: "Who did what and when, for cases and logs, kept 30 days by default (you choose 7 to 365). Logs keep the text of deleted and edited messages only if you turn that on. Tickets keep their transcript for 30 days after closing, or 365 on Pro. With AI moderation on (Pro), OpenAI's moderation model checks messages; Garrison keeps none of that.",
+    a: "Who did what and when, for cases and logs, kept 30 days by default (you choose 7 to 365). Logs keep the text of deleted and edited messages only if you turn that on. Tickets keep their transcript for 30 days after closing, or 365 on Pro. With AI moderation on (Pro), OpenAI's moderation model checks messages; Garrison keeps none of that. The Privacy Policy lists everything.",
   },
   {
     q: "Can players use it too?",
     a: "Yes. Players join groups, sign up for raids and check their rank from Discord or the dashboard, and link their game accounts on their Account page.",
   },
-  {
-    q: "What does it cost?",
-    a: "Nothing during early access. At launch, Pro is one server and Agency covers up to five you run; the prices are in the pricing section. Everything a server needs to stay safe stays free.",
-  },
 ];
 
-/** The example server in the Quartermaster shot: today's channels plus one plan's additions. */
+/** The cost answer, which changes once paid plans open. */
+const costAnswer = (paidOpen: boolean) =>
+  paidOpen
+    ? `Every module works on Free, for any number of servers, and everything a server needs to stay safe stays free. Pro adds your own look, higher limits and history for one server; Agency covers up to five you run. A new subscription can be refunded within ${LEGAL.refundDays} days, as the Refund Policy explains.`
+    : "Nothing during early access. When paid plans open, Pro covers one server and Agency up to five you run, at the prices in the pricing section. Everything a server needs to stay safe stays free.";
+
+/** The example server in the AI builder shot: today's channels plus one plan's additions. */
 const DEMO_PREVIEW: Preview = {
   loose: [],
   categories: [
@@ -206,7 +298,7 @@ function DiscordWindow({
         <div className="lp-dc__content">
           <div className="lp-dc__author">
             Garrison <span className="lp-dc__app">App</span>
-            <span className="lp-dc__time">Today at 21:04</span>
+            <span className="lp-dc__time">Today at 9:04 PM</span>
           </div>
           {children}
         </div>
@@ -283,6 +375,9 @@ export default async function Home() {
   const invite = clientId && /^\d+$/.test(clientId) ? inviteUrl(clientId) : null;
   const [metrics, theme] = await Promise.all([publicMetrics(), currentTheme()]);
   const openLabel = signedIn ? "Open your dashboard" : "Open the dashboard";
+  // Paid plans are open once Stripe is configured; until then everything is free.
+  const paidOpen = billingReady();
+  const faq = [...FAQ, { q: "What does it cost?", a: costAnswer(paidOpen) }];
 
   const actions = (
     <div className="lp-actions">
@@ -340,11 +435,15 @@ export default async function Home() {
             ) : null}
             <h1 id="lp-title">Run your Discord server from one dashboard.</h1>
             <p className="lp-lede">
-              Moderation, security, logs, LFG, raid signups and an AI server builder. You run it
-              from the web; Garrison does the work in Discord and checks again before every change.
+              Moderation, anti-raid, logs, tickets, role menus, LFG and raids, and an AI server
+              builder. You run it from the web; Garrison does the work in Discord and checks again
+              before every change.
             </p>
             {actions}
-            <p className="lp-assure">Free during early access · Never asks for Administrator</p>
+            <p className="lp-assure">
+              {paidOpen ? "Every module free to start" : "Free during early access"} · Never asks
+              for Administrator
+            </p>
           </div>
 
           {/* The focal moment: lock the server from the dashboard, and the message lands in Discord. */}
@@ -388,11 +487,11 @@ export default async function Home() {
                         <div>
                           <div className="list-row">
                             <span className="muted">Started</span>
-                            <span className="mono">21:04</span>
+                            <span className="mono">9:04 PM</span>
                           </div>
                           <div className="list-row">
                             <span className="muted">Lifts</span>
-                            <span className="mono">21:19</span>
+                            <span className="mono">9:19 PM</span>
                           </div>
                           <div className="list-row">
                             <span className="muted">Invites</span>
@@ -446,7 +545,7 @@ export default async function Home() {
                   "Lifts in 15 minutes, or run /lockdown end.",
                 ]}
                 field={["Reason", "Locked from the dashboard"]}
-                foot="Gatehouse · lockdown 3f2a9c"
+                foot="Security · lockdown 3f2a9c"
               />
             </DiscordWindow>
           </div>
@@ -510,7 +609,7 @@ export default async function Home() {
                       <li>
                         <span className="attention__item">
                           <span className="attention__text">
-                            <strong>Quartermaster plan v4 is waiting</strong>
+                            <strong>AI builder plan v4 is waiting</strong>
                             <span>Nothing changes in Discord until someone builds it.</span>
                           </span>
                           <span className="attention__go">
@@ -526,7 +625,7 @@ export default async function Home() {
                             <span>Thu, 8:00 PM · 1 Tank, 2 Healer</span>
                           </span>
                           <span className="attention__go">
-                            Rally
+                            Groups and raids
                             <span className="cue" aria-hidden="true" />
                           </span>
                         </span>
@@ -565,7 +664,7 @@ export default async function Home() {
             flip
             visual={
               <div className="lp-pair">
-                <AppWindow path="Watch">
+                <AppWindow path="Moderation">
                   <div className="lp-app lp-app--stack">
                     <div className="g-card card-col">
                       <h3 className="card-title">Escalation ladder</h3>
@@ -591,7 +690,7 @@ export default async function Home() {
                     tone="volt"
                     title="Timeout applied to Kel for 1 h"
                     lines={["Reason: 3 warnings in 24 h"]}
-                    foot="Watch · case #1042 · Undo"
+                    foot="Moderation · case #1042"
                   />
                 </DiscordWindow>
               </div>
@@ -600,12 +699,13 @@ export default async function Home() {
             <p>
               Warn, time out, kick or ban from a member's page, or with /warn and friends in
               Discord. Cases are numbered and never reused, members can get a neutral DM with how to
-              appeal, and the ladder you set handles repeat offenders.
+              appeal, and the ladder you set handles repeat offenders. Automod removes scam links
+              and blocked words before anyone has to.
             </p>
           </Feature>
 
           <Feature
-            id="gatehouse"
+            id="anti-raid"
             icon="lp-icon-gatehouse"
             title="A raid gets locked down before it spreads"
             visual={
@@ -619,7 +719,7 @@ export default async function Home() {
                     "Invites are paused.",
                     "Lifts in 15 minutes, or run /lockdown end.",
                   ]}
-                  foot="Gatehouse · lockdown 8c1e07"
+                  foot="Security · lockdown 8c1e07"
                 />
               </DiscordWindow>
             }
@@ -632,12 +732,12 @@ export default async function Home() {
           </Feature>
 
           <Feature
-            id="rally"
+            id="groups"
             icon="lp-icon-rally"
             title="From LFG post to full squad"
             flip
             visual={
-              <AppWindow path="Rally">
+              <AppWindow path="Groups and raids">
                 <div className="lp-app lp-app--stack">
                   <article className="g-card lfg" aria-label="Example group">
                     <div className="lfg__head">
@@ -695,11 +795,11 @@ export default async function Home() {
           </Feature>
 
           <Feature
-            id="quartermaster"
+            id="ai-builder"
             icon="lp-icon-quartermaster"
             title="Describe the channels you want. Review. Build. Undo."
             visual={
-              <AppWindow path="Quartermaster" className="lp-win--qm">
+              <AppWindow path="AI builder" className="lp-win--qm">
                 <div className="lp-app lp-app--stack">
                   <p className="lp-qm-ask">
                     “A Valorant section with ranked and casual LFG, a voice room, and a Gold+ role
@@ -711,42 +811,36 @@ export default async function Home() {
             }
           >
             <p>
-              Quartermaster turns a sentence into a plan and shows your server with the changes
+              The AI builder turns a sentence into a plan and shows your server with the changes
               before anything happens. It only adds channels and roles, new roles get no
               permissions, and any build can be undone, even after a partial failure.
             </p>
           </Feature>
 
-          <div className="lp-also">
-            <h3 className="lp-also__title">Also in the box</h3>
-            <ul className="lp-also__list">
-              <li>
-                <Art slot="lp-icon-ledger" className="lp-also__icon" decorative />
-                <strong>{modules.ledger.name}</strong>
-                <span>{modules.ledger.plain}</span>
-                <p>
-                  Who did what and when, searchable by member, with deleted and edited messages if
-                  you want them.
-                </p>
-              </li>
-              <li>
-                <Art slot="lp-icon-ranks" className="lp-also__icon" decorative />
-                <strong>{modules.ranks.name}</strong>
-                <span>{modules.ranks.plain}</span>
-                <p>
-                  XP and a leaderboard, off until you turn them on. Rewards can't carry admin
-                  powers.
-                </p>
-              </li>
-              <li>
-                <Art slot="lp-icon-barracks" className="lp-also__icon" decorative />
-                <strong>{modules.barracks.name}</strong>
-                <span>{modules.barracks.plain}</span>
-                <p>
-                  Members share their linked game accounts; the roster marks which are verified.
-                </p>
-              </li>
-            </ul>
+          <div className="lp-catalog" id="modules">
+            <div className="lp-catalog__head">
+              <h3>All {MODULE_COUNT} modules</h3>
+              <p>Every one works on the Free plan, with the standard look and limits.</p>
+            </div>
+            {CATALOG.map((g) => (
+              <section
+                key={g.group}
+                className="lp-catalog__group"
+                aria-labelledby={`lp-cat-${g.group}`}
+              >
+                <h4 className="lp-catalog__name" id={`lp-cat-${g.group}`}>
+                  {g.group}
+                </h4>
+                <ul className="lp-catalog__list">
+                  {g.items.map(([name, what]) => (
+                    <li key={name}>
+                      <strong>{name}</strong>
+                      <span>{what}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
           </div>
         </section>
 
@@ -770,10 +864,10 @@ export default async function Home() {
         <section className="lp-section lp-price" id="pricing" aria-labelledby="lp-pricing">
           <div className="lp-price__head">
             <h2 className="lp-h2" id="lp-pricing">
-              {billingReady() ? "Pricing" : "Free now. Simple prices at launch."}
+              {paidOpen ? "Pricing" : "Free now. Simple prices at launch."}
             </h2>
             <p>
-              {billingReady()
+              {paidOpen
                 ? "Everything a server needs to stay safe is free. Pay for the look, the limits and the history."
                 : "Every module is free while Garrison is in early access. These are the prices when paid plans open; nothing costs money before then, and safety stays free for good."}
             </p>
@@ -809,7 +903,7 @@ export default async function Home() {
                   </ul>
                   <p className="lp-tier__cta">
                     {paid
-                      ? billingReady()
+                      ? paidOpen
                         ? "Upgrade from any server's Plan page"
                         : "Opens at launch"
                       : "What every server gets"}
@@ -829,7 +923,7 @@ export default async function Home() {
             Questions owners ask
           </h2>
           <div className="lp-faq__list">
-            {FAQ.map((f) => (
+            {faq.map((f) => (
               <details key={f.q}>
                 <summary>{f.q}</summary>
                 <p>{f.a}</p>
@@ -845,8 +939,10 @@ export default async function Home() {
               Add Garrison to your server
             </h2>
             <p>
-              Free during early access. It asks only for the permissions it uses, and every change
-              it makes can be undone.
+              {paidOpen
+                ? "Free to start, on as many servers as you like."
+                : "Free during early access."}{" "}
+              It asks only for the permissions it uses, and every change it makes can be undone.
             </p>
             {actions}
           </div>

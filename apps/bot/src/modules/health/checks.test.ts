@@ -45,7 +45,7 @@ describe("runHealthChecks", () => {
     });
     expect(checks[0]).toEqual({
       status: "fix",
-      text: "Gatehouse: I'm missing View Audit Log, for lockdowns, verification, pausing invites and anti-nuke.",
+      text: "Security: I'm missing View Audit Log, for lockdowns, verification, pausing invites and anti-nuke.",
     });
   });
 

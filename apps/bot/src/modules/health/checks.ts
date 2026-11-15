@@ -17,17 +17,17 @@ export const REQUIRED_PERMISSIONS: {
     why: "to reply and post logs",
   },
   {
-    module: "Watch",
+    module: "Moderation",
     bits:
       P.ModerateMembers | P.KickMembers | P.BanMembers | P.ManageMessages | P.ReadMessageHistory,
     why: "for timeouts, kicks, bans and /purge",
   },
   {
-    module: "Gatehouse",
+    module: "Security",
     bits: P.ManageChannels | P.ManageRoles | P.ManageGuild | P.ViewAuditLog,
     why: "for lockdowns, verification, pausing invites and anti-nuke",
   },
-  { module: "Rally", bits: P.Connect, why: "to open voice channels for full squads" },
+  { module: "Groups", bits: P.Connect, why: "to open voice channels for full squads" },
   {
     module: "Voice rooms",
     bits: P.MoveMembers,

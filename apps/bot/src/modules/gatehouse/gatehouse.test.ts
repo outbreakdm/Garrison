@@ -105,7 +105,7 @@ describe("Gatehouse copy", () => {
     expect(card.title).toBe("Lockdown lifted after 4 min");
     const text = cardTexts(cardMessage(card)).join("\n");
     expect(text).toContain("Invites are open again.");
-    expect(text).toContain("-# Gatehouse · lockdown 3f2a9c");
+    expect(text).toContain("-# Security · lockdown 3f2a9c");
   });
 
   it("flags new accounts the way the dashboard shows them", async () => {

@@ -717,52 +717,65 @@
   max-height: none;
 }
 
-/* The smaller modules */
-.lp-also {
-  margin-top: 72px;
-  padding: 40px;
-  border: 1px solid var(--lp-line);
-  border-radius: var(--lp-r-lg);
-  background: var(--lp-surface);
+/* Every module, grouped like the dashboard menu: a quiet reference after the showcase */
+.lp-catalog {
+  margin-top: 112px;
 }
-.lp-also__title {
-  margin: 0 0 28px;
-  font-size: 22px;
+.lp-catalog__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 32px;
+  padding-bottom: 24px;
+}
+.lp-catalog__head h3 {
+  margin: 0;
+  font-family: var(--lp-display);
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.lp-catalog__head p {
+  margin: 0;
+  color: var(--lp-muted);
+  font-size: 15px;
+}
+.lp-catalog__group {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr);
+  gap: 32px;
+  padding: 28px 0;
+  border-top: 1px solid var(--lp-line);
+}
+.lp-catalog__name {
+  margin: 0;
+  color: var(--lp-text);
+  font-family: var(--lp-display);
+  font-size: 17px;
   font-weight: 700;
 }
-.lp-also__list {
+.lp-catalog__list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 36px;
+  gap: 24px 32px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.lp-also__list li {
+.lp-catalog__list li {
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0 12px;
+  gap: 4px;
   align-content: start;
 }
-.lp-also__icon {
-  grid-row: 1 / span 2;
-  width: 44px;
-  height: 44px;
-  background: none;
-}
-.lp-also__list strong {
-  font-family: var(--lp-display);
-  font-size: 18px;
-}
-.lp-also__list span {
-  color: var(--lp-faint);
-  font-size: 13px;
-}
-.lp-also__list p {
-  grid-column: 1 / -1;
-  margin: 10px 0 0;
-  color: var(--lp-muted);
+.lp-catalog__list strong {
   font-size: 15px;
+  font-weight: 600;
+}
+.lp-catalog__list span {
+  color: var(--lp-muted);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 /* Security */
@@ -1265,10 +1278,16 @@
   .lp-feature--flip .lp-feature__copy {
     order: 0;
   }
-  .lp-steps__list,
-  .lp-also__list {
+  .lp-steps__list {
     grid-template-columns: minmax(0, 1fr);
     gap: 40px;
+  }
+  .lp-catalog__group {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .lp-catalog__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .lp-app__grid {
     grid-template-columns: minmax(0, 1fr);
@@ -1346,8 +1365,12 @@
     width: auto;
     margin: -24px 8px 0;
   }
-  .lp-also {
-    padding: 28px 20px;
+  .lp-catalog {
+    margin-top: 72px;
+  }
+  .lp-catalog__list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
   }
   .lp-tier {
     padding: 28px 20px;

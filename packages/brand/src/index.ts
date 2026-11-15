@@ -67,22 +67,23 @@ export const fonts = {
 } as const;
 
 /**
- * Each module has a short themed name and a plain label shown next to it in
- * the dashboard. Slash commands use the plain word.
+ * Each module has a themed name, kept only for URLs, code and search keywords,
+ * and the plain label people see: the dashboard menu's name, and the module
+ * name in the footer of the bot's messages.
  */
 export const modules = {
   watch: { name: "Watch", plain: "Moderation" },
   gatehouse: { name: "Gatehouse", plain: "Security" },
   ledger: { name: "Ledger", plain: "Logs" },
-  rally: { name: "Rally", plain: "Looking for group" },
-  ops: { name: "Ops", plain: "Events" },
-  barracks: { name: "Barracks", plain: "Members" },
+  rally: { name: "Rally", plain: "Groups" },
+  ops: { name: "Ops", plain: "Raids" },
+  barracks: { name: "Barracks", plain: "Game accounts" },
   ranks: { name: "Ranks", plain: "Leveling" },
   insignia: { name: "Insignia", plain: "Role menus" },
   herald: { name: "Herald", plain: "Welcome" },
   dispatch: { name: "Dispatch", plain: "Messages" },
   parley: { name: "Parley", plain: "Tickets" },
-  beacon: { name: "Beacon", plain: "Alerts" },
+  beacon: { name: "Beacon", plain: "Stream alerts" },
   spoils: { name: "Spoils", plain: "Giveaways" },
   honors: { name: "Honors", plain: "Starboard" },
   forum: { name: "Forum", plain: "Suggestions" },
@@ -95,7 +96,7 @@ export const brand = {
   name: "Garrison",
   tagline: "Guard the gate. Rally the squad.",
   oneLiner:
-    "Moderation, security, LFG and raid signups in one fast bot, with everything a server needs to stay safe included free.",
+    "Run your Discord server from one dashboard: moderation, anti-raid, logs, tickets, LFG and raids, and an AI server builder. Everything a server needs to stay safe is free.",
 } as const;
 
 /** Ledger event types and their labels, shared by bot embeds and the dashboard filter. */

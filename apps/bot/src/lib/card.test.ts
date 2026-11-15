@@ -65,7 +65,7 @@ describe("cardMessage (Components V2)", () => {
     expect(texts[2]).toBe("[Undo]");
     expect(texts).toContain("**Member:** <@1>");
     expect(texts.join("\n")).not.toContain("Empty");
-    expect(texts.at(-1)).toMatch(/^-# Watch · case #1 · <t:\d+:f>$/);
+    expect(texts.at(-1)).toMatch(/^-# Moderation · case #1 · <t:\d+:f>$/);
   });
 
   it("wraps actions five to a row", () => {
@@ -96,7 +96,7 @@ describe("legacy embeds, for messages posted before V2", () => {
     const json = m.embeds[0]?.toJSON();
     expect(json?.title).toBe("Timeout applied to kel for 1 h · Active");
     expect(json?.fields?.map((f) => f.name)).toEqual(["Member"]);
-    expect(json?.footer?.text).toBe("Watch · case #1");
+    expect(json?.footer?.text).toBe("Moderation · case #1");
     expect(m.content).toBe("");
     expect(m.components.map((r) => r.toJSON().components.length)).toEqual([5, 2]);
   });

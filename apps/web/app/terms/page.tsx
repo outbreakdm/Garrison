@@ -139,10 +139,11 @@ const sections: LegalSection[] = [
     body: (
       <>
         <p>
-          Some features use AI from other companies: Quartermaster, which plans server layouts, uses
-          Anthropic; AI moderation uses OpenAI. AI can be wrong. Quartermaster shows its plan before
-          anything changes, and you decide whether to apply it. AI moderation can miss harmful
-          messages or flag fine ones, so it supports your moderators rather than replacing them.
+          Some features use AI from other companies: the AI builder, which plans channels and roles,
+          uses Anthropic; AI moderation uses OpenAI. AI can be wrong. The AI builder shows its plan
+          before anything changes, and you decide whether to apply it. AI moderation can miss
+          harmful messages or flag fine ones, so it supports your moderators rather than replacing
+          them.
         </p>
         <p>
           AI use is limited by daily credits on each plan, shown in the dashboard. Credits don’t

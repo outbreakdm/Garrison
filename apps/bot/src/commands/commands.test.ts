@@ -95,7 +95,7 @@ describe("Watch cards", () => {
     expect(card.ref).toBe("case #1042");
     expect(card.title).toBe("Timeout · kel");
     expect(card.tone).toBe("caution");
-    expect(texts(card)).toMatch(/-# Watch · case #1042 · <t:\d+:f>/);
+    expect(texts(card)).toMatch(/-# Moderation · case #1042 · <t:\d+:f>/);
   });
 
   it("confirms with what happened and flags closed DMs", () => {
