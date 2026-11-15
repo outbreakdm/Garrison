@@ -69,7 +69,7 @@ const ctx: BotContext = {
   appUrl: env.APP_URL,
   qmDailyBudgetUsd: env.QM_DAILY_BUDGET_USD,
 };
-if (!ctx.planner) logger.info("Quartermaster is off: set ANTHROPIC_API_KEY to enable /qm build");
+if (!ctx.planner) logger.info("AI builder is off: set ANTHROPIC_API_KEY to enable /qm build");
 const alertKeys = {
   twitch:
     env.TWITCH_CLIENT_ID && env.TWITCH_CLIENT_SECRET

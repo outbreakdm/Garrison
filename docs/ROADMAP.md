@@ -758,3 +758,8 @@ Decided (2026-11-12, owner):
   set, so the AI builder and AI moderation can run in production. The owner set up the bot's
   Discord profile (icon, banner, About me, tags, policy links). Bot online after the deploy;
   the AI builder isn't yet checked with a real plan.
+- 2026-11-15: AI builder limits by plan (`AI_PLANS_PER_DAY`): Free 2 a day per person across
+  all their Free servers (and 2 per server), Pro 15 and Agency 20 per server. Agency is told
+  apart by the seat (`guild_plans.bundle_id`). The AI builder page shows what's left for the
+  person asking. Bot replies and audit-log reasons say "AI builder" instead of Quartermaster.
+  No migration needed. Not deployed.

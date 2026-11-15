@@ -1,10 +1,10 @@
 import {
+  AI_PLANS_PER_DAY,
+  type AiTier,
+  aiTier,
   costMicros,
   createQmPlan,
-  entitlements,
-  FEATURES,
   finishAiCall,
-  getGuildPlan,
   nextUtcDayStart,
   QM_ATTEMPTS_PER_HOUR,
   type QmBuild,
@@ -81,21 +81,22 @@ export async function planBuild(
   request: string,
 ): Promise<PlanOutcome> {
   await ensureGuild(ctx, guild);
-  const ent = entitlements(await getGuildPlan(ctx.db, guild.id));
+  const tier = await aiTier(ctx.db, guild.id);
+  const daily = AI_PLANS_PER_DAY[tier];
   const model = planner.model ?? DEFAULT_MODEL;
   const reserved = await reserveAiCall(ctx.db, {
     guildId: guild.id,
     feature: "qm",
     requestedBy: requester.id,
     model,
-    dailyCredits: ent["qm.dailyCredits"],
+    dailyCredits: daily,
+    personDailyCredits: tier === "free" ? daily : null,
     attemptsPerHour: QM_ATTEMPTS_PER_HOUR,
     dailyBudgetMicros:
       ctx.qmDailyBudgetUsd === undefined ? null : Math.round(ctx.qmDailyBudgetUsd * 1e6),
     reserveMicros: qmReserveMicros(model),
   });
-  if (!reserved.ok)
-    return { ok: false, error: limitMessage(reserved.reason, ent["qm.dailyCredits"]) };
+  if (!reserved.ok) return { ok: false, error: limitMessage(reserved.reason, daily, tier) };
 
   // Whatever happens below, record what the call used. Only a valid plan keeps the credit.
   let keptCredit = false;
@@ -131,7 +132,10 @@ export async function planBuild(
       build,
       server: snap.server,
       notes: checked.notes,
-      creditsLeft: Math.max(0, ent["qm.dailyCredits"] - reserved.used),
+      creditsLeft: Math.max(
+        0,
+        Math.min(daily - reserved.used, daily - (reserved.personUsed ?? reserved.used)),
+      ),
     };
   } finally {
     await finishAiCall(ctx.db, reserved.id, {
@@ -146,17 +150,21 @@ export async function planBuild(
   }
 }
 
-const PRO_DAILY = FEATURES["qm.dailyCredits"].pro;
-
 /** Why a plan can't start, in plain words. */
-export function limitMessage(reason: "credits" | "hourly" | "budget", daily: number) {
+export function limitMessage(
+  reason: "credits" | "person" | "hourly" | "budget",
+  daily: number,
+  tier: AiTier,
+) {
   const reset = `<t:${Math.floor(nextUtcDayStart().getTime() / 1000)}:R>`;
+  const upgrade =
+    tier === "free" ? ` Garrison Pro gives a server ${AI_PLANS_PER_DAY.pro} a day of its own.` : "";
   if (reason === "credits")
-    return `This server has used today's ${daily} Quartermaster plans. They come back ${reset}.${
-      daily < PRO_DAILY ? ` Garrison Pro gives ${PRO_DAILY} a day.` : ""
-    }`;
+    return `This server has used today's ${daily} AI builder plans. They come back ${reset}.${upgrade}`;
+  if (reason === "person")
+    return `You've used your ${daily} AI builder plans for today on Free servers. They come back ${reset}.${upgrade}`;
   if (reason === "hourly") return "That's a lot of plans in one hour. Try again in a little while.";
-  return `Quartermaster has reached its limit for today across all servers. It's back ${reset}.`;
+  return `The AI builder has reached its limit for today across all servers. It's back ${reset}.`;
 }
 
 export type ApplyOutcome =
@@ -195,7 +203,7 @@ export async function applyBuild(
 
   const ids = new Map<string, string>();
   const created: QmCreated[] = [];
-  const reason = `Quartermaster v${build.version} · requested by ${build.requestedByTag}`;
+  const reason = `AI builder v${build.version} · requested by ${build.requestedByTag}`;
   const resolve = (refOrId: string) => ids.get(refOrId) ?? refOrId;
 
   try {
@@ -280,7 +288,7 @@ export async function undoBuild(
   if (!claimed) return { ok: false, error: `v${build.version} was already undone.` };
 
   const me = guild.members.me ?? (await guild.members.fetchMe());
-  const reason = `Quartermaster: undo v${build.version}`;
+  const reason = `AI builder: undo v${build.version}`;
   let removed = 0;
   let missing = 0;
   let failed = 0;

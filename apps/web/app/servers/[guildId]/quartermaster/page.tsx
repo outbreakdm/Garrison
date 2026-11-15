@@ -1,5 +1,5 @@
 import {
-  aiCreditsUsedToday,
+  aiPlansLeft,
   entitlements,
   getGuildPlan,
   listDashboardActions,
@@ -62,7 +62,7 @@ export default async function QuartermasterPage({
   const query = await searchParams;
   const { guild, session } = await requireGuildAccess(guildId);
   const db = await getDb();
-  const [builds, actions, layout, templates, guildPlan, ownerId, flash, creditsUsed] =
+  const [builds, actions, layout, templates, guildPlan, ownerId, flash, allowance] =
     await Promise.all([
       listQmBuilds(db, guild.id, 25),
       listDashboardActions(db, guild.id, 30),
@@ -71,10 +71,10 @@ export default async function QuartermasterPage({
       getGuildPlan(db, guild.id),
       guildOwnerId(guild.id).catch(() => null),
       readFlash(),
-      aiCreditsUsedToday(db, guild.id, "qm"),
+      aiPlansLeft(db, guild.id, session.userId),
     ]);
   const ent = entitlements(guildPlan);
-  const creditsLeft = Math.max(0, ent["qm.dailyCredits"] - creditsUsed);
+  const creditsLeft = allowance.left;
   const isOwner = ownerId === session.userId;
   const now = Date.now();
   const waiting = (b: QmBuild) =>
@@ -155,8 +155,10 @@ export default async function QuartermasterPage({
             <li>New roles get no permissions</li>
             <li>Nothing is built until you approve the plan</li>
             <li>
-              {creditsLeft} of {ent["qm.dailyCredits"]} plans left today (back at midnight UTC), 20
-              changes a plan
+              {allowance.perPerson
+                ? `${creditsLeft} of your ${allowance.daily} Free plans left today, across all your Free servers`
+                : `${creditsLeft} of ${allowance.daily} plans left today`}{" "}
+              (back at midnight UTC), 20 changes a plan
             </li>
           </ul>
         </form>

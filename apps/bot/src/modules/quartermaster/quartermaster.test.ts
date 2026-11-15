@@ -115,12 +115,16 @@ beforeAll(async () => {
   ctx = { db: t.db, logger: createLogger("error") };
 });
 afterAll(() => close());
-const taner = { id: "1", tag: "taner" };
+/** A requester of its own per test, so Free's per-person count doesn't carry across tests. */
+const asker = (f: { guild: { id: string } }) => ({
+  id: `9${f.guild.id.slice(1)}`,
+  tag: f.guild.id,
+});
 
 describe("Quartermaster end to end", () => {
   it("builds with zero-permission roles and allowlisted channel access, once", async () => {
     const f = fakeGuild("q1");
-    const planned = await planBuild(ctx, stub(sectionPlan), f.guild, taner, "a WARDOGS section");
+    const planned = await planBuild(ctx, stub(sectionPlan), f.guild, asker(f), "a WARDOGS section");
     expect(planned.ok).toBe(true);
     if (!planned.ok) return;
     expect(f.calls).toHaveLength(0); // Planning changes nothing.
@@ -162,7 +166,7 @@ describe("Quartermaster end to end", () => {
         op({ kind: "create_text_channel", ref: "b", name: "b", parent: "not-a-category" }),
       ],
     };
-    const planned = await planBuild(ctx, stub(hostile), f.guild, taner, "anything");
+    const planned = await planBuild(ctx, stub(hostile), f.guild, asker(f), "anything");
     expect(planned).toMatchObject({ ok: false });
     expect(f.calls).toHaveLength(0);
   });
@@ -178,7 +182,7 @@ describe("Quartermaster end to end", () => {
         throw new Error("should not be deleted");
       },
     });
-    const planned = await planBuild(ctx, stub(sectionPlan), f.guild, taner, "a WARDOGS section");
+    const planned = await planBuild(ctx, stub(sectionPlan), f.guild, asker(f), "a WARDOGS section");
     if (!planned.ok) throw new Error("plan failed");
     const applied = await applyBuild(ctx, f.guild, planned.build);
     expect(applied.ok && applied.failed).toBeTruthy();
@@ -197,15 +201,50 @@ describe("Quartermaster end to end", () => {
     });
   });
 
-  it("gives a Free server 3 plans a day, and says when they come back", async () => {
+  it("gives a Free server 2 plans a day, and says when they come back", async () => {
     const f = fakeGuild("q4");
-    for (let i = 0; i < 3; i++)
-      expect((await planBuild(ctx, stub(sectionPlan), f.guild, taner, "x")).ok).toBe(true);
-    const fourth = await planBuild(ctx, stub(sectionPlan), f.guild, taner, "x");
-    expect(fourth).toMatchObject({ ok: false });
-    expect(!fourth.ok && fourth.error).toMatch(
-      /today's 3 Quartermaster plans.*Garrison Pro gives 15/,
+    const [a, b] = [asker(f), { id: "94001", tag: "second admin" }];
+    expect((await planBuild(ctx, stub(sectionPlan), f.guild, a, "x")).ok).toBe(true);
+    expect((await planBuild(ctx, stub(sectionPlan), f.guild, b, "x")).ok).toBe(true);
+    const third = await planBuild(ctx, stub(sectionPlan), f.guild, a, "x");
+    expect(third).toMatchObject({ ok: false });
+    expect(!third.ok && third.error).toMatch(
+      /today's 2 AI builder plans.*Garrison Pro gives a server 15 a day/,
     );
+  });
+
+  it("counts Free per person across all their Free servers", async () => {
+    const [one, two, three] = [fakeGuild("q8"), fakeGuild("q9"), fakeGuild("q10")];
+    const owner = { id: "98000", tag: "owner" };
+    expect((await planBuild(ctx, stub(sectionPlan), one.guild, owner, "x")).ok).toBe(true);
+    const second = await planBuild(ctx, stub(sectionPlan), two.guild, owner, "x");
+    expect(second).toMatchObject({ ok: true, creditsLeft: 0 });
+    const third = await planBuild(ctx, stub(sectionPlan), three.guild, owner, "x");
+    expect(!third.ok && third.error).toMatch(/your 2 AI builder plans for today on Free servers/);
+    // Someone else can still use the third server's own 2.
+    const other = { id: "98001", tag: "other" };
+    expect((await planBuild(ctx, stub(sectionPlan), three.guild, other, "x")).ok).toBe(true);
+  });
+
+  it("gives an Agency seat 20 a day, and Pro 15, counted per server", async () => {
+    const { planBundles } = schema;
+    const f = fakeGuild("q11");
+    await upsertGuild(ctx.db, { id: "q11", name: "q11" });
+    const [bundle] = await ctx.db
+      .insert(planBundles)
+      .values({ ownerId: "98100", seats: 5, source: "comp" })
+      .returning({ id: planBundles.id });
+    await ctx.db
+      .insert(schema.guildPlans)
+      .values({ guildId: "q11", plan: "pro", bundleId: bundle?.id });
+    const { aiPlansLeft } = await import("@garrison/db");
+    expect(await aiPlansLeft(ctx.db, "q11", "98100")).toMatchObject({
+      tier: "agency",
+      daily: 20,
+      left: 20,
+    });
+    const first = await planBuild(ctx, stub(sectionPlan), f.guild, asker(f), "x");
+    expect(first).toMatchObject({ ok: true, creditsLeft: 19 });
   });
 
   it("lets a Pro server past Free's 3, up to 10 an hour", async () => {
@@ -213,8 +252,8 @@ describe("Quartermaster end to end", () => {
     await upsertGuild(ctx.db, { id: "q5", name: "q5" });
     await ctx.db.insert(schema.guildPlans).values({ guildId: "q5", plan: "pro" });
     for (let i = 0; i < 10; i++)
-      expect((await planBuild(ctx, stub(sectionPlan), f.guild, taner, "x")).ok).toBe(true);
-    const eleventh = await planBuild(ctx, stub(sectionPlan), f.guild, taner, "x");
+      expect((await planBuild(ctx, stub(sectionPlan), f.guild, asker(f), "x")).ok).toBe(true);
+    const eleventh = await planBuild(ctx, stub(sectionPlan), f.guild, asker(f), "x");
     expect(!eleventh.ok && eleventh.error).toMatch(/lot of plans in one hour/);
   });
 
@@ -228,13 +267,13 @@ describe("Quartermaster end to end", () => {
       }),
     };
     for (let i = 0; i < 9; i++)
-      expect(await planBuild(ctx, failing, f.guild, taner, "x")).toMatchObject({ ok: false });
+      expect(await planBuild(ctx, failing, f.guild, asker(f), "x")).toMatchObject({ ok: false });
     // Failures used no credits.
     expect(await aiCreditsUsedToday(ctx.db, "q6", "qm")).toBe(0);
-    expect((await planBuild(ctx, stub(sectionPlan), f.guild, taner, "x")).ok).toBe(true);
+    expect((await planBuild(ctx, stub(sectionPlan), f.guild, asker(f), "x")).ok).toBe(true);
     expect(await aiCreditsUsedToday(ctx.db, "q6", "qm")).toBe(1);
     // But every attempt counts toward 10 an hour, and failures' cost is kept.
-    const blocked = await planBuild(ctx, stub(sectionPlan), f.guild, taner, "x");
+    const blocked = await planBuild(ctx, stub(sectionPlan), f.guild, asker(f), "x");
     expect(!blocked.ok && blocked.error).toMatch(/lot of plans in one hour/);
     const spend = await aiSpendSince(ctx.db, new Date(Date.now() - 60_000));
     expect(spend.dollars).toBeCloseTo(9 * 0.00055, 6);
@@ -243,7 +282,7 @@ describe("Quartermaster end to end", () => {
   it("stops every server once the day's budget is spent", async () => {
     const f = fakeGuild("q7");
     const capped = { ...ctx, qmDailyBudgetUsd: 0.000001 };
-    const outcome = await planBuild(capped, stub(sectionPlan), f.guild, taner, "x");
+    const outcome = await planBuild(capped, stub(sectionPlan), f.guild, asker(f), "x");
     expect(!outcome.ok && outcome.error).toMatch(/limit for today across all servers/);
   });
 });

@@ -124,14 +124,15 @@ export class ClaudePlanner implements Planner {
       return { ok: true, plan: response.parsed_output, model: response.model, usage };
     } catch (error) {
       if (error instanceof Anthropic.RateLimitError)
-        return { ok: false, error: "Quartermaster is busy. Try again in a minute." };
+        return { ok: false, error: "The AI builder is busy. Try again in a minute." };
       if (
         error instanceof Anthropic.AuthenticationError ||
         error instanceof Anthropic.PermissionDeniedError
       ) {
         return {
           ok: false,
-          error: "Quartermaster's Claude API key was rejected. The bot's operator needs to fix it.",
+          error:
+            "The AI builder's Claude API key was rejected. The bot's operator needs to fix it.",
         };
       }
       if (error instanceof Anthropic.APIError)

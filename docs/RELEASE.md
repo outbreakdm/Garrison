@@ -107,8 +107,9 @@ Discord's 680×240 at 2x).
       accounts on Game accounts. Without them the Battle.net button is hidden.
 - [ ] `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET` (Cloudflare Turnstile): a bot check on the
       web verification page. Without them verification still works, with no captcha.
-- [ ] Free AI pool (code, not built): split `QM_DAILY_BUDGET_USD` so Free servers can never
-      use up the AI budget paid servers rely on. See `docs/pricing.md`.
+- [x] Free AI limit per person (built 2026-11-15): 2 plans a day across all of someone's Free
+      servers, Pro 15 and Agency 20 per server. A separate Free budget pool is optional; see
+      `docs/pricing.md`.
 - [ ] Ask existing servers to grant Move Members (voice rooms) or re-invite; `/health` flags it.
 - [ ] Have a lawyer read the Terms, Privacy and Refund pages.
 

@@ -59,11 +59,11 @@ export async function doTemplateSave(
   });
   if (!saved)
     return fail(
-      `You have ${TEMPLATES_PER_USER} templates already. Delete one on the Quartermaster page first.`,
+      `You have ${TEMPLATES_PER_USER} templates already. Delete one on the AI builder page first.`,
     );
   return {
     ok: true,
-    message: `Saved "${saved.name}": ${data.roles.length} roles and ${data.channels.length} channels. Apply it from Quartermaster in another server you own.`,
+    message: `Saved "${saved.name}": ${data.roles.length} roles and ${data.channels.length} channels. Apply it from the AI builder in another server you own.`,
   };
 }
 

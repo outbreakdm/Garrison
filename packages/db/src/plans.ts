@@ -10,6 +10,18 @@
 export const PLANS = ["free", "pro"] as const;
 export type GuildPlan = (typeof PLANS)[number];
 
+/** What a server's AI use is counted under: Agency is Pro from a seat (guild_plans.bundle_id). */
+export type AiTier = GuildPlan | "agency";
+
+/**
+ * AI builder plans a day. Pro and Agency count per server. Free counts per server and also
+ * per person across every Free server they ask from, so extra servers don't add free AI.
+ */
+export const AI_PLANS_PER_DAY = { free: 2, pro: 15, agency: 20 } as const satisfies Record<
+  AiTier,
+  number
+>;
+
 /**
  * What each plan costs and the few lines that sell it. One place for every price: the
  * landing page, the Plan page and the account page read this. Agency is Pro on up to
@@ -25,7 +37,7 @@ export const PRICING = {
     highlights: [
       "Moderation, anti-raid, anti-nuke, verification and logs, in full",
       "Every module with the standard look and sensible limits",
-      "3 AI builder plans a day",
+      "2 AI builder plans a day",
       "Undo and history on every change",
     ],
   },
@@ -52,7 +64,7 @@ export const PRICING = {
     highlights: [
       "Everything in Pro, on each of 5 servers",
       "Put a server in a seat, or free it, from its Plan page",
-      "15 AI builder plans a day on each server",
+      "20 AI builder plans a day on each server",
       "One bill: $7.00 a server a month",
     ],
   },
@@ -314,9 +326,10 @@ export const FEATURES = {
   },
   "qm.dailyCredits": {
     module: "qm",
-    about: "Quartermaster plans a day (each plan or change asked for uses one)",
-    free: 3,
-    pro: 15,
+    about:
+      "AI builder plans a day, each up to 20 changes (Agency: 20 a day on each server; Free: 2 a day per person across all their servers)",
+    free: AI_PLANS_PER_DAY.free,
+    pro: AI_PLANS_PER_DAY.pro,
   },
   "rally.templates": {
     module: "rally",

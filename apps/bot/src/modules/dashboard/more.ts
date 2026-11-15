@@ -327,7 +327,7 @@ export async function doQmPlan(ctx: BotContext, guild: Guild, member: GuildMembe
   const p = qmPlan.safeParse(raw);
   if (!p.success) return fail("Describe what to build, in 500 characters or fewer.");
   if (!ctx.planner)
-    return fail("Quartermaster isn't set up on this Garrison: the bot has no Claude API key.");
+    return fail("The AI builder isn't set up on this Garrison: the bot has no Claude API key.");
   const outcome = await planBuild(
     ctx,
     ctx.planner,
