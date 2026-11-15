@@ -4782,3 +4782,99 @@ button.list-rows__remove:focus-visible {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+/* --- Shell: the rail and the phone menu (adapt pass) ------------------------------------
+   The rail is taller than most screens (20 pages in four sections). Sticky alone left its
+   foot hidden until the page itself ended; it now scrolls on its own inside the screen,
+   with a thin themed scrollbar, and keeps the current page in view (ServerNav). On phones
+   the menu bar stays pinned to the top, so another page is one tap away from anywhere on a
+   long page, and the sheet opens over the page as one scrollable column of sections. */
+@media (min-width: 721px) {
+  .shell {
+    --rail-top: 84px;
+  }
+  .shell .g-nav {
+    top: var(--rail-top);
+    max-height: calc(100dvh - var(--rail-top) - var(--space-3));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 6px var(--space-4) 0;
+    margin-right: -6px;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--text-muted) 35%, transparent) transparent;
+    scrollbar-gutter: stable;
+  }
+  .shell .g-nav::-webkit-scrollbar {
+    width: 6px;
+  }
+  .shell .g-nav::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--text-muted) 35%, transparent);
+  }
+  .shell .g-nav::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+/* Laptop heights: a tighter rail that fits whole on most screens before it scrolls. */
+@media (min-width: 721px) and (max-height: 860px) {
+  .shell .g-nav .g-nav__item {
+    min-height: 32px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+  .shell .g-nav .g-nav__group {
+    padding-top: 10px;
+    padding-bottom: 4px;
+  }
+}
+@media (max-width: 720px) {
+  /* Pinned: a full-width band in the page color behind the bar, so content scrolls under it. */
+  .nav-sheet {
+    position: sticky;
+    top: 0;
+    z-index: 9;
+    /* Bleeds to the screen's edges, and still takes the whole row so the page goes below. */
+    flex: 0 0 calc(100% + 2 * var(--space-4));
+    margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-4)) 0;
+    padding: var(--space-2) var(--space-4);
+    background: var(--bg);
+  }
+  .nav-sheet__body {
+    position: absolute;
+    top: calc(100% - var(--space-1));
+    right: var(--space-4);
+    left: var(--space-4);
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+    max-height: calc(100dvh - 72px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    margin-top: 0;
+    box-shadow:
+      var(--shadow-lift),
+      0 24px 48px rgb(0 0 0 / 0.35);
+  }
+  /* Each section as one block: its items two to a row, so no column sits half empty. */
+  .nav-sheet__group {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px var(--space-2);
+  }
+  .nav-sheet__group .g-nav__group {
+    grid-column: 1 / -1;
+    padding: var(--space-1) 4px 2px;
+  }
+  .nav-sheet__item {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .nav-sheet__item:not([aria-current]):hover {
+    background: var(--surface-raised);
+  }
+  .main .page-head h1 {
+    font-size: 26px;
+    line-height: 32px;
+  }
+}

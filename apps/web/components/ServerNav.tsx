@@ -36,11 +36,37 @@ export function ServerNav({ guildId }: { guildId: string }) {
   const pathname = usePathname();
   const base = `/servers/${guildId}`;
   const sheet = useRef<HTMLDetailsElement>(null);
-  // On phones the menu is a sheet behind one button: close it once a page is picked.
+  const rail = useRef<HTMLElement>(null);
+  // On phones the menu is a sheet behind one button: close it once a page is picked. On
+  // wider screens the rail scrolls on its own: keep the current page in view.
   // biome-ignore lint/correctness/useExhaustiveDependencies: re-run when the page changes
   useEffect(() => {
     if (sheet.current) sheet.current.open = false;
+    const nav = rail.current;
+    const here = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!nav || !here || nav.scrollHeight <= nav.clientHeight) return;
+    const top = here.getBoundingClientRect().top - nav.getBoundingClientRect().top + nav.scrollTop;
+    if (top < nav.scrollTop || top + here.offsetHeight > nav.scrollTop + nav.clientHeight)
+      nav.scrollTop = top - nav.clientHeight / 3;
   }, [pathname]);
+  // The open sheet sits over the page: a tap outside it or Escape puts it away.
+  useEffect(() => {
+    const close = (e: Event) => {
+      const el = sheet.current;
+      if (!el?.open) return;
+      if (e instanceof KeyboardEvent) {
+        if (e.key !== "Escape") return;
+        el.open = false;
+        el.querySelector("summary")?.focus();
+      } else if (!el.contains(e.target as Node)) el.open = false;
+    };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", close);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", close);
+    };
+  }, []);
   // Sub-pages (LFG templates, a ticket) keep their module lit.
   const isCurrent = (href: string, own: string) =>
     pathname === href || Boolean(own && pathname.startsWith(`${href}/`));
@@ -59,7 +85,7 @@ export function ServerNav({ guildId }: { guildId: string }) {
   return (
     <>
       {/* Desktop and tablet: the rail, grouped by section, each group led by its gem. */}
-      <nav className="g-nav" aria-label="Server">
+      <nav className="g-nav" aria-label="Server" ref={rail}>
         {/* The section each item sits under, named beside the page title (app.css). */}
         {items.map((item) => (
           <div key={item.name}>
