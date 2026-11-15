@@ -1,6 +1,9 @@
 # Supplies v2: a hard ceiling on AI cost, and supply packs
 
-Proposed 2026-11-15. Not built. Goal: however hard a server uses the AI assistant, its AI
+Proposed and approved 2026-11-15; **built** the same day (commits `6ee8651`, `dff16d2`,
+`caa66e3` and step 4's), not deployed: production needs migrations 0060, 0061 and 0062.
+One change from the proposal: the hold is 14 supplies, not 13, because it also covers the
+prompt cache's write rate (1.25x input) now that caching is on. Goal: however hard a server uses the AI assistant, its AI
 bill stays **under half of what it pays us**, so the other half covers hosting, Stripe,
 disputes and a price change at Anthropic. Measured costs are in `docs/pricing.md`.
 

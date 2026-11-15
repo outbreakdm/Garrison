@@ -228,6 +228,18 @@ ${qmSettingsGuide()}
 
 ${DESIGN}`;
 
+/**
+ * The instructions as a cached block. They're the same on every call and come first (after
+ * the tools), so the API keeps them for 5 minutes and later calls read them back at a tenth
+ * of the price, across every server. Anything that changes per server or per message goes
+ * after them, in the messages.
+ */
+const cachedSystem = (text: string): Anthropic.Beta.BetaTextBlockParam[] => [
+  { type: "text", text, cache_control: { type: "ephemeral" } },
+];
+const PLAN_SYSTEM_BLOCKS = cachedSystem(SYSTEM);
+const CHAT_SYSTEM_BLOCKS = cachedSystem(CHAT_SYSTEM);
+
 /** The snapshot, limits and continuation, as the blocks that open a request. */
 function contextBlocks(input: Omit<PlannerInput, "request">) {
   const snapshot = {
@@ -320,7 +332,7 @@ export class ClaudePlanner implements Planner {
       const response = await this.client.beta.messages.parse({
         ...this.base(input.maxTokens),
         output_config: { effort: "medium", format: betaZodOutputFormat(AiPlanSchema) },
-        system: SYSTEM,
+        system: PLAN_SYSTEM_BLOCKS,
         messages: [{ role: "user", content: blocks }],
       });
       const usage = usageOf(response);
@@ -364,11 +376,14 @@ export class ClaudePlanner implements Planner {
         const response = await this.client.beta.messages.parse({
           ...this.base(input.maxTokens),
           output_config: { effort: "medium", format: betaZodOutputFormat(AiChatSchema) },
-          system: CHAT_SYSTEM,
+          system: CHAT_SYSTEM_BLOCKS,
           ...(read
             ? {
                 tools: READ_TOOLS,
                 tool_choice: lastRound ? { type: "none" as const } : { type: "auto" as const },
+                // With looks, the conversation so far is cached too, so a later round re-reads
+                // the earlier ones from the cache rather than paying for them again.
+                cache_control: { type: "ephemeral" as const },
               }
             : {}),
           messages,
@@ -442,12 +457,19 @@ export class ClaudePlanner implements Planner {
 
 function usageOf(response: {
   model: string;
-  usage: { input_tokens: number; output_tokens: number };
+  usage: {
+    input_tokens: number;
+    output_tokens: number;
+    cache_creation_input_tokens?: number | null;
+    cache_read_input_tokens?: number | null;
+  };
 }): PlannerUsage {
   return {
     model: response.model,
     inputTokens: response.usage.input_tokens,
     outputTokens: response.usage.output_tokens,
+    cacheReadTokens: response.usage.cache_read_input_tokens ?? 0,
+    cacheWriteTokens: response.usage.cache_creation_input_tokens ?? 0,
   };
 }
 
@@ -466,6 +488,8 @@ function addUsage(a: PlannerUsage | undefined, b: PlannerUsage): PlannerUsage {
     model: b.model,
     inputTokens: a.inputTokens + b.inputTokens,
     outputTokens: a.outputTokens + b.outputTokens,
+    cacheReadTokens: (a.cacheReadTokens ?? 0) + (b.cacheReadTokens ?? 0),
+    cacheWriteTokens: (a.cacheWriteTokens ?? 0) + (b.cacheWriteTokens ?? 0),
   };
 }
 

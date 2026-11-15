@@ -4,12 +4,14 @@ import type { ReadTool } from "./tools.js";
 
 type Body = {
   messages: { role: string; content: unknown }[];
+  system?: unknown;
+  cache_control?: unknown;
   tools?: { name: string }[];
   tool_choice?: { type: string };
 };
 
 /** A fake Claude API: answers each request with the next canned response, and keeps the requests. */
-function fakeApi(responses: { content: unknown[]; stop_reason: string }[]) {
+function fakeApi(responses: { content: unknown[]; stop_reason: string; usage?: unknown }[]) {
   const sent: Body[] = [];
   const fetch = (async (_url: unknown, init?: { body?: unknown }) => {
     sent.push(JSON.parse(String(init?.body)));
@@ -92,6 +94,38 @@ describe("the AI assistant chat's read tools", () => {
         { type: "tool_result", tool_use_id: "toolu_1", content: expect.stringContaining("#ideas") },
       ],
     });
+  });
+
+  it("caches the instructions and the rounds, and counts cached tokens apart", async () => {
+    const { planner, sent } = fakeApi([
+      {
+        ...answer("Suggestions are on."),
+        usage: {
+          input_tokens: 500,
+          output_tokens: 100,
+          cache_read_input_tokens: 4000,
+          cache_creation_input_tokens: 0,
+        },
+      },
+    ]);
+    const out = await planner.chat(input(async () => ({ text: "{}", error: false })));
+    expect(sent[0]?.system).toEqual([
+      {
+        type: "text",
+        text: expect.stringContaining("Garrison"),
+        cache_control: { type: "ephemeral" },
+      },
+    ]);
+    expect(sent[0]?.cache_control).toEqual({ type: "ephemeral" });
+    expect(out.usage).toMatchObject({
+      inputTokens: 500,
+      cacheReadTokens: 4000,
+      cacheWriteTokens: 0,
+    });
+    // A one-round message with nothing to look at caches only the instructions.
+    const quick = fakeApi([answer("Hi.")]);
+    await quick.planner.chat(input());
+    expect(quick.sent[0]?.cache_control).toBeUndefined();
   });
 
   it("must answer on the last round, however many looks it wants", async () => {

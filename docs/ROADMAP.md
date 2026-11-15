@@ -886,3 +886,10 @@ Decided (2026-11-12, owner):
   page shows pack supplies and a "Buy supplies" link when low; the out-of-supplies message
   points to the Plan page. Refund Policy: unused packs refunded in full within 14 days.
   Migration 0062. Checked in the local preview (desktop and phone). All checks pass.
+- 2026-11-15: Supplies v2 step 4, prompt caching: the assistant's instructions go as a
+  cached block (5 minutes, read back at a tenth of the price across every server), and a
+  chat message that can look at settings also caches its rounds. `ai_usage` records cached
+  tokens and prices them at the cache's rates. Not yet checked against the real API. Supplies
+  v2 is built (steps 1 to 4); not deployed: production needs migrations 0060, 0061 and 0062
+  before the code. Docs (`AI_SUPPLIES_V2.md`, `pricing.md`, `GO-LIVE.md`) updated. All checks
+  pass (558 tests).

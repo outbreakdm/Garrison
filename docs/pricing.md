@@ -37,12 +37,26 @@ them together. Below $8 it reads as a hobby add-on; above $10 it competes with M
 
 ## Does it pay for AI?
 
-AI is the only cost that grows with use (Claude Haiku 5.5, `docs/ai-costs.md`). Since
-2026-11-15 the AI builder has one daily currency, **supplies** (`AI_SUPPLIES_PER_DAY` in
-`packages/db/src/plans.ts`, design in `docs/AI_ASSISTANT.md`). Every AI call (a chat message, a
-plan, a revision) costs 3, because each is a paid model call; every change a plan makes costs 1.
-A full plan is 23 (the message plus 20 changes). Failed calls and discarded or expired plans
-give their supplies back.
+AI is the only cost that grows with use (Claude Haiku 5.5, `docs/ai-costs.md`). Since supplies
+v2 (2026-11-15, `docs/AI_SUPPLIES_V2.md`) the AI assistant runs on **supplies** from a monthly
+pool (`AI_SUPPLIES_PER_MONTH` in `packages/db/src/plans.ts`): Free 200 per person, Pro 3,000
+per server, Agency 13,000 shared. A supply is $0.001 of AI: every AI call is charged what it
+really cost, rounded up (about 3 for a typical message), and every change a plan makes costs 1.
+So a pool can never cost more than its size in tenths of a cent, whatever the use:
+
+| Plan or pack | Worst-case AI | Brings in (after Stripe) | Share |
+|---|---|---|---|
+| Pro, a month | $3.00 | $6.45 (yearly) to $8.43 (monthly) | 36 to 47% |
+| Agency, a month | $13.00 | $28.30 to $33.68 | 39 to 46% |
+| Pack, 1,000 supplies | $1.00 | $2.60 | 38% |
+| Pack, 5,000 supplies | $5.00 | $11.34 | 44% |
+| Free, a month per person | $0.20 | $0 | n/a |
+
+A message holds the most it can cost while it runs (14 supplies: 3 rounds of 12,000 tokens in
+at the cache-write rate and 6,000 out) and gives back what it didn't use. Failed calls are
+charged what they used; plans Garrison's checks refuse are free; discarded and expired plans
+give their changes back. The tables below are from before supplies v2, when supplies were daily
+and a message was a flat 3; they show why the ceiling was needed.
 
 ### What a message really costs (measured 2026-11-15)
 
@@ -93,25 +107,26 @@ day across all servers, and it pauses the assistant for everyone when it's reach
 1. **Prompt caching** (free, no quality change). The instructions, schema and tools (~4,900
    tokens) are the same on every call and come first, so they can be cached and re-read at a
    tenth of the price for 5 minutes, across all servers. About 15 to 20% off a one-round
-   message and more on messages that look at settings first, and replies start sooner. Not
-   built yet.
-2. **A correct budget hold.** The bot holds 4 × `qmReserveMicros` per chat message, which
-   assumes 6,000 input tokens a round (`QM_MAX_INPUT_TOKENS`); a round now takes 6,500 to
-   12,000. Raising it to 12,000 makes the hold $0.0168, covering the worst case. Not built yet.
+   message and more on messages that look at settings first, and replies start sooner.
+   **Built** (supplies v2 step 4): the instructions are a cached block, and a message that
+   looks at settings also caches its rounds. Under metering the savings go to admins as more
+   messages. Not yet checked against the real API: `ai_usage.cache_read_tokens` should be
+   above zero on the second message within 5 minutes.
+2. **A correct budget hold.** **Built** (supplies v2): `QM_MAX_INPUT_TOKENS` is 12,000, chat
+   messages have at most 3 rounds, and the hold is the worst case, $0.0135 (14 supplies).
 3. **Lower reasoning effort for chat** (`effort: "low"`, now `"medium"`). Output is about 75%
    of the cost, so this is the biggest lever, but it can make plans worse: test it on real
    conversations before switching.
-4. **Price, if real use trends toward the cap:** raise `AI_SUPPLIES_PER_MESSAGE` from 3 to 4
-   (Pro becomes 75 messages a day; typical full use $5.85). The supplies a day can stay as
-   sold. Raise `QM_DAILY_BUDGET_USD` as paying servers grow, about $0.30 a day per Pro server.
+4. **Price:** no longer needed for safety, since metering caps the cost. Pool sizes and pack
+   prices live in `plans.ts` (`AI_SUPPLIES_PER_MONTH`, `SUPPLY_PACKS`).
 
-**The one real exposure is Free.** Free brings in nothing, so since 2026-11-15 it's counted per
-person: 40 supplies a day across every Free server someone asks from (and the same per
-server), so making more servers doesn't make more free AI. At worst that's $6.24 a month per
-active person, about $1 at typical message sizes. The global cap (`QM_DAILY_BUDGET_USD`, $5 a day, $150 a month) still bounds the total.
-If Free ever crowds paid servers out of that cap, split it into a Free pool and a paid pool;
-not built, as per-person limits make it unlikely. The limits live in `AI_SUPPLIES_PER_DAY`
-(`packages/db/src/plans.ts`).
+**Free** brings in nothing, so it's counted per person: 200 supplies a month across every Free
+server someone asks from (and the same per server), so making more servers doesn't make more
+free AI. At worst that's $0.20 a month per active person. The global daily budget is a circuit
+breaker for a runaway, not an allowance: `QM_DAILY_BUDGET_USD` (default $2) plus $0.30 a day per
+Pro server, $1.30 per Agency plan and everything in packs bought that week, so normal use can't
+trip it. If Free ever crowds paid servers out of it, split it into a Free pool and a paid pool;
+not built, as per-person limits make it unlikely.
 
 ## What's built now (2026-11-13)
 
