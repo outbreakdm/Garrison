@@ -141,16 +141,19 @@ export function FormPanel({
   title,
   hint,
   open,
+  className,
   children,
 }: {
   id: string;
   title: string;
   hint: string;
   open: boolean;
+  /** Extra classes: `item-tile item-tile--new` draws it as a grid's "make a new one" tile. */
+  className?: string;
   children: ReactNode;
 }) {
   return (
-    <details className="g-card panel" id={id} open={open}>
+    <details className={`g-card panel${className ? ` ${className}` : ""}`} id={id} open={open}>
       <summary className="panel__summary">
         <span className="panel__title panel__title--lg">{title}</span>
         <span className="panel__hint">{hint}</span>

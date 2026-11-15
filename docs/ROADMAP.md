@@ -912,3 +912,9 @@ Decided (2026-11-12, owner):
   tree with New marks, Apply build). Checked locally on desktop, phone and light theme. Not
   deployed. Next: phase 3, module pages as panels with header bars and editors beside live
   previews, then DESIGN.md.
+- 2026-11-15: Console redesign phase 3: every panel's first line is a header bar (section
+  gem in a tinted tile, title, count pill, action on the right) across all module pages;
+  Role menus and Messages show saved items as a tile grid with a dashed "new" tile, opening
+  across the row to edit; Welcome's preview stays in view and its variables are colored
+  chips. DESIGN.md and `.impeccable/design.json` rewritten for the Console world. Checked
+  locally on desktop and phone (no sideways scroll). Not deployed.

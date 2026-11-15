@@ -1,11 +1,11 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-13T13:31:20Z",
+  "generatedAt": "2026-11-15T23:59:00Z",
   "title": "Design System: Garrison",
   "extensions": {
     "world": {
-      "name": "Card Table",
-      "seed": "d5461997",
+      "name": "Console",
+      "seed": null,
       "routes": [
         "/servers",
         "/servers/[guildId]/**",
@@ -16,7 +16,7 @@
         "404 (not-found)"
       ],
       "outOfScope": "The landing page (/, app/landing.css, Gabarito and Geist) keeps its own world and is not documented here.",
-      "replaces": "The night-watch HUD world (Saira Semi Condensed, Inter, JetBrains Mono, #08090c ground, chamfers, HUD corner brackets, lock-on and glint motion).",
+      "replaces": "Card Table (2026-11-13): slate-blue table, tinted card faces, identity-colored primary buttons.",
       "sources": [
         "packages/brand/css/tokens.css",
         "packages/brand/css/components.css (g- prefix)",
@@ -25,12 +25,17 @@
         "apps/web/app/layout.tsx (next/font Archivo, wdth axis)",
         "apps/web/components/ServerNav.tsx",
         "apps/web/components/DurationBar.tsx",
-        "apps/web/components/EmptyState.tsx"
+        "apps/web/components/EmptyState.tsx",
+        "apps/web/app/console.css (loaded last)",
+        "apps/web/components/ServerSwitcher.tsx",
+        "apps/web/components/PlanFoot.tsx",
+        "apps/web/components/ScrollToEnd.tsx"
       ],
       "themes": [
         "dark (default)",
         "light"
-      ]
+      ],
+      "pinnedBy": "Owner, 2026-11-15: our own style with heavy Peak Bot inspiration"
     },
     "identities": {
       "mechanism": ".shell reads the current nav item's data-id and sets --id, --id-ink, --id-text, which feed --accent, --accent-ink, --accent-strong and --focus.",
@@ -946,41 +951,11 @@
         "purpose": "Diffs and code only (--font-code)."
       }
     },
-    "shadows": [
-      {
-        "name": "card",
-        "value": "0 1px 0 rgb(255 255 255 / 0.04) inset, 0 2px 6px -2px rgb(4 7 20 / 0.55)",
-        "light": "0 1px 2px rgb(20 26 46 / 0.06), 0 2px 8px -4px rgb(20 26 46 / 0.1)",
-        "purpose": "Every card face, current nav item, LFG card."
-      },
-      {
-        "name": "lift",
-        "value": "0 1px 0 rgb(255 255 255 / 0.06) inset, 0 16px 32px -14px rgb(4 7 20 / 0.8)",
-        "light": "0 2px 4px rgb(20 26 46 / 0.06), 0 16px 32px -14px rgb(20 26 46 / 0.24)",
-        "purpose": "Server tile hover/focus with a 2px rise."
-      },
-      {
-        "name": "overlay",
-        "value": "0 12px 32px -6px rgb(4 7 20 / 0.7)",
-        "light": "0 12px 32px -8px rgb(20 26 46 / 0.22)",
-        "purpose": "Dialogs."
-      },
-      {
-        "name": "primary-button",
-        "value": "0 1px 0 rgb(255 255 255 / 0.18) inset, 0 1px 2px rgb(4 7 20 / 0.3)",
-        "purpose": "Primary button highlight."
-      },
-      {
-        "name": "open-panel",
-        "value": "0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent), var(--shadow-card)",
-        "purpose": "An open settings panel: identity ring around the card shadow."
-      },
-      {
-        "name": "pro-tag",
-        "value": "0 0 0 1px rgb(123 69 214 / 0.28), 0 1px 2px rgb(20 26 46 / 0.18)",
-        "purpose": "Foil tag outline."
-      }
-    ],
+    "shadows": {
+      "card": "none",
+      "lift": "0 1px 0 rgb(255 255 255 / 0.04) inset, 0 18px 40px -16px rgb(0 0 0 / 0.75)",
+      "overlay": "0 16px 40px -8px rgb(0 0 0 / 0.7)"
+    },
     "focus": {
       "value": "outline: 2px solid var(--focus); outline-offset: 2px",
       "purpose": "--focus is the page's identity text tone."
@@ -1090,6 +1065,11 @@
       "cardGap": "16px",
       "measure": "68ch",
       "grid": "8px (4px fine steps)"
+    },
+    "signature": {
+      "name": "Header bar",
+      "rule": "A panel's first child (.card-title, .card-head, .queue__head, .row-between) becomes a 52px bar over a hairline, led by the section gem in a tinted tile; table heads and settings rows match.",
+      "css": "apps/web/app/console.css, 'Panel header bars (phase 3)'"
     }
   },
   "components": [

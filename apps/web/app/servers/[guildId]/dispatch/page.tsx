@@ -103,102 +103,108 @@ export default async function MessagesPage({
 
       <RequestsPanel guildId={guild.id} kinds={["post_message"]} query={query} />
 
-      <FormPanel
-        id="new"
-        title="New message"
-        hint={
-          full
-            ? `${MESSAGE_LIMITS.saved} messages saved: remove one first`
-            : "Start from a ready-made card"
-        }
-        open={messages.length === 0 || editing === "new"}
-      >
-        <form action={addMessage} className="card-col">
-          <input type="hidden" name="guildId" value={guild.id} />
-          <div className="preset-grid" role="radiogroup" aria-label="Start from">
-            {Object.entries(MESSAGE_PRESETS).map(([key, p], i) => (
-              <label className="preset" key={key}>
-                <input type="radio" name="preset" value={key} defaultChecked={i === 0} />
-                <span className="preset__body">
-                  <span className="preset__name">{p.name}</span>
-                  <span className="preset__title">{p.card.title}</span>
+      <div className="item-grid">
+        {messages.map((m) => {
+          const next = m.schedule && !paused.has(m.id) ? nextOccurrence(m.schedule, tz) : null;
+          const sent = last.get(m.id);
+          const facts = [
+            m.schedule
+              ? `${REPEAT[m.schedule.repeat]}${m.channelId ? ` in #${channelName.get(m.channelId) ?? "deleted-channel"}` : ""}`
+              : "Not scheduled",
+            next ? `Next ${when(next)}` : null,
+            sent ? `Last sent ${when(sent)}` : "Never sent",
+          ].filter((f): f is string => Boolean(f));
+          return (
+            <details
+              className="g-card panel item-tile"
+              id={m.id}
+              key={`${m.id}-${contentKey(m)}`}
+              open={editing === m.id}
+            >
+              <summary className="panel__summary">
+                <span className="item-tile__mark" aria-hidden="true" />
+                <span className="panel__title panel__title--lg">{m.name}</span>
+                {paused.has(m.id) ? <span className="g-badge g-badge--caution">Paused</span> : null}
+                <span className="panel__facts">
+                  {facts.map((f) => (
+                    <span className="fact" key={f}>
+                      {f}
+                    </span>
+                  ))}
                 </span>
-              </label>
-            ))}
-          </div>
-          <div className="field-row">
-            <label className="g-field">
-              <span>Name</span>
-              <input
-                className="g-input"
-                name="name"
-                maxLength={MESSAGE_LIMITS.name}
-                placeholder="Keeps the starting point's name"
-              />
-            </label>
-          </div>
-          <div className="form-foot">
-            <button type="submit" className="g-btn g-btn--primary" disabled={full}>
-              Add message
-            </button>
-            {plan === "free" ? (
-              <span className="g-help">
-                Free servers schedule {limit} messages, once each. Pro schedules{" "}
-                {SCHEDULED_HARD_MAX}, repeats them daily or weekly, and adds link buttons.
-              </span>
-            ) : null}
-          </div>
-        </form>
-      </FormPanel>
-
-      {messages.map((m) => {
-        const next = m.schedule && !paused.has(m.id) ? nextOccurrence(m.schedule, tz) : null;
-        const sent = last.get(m.id);
-        const facts = [
-          m.schedule
-            ? `${REPEAT[m.schedule.repeat]}${m.channelId ? ` in #${channelName.get(m.channelId) ?? "deleted-channel"}` : ""}`
-            : "Not scheduled",
-          next ? `Next ${when(next)}` : null,
-          sent ? `Last sent ${when(sent)}` : "Never sent",
-        ].filter((f): f is string => Boolean(f));
-        return (
-          <details
-            className="g-card panel"
-            id={m.id}
-            key={`${m.id}-${contentKey(m)}`}
-            open={editing === m.id}
-          >
-            <summary className="panel__summary">
-              <span className="panel__title panel__title--lg">{m.name}</span>
-              {paused.has(m.id) ? <span className="g-badge g-badge--caution">Paused</span> : null}
-              <span className="panel__facts">
-                {facts.map((f) => (
-                  <span className="fact" key={f}>
-                    {f}
+                <span className={`item-tile__state g-badge${next ? " g-badge--go" : ""}`}>
+                  {next ? "Scheduled" : sent ? "Sent" : "Draft"}
+                </span>
+                <span className="panel__cue" aria-hidden="true" />
+              </summary>
+              <div className="panel__body">
+                <MessageEditor
+                  guildId={guild.id}
+                  saved={m}
+                  ent={ent}
+                  channels={channels}
+                  roleNames={roleNames}
+                  tz={tz}
+                  nextSend={next ? when(next) : null}
+                  paused={paused.has(m.id)}
+                  planHref={`/servers/${guild.id}/plan`}
+                  saveAction={saveMessage}
+                  removeAction={removeMessage}
+                  requestAction={requestAction}
+                />
+              </div>
+            </details>
+          );
+        })}
+        <FormPanel
+          className="item-tile item-tile--new"
+          id="new"
+          title="New message"
+          hint={
+            full
+              ? `${MESSAGE_LIMITS.saved} messages saved: remove one first`
+              : "Start from a ready-made card"
+          }
+          open={messages.length === 0 || editing === "new"}
+        >
+          <form action={addMessage} className="card-col">
+            <input type="hidden" name="guildId" value={guild.id} />
+            <div className="preset-grid" role="radiogroup" aria-label="Start from">
+              {Object.entries(MESSAGE_PRESETS).map(([key, p], i) => (
+                <label className="preset" key={key}>
+                  <input type="radio" name="preset" value={key} defaultChecked={i === 0} />
+                  <span className="preset__body">
+                    <span className="preset__name">{p.name}</span>
+                    <span className="preset__title">{p.card.title}</span>
                   </span>
-                ))}
-              </span>
-              <span className="panel__cue" aria-hidden="true" />
-            </summary>
-            <div className="panel__body">
-              <MessageEditor
-                guildId={guild.id}
-                saved={m}
-                ent={ent}
-                channels={channels}
-                roleNames={roleNames}
-                tz={tz}
-                nextSend={next ? when(next) : null}
-                paused={paused.has(m.id)}
-                planHref={`/servers/${guild.id}/plan`}
-                saveAction={saveMessage}
-                removeAction={removeMessage}
-                requestAction={requestAction}
-              />
+                </label>
+              ))}
             </div>
-          </details>
-        );
-      })}
+            <div className="field-row">
+              <label className="g-field">
+                <span>Name</span>
+                <input
+                  className="g-input"
+                  name="name"
+                  maxLength={MESSAGE_LIMITS.name}
+                  placeholder="Keeps the starting point's name"
+                />
+              </label>
+            </div>
+            <div className="form-foot">
+              <button type="submit" className="g-btn g-btn--primary" disabled={full}>
+                Add message
+              </button>
+              {plan === "free" ? (
+                <span className="g-help">
+                  Free servers schedule {limit} messages, once each. Pro schedules{" "}
+                  {SCHEDULED_HARD_MAX}, repeats them daily or weekly, and adds link buttons.
+                </span>
+              ) : null}
+            </div>
+          </form>
+        </FormPanel>
+      </div>
     </>
   );
 }

@@ -684,3 +684,214 @@ a.g-btn--primary:hover {
   padding-top: 0;
   border-top: 0;
 }
+
+/* Table panels already have a head row; it gets the same tile and count pill. */
+.table-card__head > .card-title::before {
+  content: "";
+  flex: none;
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin: 0 18px 0 9px;
+  border-radius: 2px;
+  background: var(--id-text, var(--accent-strong));
+  box-shadow: 0 0 0 9px color-mix(in srgb, var(--id, var(--accent)) 14%, var(--surface-raised));
+  transform: rotate(45deg) translateY(-1px);
+  vertical-align: middle;
+}
+.table-card__head .count {
+  margin-left: 0;
+  padding: 1px 7px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* --- Panel header bars (phase 3) ------------------------------------------------------------
+   The signature: a panel's first line is its header bar, full width over a hairline, led by
+   a tile in the page's section color, its title, then its count, state or action on the
+   right. Applied to every panel whose first child is its title or title row. */
+.g-card:not(.panel, .table-card, .qm-plan, .qm-chat, .plan-now, .supplies)
+  > :is(.card-title, .card-head, .queue__head, .row-between):first-child {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  min-height: 52px;
+  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) var(--space-1);
+  padding: 10px var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+.g-card:not(.panel, .table-card, .qm-plan, .qm-chat, .plan-now, .supplies)
+  > :is(.card-head, .queue__head, .row-between):first-child {
+  justify-content: space-between;
+}
+/* The tile: the section gem on a tinted square, before the title. */
+.g-card > .card-title:first-child::before,
+.g-card > :is(.card-head, .queue__head, .row-between):first-child > .card-title::before {
+  content: "";
+  flex: none;
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin: 0 18px 0 9px;
+  border-radius: 2px;
+  background: var(--id-text, var(--accent-strong));
+  box-shadow: 0 0 0 9px color-mix(in srgb, var(--id, var(--accent)) 14%, var(--surface-raised));
+  transform: rotate(45deg) translateY(-1px);
+  vertical-align: middle;
+}
+.g-card > :is(.card-head, .queue__head, .row-between):first-child > .card-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-2);
+}
+.g-card > .card-title:first-child .count,
+.g-card > :is(.card-head, .queue__head, .row-between):first-child .count {
+  margin-left: 0;
+  padding: 1px 7px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  font-size: 12px;
+  line-height: 18px;
+}
+.table-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  min-height: 52px;
+  padding: 10px var(--space-4);
+}
+
+/* --- Saved items as tiles (Role menus, Messages) -------------------------------------------
+   Each saved item is a tile: its mark, name, facts and whether it's out in Discord. The last
+   tile is dashed: make a new one. Opening a tile spreads it across the row to edit. */
+.item-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-4);
+  align-items: stretch;
+}
+.item-grid > .panel[open] {
+  grid-column: 1 / -1;
+}
+.item-tile__mark {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--id, var(--accent)) 14%, var(--surface-raised));
+}
+.item-tile:not([open]) > .panel__summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "mark title"
+    "facts facts"
+    "state state";
+  align-content: start;
+  gap: var(--space-2) var(--space-3);
+  min-height: 132px;
+  padding: var(--space-4);
+}
+.item-tile:not([open]) .item-tile__mark {
+  grid-area: mark;
+}
+.item-tile:not([open]) .panel__title {
+  grid-area: title;
+  align-self: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.item-tile:not([open]) .panel__facts {
+  grid-area: facts;
+  display: grid;
+  gap: 2px;
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+.item-tile:not([open]) .item-tile__state {
+  grid-area: state;
+  justify-self: start;
+  align-self: end;
+}
+.item-tile:not([open]) .panel__cue,
+.item-tile:not([open]) > .panel__summary > .g-badge--caution {
+  display: none;
+}
+.item-tile__mark::after {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--id-text, var(--accent-strong));
+  transform: rotate(45deg);
+}
+.item-tile[open] .item-tile__state {
+  display: none;
+}
+/* The new tile: dashed, a plus in a square, its hint underneath. */
+.item-tile--new:not([open]) {
+  border-style: dashed;
+  border-color: var(--line-strong);
+  background: none;
+}
+.item-tile--new:not([open]) > .panel__summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 132px;
+  text-align: center;
+}
+.item-tile--new:not([open]) > .panel__summary::before {
+  content: "+";
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1;
+}
+.item-tile--new:not([open]) .panel__hint {
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+.item-tile--new:not([open]) .panel__cue {
+  display: none;
+}
+
+/* --- Editors beside their preview ------------------------------------------------------------ */
+.console .preview-pane {
+  top: 76px;
+}
+/* Placeholders as chips, each its own color, like the tokens they stand for. */
+.placeholder {
+  padding: 1px 6px;
+  border: 1px solid color-mix(in srgb, var(--chip, var(--cobalt)) 45%, transparent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--chip, var(--cobalt)) 14%, transparent);
+  color: color-mix(in srgb, var(--chip, var(--cobalt)) 70%, var(--text));
+}
+.g-help > span:nth-child(5n + 2) .placeholder {
+  --chip: var(--orchid);
+}
+.g-help > span:nth-child(5n + 3) .placeholder {
+  --chip: var(--go);
+}
+.g-help > span:nth-child(5n + 4) .placeholder {
+  --chip: var(--intel);
+}
+.g-help > span:nth-child(5n + 5) .placeholder {
+  --chip: var(--caution);
+}
