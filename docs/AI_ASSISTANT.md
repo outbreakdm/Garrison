@@ -30,7 +30,10 @@ changes, nothing happens until they build it, and every build can be undone.
 | | Free | Pro | Agency |
 |---|---|---|---|
 | Supplies a day | 40 per person, across all their Free servers (and 40 per server) | 300 | 400 on each server |
-| That's about | 2 full plans, or 13 messages | 15 full plans, or 100 messages | 20 full plans, or 133 messages |
+| That's about | 1 full plan, or 13 messages | 13 full plans, or 100 messages | 17 full plans, or 133 messages |
+
+A full plan is 23 supplies: the message that drafts it (3) and its 20 changes. The table's
+first draft counted 20 a plan; the page and pricing show the honest 23.
 
 **What costs what**
 
@@ -50,8 +53,8 @@ changes, nothing happens until they build it, and every build can be undone.
 become supplies. Hidden safety limits stay: 10 AI calls an hour per server, and the global
 daily AI budget (`QM_DAILY_BUDGET_USD`, $5) that pauses the assistant for everyone if reached.
 
-**Where it shows:** the rail on the assistant page ("240 supplies left today · about 12 full
-plans or 80 messages", the gauge cut into 20-supply segments), the send button ("3 supplies"),
+**Where it shows:** the rail on the assistant page ("240 of 300 left · enough for about 10
+full plans or 80 messages", the gauge cut into 20-supply segments), the send button ("3 supplies"),
 every plan ("Uses 12 supplies"), the plan cards on the landing page and Plan page ("300
 supplies a day: 15 full plans or 100 messages"), and the Refund Policy (Free allows 40 a day).
 
@@ -131,10 +134,10 @@ bot role can't, for most modules. Two ways to let a build apply settings:
 
 ## Phases
 
-1. **Supplies.** Replace the change, request and chat allowances with one supplies balance
-   (`AI_SUPPLIES_PER_DAY`, message 3, change 1), counted from `ai_usage` and `qm_builds`.
-   Update the rail, send button, plan cards, landing, Plan page, Refund Policy, pricing doc
-   and tests. Shippable alone. *Small.*
+1. **Supplies.** *Done 2026-11-15, not deployed.* Replace the change, request and chat
+   allowances with one supplies balance (`AI_SUPPLIES_PER_DAY`, message 3, change 1),
+   counted from `ai_usage` and `qm_builds`. Update the rail, send button, plan cards,
+   landing, Plan page, Refund Policy, pricing doc and tests. Shippable alone. *Small.*
 2. **Read tools.** The chat becomes a tool-using conversation that can look at settings to
    answer questions and suggest what's missing. No new powers yet. *Medium.*
 3. **Settings plans.** `change_settings` proposals, the settings diff in the preview, the

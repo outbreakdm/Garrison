@@ -808,3 +808,12 @@ Decided (2026-11-12, owner):
   checks; post role menus, ticket panels and saved messages; never moderation, anti-nuke or
   billing). Five phases; nothing built yet. Open: bot grants for settings, rename to
   "Assistant", model choice.
+- 2026-11-15: AI builder supplies (docs/AI_ASSISTANT.md phase 1). One daily currency replaces
+  the change, request and chat allowances: every AI call (chat message, plan, revision) costs 3,
+  every change a plan makes costs 1 (`AI_SUPPLIES_PER_DAY` Free 40 per person across Free
+  servers, Pro 300, Agency 400 per server). Counted from `ai_usage` and `qm_builds` under the
+  same per-server lock; failed calls, plans refused as unsafe, and discarded or expired plans
+  give theirs back. Hourly limits and the global budget stay. The rail, composer, plan card,
+  /qm card, pricing lines, Refund Policy (now counts supplies) and docs/pricing.md updated;
+  worst-case cost per server is now above the Pro and Agency price, bounded by the hourly and
+  global caps. No migration. Not deployed.

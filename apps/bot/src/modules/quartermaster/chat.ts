@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import {
+  AI_SUPPLIES_PER_MESSAGE,
   addQmMessage,
   aiAllowance,
   costMicros,
@@ -17,11 +18,11 @@ import { displayName, MAX_OPERATIONS, validatePlan } from "./plan.js";
 import { type ChatTurn, DEFAULT_MODEL, type Planner } from "./planner.js";
 import {
   canContinue,
-  changesMessage,
   continuationFor,
   limitMessage,
   snapshot,
   storePlan,
+  suppliesMessage,
 } from "./service.js";
 
 /** Chat messages a server can send in an hour, failures included. */
@@ -36,8 +37,9 @@ export type ChatOutcome =
 /**
  * One turn of the AI builder's chat. The admin's message is saved, the model answers
  * (asking, suggesting or drafting a plan), and a drafted plan goes through the same
- * checks and change allowance as any plan before it's stored as the next version.
- * Every answer, including a refusal, is saved to the conversation so the page shows it.
+ * checks and supplies as any plan before it's stored as the next version. A message costs
+ * a message's supplies; a reply whose plan couldn't be stored gives them back. Every
+ * answer, including a refusal, is saved to the conversation so the page shows it.
  */
 export async function chatTurn(
   ctx: BotContext,
@@ -90,8 +92,9 @@ export async function chatTurn(
     feature: "qm_chat",
     requestedBy: person.id,
     model,
-    dailyCredits: allowance.chatPerDay,
-    personDailyCredits: allowance.perPerson ? allowance.chatPerDay : null,
+    dailySupplies: allowance.suppliesPerDay,
+    personDailySupplies: allowance.perPerson ? allowance.suppliesPerDay : null,
+    exceptId: replacing?.id,
     attemptsPerHour: QM_CHAT_PER_HOUR,
     dailyBudgetMicros:
       ctx.qmDailyBudgetUsd === undefined ? null : Math.round(ctx.qmDailyBudgetUsd * 1e6),
@@ -99,9 +102,9 @@ export async function chatTurn(
   });
   if (!reserved.ok) {
     const error =
-      reserved.reason === "credits" || reserved.reason === "person"
-        ? chatLimitMessage(allowance.chatPerDay, allowance.perPerson)
-        : limitMessage(reserved.reason, allowance.chatPerDay, allowance.tier);
+      reserved.reason === "supplies" || reserved.reason === "person"
+        ? chatLimitMessage(allowance)
+        : limitMessage(reserved.reason, allowance);
     await say(error);
     return { ok: false, error };
   }
@@ -110,7 +113,9 @@ export async function chatTurn(
   let usage: { model: string; inputTokens: number; outputTokens: number } | undefined;
   try {
     const snap = snapshot(guild);
-    const maxOperations = Math.max(1, Math.min(MAX_OPERATIONS, allowance.changesLeft));
+    // What's left for changes once this message is paid for.
+    const room = allowance.suppliesLeft - AI_SUPPLIES_PER_MESSAGE;
+    const maxOperations = Math.max(1, Math.min(MAX_OPERATIONS, room));
     const continuation = working ? await continuationFor(ctx, guild, working) : undefined;
     const turns: ChatTurn[] = [...history, userMessage].map((m) => ({
       role: m.role === "assistant" ? "assistant" : "user",
@@ -125,8 +130,11 @@ export async function chatTurn(
 
     let reply = result.reply.trim() || "Here's what I've got.";
     let build: QmBuild | null = null;
+    // A plan that was drafted but can't be stored: the message is free.
+    let planFailed = false;
     if (result.plan) {
-      if (allowance.changesLeft <= 0) reply = `${reply} ${changesMessage(allowance)}`;
+      planFailed = true;
+      if (room < 1) reply = `${reply} ${suppliesMessage(allowance)}`;
       else {
         const checked = validatePlan(result.plan, snap.server, maxOperations);
         if (!checked.ok) {
@@ -147,8 +155,10 @@ export async function chatTurn(
             result.model,
             { continues: working, replacing },
           );
-          if (stored.ok) build = stored.build;
-          else reply = `${reply} ${stored.error}`;
+          if (stored.ok) {
+            build = stored.build;
+            planFailed = false;
+          } else reply = `${reply} ${stored.error}`;
         }
       }
     }
@@ -157,7 +167,7 @@ export async function chatTurn(
       .filter(Boolean)
       .slice(0, 4);
     await say(reply.slice(0, 2000), { choices, buildId: build?.id ?? null });
-    keptCredit = true;
+    keptCredit = !planFailed;
     return { ok: true, threadId: thread, reply, build };
   } finally {
     await finishAiCall(ctx.db, reserved.id, {
@@ -172,10 +182,7 @@ export async function chatTurn(
   }
 }
 
-/** No chat messages left today, in plain words. */
-export function chatLimitMessage(perDay: number, perPerson: boolean) {
-  const reset = "at midnight UTC";
-  return perPerson
-    ? `That's your ${perDay} messages with the AI builder for today on Free servers. Chat comes back ${reset}; plans you've drafted can still be built.`
-    : `This server has used today's ${perDay} messages with the AI builder. Chat comes back ${reset}; plans you've drafted can still be built.`;
+/** Not enough supplies left for a message, in plain words. */
+export function chatLimitMessage(a: Parameters<typeof suppliesMessage>[0]) {
+  return `${suppliesMessage(a)} Plans you've drafted can still be built.`;
 }

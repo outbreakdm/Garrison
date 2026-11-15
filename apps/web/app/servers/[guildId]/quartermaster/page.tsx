@@ -1,4 +1,6 @@
 import {
+  AI_SUPPLIES_PER_FULL_PLAN,
+  AI_SUPPLIES_PER_MESSAGE,
   aiAllowance,
   entitlements,
   getGuildPlan,
@@ -149,11 +151,11 @@ export default async function QuartermasterPage({
     </>
   );
 
-  const { changesLeft, changesPerDay, requestsLeft, requestsPerDay, perPerson } = allowance;
-  const fullPlans = Math.floor(changesLeft / QM_CHANGES_PER_PLAN);
-  const spare = changesLeft % QM_CHANGES_PER_PLAN;
-  const { chatLeft, chatPerDay } = allowance;
-  const blocked = thinking ? "Sending…" : chatLeft === 0 ? "No messages left today" : null;
+  const { suppliesLeft, suppliesPerDay, perPerson } = allowance;
+  const fullPlans = Math.floor(suppliesLeft / AI_SUPPLIES_PER_FULL_PLAN);
+  const messagesLeft = Math.floor(suppliesLeft / AI_SUPPLIES_PER_MESSAGE);
+  const canMessage = suppliesLeft >= AI_SUPPLIES_PER_MESSAGE;
+  const blocked = thinking ? "Sending…" : canMessage ? null : "Out of supplies today";
 
   return (
     <>
@@ -313,8 +315,8 @@ export default async function QuartermasterPage({
               </button>
             </form>
             <p className="qm-compose__left">
-              {chatLeft} of {chatPerDay} messages and {changesLeft} of {changesPerDay} changes left
-              today
+              Each message uses {AI_SUPPLIES_PER_MESSAGE} supplies · {suppliesLeft} of{" "}
+              {suppliesPerDay} left today
             </p>
           </section>
 
@@ -357,7 +359,8 @@ export default async function QuartermasterPage({
               <div className="qm-plan__foot">
                 <p>
                   Building this adds <strong>{addedText(preview.added)}</strong> to {guild.name}. It
-                  holds {plural(plan.plan.length, "change")} of today's until it's built or expires.
+                  uses {plural(plan.plan.length, "supply", "supplies")}, held from today's until
+                  it's built or expires.
                   {mine
                     ? ""
                     : ` Only ${plan.requestedByTag} can build it; you can change or discard it.`}
@@ -413,7 +416,7 @@ export default async function QuartermasterPage({
                   <button
                     type="submit"
                     className="g-btn g-btn--secondary"
-                    disabled={building || planning || requestsLeft === 0}
+                    disabled={building || planning || suppliesLeft <= AI_SUPPLIES_PER_MESSAGE}
                   >
                     {planning ? "Planning…" : `Revise into v${nextVersion}`}
                   </button>
@@ -439,50 +442,51 @@ export default async function QuartermasterPage({
           )}
         </div>
 
-        <aside className="qm-aside" aria-label="Today's allowance and rules">
+        <aside className="qm-aside" aria-label="Today's supplies and rules">
           <section className="g-card qm-allow" aria-labelledby="qm-allow-title">
             <h2 className="card-title" id="qm-allow-title">
-              Today's changes
+              Today's supplies
             </h2>
             <p className="qm-allow__count">
-              <span className="qm-allow__num">{changesLeft}</span>
-              <span className="muted">of {changesPerDay} left</span>
+              <span className="qm-allow__num">{suppliesLeft}</span>
+              <span className="muted">of {suppliesPerDay} left</span>
             </p>
-            <div className={`qm-meter qm-meter--n${changesPerDay / QM_CHANGES_PER_PLAN}`}>
+            <div className={`qm-meter qm-meter--n${suppliesPerDay / QM_CHANGES_PER_PLAN}`}>
               <progress
                 className="xpbar qm-meter__bar"
-                max={changesPerDay}
-                value={changesLeft}
-                aria-label={`${changesLeft} of ${changesPerDay} changes left today`}
+                max={suppliesPerDay}
+                value={suppliesLeft}
+                aria-label={`${suppliesLeft} of ${suppliesPerDay} supplies left today`}
               />
             </div>
             <p className="g-help">
-              {changesLeft === 0
-                ? "Back at midnight UTC."
-                : `That's ${plural(fullPlans, "full plan")}${spare ? ` and ${spare} more` : ""}. Back at midnight UTC.`}
+              {canMessage
+                ? `Enough for about ${plural(fullPlans, "full plan")} or ${plural(messagesLeft, "message")}. Back at midnight UTC.`
+                : "Back at midnight UTC."}
             </p>
             <dl className="qm-allow__facts">
               <div>
-                <dt>Per plan</dt>
-                <dd>Up to {QM_CHANGES_PER_PLAN} changes. A plan uses only what it makes.</dd>
-              </div>
-              <div>
-                <dt>Chat messages</dt>
+                <dt>A message</dt>
                 <dd>
-                  {chatLeft} of {chatPerDay} left
-                  {perPerson ? ", across all your Free servers" : ""}
+                  {AI_SUPPLIES_PER_MESSAGE} supplies: asking, answering, or drafting and revising a
+                  plan
                 </dd>
               </div>
               <div>
-                <dt>Quick revisions</dt>
+                <dt>A change</dt>
                 <dd>
-                  {requestsLeft} of {requestsPerDay} left, for “Change this plan” and /qm build
+                  1 supply for each channel, category or role a plan makes, up to{" "}
+                  {QM_CHANGES_PER_PLAN} a plan
                 </dd>
+              </div>
+              <div>
+                <dt>Given back</dt>
+                <dd>Discarded and expired plans, and messages that fail</dd>
               </div>
             </dl>
             {perPerson ? (
               <p className="g-help">
-                On Free, your changes count across every Free server you use. Pro gives this server
+                On Free, your supplies count across every Free server you use. Pro gives this server
                 its own 300 a day.
               </p>
             ) : null}
@@ -494,7 +498,7 @@ export default async function QuartermasterPage({
             </h2>
             <ul className="qm-rules">
               <li>Adds only: nothing you have is edited or deleted</li>
-              <li>New roles get no permissions</li>
+              <li>New roles get only member permissions, never moderation or admin</li>
               <li>Nothing is built until you approve the plan</li>
               <li>Undo removes exactly what a build made</li>
             </ul>

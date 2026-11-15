@@ -1,5 +1,6 @@
 import {
-  AI_CHANGES_PER_DAY,
+  AI_SUPPLIES_PER_DAY,
+  AI_SUPPLIES_PER_MESSAGE,
   type AiAllowance,
   type AiTier,
   aiAllowance,
@@ -136,8 +137,8 @@ export type PlanOutcome =
       build: QmBuild;
       server: ServerSnapshot;
       notes: string;
-      /** AI builder changes left today after this plan, which holds its own until it's built or expires. */
-      changesLeft: number;
+      /** Supplies left today after this plan, which holds its changes until it's built or expires. */
+      suppliesLeft: number;
       /** The waiting plan this one replaced, when it was a revision. */
       replaced: QmBuild | null;
     }
@@ -207,9 +208,10 @@ export async function continuationFor(
 }
 
 /**
- * Store a checked plan as the next version: check the day's changes again (another plan
- * may have used some while this one was thought up), then replace the waiting plan it
- * revises, if any. Shared by the one-shot planner and the chat.
+ * Store a checked plan as the next version: check the day's supplies again (another plan
+ * or message may have used some while this one was thought up; this call's own message is
+ * already counted), then replace the waiting plan it revises, if any. Shared by the
+ * one-shot planner and the chat.
  */
 export async function storePlan(
   ctx: BotContext,
@@ -220,16 +222,16 @@ export async function storePlan(
   model: string,
   line: { continues: QmBuild | null; replacing: QmBuild | null },
 ): Promise<
-  | { ok: true; build: QmBuild; changesLeft: number; replaced: QmBuild | null }
+  | { ok: true; build: QmBuild; suppliesLeft: number; replaced: QmBuild | null }
   | { ok: false; error: string }
 > {
   const now = await aiAllowance(ctx.db, guildId, requester.id, {
     exceptId: line.replacing?.id,
   });
-  if (checked.operations.length > now.changesLeft)
+  if (checked.operations.length > now.suppliesLeft)
     return {
       ok: false,
-      error: `This plan needs ${checked.operations.length} changes, but only ${now.changesLeft} are left today. Ask for less, or wait for tomorrow's.`,
+      error: `This plan needs ${checked.operations.length} supplies, but only ${now.suppliesLeft} are left today. Ask for less, or wait for tomorrow's.`,
     };
   const build = await createQmPlan(ctx.db, {
     guildId,
@@ -250,15 +252,16 @@ export async function storePlan(
   return {
     ok: true,
     build,
-    changesLeft: Math.max(0, now.changesLeft - checked.operations.length),
+    suppliesLeft: Math.max(0, now.suppliesLeft - checked.operations.length),
     replaced,
   };
 }
 
 /**
- * Ask the model for a plan and store it as the next version. The day's allowance is in
- * changes: a plan may use up to 20, or whatever is left, and unused changes stay for the
- * next plan. Continuing a waiting plan replaces it; continuing a built one adds onto it.
+ * Ask the model for a plan and store it as the next version. It costs a message's supplies
+ * plus one per change: a plan may make up to 20 changes, or whatever is left, and unused
+ * supplies stay for the next plan. Continuing a waiting plan replaces it; continuing a
+ * built one adds onto it.
  */
 export async function planBuild(
   ctx: BotContext,
@@ -280,8 +283,10 @@ export async function planBuild(
   const allowance = await aiAllowance(ctx.db, guild.id, requester.id, {
     exceptId: replacing?.id,
   });
-  if (allowance.changesLeft <= 0) return { ok: false, error: changesMessage(allowance) };
-  const maxOperations = Math.min(MAX_OPERATIONS, allowance.changesLeft);
+  // The message, and room for at least one change.
+  const room = allowance.suppliesLeft - AI_SUPPLIES_PER_MESSAGE;
+  if (room < 1) return { ok: false, error: suppliesMessage(allowance) };
+  const maxOperations = Math.min(MAX_OPERATIONS, room);
 
   const model = planner.model ?? DEFAULT_MODEL;
   const reserved = await reserveAiCall(ctx.db, {
@@ -289,20 +294,17 @@ export async function planBuild(
     feature: "qm",
     requestedBy: requester.id,
     model,
-    dailyCredits: allowance.requestsPerDay,
-    personDailyCredits: allowance.perPerson ? allowance.requestsPerDay : null,
+    dailySupplies: allowance.suppliesPerDay,
+    personDailySupplies: allowance.perPerson ? allowance.suppliesPerDay : null,
+    exceptId: replacing?.id,
     attemptsPerHour: QM_ATTEMPTS_PER_HOUR,
     dailyBudgetMicros:
       ctx.qmDailyBudgetUsd === undefined ? null : Math.round(ctx.qmDailyBudgetUsd * 1e6),
     reserveMicros: qmReserveMicros(model),
   });
-  if (!reserved.ok)
-    return {
-      ok: false,
-      error: limitMessage(reserved.reason, allowance.requestsPerDay, allowance.tier),
-    };
+  if (!reserved.ok) return { ok: false, error: limitMessage(reserved.reason, allowance) };
 
-  // Whatever happens below, record what the call used. Only a valid plan keeps the request.
+  // Whatever happens below, record what the call used. Only a stored plan keeps the supplies.
   let keptCredit = false;
   let usage: { model: string; inputTokens: number; outputTokens: number } | undefined;
   try {
@@ -345,27 +347,24 @@ export async function planBuild(
 const resetAt = () => `<t:${Math.floor(nextUtcDayStart().getTime() / 1000)}:R>`;
 const upgradeLine = (tier: AiTier) =>
   tier === "free"
-    ? ` Garrison Pro gives a server ${AI_CHANGES_PER_DAY.pro} changes a day of its own.`
+    ? ` Garrison Pro gives a server ${AI_SUPPLIES_PER_DAY.pro} supplies a day of its own.`
     : "";
 
-/** No changes left today, in plain words. */
-export function changesMessage(a: Pick<AiAllowance, "tier" | "changesPerDay" | "perPerson">) {
+/** Not enough supplies left today, in plain words. */
+export function suppliesMessage(a: Pick<AiAllowance, "tier" | "suppliesPerDay" | "perPerson">) {
   return a.perPerson
-    ? `You've used your ${a.changesPerDay} AI builder changes for today on Free servers. They come back ${resetAt()}.${upgradeLine(a.tier)}`
-    : `This server has used today's ${a.changesPerDay} AI builder changes. They come back ${resetAt()}.${upgradeLine(a.tier)}`;
+    ? `You've used your ${a.suppliesPerDay} AI builder supplies for today on Free servers. They come back ${resetAt()}.${upgradeLine(a.tier)}`
+    : `This server has used today's ${a.suppliesPerDay} AI builder supplies. They come back ${resetAt()}.${upgradeLine(a.tier)}`;
 }
 
-/** Why a request can't start, in plain words. */
+/** Why an AI call can't start, in plain words. */
 export function limitMessage(
-  reason: "credits" | "person" | "hourly" | "budget",
-  daily: number,
-  tier: AiTier,
+  reason: "supplies" | "person" | "hourly" | "budget",
+  a: Pick<AiAllowance, "tier" | "suppliesPerDay" | "perPerson">,
 ) {
-  if (reason === "credits")
-    return `This server has made today's ${daily} AI builder requests. They come back ${resetAt()}.${upgradeLine(tier)}`;
-  if (reason === "person")
-    return `You've made your ${daily} AI builder requests for today on Free servers. They come back ${resetAt()}.${upgradeLine(tier)}`;
-  if (reason === "hourly") return "That's a lot of plans in one hour. Try again in a little while.";
+  if (reason === "supplies" || reason === "person") return suppliesMessage(a);
+  if (reason === "hourly")
+    return "That's a lot of AI builder use in one hour. Try again in a little while.";
   return `The AI builder has reached its limit for today across all servers. It's back ${resetAt()}.`;
 }
 

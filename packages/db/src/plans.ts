@@ -17,25 +17,21 @@ export type AiTier = GuildPlan | "agency";
 export const QM_CHANGES_PER_PLAN = 20;
 
 /**
- * Full AI builder plans a day, the unit the plans are sold in. The allowance itself is
- * counted in changes (AI_CHANGES_PER_DAY): a plan uses only the changes it makes, and the
- * rest carry to the next plan the same day.
+ * Supplies: the AI builder's one daily currency. Every message to the AI (a chat message,
+ * a plan, a revision) costs AI_SUPPLIES_PER_MESSAGE because each is a paid AI call; every
+ * change a plan makes costs AI_SUPPLIES_PER_CHANGE. A drafted plan holds its changes until
+ * it's built, discarded or expires. Pro and Agency count per server. Free counts per server
+ * and also per person across every Free server they ask from, so extra servers don't add
+ * free AI. Resets at midnight UTC. See docs/AI_ASSISTANT.md.
  */
-export const AI_PLANS_PER_DAY = { free: 2, pro: 15, agency: 20 } as const satisfies Record<
+export const AI_SUPPLIES_PER_DAY = { free: 40, pro: 300, agency: 400 } as const satisfies Record<
   AiTier,
   number
 >;
-
-/**
- * AI builder changes a day: full plans times 20. Pro and Agency count per server. Free
- * counts per server and also per person across every Free server they ask from, so extra
- * servers don't add free AI.
- */
-export const AI_CHANGES_PER_DAY = {
-  free: AI_PLANS_PER_DAY.free * QM_CHANGES_PER_PLAN,
-  pro: AI_PLANS_PER_DAY.pro * QM_CHANGES_PER_PLAN,
-  agency: AI_PLANS_PER_DAY.agency * QM_CHANGES_PER_PLAN,
-} as const satisfies Record<AiTier, number>;
+export const AI_SUPPLIES_PER_MESSAGE = 3;
+export const AI_SUPPLIES_PER_CHANGE = 1;
+/** What one full plan costs: the message that drafts it and its 20 changes. */
+export const AI_SUPPLIES_PER_FULL_PLAN = AI_SUPPLIES_PER_MESSAGE + QM_CHANGES_PER_PLAN;
 
 /**
  * Member-level permissions the AI builder may give a new role. Never Administrator,
@@ -59,25 +55,6 @@ export type QmRolePermission = keyof typeof QM_ROLE_PERMISSIONS;
 export const QM_ROLE_PERMISSION_KEYS = Object.keys(QM_ROLE_PERMISSIONS) as QmRolePermission[];
 
 /**
- * Messages a day with the AI builder's chat, counted like requests. A chat reply is short and
- * cheap; one that drafts a plan also uses changes. Free counts per person as well as per server.
- */
-export const AI_CHAT_TURNS_PER_DAY = { free: 20, pro: 100, agency: 150 } as const satisfies Record<
-  AiTier,
-  number
->;
-
-/**
- * AI requests a day, counted like the changes. Every request costs the same to run however
- * few changes it makes, so this keeps a string of tiny plans from running up the AI bill
- * (docs/pricing.md). A request that fails gives its slot back.
- */
-export const AI_REQUESTS_PER_DAY = { free: 6, pro: 40, agency: 50 } as const satisfies Record<
-  AiTier,
-  number
->;
-
-/**
  * What each plan costs and the few lines that sell it. One place for every price: the
  * landing page, the Plan page and the account page read this. Agency is Pro on up to
  * `servers` servers under one subscription (plan_bundles); see docs/pricing.md.
@@ -92,7 +69,7 @@ export const PRICING = {
     highlights: [
       "Moderation, anti-raid, anti-nuke, verification and logs, in full",
       "Every module with the standard look and sensible limits",
-      "AI builder: 40 changes a day, carried between plans",
+      "AI builder: 40 supplies a day, about 13 messages",
       "Undo and history on every change",
     ],
   },
@@ -107,7 +84,7 @@ export const PRICING = {
       "Ticket forms, auto-assign, stats and a year of transcripts",
       "Custom rank cards, XP boosts and seasons",
       "Raid attendance, roles from game stats, scheduled backups",
-      "AI builder: 300 changes a day, and server templates",
+      "AI builder: 300 supplies a day (100 messages), and server templates",
     ],
   },
   agency: {
@@ -119,7 +96,7 @@ export const PRICING = {
     highlights: [
       "Everything in Pro, on each of 5 servers",
       "Put a server in a seat, or free it, from its Plan page",
-      "AI builder: 400 changes a day on each server",
+      "AI builder: 400 supplies a day on each server",
       "One bill: $7.00 a server a month",
     ],
   },
@@ -382,9 +359,9 @@ export const FEATURES = {
   "qm.dailyCredits": {
     module: "qm",
     about:
-      "AI builder changes a day. A plan makes up to 20 and uses only what it makes; the rest carry to the next plan (Agency: 400 on each server; Free: 40 per person across all their servers)",
-    free: AI_CHANGES_PER_DAY.free,
-    pro: AI_CHANGES_PER_DAY.pro,
+      "AI builder supplies a day: a message costs 3, each change a plan makes costs 1 (Agency: 400 on each server; Free: 40 per person across all their servers)",
+    free: AI_SUPPLIES_PER_DAY.free,
+    pro: AI_SUPPLIES_PER_DAY.pro,
   },
   "rally.templates": {
     module: "rally",

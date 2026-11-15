@@ -128,7 +128,7 @@ export function validatePlan(
   if (raw.operations.length > maxOperations)
     errors.push(
       maxOperations < MAX_OPERATIONS
-        ? `The plan has ${raw.operations.length} changes, but only ${maxOperations} are left today.`
+        ? `The plan has ${raw.operations.length} changes, but only ${maxOperations} supplies are left for changes today.`
         : `The plan has ${raw.operations.length} changes; the most a build can make is ${MAX_OPERATIONS}.`,
     );
 

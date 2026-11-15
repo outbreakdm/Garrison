@@ -1,12 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { nextUtcDayStart, utcDayStart } from "./ai-usage";
 import type { Db } from "./client";
-import {
-  aiCreditsUsedToday,
-  finishAiCall,
-  type ReserveInput,
-  reserveAiCall,
-} from "./repo/ai-usage";
+import { finishAiCall, type ReserveInput, reserveAiCall, suppliesUsed } from "./repo/ai-usage";
 import { upsertGuild } from "./repo/guilds";
 import { createTestDb } from "./testing";
 
@@ -27,7 +22,7 @@ const input = (guildId: string, over: Partial<ReserveInput> = {}): ReserveInput 
   feature: "qm",
   requestedBy: "1",
   model: "claude-haiku-5-5",
-  dailyCredits: 15,
+  dailySupplies: 45,
   attemptsPerHour: 10,
   dailyBudgetMicros: null,
   reserveMicros: 2600,
@@ -42,8 +37,8 @@ const finish = (id: string, ok: boolean) =>
     ok,
   });
 
-describe("AI credits", () => {
-  it("allows 15 a day on Pro across hours, then resets at midnight UTC", async () => {
+describe("AI supplies", () => {
+  it("takes 3 a message: 45 is 15 messages, then resets at midnight UTC", async () => {
     for (let i = 0; i < 15; i++) {
       const r = await reserveAiCall(db, input("a1"), at(1 + Math.floor(i / 8) * 2));
       if (!r.ok) throw new Error(`stopped at ${i}: ${r.reason}`);
@@ -51,22 +46,30 @@ describe("AI credits", () => {
     }
     expect(await reserveAiCall(db, input("a1"), at(9))).toMatchObject({
       ok: false,
-      reason: "credits",
-      used: 15,
+      reason: "supplies",
     });
-    expect(await aiCreditsUsedToday(db, "a1", "qm", at(9))).toBe(15);
-    expect(await reserveAiCall(db, input("a1"), at(25))).toMatchObject({ ok: true, used: 1 });
+    expect(await suppliesUsed(db, { guildId: "a1" }, { now: at(9) })).toBe(45);
+    expect(await reserveAiCall(db, input("a1"), at(25))).toMatchObject({
+      ok: true,
+      suppliesLeft: 42,
+    });
     expect(nextUtcDayStart(at(9)).toISOString()).toBe("2026-11-13T00:00:00.000Z");
   });
 
   it("counts a running call, but not a crashed one after 10 minutes", async () => {
-    const r = await reserveAiCall(db, input("a2", { dailyCredits: 1 }), at(1));
+    const one = input("a2", { dailySupplies: 3 });
+    const r = await reserveAiCall(db, one, at(1));
     expect(r.ok).toBe(true);
-    expect(await reserveAiCall(db, input("a2", { dailyCredits: 1 }), at(1.05))).toMatchObject({
+    expect(await reserveAiCall(db, one, at(1.05))).toMatchObject({
       ok: false,
-      reason: "credits",
+      reason: "supplies",
     });
-    expect((await reserveAiCall(db, input("a2", { dailyCredits: 1 }), at(1.25))).ok).toBe(true);
+    const later = await reserveAiCall(db, one, at(1.25));
+    if (!later.ok) throw new Error(later.reason);
+    // A failed call gives its supplies back.
+    await finish(later.id, false);
+    expect(await suppliesUsed(db, { guildId: "a2" }, { now: at(1.3) })).toBe(0);
+    expect((await reserveAiCall(db, one, at(1.3))).ok).toBe(true);
   });
 
   it("stops at the day's budget, counting running calls at their reservation", async () => {

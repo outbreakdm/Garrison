@@ -143,7 +143,7 @@ const moduleCount = NUMBER_WORDS[MODULE_COUNT] ?? String(MODULE_COUNT);
 const SECURITY = [
   "Garrison asks only for the permissions it uses, never Administrator, and /health tells you when something's off.",
   "Anti-nuke and its trusted list are owner-only, so a compromised admin can't switch them off first.",
-  "The AI builder only adds channels and roles, new roles get no permissions, and a person approves every plan.",
+  "The AI builder only adds channels and roles, new roles get only member permissions, and a person approves every plan.",
   "Message text is kept only where it's the point: tickets, suggestions and appeals, and logs if you turn it on. Ticket and log text expires on a schedule.",
   "The dashboard signs in with Discord, keeps no Discord token, and re-checks your permissions on every page.",
 ];

@@ -1,10 +1,10 @@
 import {
   aiAllowance,
-  aiCreditsUsedToday,
   aiSpendSince,
   costMicros,
   qmReserveMicros,
   schema,
+  suppliesUsed,
   upsertGuild,
 } from "@garrison/db";
 import { createTestDb } from "@garrison/db/testing";
@@ -215,31 +215,32 @@ describe("Quartermaster end to end", () => {
     });
   });
 
-  it("counts changes, not plans: unused changes carry to the next plan", async () => {
+  it("counts supplies: a message is 3, each change 1, and the rest carry over", async () => {
     const f = fakeGuild("q4");
     const a = asker(f);
-    const first = await planBuild(ctx, stub(rolesPlan(20)), f.guild, a, "x");
-    expect(first).toMatchObject({ ok: true, changesLeft: 20 });
+    const first = await planBuild(ctx, stub(rolesPlan(10)), f.guild, a, "x");
+    expect(first).toMatchObject({ ok: true, suppliesLeft: 27 });
     const small = await planBuild(ctx, stub(rolesPlan(3)), f.guild, a, "x");
-    expect(small).toMatchObject({ ok: true, changesLeft: 17 });
-    // 17 left, so the next plan may make up to 17, and one asking for more is refused whole.
-    const tooBig = await planBuild(ctx, stub(rolesPlan(18)), f.guild, a, "x");
-    expect(!tooBig.ok && tooBig.error).toMatch(/only 17 are left today/);
-    expect(await planBuild(ctx, stub(rolesPlan(17)), f.guild, a, "x")).toMatchObject({
+    expect(small).toMatchObject({ ok: true, suppliesLeft: 21 });
+    // 21 left: the message takes 3, so the next plan may make up to 18. One asking for more
+    // is refused whole, and the refusal gives its message back.
+    const tooBig = await planBuild(ctx, stub(rolesPlan(19)), f.guild, a, "x");
+    expect(!tooBig.ok && tooBig.error).toMatch(/only 18 supplies are left for changes today/);
+    expect(await planBuild(ctx, stub(rolesPlan(18)), f.guild, a, "x")).toMatchObject({
       ok: true,
-      changesLeft: 0,
+      suppliesLeft: 0,
     });
     const none = await planBuild(ctx, stub(rolesPlan(1)), f.guild, a, "x");
     expect(!none.ok && none.error).toMatch(
-      /your 40 AI builder changes for today on Free servers.*Garrison Pro gives a server 300/,
+      /your 40 AI builder supplies for today on Free servers.*Garrison Pro gives a server 300/,
     );
   });
 
-  it("gives the planner the changes left as its limit", async () => {
+  it("gives the planner what's left after the message as its limit", async () => {
     const f = fakeGuild("q12");
     const a = asker(f);
     expect((await planBuild(ctx, stub(rolesPlan(20)), f.guild, a, "x")).ok).toBe(true);
-    expect((await planBuild(ctx, stub(rolesPlan(15)), f.guild, a, "x")).ok).toBe(true);
+    expect((await planBuild(ctx, stub(rolesPlan(9)), f.guild, a, "x")).ok).toBe(true);
     let limit: number | undefined;
     const seeing: Planner = {
       plan: async (input) => {
@@ -247,33 +248,36 @@ describe("Quartermaster end to end", () => {
         return { ok: true, plan: rolesPlan(2), model: "stub" };
       },
     };
-    expect(await planBuild(ctx, seeing, f.guild, a, "x")).toMatchObject({ ok: true });
-    expect(limit).toBe(5);
+    expect(await planBuild(ctx, seeing, f.guild, a, "x")).toMatchObject({
+      ok: true,
+      suppliesLeft: 0,
+    });
+    expect(limit).toBe(2);
   });
 
   it("counts Free per person across all their Free servers", async () => {
     const [one, two, three] = [fakeGuild("q8"), fakeGuild("q9"), fakeGuild("q10")];
     const owner = { id: "98000", tag: "owner" };
     expect((await planBuild(ctx, stub(rolesPlan(20)), one.guild, owner, "x")).ok).toBe(true);
-    const second = await planBuild(ctx, stub(rolesPlan(20)), two.guild, owner, "x");
-    expect(second).toMatchObject({ ok: true, changesLeft: 0 });
+    const second = await planBuild(ctx, stub(rolesPlan(14)), two.guild, owner, "x");
+    expect(second).toMatchObject({ ok: true, suppliesLeft: 0 });
     const third = await planBuild(ctx, stub(sectionPlan), three.guild, owner, "x");
-    expect(!third.ok && third.error).toMatch(/your 40 AI builder changes for today on Free/);
-    // Someone else can still use the third server's own allowance.
+    expect(!third.ok && third.error).toMatch(/your 40 AI builder supplies for today on Free/);
+    // Someone else can still use the third server's own supplies.
     const other = { id: "98001", tag: "other" };
     expect((await planBuild(ctx, stub(sectionPlan), three.guild, other, "x")).ok).toBe(true);
   });
 
-  it("caps AI requests too, so many tiny plans can't run up the AI bill", async () => {
+  it("charges for every message, so many tiny plans can't run up the AI bill", async () => {
     const f = fakeGuild("q14");
     const a = asker(f);
-    for (let i = 0; i < 6; i++)
+    for (let i = 0; i < 10; i++)
       expect((await planBuild(ctx, stub(rolesPlan(1)), f.guild, a, "x")).ok).toBe(true);
-    const seventh = await planBuild(ctx, stub(rolesPlan(1)), f.guild, a, "x");
-    expect(!seventh.ok && seventh.error).toMatch(/today's 6 AI builder requests/);
+    const eleventh = await planBuild(ctx, stub(rolesPlan(1)), f.guild, a, "x");
+    expect(!eleventh.ok && eleventh.error).toMatch(/your 40 AI builder supplies/);
   });
 
-  it("gives an Agency seat 400 changes a day, counted per server", async () => {
+  it("gives an Agency seat 400 supplies a day, counted per server", async () => {
     const { planBundles } = schema;
     const f = fakeGuild("q11");
     await upsertGuild(ctx.db, { id: "q11", name: "q11" });
@@ -284,15 +288,14 @@ describe("Quartermaster end to end", () => {
     await ctx.db
       .insert(schema.guildPlans)
       .values({ guildId: "q11", plan: "pro", bundleId: bundle?.id });
-    expect(await aiAllowance(ctx.db, "q11", "98100")).toMatchObject({
+    expect(await aiAllowance(ctx.db, "q11", "98100")).toEqual({
       tier: "agency",
-      changesPerDay: 400,
-      changesLeft: 400,
-      requestsPerDay: 50,
+      suppliesPerDay: 400,
+      suppliesLeft: 400,
       perPerson: false,
     });
     const first = await planBuild(ctx, stub(sectionPlan), f.guild, asker(f), "x");
-    expect(first).toMatchObject({ ok: true, changesLeft: 396 });
+    expect(first).toMatchObject({ ok: true, suppliesLeft: 393 });
   });
 
   it("revises a waiting plan into the next version, which replaces it", async () => {
@@ -310,7 +313,8 @@ describe("Quartermaster end to end", () => {
     const v2 = await planBuild(ctx, reviser, f.guild, a, "add two more roles", {
       continues: v1.build,
     });
-    expect(v2).toMatchObject({ ok: true, changesLeft: 34 });
+    // v1's 4 changes are given back; both messages count: 40 - 3 - 3 - 6.
+    expect(v2).toMatchObject({ ok: true, suppliesLeft: 28 });
     if (!v2.ok) return;
     expect(v2.build.continuesId).toBe(v1.build.id);
     expect(v2.replaced).toMatchObject({ id: v1.build.id, status: "cancelled" });
@@ -365,10 +369,10 @@ describe("Quartermaster end to end", () => {
     for (let i = 0; i < 10; i++)
       expect((await planBuild(ctx, stub(sectionPlan), f.guild, asker(f), "x")).ok).toBe(true);
     const eleventh = await planBuild(ctx, stub(sectionPlan), f.guild, asker(f), "x");
-    expect(!eleventh.ok && eleventh.error).toMatch(/lot of plans in one hour/);
+    expect(!eleventh.ok && eleventh.error).toMatch(/lot of AI builder use in one hour/);
   });
 
-  it("gives the credit back when a plan fails, but caps attempts per hour", async () => {
+  it("gives the supplies back when a plan fails, but caps attempts per hour", async () => {
     const f = fakeGuild("q6");
     const failing: Planner = {
       plan: async () => ({
@@ -379,13 +383,13 @@ describe("Quartermaster end to end", () => {
     };
     for (let i = 0; i < 9; i++)
       expect(await planBuild(ctx, failing, f.guild, asker(f), "x")).toMatchObject({ ok: false });
-    // Failures used no credits.
-    expect(await aiCreditsUsedToday(ctx.db, "q6", "qm")).toBe(0);
+    // Failures used no supplies.
+    expect(await suppliesUsed(ctx.db, { guildId: "q6" })).toBe(0);
     expect((await planBuild(ctx, stub(sectionPlan), f.guild, asker(f), "x")).ok).toBe(true);
-    expect(await aiCreditsUsedToday(ctx.db, "q6", "qm")).toBe(1);
+    expect(await suppliesUsed(ctx.db, { guildId: "q6" })).toBe(7);
     // But every attempt counts toward 10 an hour, and failures' cost is kept.
     const blocked = await planBuild(ctx, stub(sectionPlan), f.guild, asker(f), "x");
-    expect(!blocked.ok && blocked.error).toMatch(/lot of plans in one hour/);
+    expect(!blocked.ok && blocked.error).toMatch(/lot of AI builder use in one hour/);
     const spend = await aiSpendSince(ctx.db, new Date(Date.now() - 60_000));
     expect(spend.dollars).toBeCloseTo(9 * 0.00055, 6);
   });
@@ -563,5 +567,38 @@ describe("AI builder chat", () => {
     );
     expect(outcome).toMatchObject({ ok: true, build: null });
     expect(outcome.ok && outcome.reply).toMatch(/couldn't make that plan safely/);
+  });
+
+  it("costs 3 supplies a message, and says so in the chat when they run out", async () => {
+    const f = fakeGuild("q19");
+    const me = asker(f);
+    const bot = scripted([{ reply: "Sure." }]);
+    let thread: string | undefined;
+    for (let i = 0; i < 13; i++) {
+      const turn = await chatTurn(ctx, bot, f.guild, me, { message: "hi", threadId: thread });
+      if (!turn.ok) throw new Error(`stopped at ${i}: ${turn.error}`);
+      thread = turn.threadId;
+    }
+    expect(await suppliesUsed(ctx.db, { guildId: "q19" })).toBe(39);
+    const out = await chatTurn(ctx, bot, f.guild, me, { message: "hi", threadId: thread });
+    expect(!out.ok && out.error).toMatch(
+      /40 AI builder supplies.*Plans you've drafted can still be built/,
+    );
+    const { listQmThread } = await import("@garrison/db");
+    const log = await listQmThread(ctx.db, "q19", me.id, thread ?? "");
+    expect(log.at(-1)?.text).toMatch(/Plans you've drafted can still be built/);
+  });
+
+  it("gives a message's supplies back when its plan couldn't be made safely", async () => {
+    const f = fakeGuild("q20");
+    const bad: AiPlan = {
+      summary: "x",
+      notes: "",
+      operations: [op({ kind: "create_role", ref: "Bad Ref!", name: "x" })],
+    };
+    await chatTurn(ctx, scripted([{ reply: "Here.", plan: bad }]), f.guild, asker(f), {
+      message: "go",
+    });
+    expect(await suppliesUsed(ctx.db, { guildId: "q20" })).toBe(0);
   });
 });

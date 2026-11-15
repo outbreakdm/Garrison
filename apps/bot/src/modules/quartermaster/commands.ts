@@ -25,7 +25,7 @@ export function planCard(
   build: QmBuild,
   server: ServerSnapshot,
   notes: string,
-  changesLeft?: number,
+  suppliesLeft?: number,
 ): Card {
   const lines = describePlan(build.plan, server).map((l) => safeText(l));
   const expires = new Date(build.createdAt.getTime() + PLAN_TTL_MS);
@@ -38,7 +38,7 @@ export function planCard(
       { text: `\`\`\`diff\n${lines.join("\n").replaceAll("```", "'''")}\n\`\`\`` },
       ...(notes ? [{ text: `**Notes:** ${safeText(notes)}` }] : []),
       {
-        text: `-# New roles get no permissions. Nothing that exists is changed. Expires ${ts(expires)}.`,
+        text: `-# New roles get only member permissions. Nothing that exists is changed. Expires ${ts(expires)}.`,
       },
     ],
     actions: [
@@ -47,9 +47,9 @@ export function planCard(
     ],
     module: "quartermaster",
     ref:
-      changesLeft === undefined
+      suppliesLeft === undefined
         ? `plan v${build.version}`
-        : `plan v${build.version} · ${changesLeft} ${changesLeft === 1 ? "change" : "changes"} left today`,
+        : `plan v${build.version} · ${suppliesLeft} ${suppliesLeft === 1 ? "supply" : "supplies"} left today`,
   };
 }
 
@@ -164,7 +164,7 @@ export const qm: Command = {
       return;
     }
     await interaction.editReply(
-      cardMessage(planCard(outcome.build, outcome.server, outcome.notes, outcome.changesLeft)),
+      cardMessage(planCard(outcome.build, outcome.server, outcome.notes, outcome.suppliesLeft)),
     );
   },
 };
