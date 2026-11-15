@@ -1,10 +1,11 @@
 import {
-  AI_SUPPLIES_PER_DAY,
   AI_SUPPLIES_PER_MESSAGE,
+  AI_SUPPLIES_PER_MONTH,
   type AiAllowance,
   type AiCallUsage,
   type AiTier,
   aiAllowance,
+  aiDailyBudgetMicros,
   applySettingsChange,
   checkQmPosts,
   checkQmSettings,
@@ -74,9 +75,12 @@ export function callUsage(usage: PlannerUsage | undefined, model: string): AiCal
   };
 }
 
-/** The global daily budget, in millionths of a dollar, or null for none. */
-export const dailyBudgetMicros = (ctx: BotContext) =>
-  ctx.qmDailyBudgetUsd === undefined ? null : Math.round(ctx.qmDailyBudgetUsd * 1e6);
+/**
+ * The global daily budget, in millionths of a dollar, or null for none: the configured base
+ * plus a share for every paying server (aiDailyBudgetMicros).
+ */
+export const dailyBudgetMicros = async (ctx: BotContext) =>
+  ctx.qmDailyBudgetUsd === undefined ? null : aiDailyBudgetMicros(ctx.db, ctx.qmDailyBudgetUsd);
 
 export const PLAN_TTL_MS = QM_PLAN_TTL_MS;
 export const REQUEST_MAX = 500;
@@ -444,7 +448,7 @@ export async function planBuild(
     minSupplies: QM_MIN_MESSAGE_SUPPLIES,
     exceptId: replacing?.id,
     attemptsPerHour: QM_ATTEMPTS_PER_HOUR,
-    dailyBudgetMicros: dailyBudgetMicros(ctx),
+    dailyBudgetMicros: await dailyBudgetMicros(ctx),
   });
   if (!reserved.ok) return { ok: false, error: limitMessage(reserved.reason, reserved.allowance) };
   const maxOperations = Math.max(
@@ -508,16 +512,20 @@ export async function planBuild(
 const when = (at: Date) => `<t:${Math.floor(at.getTime() / 1000)}:R>`;
 const upgradeLine = (tier: AiTier) =>
   tier === "free"
-    ? ` Garrison Pro gives a server ${AI_SUPPLIES_PER_DAY.pro} supplies of its own.`
+    ? ` Garrison Pro gives a server ${AI_SUPPLIES_PER_MONTH.pro.toLocaleString("en-US")} supplies a month of its own.`
     : "";
 
-export type SuppliesInfo = Pick<AiAllowance, "tier" | "pool" | "perPerson" | "resetsAt">;
+export type SuppliesInfo = Pick<AiAllowance, "tier" | "pool" | "perPerson" | "shared" | "resetsAt">;
 
 /** Not enough supplies left, in plain words. */
 export function suppliesMessage(a: SuppliesInfo) {
-  return a.perPerson
-    ? `You've used your ${a.pool} AI assistant supplies on Free servers. They renew ${when(a.resetsAt)}.${upgradeLine(a.tier)}`
-    : `This server has used its ${a.pool} AI assistant supplies. They renew ${when(a.resetsAt)}.${upgradeLine(a.tier)}`;
+  const pool = a.pool.toLocaleString("en-US");
+  const renew = `They renew ${when(a.resetsAt)}.`;
+  if (a.perPerson)
+    return `You've used this month's ${pool} AI assistant supplies on Free servers. ${renew}${upgradeLine(a.tier)}`;
+  if (a.shared)
+    return `Your Agency servers have used this month's ${pool} AI assistant supplies. ${renew}`;
+  return `This server has used this month's ${pool} AI assistant supplies. ${renew}`;
 }
 
 /** Why an AI call can't start, in plain words. */

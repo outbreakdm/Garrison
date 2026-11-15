@@ -32,6 +32,14 @@ import {
 } from "./service.js";
 import { QM_CHAT_ROUNDS, settingsReader } from "./tools.js";
 
+/** A Discord timestamp's day, as the web shows it: "Dec 3". */
+const dayName = (seconds: number) =>
+  new Date(seconds * 1000).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+
 /** Chat messages a server can send in an hour, failures included. */
 export const QM_CHAT_PER_HOUR = 40;
 /** How much of a conversation the model sees. */
@@ -77,7 +85,7 @@ export async function chatTurn(
       threadId: thread,
       authorId: person.id,
       role: "assistant",
-      text: text.replace(/<t:\d+:[a-zA-Z]>/g, "at midnight UTC"),
+      text: text.replace(/<t:(\d+):[a-zA-Z]>/g, (_, s: string) => `on ${dayName(Number(s))}`),
       ...extra,
     });
 
@@ -108,7 +116,7 @@ export async function chatTurn(
     minSupplies: QM_MIN_MESSAGE_SUPPLIES,
     exceptId: replacing?.id,
     attemptsPerHour: QM_CHAT_PER_HOUR,
-    dailyBudgetMicros: dailyBudgetMicros(ctx),
+    dailyBudgetMicros: await dailyBudgetMicros(ctx),
   });
   if (!reserved.ok) {
     const error =

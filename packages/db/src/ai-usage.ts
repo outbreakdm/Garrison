@@ -92,3 +92,46 @@ export function utcDayStart(now = new Date()) {
 export function nextUtcDayStart(now = new Date()) {
   return new Date(utcDayStart(now).getTime() + 86_400_000);
 }
+
+/** The 1st of `now`'s month, midnight UTC: Free's pool renews then. */
+export function utcMonthStart(now = new Date()) {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+}
+
+export function nextUtcMonthStart(now = new Date()) {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+}
+
+/**
+ * `anchor` moved by whole months, keeping its day and time; a day the month doesn't have
+ * becomes its last day (the 31st is the 30th in April), as Stripe bills.
+ */
+export function addMonths(anchor: Date, months: number) {
+  const y = anchor.getUTCFullYear();
+  const m = anchor.getUTCMonth() + months;
+  const last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  return new Date(
+    Date.UTC(
+      y,
+      m,
+      Math.min(anchor.getUTCDate(), last),
+      anchor.getUTCHours(),
+      anchor.getUTCMinutes(),
+      anchor.getUTCSeconds(),
+      anchor.getUTCMilliseconds(),
+    ),
+  );
+}
+
+/**
+ * The month of a billing period that `now` falls in, from any date the period renews on
+ * (its end, say). A yearly plan's pool renews a month at a time on the same day.
+ */
+export function billingMonth(anchor: Date, now = new Date()) {
+  let k =
+    (now.getUTCFullYear() - anchor.getUTCFullYear()) * 12 +
+    (now.getUTCMonth() - anchor.getUTCMonth());
+  while (addMonths(anchor, k) > now) k--;
+  while (addMonths(anchor, k + 1) <= now) k++;
+  return { start: addMonths(anchor, k), resetsAt: addMonths(anchor, k + 1) };
+}

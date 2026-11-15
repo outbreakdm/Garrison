@@ -17,17 +17,24 @@ export type AiTier = GuildPlan | "agency";
 export const QM_CHANGES_PER_PLAN = 20;
 
 /**
- * Supplies: the AI assistant's one daily currency. Every message to the AI (a chat message,
- * a plan, a revision) costs AI_SUPPLIES_PER_MESSAGE because each is a paid AI call; every
- * change a plan makes costs AI_SUPPLIES_PER_CHANGE. A drafted plan holds its changes until
- * it's built, discarded or expires. Pro and Agency count per server. Free counts per server
- * and also per person across every Free server they ask from, so extra servers don't add
- * free AI. Resets at midnight UTC. See docs/AI_ASSISTANT.md.
+ * Supplies: the AI assistant's one currency, a monthly pool. A message (a chat message, a
+ * plan, a revision) is charged what its AI call really cost, 1 supply per $0.001
+ * (ai-usage.ts), so a pool can never cost more than its size in tenths of a cent; a typical
+ * message is AI_SUPPLIES_PER_MESSAGE. Every change a plan makes costs AI_SUPPLIES_PER_CHANGE.
+ * A drafted plan holds its changes until it's built, discarded or expires.
+ *
+ * Pro counts per server and renews with its billing period (a month at a time on yearly
+ * plans too); Agency is one pool shared by its servers, renewing with its billing period.
+ * Free counts per server and also per person across every Free server they ask from, so
+ * extra servers don't add free AI, and renews on the 1st (UTC). Worst case, a pool's AI
+ * costs under half of what the plan brings in (docs/AI_SUPPLIES_V2.md).
  */
-export const AI_SUPPLIES_PER_DAY = { free: 40, pro: 300, agency: 400 } as const satisfies Record<
-  AiTier,
-  number
->;
+export const AI_SUPPLIES_PER_MONTH = {
+  free: 200,
+  pro: 3000,
+  agency: 13_000,
+} as const satisfies Record<AiTier, number>;
+/** What a typical message costs, for "about N messages". */
 export const AI_SUPPLIES_PER_MESSAGE = 3;
 export const AI_SUPPLIES_PER_CHANGE = 1;
 /** What one full plan costs: the message that drafts it and its 20 changes. */
@@ -69,7 +76,7 @@ export const PRICING = {
     highlights: [
       "Moderation, anti-raid, anti-nuke, verification and logs, in full",
       "Every module with the standard look and sensible limits",
-      "AI assistant: 40 supplies a day, about 13 messages",
+      "AI assistant: 200 supplies a month, about 65 messages",
       "Undo and history on every change",
     ],
   },
@@ -84,7 +91,7 @@ export const PRICING = {
       "Ticket forms, auto-assign, stats and a year of transcripts",
       "Custom rank cards, XP boosts and seasons",
       "Raid attendance, roles from game stats, scheduled backups",
-      "AI assistant: 300 supplies a day (100 messages), and server templates",
+      "AI assistant: 3,000 supplies a month (about 1,000 messages), and server templates",
     ],
   },
   agency: {
@@ -96,7 +103,7 @@ export const PRICING = {
     highlights: [
       "Everything in Pro, on each of 5 servers",
       "Put a server in a seat, or free it, from its Plan page",
-      "AI assistant: 400 supplies a day on each server",
+      "AI assistant: 13,000 supplies a month, shared by your servers",
       "One bill: $7.00 a server a month",
     ],
   },
@@ -356,12 +363,12 @@ export const FEATURES = {
     free: false,
     pro: true,
   },
-  "qm.dailyCredits": {
+  "qm.supplies": {
     module: "qm",
     about:
-      "AI assistant supplies a day: a message costs 3, each change a plan makes costs 1 (Agency: 400 on each server; Free: 40 per person across all their servers)",
-    free: AI_SUPPLIES_PER_DAY.free,
-    pro: AI_SUPPLIES_PER_DAY.pro,
+      "AI assistant supplies a month: a message costs what it really uses (about 3), each change a plan makes costs 1 (Agency: 13,000 shared by its servers; Free: 200 per person across all their servers)",
+    free: AI_SUPPLIES_PER_MONTH.free,
+    pro: AI_SUPPLIES_PER_MONTH.pro,
   },
   "rally.templates": {
     module: "rally",

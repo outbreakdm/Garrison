@@ -11,8 +11,8 @@ export const metadata: Metadata = {
 };
 
 const DAYS = LEGAL.refundDays;
-/** AI assistant supplies a day on Free; past this, a server is using paid AI. */
-const FREE_AI = FEATURES["qm.dailyCredits"].free;
+/** AI assistant supplies a month on Free; past this, a server is using paid AI. */
+const FREE_AI = FEATURES["qm.supplies"].free;
 
 const sections: LegalSection[] = [
   {
@@ -40,8 +40,8 @@ const sections: LegalSection[] = [
         <p>
           Every AI assistant message and plan runs on AI we pay for as it’s used, and that cost
           can’t be taken back. So the first-payment refund doesn’t apply if, after the payment, the
-          server used more AI assistant supplies in any single day than the Free plan allows
-          (currently {FREE_AI} a day). For an Agency plan, this counts every server in its seats.
+          server used more AI assistant supplies than the Free plan allows in a month (currently{" "}
+          {FREE_AI}). For an Agency plan, this counts every server in its seats.
         </p>
         <p>
           The dashboard records every AI assistant message, every plan and the changes it makes, and
@@ -170,7 +170,7 @@ export default function RefundsPage() {
       lead="When Garrison refunds a plan, when it doesn’t, and how to ask."
       summary={[
         `New Pro and Agency subscriptions: a full refund if you ask within ${DAYS} days of the first payment.`,
-        `Unless the server used more AI assistant supplies in a day than Free allows (${FREE_AI} a day). That AI costs us as it’s used.`,
+        `Unless the server used more AI assistant supplies than Free allows in a month (${FREE_AI}). That AI costs us as it’s used.`,
         "Renewals aren’t refunded, but you can cancel any time and keep your plan to the end of the period.",
         "Mistaken charges are always refunded, and your consumer rights where you live always apply.",
       ]}

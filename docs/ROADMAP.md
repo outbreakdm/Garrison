@@ -867,3 +867,11 @@ Decided (2026-11-12, owner):
   checks refuse are free. Near the end of a pool a message gets fewer rounds and a shorter
   answer (down to 4 supplies). Each reply records what it cost and the page shows it.
   Migration 0060. Pools are still daily until step 2. All checks pass.
+- 2026-11-15: Supplies v2 step 2, monthly pools: Free 200 a month per person (and per
+  server), renewing on the 1st UTC; Pro 3,000 per server and Agency 13,000 shared by its
+  servers, renewing with the billing period a month at a time (yearly plans too; staff-given
+  plans use the calendar month). Agency calls record their plan (`ai_usage.bundle_id`) so a
+  seat swap can't refill the pool. The global daily budget is now a circuit breaker: $2 plus
+  $0.30 a day per Pro server and $1.30 per Agency plan. Plan cards, Refund Policy, chat
+  messages and the supplies bar say "a month" and when the pool renews. Migration 0061.
+  All checks pass.

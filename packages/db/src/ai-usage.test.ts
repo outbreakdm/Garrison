@@ -1,5 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  addMonths,
+  billingMonth,
+  nextUtcMonthStart,
   qmHoldSupplies,
   qmReserveMicros,
   quickOutputTokens,
@@ -7,15 +10,17 @@ import {
   utcDayStart,
 } from "./ai-usage";
 import type { Db } from "./client";
-import { AI_SUPPLIES_PER_DAY } from "./plans";
+import { AI_SUPPLIES_PER_MONTH } from "./plans";
 import {
   aiAllowance,
+  aiDailyBudgetMicros,
   finishAiCall,
   type ReserveInput,
   reserveAiCall,
   suppliesUsed,
 } from "./repo/ai-usage";
 import { upsertGuild } from "./repo/guilds";
+import { guildPlans, planBundles } from "./schema";
 import { createTestDb } from "./testing";
 
 let db: Db;
@@ -24,7 +29,21 @@ let close: () => Promise<void>;
 beforeAll(async () => {
   ({ db, exec, close } = await createTestDb());
   await exec("SET ROLE garrison_bot");
-  for (const id of ["a1", "a2", "a3", "a4", "a5"]) await upsertGuild(db, { id, name: id });
+  for (const id of ["a1", "a2", "a3", "a4", "a5", "p1", "g1", "g2"])
+    await upsertGuild(db, { id, name: id });
+  // Plans are written by billing and staff, never the bot.
+  await exec("RESET ROLE");
+  // Pro on a yearly plan that renews on 10 June: its pool renews on the 10th of each month.
+  await db
+    .insert(guildPlans)
+    .values({ guildId: "p1", plan: "pro", currentPeriodEnd: new Date("2027-06-10T00:00:00Z") });
+  const [bundle] = await db
+    .insert(planBundles)
+    .values({ ownerId: "200", seats: 5, source: "comp" })
+    .returning({ id: planBundles.id });
+  for (const guildId of ["g1", "g2"])
+    await db.insert(guildPlans).values({ guildId, plan: "pro", bundleId: bundle?.id });
+  await exec("SET ROLE garrison_bot");
 });
 afterAll(() => close());
 
@@ -81,9 +100,9 @@ describe("AI supplies", () => {
   });
 
   it("takes a smaller hold near the end of the pool, then stops", async () => {
-    const pool = AI_SUPPLIES_PER_DAY.free;
+    const pool = AI_SUPPLIES_PER_MONTH.free;
     const holds: number[] = [];
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 100; i++) {
       const r = await reserveAiCall(db, input("a2", "102"), at(2));
       if (!r.ok) {
         expect(r.reason).toBe("person");
@@ -97,8 +116,10 @@ describe("AI supplies", () => {
     expect(used).toBe(holds.length * 3);
     expect(pool - used).toBeLessThan(4);
     expect(holds.at(-1)).toBeLessThan(14);
-    // A new day, a new pool.
-    expect((await aiAllowance(db, "a2", "102", { now: at(25) })).suppliesLeft).toBe(pool);
+    // Free renews on the 1st.
+    const december = nextUtcMonthStart(day);
+    expect((await aiAllowance(db, "a2", "102", { now: at(24 * 18) })).suppliesLeft).toBeLessThan(4);
+    expect((await aiAllowance(db, "a2", "102", { now: december })).suppliesLeft).toBe(pool);
   });
 
   it("charges a failed call what it used, and a refused plan nothing", async () => {
@@ -116,6 +137,50 @@ describe("AI supplies", () => {
     expect(r.ok).toBe(true);
     expect(await suppliesUsed(db, { guildId: "a4" }, { now: at(4.1) })).toBe(14);
     expect(await suppliesUsed(db, { guildId: "a4" }, { now: at(4.25) })).toBe(0);
+  });
+
+  it("renews a paid pool with its billing period, a month at a time", () => {
+    // Billed on the 31st: the pool renews on the last day of shorter months.
+    const jan31 = new Date("2026-01-31T10:00:00Z");
+    expect(addMonths(jan31, 1).toISOString()).toBe("2026-02-28T10:00:00.000Z");
+    expect(billingMonth(jan31, new Date("2026-03-05T00:00:00Z"))).toEqual({
+      start: new Date("2026-02-28T10:00:00Z"),
+      resetsAt: new Date("2026-03-31T10:00:00Z"),
+    });
+    // A yearly plan ending next June renews its pool on the 10th of every month.
+    expect(billingMonth(new Date("2027-06-10T00:00:00Z"), day)).toEqual({
+      start: new Date("2026-11-10T00:00:00Z"),
+      resetsAt: new Date("2026-12-10T00:00:00Z"),
+    });
+  });
+
+  it("gives Pro its pool from its billing period, and Agency one pool its servers share", async () => {
+    // Used on 9 November, the last day of the previous billing month: it doesn't count.
+    const before = await reserveAiCall(db, input("p1", "107"), at(-72));
+    if (!before.ok) throw new Error(before.reason);
+    await finish(before.id);
+    expect(await aiAllowance(db, "p1", "107", { now: at(1) })).toEqual({
+      tier: "pro",
+      pool: 3000,
+      suppliesLeft: 3000,
+      perPerson: false,
+      shared: false,
+      resetsAt: new Date("2026-12-10T00:00:00Z"),
+    });
+    const agency = await reserveAiCall(db, input("g1", "108"), at(1));
+    if (!agency.ok) throw new Error(agency.reason);
+    await finish(agency.id);
+    expect(await aiAllowance(db, "g2", "109", { now: at(1) })).toMatchObject({
+      tier: "agency",
+      pool: 13_000,
+      suppliesLeft: 12_997,
+      shared: true,
+    });
+  });
+
+  it("grows the global daily budget with each paying server", async () => {
+    // $2, plus $0.30 a day for the Pro server and $1.30 for the Agency plan.
+    expect(await aiDailyBudgetMicros(db, 2)).toBe(3_600_000);
   });
 
   it("stops at the day's budget, counting running calls at their hold", async () => {

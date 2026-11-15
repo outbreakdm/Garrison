@@ -357,7 +357,7 @@ export async function doQmPlan(ctx: BotContext, guild: Guild, member: GuildMembe
       : "is ready";
   return {
     ok: true,
-    message: `Plan v${outcome.build.version} ${what}: ${n} ${n === 1 ? "change" : "changes"}, ${outcome.suppliesLeft} supplies left today. Nothing is built until you apply it.`,
+    message: `Plan v${outcome.build.version} ${what}: ${n} ${n === 1 ? "change" : "changes"}, ${outcome.suppliesLeft} supplies left. Nothing is built until you apply it.`,
   };
 }
 

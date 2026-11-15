@@ -43,11 +43,14 @@ first draft counted 20 a plan; the page and pricing show the honest 23.
   changes (one per field: "Automod On" is 1, "Scam links Blocked" is 1), and each post.
 - **A drafted plan holds its changes** until it's built, discarded or expires (15 minutes);
   discarded and expired plans give them back. A plan still makes at most 20 changes.
-- **Failures are free.** A message the AI couldn't answer, or a plan that was refused as
-  unsafe, gives its supplies back.
+- **Refusals are free.** A plan Garrison's checks refused as unsafe gives its supplies back.
+  Since supplies v2, a message the AI couldn't answer is charged what it used
+  (`docs/AI_SUPPLIES_V2.md`).
 - **Reading is free.** Garrison looking at settings to answer a question costs nothing beyond
   the message.
-- Unused supplies carry from plan to plan through the day and reset at midnight UTC.
+- Unused supplies carry from plan to plan through the month. Since supplies v2 they are a
+  monthly pool (Free 200, Pro 3,000, Agency 13,000 shared) and a message is charged what it
+  really cost; see `docs/AI_SUPPLIES_V2.md`.
 
 **What's removed:** "plans a day", the change allowance, the request cap and the chat cap all
 become supplies. Hidden safety limits stay: 10 AI calls an hour per server, and the global

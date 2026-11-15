@@ -752,6 +752,8 @@ export const aiUsage = pgTable(
       .references(() => guilds.id, { onDelete: "cascade" }),
     feature: text("feature").notNull(),
     requestedBy: text("requested_by").notNull(),
+    /** The Agency plan whose shared pool the call counted against, when it did. */
+    bundleId: uuid("bundle_id").references(() => planBundles.id, { onDelete: "set null" }),
     model: text("model").notNull(),
     /** Uncached input; cached input is in the two cache columns. */
     inputTokens: integer("input_tokens").notNull().default(0),
@@ -771,6 +773,7 @@ export const aiUsage = pgTable(
   (t) => [
     index("ai_usage_guild_day").on(t.guildId, t.feature, t.createdAt),
     index("ai_usage_day").on(t.createdAt),
+    index("ai_usage_bundle").on(t.bundleId, t.createdAt),
   ],
 ).enableRLS();
 

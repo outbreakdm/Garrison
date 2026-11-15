@@ -51,17 +51,22 @@ export const qmChangeCount = (b: Pick<QmBuild, "plan" | "settings" | "posts">) =
 const onFreeServer = sql`not exists (select 1 from ${guildPlans} where ${guildPlans.guildId} = ${qmBuilds.guildId} and ${guildPlans.plan} = 'pro')`;
 
 /**
- * AI assistant changes used since `since`: on one server, or (Free) by one person across
- * every Free server. `exceptId` leaves out a waiting plan that's about to be replaced.
+ * AI assistant changes used since `since`: on one server, on the servers in an Agency plan's
+ * seats, or (Free) by one person across every Free server. `exceptId` leaves out a waiting
+ * plan that's about to be replaced.
  */
 export async function qmChangesUsed(
   db: Db,
-  scope: { guildId: string } | { personId: string },
+  scope: { guildId: string } | { personId: string } | { bundleId: string },
   since: Date,
   opts: { exceptId?: string; now?: Date } = {},
 ) {
   const where: SQL[] = [gte(qmBuilds.createdAt, since)];
   if ("guildId" in scope) where.push(eq(qmBuilds.guildId, scope.guildId));
+  else if ("bundleId" in scope)
+    where.push(
+      sql`${qmBuilds.guildId} in (select ${guildPlans.guildId} from ${guildPlans} where ${guildPlans.bundleId} = ${scope.bundleId})`,
+    );
   else where.push(eq(qmBuilds.requestedById, scope.personId), onFreeServer);
   if (opts.exceptId) where.push(ne(qmBuilds.id, opts.exceptId));
   const [row] = await db

@@ -159,7 +159,12 @@ export default async function QuartermasterPage({
     </>
   );
 
-  const { suppliesLeft, pool, perPerson } = allowance;
+  const { suppliesLeft, pool, perPerson, shared, resetsAt } = allowance;
+  const renews = resetsAt.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
   const canMessage = suppliesLeft >= QM_MIN_MESSAGE_SUPPLIES;
   const blocked = thinking ? "Sending…" : canMessage ? null : "Out of supplies";
 
@@ -306,15 +311,17 @@ export default async function QuartermasterPage({
               className="qm-usage__bar"
               max={pool}
               value={Math.min(pool, suppliesLeft)}
-              aria-label={`${suppliesLeft} of ${pool} supplies left today`}
+              aria-label={`${suppliesLeft.toLocaleString("en-US")} of ${pool.toLocaleString("en-US")} supplies left this month`}
             />
             <p className="qm-usage__text">
               <span>
-                <strong>{suppliesLeft}</strong> of {pool} supplies left today
+                <strong>{suppliesLeft.toLocaleString("en-US")}</strong> of{" "}
+                {pool.toLocaleString("en-US")} supplies left this month
               </span>
               <span className="muted">
                 About {AI_SUPPLIES_PER_MESSAGE} a message, 1 a change
-                {perPerson ? " · shared across your Free servers" : ""} · back at midnight UTC
+                {perPerson ? " · shared across your Free servers" : ""}
+                {shared ? " · shared by your Agency servers" : ""} · renews {renews}
               </span>
             </p>
           </div>

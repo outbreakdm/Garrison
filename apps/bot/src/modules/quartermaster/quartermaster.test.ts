@@ -159,6 +159,20 @@ const asker = (f: { guild: { id: string } }) => ({
   id: `9${f.guild.id.slice(1)}`,
   tag: f.guild.id,
 });
+/** Supplies this person already used on this server this month, as one earlier AI call. */
+async function used(f: { guild: { id: string } }, person: { id: string }, supplies: number) {
+  await upsertGuild(ctx.db, { id: f.guild.id, name: f.guild.id });
+  await ctx.db.insert(schema.aiUsage).values({
+    guildId: f.guild.id,
+    feature: "qm_chat",
+    requestedBy: person.id,
+    model: "claude-haiku-5-5",
+    reservedMicros: 0,
+    costMicros: supplies * 1000,
+    supplies,
+    ok: true,
+  });
+}
 
 describe("Quartermaster end to end", () => {
   it("builds with zero-permission roles and allowlisted channel access, once", async () => {
@@ -250,6 +264,7 @@ describe("Quartermaster end to end", () => {
   it("counts supplies: a typical message is 3, each change 1, and the rest carry over", async () => {
     const f = fakeGuild("q4");
     const a = asker(f);
+    await used(f, a, 160);
     const first = await planBuild(ctx, stub(rolesPlan(10)), f.guild, a, "x");
     expect(first).toMatchObject({ ok: true, suppliesLeft: 27 });
     const small = await planBuild(ctx, stub(rolesPlan(3)), f.guild, a, "x");
@@ -257,20 +272,21 @@ describe("Quartermaster end to end", () => {
     // 21 left: the message takes 3, so the next plan may make up to 18. One asking for more
     // is refused whole, and the refusal gives its message back.
     const tooBig = await planBuild(ctx, stub(rolesPlan(19)), f.guild, a, "x");
-    expect(!tooBig.ok && tooBig.error).toMatch(/only 18 supplies are left for changes today/);
+    expect(!tooBig.ok && tooBig.error).toMatch(/only 18 supplies are left for changes./);
     expect(await planBuild(ctx, stub(rolesPlan(18)), f.guild, a, "x")).toMatchObject({
       ok: true,
       suppliesLeft: 0,
     });
     const none = await planBuild(ctx, stub(rolesPlan(1)), f.guild, a, "x");
     expect(!none.ok && none.error).toMatch(
-      /your 40 AI assistant supplies on Free servers\. They renew <t:\d+:R>.*Garrison Pro gives a server 300/,
+      /this month's 200 AI assistant supplies on Free servers\. They renew <t:\d+:R>.*Garrison Pro gives a server 3,000 supplies a month/,
     );
   });
 
   it("gives the planner what's left after the message as its limit", async () => {
     const f = fakeGuild("q12");
     const a = asker(f);
+    await used(f, a, 160);
     expect((await planBuild(ctx, stub(rolesPlan(20)), f.guild, a, "x")).ok).toBe(true);
     expect((await planBuild(ctx, stub(rolesPlan(9)), f.guild, a, "x")).ok).toBe(true);
     let limit: number | undefined;
@@ -290,11 +306,12 @@ describe("Quartermaster end to end", () => {
   it("counts Free per person across all their Free servers", async () => {
     const [one, two, three] = [fakeGuild("q8"), fakeGuild("q9"), fakeGuild("q10")];
     const owner = { id: "98000", tag: "owner" };
+    await used(one, owner, 160);
     expect((await planBuild(ctx, stub(rolesPlan(20)), one.guild, owner, "x")).ok).toBe(true);
     const second = await planBuild(ctx, stub(rolesPlan(14)), two.guild, owner, "x");
     expect(second).toMatchObject({ ok: true, suppliesLeft: 0 });
     const third = await planBuild(ctx, stub(sectionPlan), three.guild, owner, "x");
-    expect(!third.ok && third.error).toMatch(/your 40 AI assistant supplies on Free/);
+    expect(!third.ok && third.error).toMatch(/this month's 200 AI assistant supplies on Free/);
     // Someone else can still use the third server's own supplies.
     const other = { id: "98001", tag: "other" };
     expect((await planBuild(ctx, stub(sectionPlan), three.guild, other, "x")).ok).toBe(true);
@@ -303,13 +320,14 @@ describe("Quartermaster end to end", () => {
   it("charges for every message, so many tiny plans can't run up the AI bill", async () => {
     const f = fakeGuild("q14");
     const a = asker(f);
+    await used(f, a, 160);
     for (let i = 0; i < 10; i++)
       expect((await planBuild(ctx, stub(rolesPlan(1)), f.guild, a, "x")).ok).toBe(true);
     const eleventh = await planBuild(ctx, stub(rolesPlan(1)), f.guild, a, "x");
-    expect(!eleventh.ok && eleventh.error).toMatch(/your 40 AI assistant supplies/);
+    expect(!eleventh.ok && eleventh.error).toMatch(/this month's 200 AI assistant supplies/);
   });
 
-  it("gives an Agency seat 400 supplies a day, counted per server", async () => {
+  it("gives an Agency plan one pool of 13,000 a month, shared by its servers", async () => {
     const { planBundles } = schema;
     const f = fakeGuild("q11");
     await upsertGuild(ctx.db, { id: "q11", name: "q11" });
@@ -322,13 +340,14 @@ describe("Quartermaster end to end", () => {
       .values({ guildId: "q11", plan: "pro", bundleId: bundle?.id });
     expect(await aiAllowance(ctx.db, "q11", "98100")).toEqual({
       tier: "agency",
-      pool: 400,
-      suppliesLeft: 400,
+      pool: 13_000,
+      suppliesLeft: 13_000,
       perPerson: false,
+      shared: true,
       resetsAt: expect.any(Date),
     });
     const first = await planBuild(ctx, stub(sectionPlan), f.guild, asker(f), "x");
-    expect(first).toMatchObject({ ok: true, suppliesLeft: 393 });
+    expect(first).toMatchObject({ ok: true, suppliesLeft: 12_993 });
   });
 
   it("revises a waiting plan into the next version, which replaces it", async () => {
@@ -346,8 +365,8 @@ describe("Quartermaster end to end", () => {
     const v2 = await planBuild(ctx, reviser, f.guild, a, "add two more roles", {
       continues: v1.build,
     });
-    // v1's 4 changes are given back; both messages count: 40 - 3 - 3 - 6.
-    expect(v2).toMatchObject({ ok: true, suppliesLeft: 28 });
+    // v1's 4 changes are given back; both messages count: 200 - 3 - 3 - 6.
+    expect(v2).toMatchObject({ ok: true, suppliesLeft: 188 });
     if (!v2.ok) return;
     expect(v2.build.continuesId).toBe(v1.build.id);
     expect(v2.replaced).toMatchObject({ id: v1.build.id, status: "cancelled" });
@@ -430,7 +449,8 @@ describe("Quartermaster end to end", () => {
 
   it("stops every server once the day's budget is spent", async () => {
     const f = fakeGuild("q7");
-    const capped = { ...ctx, qmDailyBudgetUsd: 0.000001 };
+    // Below zero: already spent, whatever the paying servers add to it.
+    const capped = { ...ctx, qmDailyBudgetUsd: -1 };
     const outcome = await planBuild(capped, stub(sectionPlan), f.guild, asker(f), "x");
     expect(!outcome.ok && outcome.error).toMatch(/limit for today across all servers/);
   });
@@ -614,6 +634,7 @@ describe("AI assistant chat", () => {
   it("charges a typical message 3 supplies, and says so in the chat when they run out", async () => {
     const f = fakeGuild("q19");
     const me = asker(f);
+    await used(f, me, 160);
     const bot = scripted([{ reply: "Sure." }]);
     let thread: string | undefined;
     for (let i = 0; i < 13; i++) {
@@ -621,10 +642,10 @@ describe("AI assistant chat", () => {
       if (!turn.ok) throw new Error(`stopped at ${i}: ${turn.error}`);
       thread = turn.threadId;
     }
-    expect(await suppliesUsed(ctx.db, { guildId: "q19" })).toBe(39);
+    expect(await suppliesUsed(ctx.db, { guildId: "q19" })).toBe(199);
     const out = await chatTurn(ctx, bot, f.guild, me, { message: "hi", threadId: thread });
     expect(!out.ok && out.error).toMatch(
-      /40 AI assistant supplies.*Plans you've drafted can still be built/,
+      /200 AI assistant supplies.*Plans you've drafted can still be built/,
     );
     const { listQmThread } = await import("@garrison/db");
     const log = await listQmThread(ctx.db, "q19", me.id, thread ?? "");
@@ -666,7 +687,7 @@ describe("AI assistant chat", () => {
     };
     expect((await chatTurn(ctx, bot, f.guild, asker(f), { message: "what's on?" })).ok).toBe(true);
     const overview = JSON.parse(looked.overview ?? "{}");
-    expect(overview).toMatchObject({ plan: "free", supplies_left: 40, supplies_in_pool: 40 });
+    expect(overview).toMatchObject({ plan: "free", supplies_left: 200, supplies_in_pool: 200 });
     expect(overview.modules).toContainEqual({
       module: "suggestions",
       page: "Suggestions",
