@@ -766,3 +766,12 @@ Decided (2026-11-12, owner):
 - 2026-11-15: Deployed `1d836a6` (run 43676594148) with the Twitch and Battle.net keys set:
   new AI builder limits, "AI builder" wording in the bot, Twitch stream alerts and verified
   Battle.net accounts are live. Bot online after the deploy.
+- 2026-11-15: Battle.net linking fixed: the form's redirect to Battle.net's sign-in page was
+  blocked by form-action, which only allowed oauth.battle.net. Linking now picks a version
+  (Retail, Classic, Classic Era; Forever once Blizzard publishes an API namespace), and each
+  version and region keeps its own characters.
+- 2026-11-15: AI builder designs full sections: new instructions (build what the admin is
+  trying to achieve, size voice rooms and roles to the game, topics and slowmode, match the
+  server's naming, list what didn't fit in notes) instead of "keep plans small". Output cap
+  raised from 4,000 to 6,000 tokens; worst-case plan cost $0.0036. Not yet tried against the
+  real model. Not deployed.

@@ -32,10 +32,11 @@ Measured from the planner's real prompt, with realistic servers:
 | Large (25, 120, 150; the snapshot stops at 150 channels) | ~5,900 | |
 | An 8-change plan | | ~600 |
 | A 20-change plan (the most allowed) | | ~1,400 |
+| A 20-change plan with a topic on every channel (since 2026-11-15) | | ~2,500 |
 
 Reasoning adds output on top (about 1,000–2,500 at medium effort). Below, a **typical** build
-is 3,400 in and 2,000 out; a **heavy** build is 6,000 in and 4,000 out, with output capped at
-4,000 (today the cap is 16,000).
+is 3,400 in and 2,000 out; a **heavy** build is 6,000 in and 6,000 out, with output capped at
+6,000 (raised from 4,000 on 2026-11-15, when the builder started designing full sections).
 
 ## Cost per build
 
@@ -70,7 +71,7 @@ figure.
      single day. A realistic admin (10–40 builds a month) costs $0.01–0.06.
    - A failed call (provider down, refused, invalid plan) gives the credit back.
 3. **Hard limits in code**, so a bug or abuse can't run up a bill:
-   - Output capped at 4,000 tokens; the snapshot stays capped at 150 channels.
+   - Output capped at 6,000 tokens; the snapshot stays capped at 150 channels.
    - A global daily spend cap (start at $5 a day). Quartermaster pauses for everyone when it's
      reached and says so.
    - A spending limit on the OpenRouter key itself, as the last backstop.

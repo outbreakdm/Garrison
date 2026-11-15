@@ -293,6 +293,6 @@ describe("AI costs", () => {
     expect(costMicros("claude-haiku-5-5", 3400, 2000)).toBe(1340);
     expect(costMicros("claude-opus-5-5", 1000, 1000)).toBe(24000);
     expect(costMicros("some-new-model", 1000, 1000)).toBe(24000);
-    expect(qmReserveMicros("claude-haiku-5-5")).toBe(2600);
+    expect(qmReserveMicros("claude-haiku-5-5")).toBe(3600);
   });
 });

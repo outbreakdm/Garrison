@@ -36,28 +36,29 @@ them together. Below $8 it reads as a hobby add-on; above $10 it competes with M
 
 ## Does it pay for AI?
 
-AI is the only cost that grows with use (Claude Haiku 5.5, `docs/ai-costs.md`). A heavy plan
-costs about $0.0027, so a server that uses every credit every day for a month costs at most:
+AI is the only cost that grows with use (Claude Haiku 5.5, `docs/ai-costs.md`). The heaviest
+possible plan (6,000 tokens in, 6,000 out) costs $0.0036, so a server that uses every credit every
+day for a month on the heaviest plans costs at most:
 
-- Free (2 a day per person): **$0.16** a person
-- Pro (15 a day): **$1.23**
-- Agency (5 servers × 20 a day): **$8.20**
+- Free (2 a day per person): **$0.22** a person
+- Pro (15 a day): **$1.62**
+- Agency (5 servers × 20 a day): **$10.80**
 
 After Stripe (2.9% + $0.30 a charge), worst-case AI use, monthly billing:
 
 | Plan | Price | Stripe | Net | Worst-case AI | Left | AI share |
 |---|---|---|---|---|---|---|
-| Pro monthly | $8.99 | $0.56 | $8.43 | $1.23 | **$7.20** | 15% |
-| Pro yearly | $6.67/mo | $0.22/mo | $6.45 | $1.23 | **$5.22** | 19% |
-| Agency monthly | $34.99 | $1.31 | $33.68 | $8.20 | **$25.48** | 24% |
-| Agency yearly | $29.17/mo | $0.87/mo | $28.30 | $8.20 | **$20.10** | 29% |
+| Pro monthly | $8.99 | $0.56 | $8.43 | $1.62 | **$6.81** | 19% |
+| Pro yearly | $6.67/mo | $0.22/mo | $6.45 | $1.62 | **$4.83** | 25% |
+| Agency monthly | $34.99 | $1.31 | $33.68 | $10.80 | **$22.88** | 32% |
+| Agency yearly | $29.17/mo | $0.87/mo | $28.30 | $10.80 | **$17.50** | 38% |
 
 A realistic admin asks for 10 to 40 plans a month, about $0.01 to $0.11, so real AI use is a
 rounding error; the worst case above assumes every credit is spent every day.
 
 **The one real exposure is Free.** Free brings in nothing, so since 2026-11-15 it's counted per
 person: 2 plans a day across every Free server someone asks from (and still 2 per server), so
-making more servers doesn't make more free AI. At worst that's $0.16 a month per active
+making more servers doesn't make more free AI. At worst that's $0.22 a month per active
 person. The global cap (`QM_DAILY_BUDGET_USD`, $5 a day, $150 a month) still bounds the total.
 If Free ever crowds paid servers out of that cap, split it into a Free pool and a paid pool;
 not built, as per-person limits make it unlikely. The limits live in `AI_PLANS_PER_DAY`

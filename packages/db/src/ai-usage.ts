@@ -23,9 +23,12 @@ export function costMicros(model: string, inputTokens: number, outputTokens: num
   return Math.ceil(inputTokens * p.input + outputTokens * p.output);
 }
 
-/** Quartermaster's ceiling on one call: the largest snapshot, and the output cap. */
+/**
+ * The AI builder's ceiling on one call: the largest snapshot, and the output cap. A full
+ * 20-change plan with a topic on every channel is about 2,500 tokens, plus reasoning.
+ */
 export const QM_MAX_INPUT_TOKENS = 6000;
-export const QM_MAX_OUTPUT_TOKENS = 4000;
+export const QM_MAX_OUTPUT_TOKENS = 6000;
 
 /** Held against the day's budget while a call runs, before its real cost is known. */
 export const qmReserveMicros = (model: string) =>
