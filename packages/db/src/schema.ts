@@ -739,9 +739,9 @@ export interface QmCreated {
 }
 
 /**
- * One row per AI call (ai-usage.ts): reserved before the call, filled in after.
- * Daily credits, the hourly attempt limit and the global daily budget all count
- * these. Written only by the bot.
+ * One row per AI call (repo/ai-usage.ts): it holds supplies before the call and is charged
+ * what the call really cost after. Supplies, the hourly attempt limit and the global daily
+ * budget all count these. Written only by the bot.
  */
 export const aiUsage = pgTable(
   "ai_usage",
@@ -753,13 +753,18 @@ export const aiUsage = pgTable(
     feature: text("feature").notNull(),
     requestedBy: text("requested_by").notNull(),
     model: text("model").notNull(),
+    /** Uncached input; cached input is in the two cache columns. */
     inputTokens: integer("input_tokens").notNull().default(0),
     outputTokens: integer("output_tokens").notNull().default(0),
+    cacheReadTokens: integer("cache_read_tokens").notNull().default(0),
+    cacheWriteTokens: integer("cache_write_tokens").notNull().default(0),
     /** Held against the day's budget until the real cost is known. */
     reservedMicros: integer("reserved_micros").notNull(),
     /** Millionths of a dollar. Null while the call runs. */
     costMicros: integer("cost_micros"),
-    /** True: used a credit. False: failed, credit given back. Null: running. */
+    /** What the call holds while it runs, then what it was charged: 1 per $0.001 of AI. */
+    supplies: integer("supplies").notNull().default(0),
+    /** True: answered. False: failed (charged what it used). Null: running. */
     ok: boolean("ok"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -833,6 +838,8 @@ export const qmMessages = pgTable(
     choices: jsonb("choices").$type<string[]>().notNull().default([]),
     /** The plan this reply drafted. */
     buildId: uuid("build_id").references(() => qmBuilds.id, { onDelete: "set null" }),
+    /** Supplies the message that produced this reply was charged. Null on older replies. */
+    supplies: integer("supplies"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

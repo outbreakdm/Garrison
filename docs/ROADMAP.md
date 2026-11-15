@@ -860,3 +860,10 @@ Decided (2026-11-12, owner):
   Agency 13,000 shared); a 13-supply hold per message (3 rounds); supply packs (1,000 for
   $2.99, 5,000 for $11.99). Worst-case AI under half of net for every plan and pack. Waiting
   on the owner.
+- 2026-11-15: Supplies v2 approved as proposed. Step 1, metering: a call holds the most it
+  can cost (3 rounds × 12,000 tokens in at the cache-write rate + 6,000 out = 14 supplies;
+  13 in the proposal, plus the cache-write premium) and is charged what it really cost, 1
+  supply per $0.001, rounded up. Failed calls are charged what they used; plans Garrison's
+  checks refuse are free. Near the end of a pool a message gets fewer rounds and a shorter
+  answer (down to 4 supplies). Each reply records what it cost and the page shows it.
+  Migration 0060. Pools are still daily until step 2. All checks pass.

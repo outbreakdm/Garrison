@@ -62,13 +62,21 @@ export interface PlannerInput {
   /** The most operations this plan may have: 20, or what's left of the day's changes. */
   maxOperations?: number;
   continuation?: PlannerContinuation;
+  /**
+   * The most the model may write, below the usual cap: a message near the end of a pool
+   * gets what its supplies can pay for.
+   */
+  maxTokens?: number;
 }
 
 /** What a call used, for its cost. Absent when no request reached the model. */
 export interface PlannerUsage {
   model: string;
+  /** Uncached input. */
   inputTokens: number;
   outputTokens: number;
+  cacheReadTokens?: number;
+  cacheWriteTokens?: number;
 }
 
 export type PlannerResult = (
@@ -95,6 +103,8 @@ export interface ChatInput extends Omit<PlannerInput, "request"> {
   history: ChatTurn[];
   /** Lets the model look at the server's settings before answering. Absent: no tools. */
   read?: ReadTool;
+  /** Rounds this message may use, at most QM_CHAT_ROUNDS: fewer near the end of a pool. */
+  rounds?: number;
 }
 
 /** A plan drafted in the chat: structure, and settings it changes (unchecked). */
@@ -291,11 +301,11 @@ export class ClaudePlanner implements Planner {
     this.client = new Anthropic({ apiKey, maxRetries: 2, timeout: 90_000, ...options });
   }
 
-  private base() {
+  private base(maxTokens?: number) {
     return {
       model: this.model,
       // A full 20-change plan with topics is ~2,500 tokens; the rest is room to think.
-      max_tokens: QM_MAX_OUTPUT_TOKENS,
+      max_tokens: Math.max(1, Math.min(QM_MAX_OUTPUT_TOKENS, maxTokens ?? QM_MAX_OUTPUT_TOKENS)),
       // Where the model has one, a declined request is retried on a fallback inside the call.
       ...(hasFallback(this.model)
         ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }
@@ -308,7 +318,7 @@ export class ClaudePlanner implements Planner {
     blocks.push({ type: "text", text: `<request>\n${input.request}\n</request>` });
     try {
       const response = await this.client.beta.messages.parse({
-        ...this.base(),
+        ...this.base(input.maxTokens),
         output_config: { effort: "medium", format: betaZodOutputFormat(AiPlanSchema) },
         system: SYSTEM,
         messages: [{ role: "user", content: blocks }],
@@ -349,9 +359,10 @@ export class ClaudePlanner implements Planner {
     try {
       for (let round = 1; ; round++) {
         // The last round must answer, so a message never ends on a look.
-        const lastRound = !read || round >= QM_CHAT_ROUNDS;
+        const lastRound =
+          !read || round >= Math.min(QM_CHAT_ROUNDS, input.rounds ?? QM_CHAT_ROUNDS);
         const response = await this.client.beta.messages.parse({
-          ...this.base(),
+          ...this.base(input.maxTokens),
           output_config: { effort: "medium", format: betaZodOutputFormat(AiChatSchema) },
           system: CHAT_SYSTEM,
           ...(read

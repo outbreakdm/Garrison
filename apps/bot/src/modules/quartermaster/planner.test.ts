@@ -98,16 +98,15 @@ describe("the AI assistant chat's read tools", () => {
     const { planner, sent } = fakeApi([
       look("a", "server_overview"),
       look("b", "server_overview"),
-      look("c", "server_overview"),
       answer("Here's what's set up."),
     ]);
     const out = await planner.chat(input(async () => ({ text: "{}", error: false })));
     expect(out).toMatchObject({
       ok: true,
-      reads: ["server_overview", "server_overview", "server_overview"],
+      reads: ["server_overview", "server_overview"],
     });
-    expect(sent).toHaveLength(4);
-    expect(sent[3]?.tool_choice).toEqual({ type: "none" });
+    expect(sent).toHaveLength(3);
+    expect(sent[2]?.tool_choice).toEqual({ type: "none" });
   });
 
   it("marks a failed look as an error for the model", async () => {

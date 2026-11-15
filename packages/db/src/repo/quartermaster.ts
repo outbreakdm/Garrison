@@ -157,11 +157,18 @@ export async function addQmMessage(
     text: string;
     choices?: string[];
     buildId?: string | null;
+    /** What the message behind this reply was charged. */
+    supplies?: number | null;
   },
 ): Promise<QmMessage> {
   const [row] = await db
     .insert(qmMessages)
-    .values({ ...input, choices: input.choices ?? [], buildId: input.buildId ?? null })
+    .values({
+      ...input,
+      choices: input.choices ?? [],
+      buildId: input.buildId ?? null,
+      supplies: input.supplies ?? null,
+    })
     .returning();
   if (!row) throw new Error("Couldn't save the message");
   return row;

@@ -2,6 +2,7 @@ import {
   AI_SUPPLIES_PER_DAY,
   AI_SUPPLIES_PER_MESSAGE,
   type AiAllowance,
+  type AiCallUsage,
   type AiTier,
   aiAllowance,
   applySettingsChange,
@@ -14,8 +15,10 @@ import {
   finishAiCall,
   getGuildPlan,
   getQmBuild,
-  nextUtcDayStart,
+  type LimitReason,
+  meterAiCall,
   QM_ATTEMPTS_PER_HOUR,
+  QM_MIN_MESSAGE_SUPPLIES,
   QM_PLAN_TTL_MS,
   QM_ROLE_PERMISSION_KEYS,
   QM_ROLE_PERMISSIONS,
@@ -27,7 +30,8 @@ import {
   type QmSettingChange,
   type QmSettingProposal,
   type QmSettingsLookup,
-  qmReserveMicros,
+  qmHoldSupplies,
+  quickOutputTokens,
   recordQmCreated,
   reserveAiCall,
   resolveQmSettingRefs,
@@ -55,7 +59,24 @@ import {
   type Planner,
   type PlannerContinuation,
   type PlannerInput,
+  type PlannerUsage,
 } from "./planner.js";
+
+/** What a model call used, priced: cached input at the cache's rates. */
+export function callUsage(usage: PlannerUsage | undefined, model: string): AiCallUsage {
+  if (!usage) return { model, inputTokens: 0, outputTokens: 0, costMicros: 0 };
+  return {
+    ...usage,
+    costMicros: costMicros(usage.model, usage.inputTokens, usage.outputTokens, {
+      read: usage.cacheReadTokens,
+      write: usage.cacheWriteTokens,
+    }),
+  };
+}
+
+/** The global daily budget, in millionths of a dollar, or null for none. */
+export const dailyBudgetMicros = (ctx: BotContext) =>
+  ctx.qmDailyBudgetUsd === undefined ? null : Math.round(ctx.qmDailyBudgetUsd * 1e6);
 
 export const PLAN_TTL_MS = QM_PLAN_TTL_MS;
 export const REQUEST_MAX = 500;
@@ -273,7 +294,7 @@ export async function storePlan(
   if (changes > now.suppliesLeft)
     return {
       ok: false,
-      error: `This plan needs ${changes} supplies, but only ${now.suppliesLeft} are left today. Ask for less, or wait for tomorrow's.`,
+      error: `This plan needs ${changes} supplies, but only ${now.suppliesLeft} are left. Ask for less, or wait until they renew ${when(now.resetsAt)}.`,
     };
   const build = await createQmPlan(ctx.db, {
     guildId,
@@ -390,10 +411,10 @@ export async function checkDraft(
 }
 
 /**
- * Ask the model for a plan and store it as the next version. It costs a message's supplies
- * plus one per change: a plan may make up to 20 changes, or whatever is left, and unused
- * supplies stay for the next plan. Continuing a waiting plan replaces it; continuing a
- * built one adds onto it.
+ * Ask the model for a plan and store it as the next version. It costs what the call really
+ * cost (1 supply per $0.001) plus one per change: a plan may make up to 20 changes, or
+ * whatever is left, and unused supplies stay for the next plan. Continuing a waiting plan
+ * replaces it; continuing a built one adds onto it.
  */
 export async function planBuild(
   ctx: BotContext,
@@ -412,39 +433,48 @@ export async function planBuild(
     };
   // A revision replaces the waiting plan, so the changes it holds count as free again.
   const replacing = continues?.status === "pending" ? continues : null;
-  const allowance = await aiAllowance(ctx.db, guild.id, requester.id, {
-    exceptId: replacing?.id,
-  });
-  // The message, and room for at least one change.
-  const room = allowance.suppliesLeft - AI_SUPPLIES_PER_MESSAGE;
-  if (room < 1) return { ok: false, error: suppliesMessage(allowance) };
-  const maxOperations = Math.min(MAX_OPERATIONS, room);
-
   const model = planner.model ?? DEFAULT_MODEL;
+  // The most one round can cost; near the end of a pool, a shorter answer.
   const reserved = await reserveAiCall(ctx.db, {
     guildId: guild.id,
     feature: "qm",
     requestedBy: requester.id,
     model,
-    dailySupplies: allowance.suppliesPerDay,
-    personDailySupplies: allowance.perPerson ? allowance.suppliesPerDay : null,
+    holdSupplies: qmHoldSupplies(model, 1),
+    minSupplies: QM_MIN_MESSAGE_SUPPLIES,
     exceptId: replacing?.id,
     attemptsPerHour: QM_ATTEMPTS_PER_HOUR,
-    dailyBudgetMicros:
-      ctx.qmDailyBudgetUsd === undefined ? null : Math.round(ctx.qmDailyBudgetUsd * 1e6),
-    reserveMicros: qmReserveMicros(model),
+    dailyBudgetMicros: dailyBudgetMicros(ctx),
   });
-  if (!reserved.ok) return { ok: false, error: limitMessage(reserved.reason, allowance) };
+  if (!reserved.ok) return { ok: false, error: limitMessage(reserved.reason, reserved.allowance) };
+  const maxOperations = Math.max(
+    1,
+    Math.min(MAX_OPERATIONS, reserved.allowance.suppliesLeft - AI_SUPPLIES_PER_MESSAGE),
+  );
+  const maxTokens =
+    reserved.hold < qmHoldSupplies(model, 1) ? quickOutputTokens(model, reserved.hold) : undefined;
 
-  // Whatever happens below, record what the call used. Only a stored plan keeps the supplies.
-  let keptCredit = false;
-  let usage: { model: string; inputTokens: number; outputTokens: number } | undefined;
+  // Whatever happens below, record what the call used and charge it, unless Garrison's own
+  // checks refused the plan.
+  let refused = false;
+  let answered = false;
+  let usage: PlannerUsage | undefined;
   try {
     const snap = snapshot(guild);
     const continuation = continues ? await continuationFor(ctx, guild, continues) : undefined;
-    const result = await planner.plan({ request, ...snap, maxOperations, continuation });
+    const result = await planner.plan({
+      request,
+      ...snap,
+      maxOperations,
+      continuation,
+      maxTokens,
+    });
     usage = result.usage;
     if (!result.ok) return result;
+    answered = true;
+    refused = true;
+    // Charged what it cost so far, so the plan is checked against what's really left.
+    if (usage) await meterAiCall(ctx.db, reserved.id, callUsage(usage, model));
     const checked = validatePlan(result.plan, snap.server, maxOperations);
     if (!checked.ok) {
       ctx.logger.info("AI assistant plan rejected", { guildId: guild.id, errors: checked.errors });
@@ -461,43 +491,43 @@ export async function planBuild(
       replacing,
     });
     if (!stored.ok) return stored;
-    keptCredit = true;
+    refused = false;
     return { ...stored, server: snap.server, notes: checked.notes };
   } finally {
     await finishAiCall(ctx.db, reserved.id, {
-      model: usage?.model ?? model,
-      inputTokens: usage?.inputTokens ?? 0,
-      outputTokens: usage?.outputTokens ?? 0,
-      costMicros: usage ? costMicros(usage.model, usage.inputTokens, usage.outputTokens) : 0,
-      ok: keptCredit,
+      ...callUsage(usage, model),
+      ok: answered,
+      charge: !refused,
     }).catch((error: unknown) =>
       ctx.logger.warn("Couldn't record a Quartermaster call", { guildId: guild.id, error }),
     );
   }
 }
 
-const resetAt = () => `<t:${Math.floor(nextUtcDayStart().getTime() / 1000)}:R>`;
+/** A time as Discord shows it to each reader ("in 3 hours"). */
+const when = (at: Date) => `<t:${Math.floor(at.getTime() / 1000)}:R>`;
 const upgradeLine = (tier: AiTier) =>
   tier === "free"
-    ? ` Garrison Pro gives a server ${AI_SUPPLIES_PER_DAY.pro} supplies a day of its own.`
+    ? ` Garrison Pro gives a server ${AI_SUPPLIES_PER_DAY.pro} supplies of its own.`
     : "";
 
-/** Not enough supplies left today, in plain words. */
-export function suppliesMessage(a: Pick<AiAllowance, "tier" | "suppliesPerDay" | "perPerson">) {
+export type SuppliesInfo = Pick<AiAllowance, "tier" | "pool" | "perPerson" | "resetsAt">;
+
+/** Not enough supplies left, in plain words. */
+export function suppliesMessage(a: SuppliesInfo) {
   return a.perPerson
-    ? `You've used your ${a.suppliesPerDay} AI assistant supplies for today on Free servers. They come back ${resetAt()}.${upgradeLine(a.tier)}`
-    : `This server has used today's ${a.suppliesPerDay} AI assistant supplies. They come back ${resetAt()}.${upgradeLine(a.tier)}`;
+    ? `You've used your ${a.pool} AI assistant supplies on Free servers. They renew ${when(a.resetsAt)}.${upgradeLine(a.tier)}`
+    : `This server has used its ${a.pool} AI assistant supplies. They renew ${when(a.resetsAt)}.${upgradeLine(a.tier)}`;
 }
 
 /** Why an AI call can't start, in plain words. */
-export function limitMessage(
-  reason: "supplies" | "person" | "hourly" | "budget",
-  a: Pick<AiAllowance, "tier" | "suppliesPerDay" | "perPerson">,
-) {
+export function limitMessage(reason: LimitReason, a: SuppliesInfo) {
   if (reason === "supplies" || reason === "person") return suppliesMessage(a);
   if (reason === "hourly")
     return "That's a lot of AI assistant use in one hour. Try again in a little while.";
-  return `The AI assistant has reached its limit for today across all servers. It's back ${resetAt()}.`;
+  return `The AI assistant has reached its limit for today across all servers. It's back ${when(
+    new Date(Math.ceil(Date.now() / 86_400_000) * 86_400_000),
+  )}.`;
 }
 
 export type ApplyOutcome =

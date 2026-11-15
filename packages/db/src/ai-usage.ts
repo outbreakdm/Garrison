@@ -17,22 +17,66 @@ export function priceFor(model: string) {
   return known?.[1] ?? { input: 4, output: 20 };
 }
 
-/** Millionths of a dollar: tokens × $/1M tokens is exactly that. */
-export function costMicros(model: string, inputTokens: number, outputTokens: number) {
+/** Writing the prompt cache costs 1.25x an input token; reading it back costs 0.1x. */
+export const CACHE_WRITE_RATE = 1.25;
+export const CACHE_READ_RATE = 0.1;
+
+/**
+ * Millionths of a dollar: tokens × $/1M tokens is exactly that. `inputTokens` is the
+ * uncached input; cached input is priced at the cache's own rates.
+ */
+export function costMicros(
+  model: string,
+  inputTokens: number,
+  outputTokens: number,
+  cache: { read?: number; write?: number } = {},
+) {
   const p = priceFor(model);
-  return Math.ceil(inputTokens * p.input + outputTokens * p.output);
+  return Math.ceil(
+    inputTokens * p.input +
+      (cache.write ?? 0) * p.input * CACHE_WRITE_RATE +
+      (cache.read ?? 0) * p.input * CACHE_READ_RATE +
+      outputTokens * p.output,
+  );
 }
 
 /**
- * The AI assistant's ceiling on one call: the largest snapshot, and the output cap. A full
+ * The AI assistant's ceiling on one round with the model: the instructions, the server and
+ * the conversation (6,500 to 12,000 tokens, docs/pricing.md), and the output cap. A full
  * 20-change plan with a topic on every channel is about 2,500 tokens, plus reasoning.
  */
-export const QM_MAX_INPUT_TOKENS = 6000;
+export const QM_MAX_INPUT_TOKENS = 12_000;
 export const QM_MAX_OUTPUT_TOKENS = 6000;
 
-/** Held against the day's budget while a call runs, before its real cost is known. */
+/** The most one round can cost: every input token written to the cache, and the output cap. */
 export const qmReserveMicros = (model: string) =>
-  costMicros(model, QM_MAX_INPUT_TOKENS, QM_MAX_OUTPUT_TOKENS);
+  costMicros(model, 0, QM_MAX_OUTPUT_TOKENS, { write: QM_MAX_INPUT_TOKENS });
+
+/**
+ * A supply is a fixed amount of AI: $0.001. A message is charged what it really cost,
+ * rounded up, so a pool of N supplies can never cost more than N × $0.001
+ * (docs/AI_SUPPLIES_V2.md). A change a plan makes is 1 more, and costs no AI.
+ */
+export const QM_MICROS_PER_SUPPLY = 1000;
+export const suppliesFor = (micros: number) =>
+  Math.ceil(Math.max(0, micros) / QM_MICROS_PER_SUPPLY);
+
+/** What a message holds while it runs: the most its rounds can cost. */
+export const qmHoldSupplies = (model: string, rounds: number) =>
+  suppliesFor(qmReserveMicros(model) * rounds);
+
+/** The fewest supplies a message can run on: one round with a short answer. */
+export const QM_MIN_MESSAGE_SUPPLIES = 4;
+
+/**
+ * The output a one-round answer may write and still cost at most `supplies`, for a message
+ * near the end of a pool. Never more than the usual cap.
+ */
+export function quickOutputTokens(model: string, supplies: number) {
+  const p = priceFor(model);
+  const room = supplies * QM_MICROS_PER_SUPPLY - QM_MAX_INPUT_TOKENS * p.input * CACHE_WRITE_RATE;
+  return Math.max(0, Math.min(QM_MAX_OUTPUT_TOKENS, Math.floor(room / p.output)));
+}
 
 /** Attempts per server per hour, failed ones included, so failures can't run up a bill. */
 export const QM_ATTEMPTS_PER_HOUR = 10;

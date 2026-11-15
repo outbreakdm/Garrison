@@ -8,6 +8,7 @@ import {
   listQmBuilds,
   listQmThread,
   listTemplates,
+  QM_MIN_MESSAGE_SUPPLIES,
   QM_PLAN_TTL_MS,
   type QmBuild,
   qmChangeCount,
@@ -158,8 +159,8 @@ export default async function QuartermasterPage({
     </>
   );
 
-  const { suppliesLeft, suppliesPerDay, perPerson } = allowance;
-  const canMessage = suppliesLeft >= AI_SUPPLIES_PER_MESSAGE;
+  const { suppliesLeft, pool, perPerson } = allowance;
+  const canMessage = suppliesLeft >= QM_MIN_MESSAGE_SUPPLIES;
   const blocked = thinking ? "Sending…" : canMessage ? null : "Out of supplies";
 
   return (
@@ -214,6 +215,11 @@ export default async function QuartermasterPage({
                   {m.role === "user" ? null : <span className="qm-msg__mark" aria-hidden="true" />}
                   <div className="qm-msg__bubble">
                     <p>{m.text}</p>
+                    {m.role === "assistant" && m.supplies != null ? (
+                      <span className="qm-msg__cost">
+                        {m.supplies ? `Used ${plural(m.supplies, "supply", "supplies")}` : "Free"}
+                      </span>
+                    ) : null}
                     {drafted ? (
                       drafted === plan ? (
                         <a className="qm-msg__plan" href="#change-list">
@@ -298,16 +304,16 @@ export default async function QuartermasterPage({
           <div className="qm-usage">
             <progress
               className="qm-usage__bar"
-              max={suppliesPerDay}
-              value={suppliesLeft}
-              aria-label={`${suppliesLeft} of ${suppliesPerDay} supplies left today`}
+              max={pool}
+              value={Math.min(pool, suppliesLeft)}
+              aria-label={`${suppliesLeft} of ${pool} supplies left today`}
             />
             <p className="qm-usage__text">
               <span>
-                <strong>{suppliesLeft}</strong> of {suppliesPerDay} supplies left today
+                <strong>{suppliesLeft}</strong> of {pool} supplies left today
               </span>
               <span className="muted">
-                {AI_SUPPLIES_PER_MESSAGE} a message, 1 a change
+                About {AI_SUPPLIES_PER_MESSAGE} a message, 1 a change
                 {perPerson ? " · shared across your Free servers" : ""} · back at midnight UTC
               </span>
             </p>

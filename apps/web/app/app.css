@@ -1646,6 +1646,12 @@ select[multiple].g-input option {
 .qm-msg__plan--past {
   color: var(--text-muted);
 }
+/* What a reply cost, quiet under its text. */
+.qm-msg__cost {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
 /* The draft: what applying does and the button, then everything in depth behind a toggle. */
 .qm-changes {
   display: grid;

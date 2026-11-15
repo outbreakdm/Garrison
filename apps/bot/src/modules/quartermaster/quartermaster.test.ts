@@ -53,7 +53,11 @@ const op = (o: Partial<Op> & Pick<Op, "kind" | "ref" | "name">): Op => ({
   permissions: [],
   ...o,
 });
-const stub = (plan: AiPlan): Planner => ({ plan: async () => ({ ok: true, plan, model: "stub" }) });
+/** A typical message's tokens: $0.00262, so 3 supplies. */
+const TYPICAL = { model: "claude-haiku-5-5", inputTokens: 6700, outputTokens: 3900 };
+const stub = (plan: AiPlan): Planner => ({
+  plan: async () => ({ ok: true, plan, model: "stub", usage: TYPICAL }),
+});
 
 /** A guild that records every create/delete. `failOn` makes the Nth create throw. */
 function fakeGuild(id: string, failOn?: number) {
@@ -243,7 +247,7 @@ describe("Quartermaster end to end", () => {
     });
   });
 
-  it("counts supplies: a message is 3, each change 1, and the rest carry over", async () => {
+  it("counts supplies: a typical message is 3, each change 1, and the rest carry over", async () => {
     const f = fakeGuild("q4");
     const a = asker(f);
     const first = await planBuild(ctx, stub(rolesPlan(10)), f.guild, a, "x");
@@ -260,7 +264,7 @@ describe("Quartermaster end to end", () => {
     });
     const none = await planBuild(ctx, stub(rolesPlan(1)), f.guild, a, "x");
     expect(!none.ok && none.error).toMatch(
-      /your 40 AI assistant supplies for today on Free servers.*Garrison Pro gives a server 300/,
+      /your 40 AI assistant supplies on Free servers\. They renew <t:\d+:R>.*Garrison Pro gives a server 300/,
     );
   });
 
@@ -273,7 +277,7 @@ describe("Quartermaster end to end", () => {
     const seeing: Planner = {
       plan: async (input) => {
         limit = input.maxOperations;
-        return { ok: true, plan: rolesPlan(2), model: "stub" };
+        return { ok: true, plan: rolesPlan(2), model: "stub", usage: TYPICAL };
       },
     };
     expect(await planBuild(ctx, seeing, f.guild, a, "x")).toMatchObject({
@@ -290,7 +294,7 @@ describe("Quartermaster end to end", () => {
     const second = await planBuild(ctx, stub(rolesPlan(14)), two.guild, owner, "x");
     expect(second).toMatchObject({ ok: true, suppliesLeft: 0 });
     const third = await planBuild(ctx, stub(sectionPlan), three.guild, owner, "x");
-    expect(!third.ok && third.error).toMatch(/your 40 AI assistant supplies for today on Free/);
+    expect(!third.ok && third.error).toMatch(/your 40 AI assistant supplies on Free/);
     // Someone else can still use the third server's own supplies.
     const other = { id: "98001", tag: "other" };
     expect((await planBuild(ctx, stub(sectionPlan), three.guild, other, "x")).ok).toBe(true);
@@ -318,9 +322,10 @@ describe("Quartermaster end to end", () => {
       .values({ guildId: "q11", plan: "pro", bundleId: bundle?.id });
     expect(await aiAllowance(ctx.db, "q11", "98100")).toEqual({
       tier: "agency",
-      suppliesPerDay: 400,
+      pool: 400,
       suppliesLeft: 400,
       perPerson: false,
+      resetsAt: expect.any(Date),
     });
     const first = await planBuild(ctx, stub(sectionPlan), f.guild, asker(f), "x");
     expect(first).toMatchObject({ ok: true, suppliesLeft: 393 });
@@ -335,7 +340,7 @@ describe("Quartermaster end to end", () => {
     const reviser: Planner = {
       plan: async (input) => {
         told = input.continuation;
-        return { ok: true, plan: rolesPlan(6), model: "stub" };
+        return { ok: true, plan: rolesPlan(6), model: "stub", usage: TYPICAL };
       },
     };
     const v2 = await planBuild(ctx, reviser, f.guild, a, "add two more roles", {
@@ -376,7 +381,7 @@ describe("Quartermaster end to end", () => {
     const extender: Planner = {
       plan: async (input) => {
         told = input.continuation;
-        return { ok: true, plan: rolesPlan(2), model: "stub" };
+        return { ok: true, plan: rolesPlan(2), model: "stub", usage: TYPICAL };
       },
     };
     const v2 = await planBuild(ctx, extender, f.guild, a, "more", { continues: stored });
@@ -400,8 +405,9 @@ describe("Quartermaster end to end", () => {
     expect(!eleventh.ok && eleventh.error).toMatch(/lot of AI assistant use in one hour/);
   });
 
-  it("gives the supplies back when a plan fails, but caps attempts per hour", async () => {
+  it("charges a failed plan what it used, and caps attempts per hour", async () => {
     const f = fakeGuild("q6");
+    const since = new Date();
     const failing: Planner = {
       plan: async () => ({
         ok: false,
@@ -411,15 +417,15 @@ describe("Quartermaster end to end", () => {
     };
     for (let i = 0; i < 9; i++)
       expect(await planBuild(ctx, failing, f.guild, asker(f), "x")).toMatchObject({ ok: false });
-    // Failures used no supplies.
-    expect(await suppliesUsed(ctx.db, { guildId: "q6" })).toBe(0);
+    // Each failure cost $0.00055 of AI, so 1 supply: those tokens were paid for.
+    expect(await suppliesUsed(ctx.db, { guildId: "q6" })).toBe(9);
     expect((await planBuild(ctx, stub(sectionPlan), f.guild, asker(f), "x")).ok).toBe(true);
-    expect(await suppliesUsed(ctx.db, { guildId: "q6" })).toBe(7);
+    expect(await suppliesUsed(ctx.db, { guildId: "q6" })).toBe(16);
     // But every attempt counts toward 10 an hour, and failures' cost is kept.
     const blocked = await planBuild(ctx, stub(sectionPlan), f.guild, asker(f), "x");
     expect(!blocked.ok && blocked.error).toMatch(/lot of AI assistant use in one hour/);
-    const spend = await aiSpendSince(ctx.db, new Date(Date.now() - 60_000));
-    expect(spend.dollars).toBeCloseTo(9 * 0.00055, 6);
+    const spend = await aiSpendSince(ctx.db, since);
+    expect(spend.dollars).toBeCloseTo((9 * 550 + 2620) / 1e6, 6);
   });
 
   it("stops every server once the day's budget is spent", async () => {
@@ -436,7 +442,10 @@ describe("AI costs", () => {
     expect(costMicros("claude-haiku-5-5", 3400, 2000)).toBe(1340);
     expect(costMicros("claude-opus-5-5", 1000, 1000)).toBe(24000);
     expect(costMicros("some-new-model", 1000, 1000)).toBe(24000);
-    expect(qmReserveMicros("claude-haiku-5-5")).toBe(3600);
+    // A round at its worst: 12,000 tokens written to the cache, and 6,000 out.
+    expect(qmReserveMicros("claude-haiku-5-5")).toBe(4500);
+    // Cache reads at a tenth, writes at a quarter more.
+    expect(costMicros("claude-haiku-5-5", 1000, 0, { read: 10_000, write: 1000 })).toBe(325);
   });
 });
 
@@ -517,6 +526,7 @@ describe("AI assistant chat", () => {
           choices: t?.choices ?? [],
           plan: t?.plan ? { settings: [], posts: [], ...t.plan } : null,
           model: "stub",
+          usage: TYPICAL,
         };
       },
     };
@@ -601,7 +611,7 @@ describe("AI assistant chat", () => {
     expect(outcome.ok && outcome.reply).toMatch(/couldn't make that plan safely/);
   });
 
-  it("costs 3 supplies a message, and says so in the chat when they run out", async () => {
+  it("charges a typical message 3 supplies, and says so in the chat when they run out", async () => {
     const f = fakeGuild("q19");
     const me = asker(f);
     const bot = scripted([{ reply: "Sure." }]);
@@ -619,6 +629,8 @@ describe("AI assistant chat", () => {
     const { listQmThread } = await import("@garrison/db");
     const log = await listQmThread(ctx.db, "q19", me.id, thread ?? "");
     expect(log.at(-1)?.text).toMatch(/Plans you've drafted can still be built/);
+    // Each reply says what its message cost.
+    expect(log.at(-3)?.supplies).toBe(3);
   });
 
   it("lets the chat read this server's settings, with names for channels and roles", async () => {
@@ -642,12 +654,19 @@ describe("AI assistant chat", () => {
         looked.overview = (await input.read("server_overview", {})).text;
         looked.module = (await input.read("module_settings", { module: "suggestions" })).text;
         looked.bad = JSON.stringify(await input.read("module_settings", { module: "antinuke" }));
-        return { ok: true, reply: "Suggestions are on.", choices: [], plan: null, model: "stub" };
+        return {
+          ok: true,
+          reply: "Suggestions are on.",
+          choices: [],
+          plan: null,
+          model: "stub",
+          usage: TYPICAL,
+        };
       },
     };
     expect((await chatTurn(ctx, bot, f.guild, asker(f), { message: "what's on?" })).ok).toBe(true);
     const overview = JSON.parse(looked.overview ?? "{}");
-    expect(overview).toMatchObject({ plan: "free", supplies_left_after_this_message: 37 });
+    expect(overview).toMatchObject({ plan: "free", supplies_left: 40, supplies_in_pool: 40 });
     expect(overview.modules).toContainEqual({
       module: "suggestions",
       page: "Suggestions",

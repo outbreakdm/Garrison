@@ -421,6 +421,13 @@
       "when": 1794766922593,
       "tag": "0059_qm_posts",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1794779828689,
+      "tag": "0060_ai_metering",
+      "breakpoints": true
     }
   ]
 }
