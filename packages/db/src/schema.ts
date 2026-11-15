@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   bigserial,
   boolean,
   check,
@@ -749,6 +750,12 @@ export const qmBuilds = pgTable(
     prompt: text("prompt").notNull(),
     summary: text("summary").notNull(),
     plan: jsonb("plan").$type<QmOperation[]>().notNull(),
+    /** What the model left out or would add next, shown with the plan and used to continue it. */
+    notes: text("notes"),
+    /** The build this one continues: a revised plan, or more added onto a built one. */
+    continuesId: uuid("continues_id").references((): AnyPgColumn => qmBuilds.id, {
+      onDelete: "set null",
+    }),
     model: text("model").notNull(),
     status: qmStatus("status").notNull().default("pending"),
     created: jsonb("created").$type<QmCreated[]>().notNull().default([]),
@@ -1178,6 +1185,8 @@ export interface RaidWithdrawPayload {
 /** Ask Quartermaster for a plan. Nothing is built until the plan is applied. */
 export interface QmPlanPayload {
   request: string;
+  /** Continue this build: revise it while it waits, or add onto it once built. */
+  continues?: string;
 }
 /** Owner only: the bot applies it after confirming the requester owns the server. */
 export interface AntiNukePayload {

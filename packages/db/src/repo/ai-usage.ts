@@ -1,8 +1,9 @@
 import { and, count, eq, gte, isNull, or, sql } from "drizzle-orm";
 import { utcDayStart } from "../ai-usage";
 import type { Db } from "../client";
-import { AI_PLANS_PER_DAY, type AiTier } from "../plans";
+import { AI_CHANGES_PER_DAY, AI_REQUESTS_PER_DAY, type AiTier } from "../plans";
 import { aiUsage, guildPlans } from "../schema";
+import { qmChangesUsed } from "./quartermaster";
 
 /**
  * One row per AI call. A call reserves its row (and a credit) before it runs and
@@ -170,21 +171,54 @@ export async function aiTier(db: Db, guildId: string): Promise<AiTier> {
   return row.bundleId ? "agency" : "pro";
 }
 
+export interface AiAllowance {
+  tier: AiTier;
+  /** Changes a day for this tier, and how many this person can still use here today. */
+  changesPerDay: number;
+  changesLeft: number;
+  /** AI requests a day, and how many are left. */
+  requestsPerDay: number;
+  requestsLeft: number;
+  /** Free: counted per person across all their Free servers, as well as per server. */
+  perPerson: boolean;
+}
+
 /**
- * AI builder plans left today for this person on this server: the server's own allowance
- * and, on Free, the person's allowance across all their Free servers, whichever is lower.
+ * What this person can still ask the AI builder for on this server today: changes and
+ * requests, each the lower of the server's allowance and (on Free) the person's.
+ * `exceptId` leaves out a waiting plan that's about to be replaced by a revision.
  */
-export async function aiPlansLeft(
+export async function aiAllowance(
   db: Db,
   guildId: string,
   personId: string,
-  now = new Date(),
-): Promise<{ tier: AiTier; daily: number; left: number; perPerson: boolean }> {
+  opts: { exceptId?: string; now?: Date } = {},
+): Promise<AiAllowance> {
+  const now = opts.now ?? new Date();
+  const since = utcDayStart(now);
   const tier = await aiTier(db, guildId);
-  const daily = AI_PLANS_PER_DAY[tier];
-  const server = daily - (await aiCreditsUsedToday(db, guildId, "qm", now));
-  if (tier !== "free") return { tier, daily, left: Math.max(0, server), perPerson: false };
-  const [person] = await db
+  const changesPerDay = AI_CHANGES_PER_DAY[tier];
+  const requestsPerDay = AI_REQUESTS_PER_DAY[tier];
+  const perPerson = tier === "free";
+  const [serverChanges, serverRequests, personChanges, personRequests] = await Promise.all([
+    qmChangesUsed(db, { guildId }, since, { ...opts, now }),
+    aiCreditsUsedToday(db, guildId, "qm", now),
+    perPerson ? qmChangesUsed(db, { personId }, since, { ...opts, now }) : 0,
+    perPerson ? aiRequestsByPersonToday(db, personId, now) : 0,
+  ]);
+  return {
+    tier,
+    changesPerDay,
+    changesLeft: Math.max(0, changesPerDay - Math.max(serverChanges, personChanges)),
+    requestsPerDay,
+    requestsLeft: Math.max(0, requestsPerDay - Math.max(serverRequests, personRequests)),
+    perPerson,
+  };
+}
+
+/** AI builder requests one person made today on servers that are on Free. */
+async function aiRequestsByPersonToday(db: Db, personId: string, now: Date) {
+  const [row] = await db
     .select({ n: count() })
     .from(aiUsage)
     .where(
@@ -196,8 +230,7 @@ export async function aiPlansLeft(
         onFreeServer,
       ),
     );
-  const mine = daily - (person?.n ?? 0);
-  return { tier, daily, left: Math.max(0, Math.min(server, mine)), perPerson: true };
+  return row?.n ?? 0;
 }
 
 /** Spend across all servers since `since`, in dollars, for the operator. */

@@ -31,6 +31,8 @@ const ERRORS: Record<string, string> = {
   giveaway_full: "This server runs as many giveaways at once as its plan allows. End one first.",
   ticket_closed: "That ticket is already closed.",
   ticket_open: "That ticket is already open.",
+  qm_cant_continue:
+    "That plan can't be continued any more: it expired, was discarded or was undone. Start a new plan.",
   qm_not_yours: "Only the person who asked for a plan can apply it. You can discard it.",
 };
 

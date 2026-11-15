@@ -1,4 +1,4 @@
-import type { QmCreated, QmOperation } from "@garrison/db";
+import { QM_CHANGES_PER_PLAN, type QmCreated, type QmOperation } from "@garrison/db";
 import { z } from "zod";
 
 /**
@@ -50,7 +50,8 @@ export interface ServerSnapshot {
   roleCount: number;
 }
 
-export const MAX_OPERATIONS = 20;
+/** The most changes one plan can make (QM_CHANGES_PER_PLAN). */
+export const MAX_OPERATIONS = QM_CHANGES_PER_PLAN;
 export const MAX_PRIVATE_ROLES = 5;
 const DISCORD_CHANNEL_LIMIT = 500;
 const DISCORD_ROLE_LIMIT = 250;
@@ -86,7 +87,12 @@ export type ValidationResult =
  * Turn model output into a plan Garrison will run, or explain why not. A plan
  * with any problem is rejected whole: half a build is worse than none.
  */
-export function validatePlan(raw: AiPlan, server: ServerSnapshot): ValidationResult {
+export function validatePlan(
+  raw: AiPlan,
+  server: ServerSnapshot,
+  /** The most changes this plan may make: 20, or fewer when the day's allowance is short. */
+  maxOperations = MAX_OPERATIONS,
+): ValidationResult {
   const errors: string[] = [];
   const ops: QmOperation[] = [];
   const refs = new Map<string, QmOperation["kind"]>();
@@ -96,12 +102,14 @@ export function validatePlan(raw: AiPlan, server: ServerSnapshot): ValidationRes
   );
 
   if (!raw.operations.length) errors.push("The plan has no changes.");
-  if (raw.operations.length > MAX_OPERATIONS)
+  if (raw.operations.length > maxOperations)
     errors.push(
-      `The plan has ${raw.operations.length} changes; the most a build can make is ${MAX_OPERATIONS}.`,
+      maxOperations < MAX_OPERATIONS
+        ? `The plan has ${raw.operations.length} changes, but only ${maxOperations} are left today.`
+        : `The plan has ${raw.operations.length} changes; the most a build can make is ${MAX_OPERATIONS}.`,
     );
 
-  raw.operations.slice(0, MAX_OPERATIONS).forEach((op, i) => {
+  raw.operations.slice(0, maxOperations).forEach((op, i) => {
     const n = `Change ${i + 1}`;
     const ref = op.ref.trim().toLowerCase();
     if (!/^[a-z0-9_-]{1,32}$/.test(ref))

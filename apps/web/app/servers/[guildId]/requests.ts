@@ -24,6 +24,7 @@ import {
   getTicketConfig,
   isPanelPaused,
   isPaused,
+  QM_PLAN_TTL_MS,
   type QueueInput,
   queueDashboardAction,
   readAlertFeeds,
@@ -465,7 +466,16 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
     case "qm_plan": {
       const request = field(form, "request");
       if (!request || request.length > 500) return { ok: false, error: "qm_request" };
-      return { ok: true, input: { kind, payload: { request } } };
+      // Continuing a build: a plan still waiting (revised), or one that was built (added onto).
+      const raw = field(form, "continues");
+      if (!raw) return { ok: true, input: { kind, payload: { request } } };
+      const id = uuid.safeParse(raw);
+      const from = id.success ? await getQmBuild(db, guildId, id.data) : null;
+      const fresh =
+        from?.status === "pending" && Date.now() - from.createdAt.getTime() < QM_PLAN_TTL_MS;
+      if (!from || !(fresh || from.status === "applied" || from.status === "failed"))
+        return { ok: false, error: "qm_cant_continue" };
+      return { ok: true, input: { kind, payload: { request, continues: from.id } } };
     }
     case "qm_apply":
     case "qm_cancel": {

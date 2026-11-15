@@ -1,4 +1,5 @@
 import {
+  aiAllowance,
   aiCreditsUsedToday,
   aiSpendSince,
   costMicros,
@@ -12,7 +13,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { BotContext } from "../../commands/types.js";
 import { createLogger } from "../../lib/logger.js";
 import type { AiPlan } from "./plan.js";
-import type { Planner } from "./planner.js";
+import type { Planner, PlannerInput } from "./planner.js";
 import { applyBuild, planBuild, undoBuild } from "./service.js";
 
 type Op = AiPlan["operations"][number];
@@ -89,6 +90,15 @@ function fakeGuild(id: string, failOn?: number) {
   };
   return { guild: guild as unknown as Guild, calls, deleted, channels, roles };
 }
+
+/** A plan of `n` roles, for counting changes. */
+const rolesPlan = (n: number): AiPlan => ({
+  summary: `${n} roles`,
+  notes: "",
+  operations: Array.from({ length: n }, (_, i) =>
+    op({ kind: "create_role", ref: `r${i}`, name: `Role ${i}` }),
+  ),
+});
 
 const sectionPlan: AiPlan = {
   summary: "WARDOGS section",
@@ -201,32 +211,65 @@ describe("Quartermaster end to end", () => {
     });
   });
 
-  it("gives a Free server 2 plans a day, and says when they come back", async () => {
+  it("counts changes, not plans: unused changes carry to the next plan", async () => {
     const f = fakeGuild("q4");
-    const [a, b] = [asker(f), { id: "94001", tag: "second admin" }];
-    expect((await planBuild(ctx, stub(sectionPlan), f.guild, a, "x")).ok).toBe(true);
-    expect((await planBuild(ctx, stub(sectionPlan), f.guild, b, "x")).ok).toBe(true);
-    const third = await planBuild(ctx, stub(sectionPlan), f.guild, a, "x");
-    expect(third).toMatchObject({ ok: false });
-    expect(!third.ok && third.error).toMatch(
-      /today's 2 AI builder plans.*Garrison Pro gives a server 15 a day/,
+    const a = asker(f);
+    const first = await planBuild(ctx, stub(rolesPlan(20)), f.guild, a, "x");
+    expect(first).toMatchObject({ ok: true, changesLeft: 20 });
+    const small = await planBuild(ctx, stub(rolesPlan(3)), f.guild, a, "x");
+    expect(small).toMatchObject({ ok: true, changesLeft: 17 });
+    // 17 left, so the next plan may make up to 17, and one asking for more is refused whole.
+    const tooBig = await planBuild(ctx, stub(rolesPlan(18)), f.guild, a, "x");
+    expect(!tooBig.ok && tooBig.error).toMatch(/only 17 are left today/);
+    expect(await planBuild(ctx, stub(rolesPlan(17)), f.guild, a, "x")).toMatchObject({
+      ok: true,
+      changesLeft: 0,
+    });
+    const none = await planBuild(ctx, stub(rolesPlan(1)), f.guild, a, "x");
+    expect(!none.ok && none.error).toMatch(
+      /your 40 AI builder changes for today on Free servers.*Garrison Pro gives a server 300/,
     );
+  });
+
+  it("gives the planner the changes left as its limit", async () => {
+    const f = fakeGuild("q12");
+    const a = asker(f);
+    expect((await planBuild(ctx, stub(rolesPlan(20)), f.guild, a, "x")).ok).toBe(true);
+    expect((await planBuild(ctx, stub(rolesPlan(15)), f.guild, a, "x")).ok).toBe(true);
+    let limit: number | undefined;
+    const seeing: Planner = {
+      plan: async (input) => {
+        limit = input.maxOperations;
+        return { ok: true, plan: rolesPlan(2), model: "stub" };
+      },
+    };
+    expect(await planBuild(ctx, seeing, f.guild, a, "x")).toMatchObject({ ok: true });
+    expect(limit).toBe(5);
   });
 
   it("counts Free per person across all their Free servers", async () => {
     const [one, two, three] = [fakeGuild("q8"), fakeGuild("q9"), fakeGuild("q10")];
     const owner = { id: "98000", tag: "owner" };
-    expect((await planBuild(ctx, stub(sectionPlan), one.guild, owner, "x")).ok).toBe(true);
-    const second = await planBuild(ctx, stub(sectionPlan), two.guild, owner, "x");
-    expect(second).toMatchObject({ ok: true, creditsLeft: 0 });
+    expect((await planBuild(ctx, stub(rolesPlan(20)), one.guild, owner, "x")).ok).toBe(true);
+    const second = await planBuild(ctx, stub(rolesPlan(20)), two.guild, owner, "x");
+    expect(second).toMatchObject({ ok: true, changesLeft: 0 });
     const third = await planBuild(ctx, stub(sectionPlan), three.guild, owner, "x");
-    expect(!third.ok && third.error).toMatch(/your 2 AI builder plans for today on Free servers/);
-    // Someone else can still use the third server's own 2.
+    expect(!third.ok && third.error).toMatch(/your 40 AI builder changes for today on Free/);
+    // Someone else can still use the third server's own allowance.
     const other = { id: "98001", tag: "other" };
     expect((await planBuild(ctx, stub(sectionPlan), three.guild, other, "x")).ok).toBe(true);
   });
 
-  it("gives an Agency seat 20 a day, and Pro 15, counted per server", async () => {
+  it("caps AI requests too, so many tiny plans can't run up the AI bill", async () => {
+    const f = fakeGuild("q14");
+    const a = asker(f);
+    for (let i = 0; i < 6; i++)
+      expect((await planBuild(ctx, stub(rolesPlan(1)), f.guild, a, "x")).ok).toBe(true);
+    const seventh = await planBuild(ctx, stub(rolesPlan(1)), f.guild, a, "x");
+    expect(!seventh.ok && seventh.error).toMatch(/today's 6 AI builder requests/);
+  });
+
+  it("gives an Agency seat 400 changes a day, counted per server", async () => {
     const { planBundles } = schema;
     const f = fakeGuild("q11");
     await upsertGuild(ctx.db, { id: "q11", name: "q11" });
@@ -237,17 +280,81 @@ describe("Quartermaster end to end", () => {
     await ctx.db
       .insert(schema.guildPlans)
       .values({ guildId: "q11", plan: "pro", bundleId: bundle?.id });
-    const { aiPlansLeft } = await import("@garrison/db");
-    expect(await aiPlansLeft(ctx.db, "q11", "98100")).toMatchObject({
+    expect(await aiAllowance(ctx.db, "q11", "98100")).toMatchObject({
       tier: "agency",
-      daily: 20,
-      left: 20,
+      changesPerDay: 400,
+      changesLeft: 400,
+      requestsPerDay: 50,
+      perPerson: false,
     });
     const first = await planBuild(ctx, stub(sectionPlan), f.guild, asker(f), "x");
-    expect(first).toMatchObject({ ok: true, creditsLeft: 19 });
+    expect(first).toMatchObject({ ok: true, changesLeft: 396 });
   });
 
-  it("lets a Pro server past Free's 3, up to 10 an hour", async () => {
+  it("revises a waiting plan into the next version, which replaces it", async () => {
+    const f = fakeGuild("q13");
+    const a = asker(f);
+    const v1 = await planBuild(ctx, stub(sectionPlan), f.guild, a, "a WARDOGS section");
+    if (!v1.ok) throw new Error(v1.error);
+    let told: PlannerInput["continuation"];
+    const reviser: Planner = {
+      plan: async (input) => {
+        told = input.continuation;
+        return { ok: true, plan: rolesPlan(6), model: "stub" };
+      },
+    };
+    const v2 = await planBuild(ctx, reviser, f.guild, a, "add two more roles", {
+      continues: v1.build,
+    });
+    expect(v2).toMatchObject({ ok: true, changesLeft: 34 });
+    if (!v2.ok) return;
+    expect(v2.build.continuesId).toBe(v1.build.id);
+    expect(v2.replaced).toMatchObject({ id: v1.build.id, status: "cancelled" });
+    expect(told).toMatchObject({ mode: "revise", history: [{ version: v1.build.version }] });
+    expect(told?.mode === "revise" && told.operations.map((o) => o.ref)).toEqual([
+      "gold",
+      "wardogs",
+      "ranked",
+      "vc",
+    ]);
+    // The replaced plan can't be built or continued any more.
+    const { getQmBuild } = await import("@garrison/db");
+    const old = await getQmBuild(ctx.db, "q13", v1.build.id);
+    if (!old) throw new Error("v1 missing");
+    const again = await planBuild(ctx, reviser, f.guild, a, "x", { continues: old });
+    expect(!again.ok && again.error).toMatch(/can't be continued/);
+  });
+
+  it("continues a built plan by adding onto what it made", async () => {
+    const f = fakeGuild("q15");
+    const a = asker(f);
+    const v1 = await planBuild(ctx, stub(sectionPlan), f.guild, a, "a WARDOGS section");
+    if (!v1.ok) throw new Error(v1.error);
+    const built = await applyBuild(ctx, f.guild, v1.build);
+    if (!built.ok) throw new Error(built.error);
+    // As the dashboard does: the build as stored, with what it created.
+    const { getQmBuild } = await import("@garrison/db");
+    const stored = await getQmBuild(ctx.db, "q15", v1.build.id);
+    if (!stored) throw new Error("v1 missing");
+    let told: PlannerInput["continuation"];
+    const extender: Planner = {
+      plan: async (input) => {
+        told = input.continuation;
+        return { ok: true, plan: rolesPlan(2), model: "stub" };
+      },
+    };
+    const v2 = await planBuild(ctx, extender, f.guild, a, "more", { continues: stored });
+    expect(v2).toMatchObject({ ok: true, replaced: null });
+    expect(told?.mode).toBe("extend");
+    expect(told?.mode === "extend" && told.built.map((b) => b.name)).toEqual([
+      "Gold+",
+      "WARDOGS",
+      "ranked-lfg",
+      "Ranked voice",
+    ]);
+  });
+
+  it("lets a Pro server past Free's limits, up to 10 requests an hour", async () => {
     const f = fakeGuild("q5");
     await upsertGuild(ctx.db, { id: "q5", name: "q5" });
     await ctx.db.insert(schema.guildPlans).values({ guildId: "q5", plan: "pro" });

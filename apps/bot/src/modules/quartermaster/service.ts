@@ -1,14 +1,18 @@
 import {
-  AI_PLANS_PER_DAY,
+  AI_CHANGES_PER_DAY,
+  type AiAllowance,
   type AiTier,
-  aiTier,
+  aiAllowance,
   costMicros,
   createQmPlan,
   finishAiCall,
+  getQmBuild,
   nextUtcDayStart,
   QM_ATTEMPTS_PER_HOUR,
+  QM_PLAN_TTL_MS,
   type QmBuild,
   type QmCreated,
+  type QmOperation,
   qmReserveMicros,
   recordQmCreated,
   reserveAiCall,
@@ -17,10 +21,15 @@ import {
 import { ChannelType, type Guild, type OverwriteResolvable, PermissionFlagsBits } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
-import { rollbackOrder, type ServerSnapshot, validatePlan } from "./plan.js";
-import { DEFAULT_MODEL, type Planner, type PlannerInput } from "./planner.js";
+import { MAX_OPERATIONS, rollbackOrder, type ServerSnapshot, validatePlan } from "./plan.js";
+import {
+  DEFAULT_MODEL,
+  type Planner,
+  type PlannerContinuation,
+  type PlannerInput,
+} from "./planner.js";
 
-export const PLAN_TTL_MS = 15 * 60_000;
+export const PLAN_TTL_MS = QM_PLAN_TTL_MS;
 export const REQUEST_MAX = 500;
 
 /** What a private channel's roles may do. Nothing that moderates or manages. */
@@ -68,47 +77,132 @@ export type PlanOutcome =
       build: QmBuild;
       server: ServerSnapshot;
       notes: string;
-      /** Plans left today, after this one. */
-      creditsLeft: number;
+      /** AI builder changes left today after this plan, which holds its own until it's built or expires. */
+      changesLeft: number;
+      /** The waiting plan this one replaced, when it was a revision. */
+      replaced: QmBuild | null;
     }
   | { ok: false; error: string };
 
+/** Builds a continuation can start from: a plan still waiting, or one that was built. */
+export function canContinue(build: QmBuild, now = Date.now()) {
+  if (build.status === "pending") return now - build.createdAt.getTime() < PLAN_TTL_MS;
+  return build.status === "applied" || build.status === "failed";
+}
+
+/** The plan a waiting build holds, in the shape the model writes, for a revision. */
+function asAiOperations(plan: QmOperation[]) {
+  return plan.map((op) => ({
+    kind: op.kind,
+    ref: op.ref,
+    name: op.name,
+    parent: op.parent,
+    topic: op.topic,
+    slowmode_seconds: op.slowmodeSeconds,
+    user_limit: op.userLimit,
+    private_to: op.privateTo,
+    color_hex: op.color === null ? null : `#${op.color.toString(16).padStart(6, "0")}`,
+    hoist: op.hoist,
+    mentionable: op.mentionable,
+  }));
+}
+
+/** The earlier requests in a line of continued builds, oldest first (at most four). */
+async function historyOf(ctx: BotContext, guildId: string, build: QmBuild) {
+  const line: QmBuild[] = [build];
+  let at = build;
+  while (at.continuesId && line.length < 4) {
+    const parent = await getQmBuild(ctx.db, guildId, at.continuesId);
+    if (!parent) break;
+    line.unshift(parent);
+    at = parent;
+  }
+  return line.map((b) => ({ version: b.version, request: b.prompt, summary: b.summary }));
+}
+
+/** What the model is told about the build being continued. Built items that were since deleted are left out. */
+async function continuationFor(
+  ctx: BotContext,
+  guild: Guild,
+  build: QmBuild,
+): Promise<PlannerContinuation> {
+  const history = await historyOf(ctx, guild.id, build);
+  if (build.status === "pending")
+    return {
+      mode: "revise",
+      history,
+      notes: build.notes,
+      operations: asAiOperations(build.plan),
+    };
+  const exists = (c: QmCreated) =>
+    c.kind === "role" ? guild.roles.cache.has(c.id) : guild.channels.cache.has(c.id);
+  return {
+    mode: "extend",
+    history,
+    notes: build.notes,
+    built: build.created.filter(exists).map(({ kind, id, name }) => ({ kind, id, name })),
+  };
+}
+
+/**
+ * Ask the model for a plan and store it as the next version. The day's allowance is in
+ * changes: a plan may use up to 20, or whatever is left, and unused changes stay for the
+ * next plan. Continuing a waiting plan replaces it; continuing a built one adds onto it.
+ */
 export async function planBuild(
   ctx: BotContext,
   planner: Planner,
   guild: Guild,
   requester: { id: string; tag: string },
   request: string,
+  opts: { continues?: QmBuild } = {},
 ): Promise<PlanOutcome> {
   await ensureGuild(ctx, guild);
-  const tier = await aiTier(ctx.db, guild.id);
-  const daily = AI_PLANS_PER_DAY[tier];
+  const continues = opts.continues ?? null;
+  if (continues && !canContinue(continues))
+    return {
+      ok: false,
+      error: `Plan v${continues.version} can't be continued any more. Start a new plan instead.`,
+    };
+  // A revision replaces the waiting plan, so the changes it holds count as free again.
+  const replacing = continues?.status === "pending" ? continues : null;
+  const allowance = await aiAllowance(ctx.db, guild.id, requester.id, {
+    exceptId: replacing?.id,
+  });
+  if (allowance.changesLeft <= 0) return { ok: false, error: changesMessage(allowance) };
+  const maxOperations = Math.min(MAX_OPERATIONS, allowance.changesLeft);
+
   const model = planner.model ?? DEFAULT_MODEL;
   const reserved = await reserveAiCall(ctx.db, {
     guildId: guild.id,
     feature: "qm",
     requestedBy: requester.id,
     model,
-    dailyCredits: daily,
-    personDailyCredits: tier === "free" ? daily : null,
+    dailyCredits: allowance.requestsPerDay,
+    personDailyCredits: allowance.perPerson ? allowance.requestsPerDay : null,
     attemptsPerHour: QM_ATTEMPTS_PER_HOUR,
     dailyBudgetMicros:
       ctx.qmDailyBudgetUsd === undefined ? null : Math.round(ctx.qmDailyBudgetUsd * 1e6),
     reserveMicros: qmReserveMicros(model),
   });
-  if (!reserved.ok) return { ok: false, error: limitMessage(reserved.reason, daily, tier) };
+  if (!reserved.ok)
+    return {
+      ok: false,
+      error: limitMessage(reserved.reason, allowance.requestsPerDay, allowance.tier),
+    };
 
-  // Whatever happens below, record what the call used. Only a valid plan keeps the credit.
+  // Whatever happens below, record what the call used. Only a valid plan keeps the request.
   let keptCredit = false;
   let usage: { model: string; inputTokens: number; outputTokens: number } | undefined;
   try {
     const snap = snapshot(guild);
-    const result = await planner.plan({ request, ...snap });
+    const continuation = continues ? await continuationFor(ctx, guild, continues) : undefined;
+    const result = await planner.plan({ request, ...snap, maxOperations, continuation });
     usage = result.usage;
     if (!result.ok) return result;
-    const checked = validatePlan(result.plan, snap.server);
+    const checked = validatePlan(result.plan, snap.server, maxOperations);
     if (!checked.ok) {
-      ctx.logger.info("Quartermaster plan rejected", { guildId: guild.id, errors: checked.errors });
+      ctx.logger.info("AI builder plan rejected", { guildId: guild.id, errors: checked.errors });
       return {
         ok: false,
         error: `I couldn't make a safe plan from that:\n${checked.errors
@@ -117,6 +211,13 @@ export async function planBuild(
           .join("\n")}`,
       };
     }
+    // Another plan may have used changes while this one was thought up: check again.
+    const now = await aiAllowance(ctx.db, guild.id, requester.id, { exceptId: replacing?.id });
+    if (checked.operations.length > now.changesLeft)
+      return {
+        ok: false,
+        error: `This plan needs ${checked.operations.length} changes, but only ${now.changesLeft} are left today. Ask for less, or wait for tomorrow's.`,
+      };
     const build = await createQmPlan(ctx.db, {
       guildId: guild.id,
       requestedById: requester.id,
@@ -124,18 +225,23 @@ export async function planBuild(
       prompt: request,
       summary: checked.summary,
       plan: checked.operations,
+      notes: checked.notes || null,
+      continuesId: continues?.id ?? null,
       model: result.model,
     });
+    const replaced = replacing
+      ? await transitionQmBuild(ctx.db, replacing.id, "pending", "cancelled", {
+          error: `Replaced by v${build.version}.`,
+        })
+      : null;
     keptCredit = true;
     return {
       ok: true,
       build,
       server: snap.server,
       notes: checked.notes,
-      creditsLeft: Math.max(
-        0,
-        Math.min(daily - reserved.used, daily - (reserved.personUsed ?? reserved.used)),
-      ),
+      changesLeft: Math.max(0, now.changesLeft - checked.operations.length),
+      replaced,
     };
   } finally {
     await finishAiCall(ctx.db, reserved.id, {
@@ -150,21 +256,31 @@ export async function planBuild(
   }
 }
 
-/** Why a plan can't start, in plain words. */
+const resetAt = () => `<t:${Math.floor(nextUtcDayStart().getTime() / 1000)}:R>`;
+const upgradeLine = (tier: AiTier) =>
+  tier === "free"
+    ? ` Garrison Pro gives a server ${AI_CHANGES_PER_DAY.pro} changes a day of its own.`
+    : "";
+
+/** No changes left today, in plain words. */
+export function changesMessage(a: Pick<AiAllowance, "tier" | "changesPerDay" | "perPerson">) {
+  return a.perPerson
+    ? `You've used your ${a.changesPerDay} AI builder changes for today on Free servers. They come back ${resetAt()}.${upgradeLine(a.tier)}`
+    : `This server has used today's ${a.changesPerDay} AI builder changes. They come back ${resetAt()}.${upgradeLine(a.tier)}`;
+}
+
+/** Why a request can't start, in plain words. */
 export function limitMessage(
   reason: "credits" | "person" | "hourly" | "budget",
   daily: number,
   tier: AiTier,
 ) {
-  const reset = `<t:${Math.floor(nextUtcDayStart().getTime() / 1000)}:R>`;
-  const upgrade =
-    tier === "free" ? ` Garrison Pro gives a server ${AI_PLANS_PER_DAY.pro} a day of its own.` : "";
   if (reason === "credits")
-    return `This server has used today's ${daily} AI builder plans. They come back ${reset}.${upgrade}`;
+    return `This server has made today's ${daily} AI builder requests. They come back ${resetAt()}.${upgradeLine(tier)}`;
   if (reason === "person")
-    return `You've used your ${daily} AI builder plans for today on Free servers. They come back ${reset}.${upgrade}`;
+    return `You've made your ${daily} AI builder requests for today on Free servers. They come back ${resetAt()}.${upgradeLine(tier)}`;
   if (reason === "hourly") return "That's a lot of plans in one hour. Try again in a little while.";
-  return `The AI builder has reached its limit for today across all servers. It's back ${reset}.`;
+  return `The AI builder has reached its limit for today across all servers. It's back ${resetAt()}.`;
 }
 
 export type ApplyOutcome =

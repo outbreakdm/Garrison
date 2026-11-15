@@ -13,7 +13,8 @@ checkout isn't available; the landing page always shows release pricing.
 | Monthly | $0 | **$8.99** | **$34.99** ($7.00 a server) |
 | Yearly | $0 | **$79.99** (save 26%) | **$349.99** ($5.83 a server a month) |
 | Safety (moderation, anti-raid, anti-nuke, verification, logs) | Everything | Everything | Everything |
-| AI builder plans a day | 2 per person, across all their Free servers (and 2 per server) | 15 | 20 on each server |
+| AI builder changes a day (a plan makes up to 20 and uses only what it makes) | 40 per person, across all their Free servers (and 40 per server) | 300 | 400 on each server |
+| AI builder requests a day (a cost cap) | 6 | 40 | 50 on each server |
 | Everything in the Free and Pro table | Free column | Pro column | Pro column, on every seat |
 
 Agency is the same Pro on each server. What it sells is the bundle price and one place to
@@ -36,30 +37,38 @@ them together. Below $8 it reads as a hobby add-on; above $10 it competes with M
 
 ## Does it pay for AI?
 
-AI is the only cost that grows with use (Claude Haiku 5.5, `docs/ai-costs.md`). The heaviest
-possible plan (6,000 tokens in, 6,000 out) costs $0.0036, so a server that uses every credit every
-day for a month on the heaviest plans costs at most:
+AI is the only cost that grows with use (Claude Haiku 5.5, `docs/ai-costs.md`). Since
+2026-11-15 the allowance is counted in **changes** (`AI_CHANGES_PER_DAY`): a plan makes up to 20
+and uses only the changes it makes, so a 3-change plan leaves 17 for the next one. What costs
+money is the AI request, the same price however few changes it makes, so requests have their own
+daily cap (`AI_REQUESTS_PER_DAY`). Both live in `packages/db/src/plans.ts`.
 
-- Free (2 a day per person): **$0.22** a person
-- Pro (15 a day): **$1.62**
-- Agency (5 servers × 20 a day): **$10.80**
+The heaviest possible request (6,000 tokens in, 6,000 out) costs $0.0036, so a server that uses
+every request every day for a month on the heaviest plans costs at most:
 
-After Stripe (2.9% + $0.30 a charge), worst-case AI use, monthly billing:
+- Free (6 a day per person): **$0.65** a person
+- Pro (40 a day): **$4.32**
+- Agency (5 servers × 50 a day): **$27.00**
+
+After Stripe (2.9% + $0.30 a charge), that absolute worst case, monthly billing:
 
 | Plan | Price | Stripe | Net | Worst-case AI | Left | AI share |
 |---|---|---|---|---|---|---|
-| Pro monthly | $8.99 | $0.56 | $8.43 | $1.62 | **$6.81** | 19% |
-| Pro yearly | $6.67/mo | $0.22/mo | $6.45 | $1.62 | **$4.83** | 25% |
-| Agency monthly | $34.99 | $1.31 | $33.68 | $10.80 | **$22.88** | 32% |
-| Agency yearly | $29.17/mo | $0.87/mo | $28.30 | $10.80 | **$17.50** | 38% |
+| Pro monthly | $8.99 | $0.56 | $8.43 | $4.32 | **$4.11** | 51% |
+| Pro yearly | $6.67/mo | $0.22/mo | $6.45 | $4.32 | **$2.13** | 67% |
+| Agency monthly | $34.99 | $1.31 | $33.68 | $27.00 | **$6.68** | 80% |
+| Agency yearly | $29.17/mo | $0.87/mo | $28.30 | $27.00 | **$1.30** | 95% |
 
-A realistic admin asks for 10 to 40 plans a month, about $0.01 to $0.11, so real AI use is a
-rounding error; the worst case above assumes every credit is spent every day.
+That worst case needs every request at the token ceiling, every day, all month, and the global
+cap (`QM_DAILY_BUDGET_USD`, $5 a day) stops the AI builder for everyone long before many servers
+could do it. A realistic admin asks for 10 to 40 plans a month, about $0.01 to $0.11. If real
+use ever trends toward the cap, lower `AI_REQUESTS_PER_DAY` for Pro and Agency first; the change
+allowance can stay as sold.
 
 **The one real exposure is Free.** Free brings in nothing, so since 2026-11-15 it's counted per
-person: 2 plans a day across every Free server someone asks from (and still 2 per server), so
-making more servers doesn't make more free AI. At worst that's $0.22 a month per active
-person. The global cap (`QM_DAILY_BUDGET_USD`, $5 a day, $150 a month) still bounds the total.
+person: 40 changes and 6 requests a day across every Free server someone asks from (and the
+same per server), so making more servers doesn't make more free AI. At worst that's $0.65 a
+month per active person. The global cap (`QM_DAILY_BUDGET_USD`, $5 a day, $150 a month) still bounds the total.
 If Free ever crowds paid servers out of that cap, split it into a Free pool and a paid pool;
 not built, as per-person limits make it unlikely. The limits live in `AI_PLANS_PER_DAY`
 (`packages/db/src/plans.ts`).
@@ -129,14 +138,19 @@ shared facts in `apps/web/lib/legal.ts`). Before launch:
   `custom_text`), so the agreement line sits under the Upgrade buttons on the Plan page.
 
 **Handling a refund request** (Refund Policy): full refund within 7 days of the first payment,
-one per person, unless the server ran more AI builder plans in a day than Free allows (2).
+one per person, unless the server used more AI builder changes in a day than Free allows (40).
 Check with (Supabase SQL editor, put in the server ID and the payment time):
 
 ```sql
-select date_trunc('day', created_at) as day, count(*) as plans
-from ai_usage
-where guild_id = '<server id>' and ok and created_at >= '<payment time>'
-group by 1 having count(*) > 2;
+select date_trunc('day', created_at) as day,
+  sum(case when status = 'applied' then jsonb_array_length(plan)
+           when status in ('failed', 'rolled_back') then jsonb_array_length(created)
+           else 0 end) as changes
+from qm_builds
+where guild_id = '<server id>' and created_at >= '<payment time>'
+group by 1 having sum(case when status = 'applied' then jsonb_array_length(plan)
+                           when status in ('failed', 'rolled_back') then jsonb_array_length(created)
+                           else 0 end) > 40;
 ```
 
 No rows means eligible. For an Agency plan, run it for each server in its seats. Refund in the

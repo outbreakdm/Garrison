@@ -1,6 +1,6 @@
-import { and, count, desc, eq, gte, max, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, max, ne, type SQL, sql } from "drizzle-orm";
 import type { Db } from "../client";
-import { type QmBuild, type QmCreated, type QmOperation, qmBuilds } from "../schema";
+import { guildPlans, type QmBuild, type QmCreated, type QmOperation, qmBuilds } from "../schema";
 
 export interface CreatePlanInput {
   guildId: string;
@@ -10,6 +10,46 @@ export interface CreatePlanInput {
   summary: string;
   plan: QmOperation[];
   model: string;
+  notes?: string | null;
+  continuesId?: string | null;
+}
+
+/** How long a plan waits to be built before it expires, as the bot enforces. */
+export const QM_PLAN_TTL_MS = 15 * 60_000;
+
+/**
+ * Changes a build counts against the day: what it built (all of a built plan, what got
+ * made before a failure or an undo), or what a waiting plan holds until it expires.
+ * Discarded and expired plans count nothing.
+ */
+const changesCounted = (now: Date) => sql<number>`coalesce(sum(case
+  when ${qmBuilds.status} = 'applied' then jsonb_array_length(${qmBuilds.plan})
+  when ${qmBuilds.status} in ('failed', 'rolled_back') then jsonb_array_length(${qmBuilds.created})
+  when ${qmBuilds.status} = 'pending' and ${qmBuilds.createdAt} > ${new Date(now.getTime() - QM_PLAN_TTL_MS).toISOString()}::timestamptz then jsonb_array_length(${qmBuilds.plan})
+  else 0 end), 0)::int`;
+
+/** Builds on a server that is on Free right now (no Pro row). */
+const onFreeServer = sql`not exists (select 1 from ${guildPlans} where ${guildPlans.guildId} = ${qmBuilds.guildId} and ${guildPlans.plan} = 'pro')`;
+
+/**
+ * AI builder changes used since `since`: on one server, or (Free) by one person across
+ * every Free server. `exceptId` leaves out a waiting plan that's about to be replaced.
+ */
+export async function qmChangesUsed(
+  db: Db,
+  scope: { guildId: string } | { personId: string },
+  since: Date,
+  opts: { exceptId?: string; now?: Date } = {},
+) {
+  const where: SQL[] = [gte(qmBuilds.createdAt, since)];
+  if ("guildId" in scope) where.push(eq(qmBuilds.guildId, scope.guildId));
+  else where.push(eq(qmBuilds.requestedById, scope.personId), onFreeServer);
+  if (opts.exceptId) where.push(ne(qmBuilds.id, opts.exceptId));
+  const [row] = await db
+    .select({ n: changesCounted(opts.now ?? new Date()) })
+    .from(qmBuilds)
+    .where(and(...where));
+  return Number(row?.n ?? 0);
 }
 
 /** Store a pending plan with the server's next version number. Retries once if two plans race for a number. */

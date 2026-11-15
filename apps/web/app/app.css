@@ -1419,22 +1419,43 @@ select[multiple].g-input option {
   margin-right: auto;
 }
 
-/* --- Quartermaster ------------------------------------------------------------ */
+/* --- AI builder -------------------------------------------------------------- */
+/* Work on the left (describe, review, build), today's allowance and the rules in a rail. */
+.qm-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--space-6);
+  align-items: start;
+}
+.qm-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+.qm-aside {
+  position: sticky;
+  top: 84px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
 .qm-compose {
   border-color: color-mix(in srgb, var(--accent-strong) 45%, var(--line));
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--accent) 5%, transparent), transparent 70%),
     var(--surface);
+  scroll-margin-top: 80px;
 }
 .qm-compose__label {
-  font: 700 22px / 28px var(--font-display);
-  font-stretch: 108%;
+  font: 700 20px / 28px var(--font-display);
+  font-stretch: 106%;
 }
 .qm-compose__input {
   min-height: 96px;
   padding: var(--space-3) var(--space-4);
-  font-size: 16px;
-  line-height: 24px;
+  font-size: 15px;
+  line-height: 22px;
   resize: vertical;
 }
 .qm-compose__foot {
@@ -1443,6 +1464,33 @@ select[multiple].g-input option {
   gap: var(--space-3);
   align-items: center;
   justify-content: space-between;
+}
+/* The rail says it on wide screens; below them the compose card carries the count. */
+.qm-compose__left {
+  display: none;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+/* Continuing a build: the thread it adds onto, above the question. */
+.qm-thread {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  font-size: 14px;
+}
+.qm-thread__what {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+.qm-thread__clear {
+  font-size: 13px;
 }
 .chip {
   padding: 2px var(--space-3);
@@ -1457,32 +1505,107 @@ select[multiple].g-input option {
   border-color: var(--accent-strong);
   color: var(--accent-strong);
 }
-.qm-rules {
+
+/* Today's allowance: changes left as a gauge cut into plan-sized segments. */
+.qm-allow,
+.qm-rules-card {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-6);
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.qm-allow p {
   margin: 0;
-  padding: var(--space-3) 0 0;
+}
+.qm-allow__count {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+.qm-allow__num {
+  font: 650 30px / 36px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.qm-meter {
+  --segments: 1;
+  position: relative;
+}
+.qm-meter--n2 {
+  --segments: 2;
+}
+.qm-meter--n15 {
+  --segments: 15;
+}
+.qm-meter--n20 {
+  --segments: 20;
+}
+.qm-meter .qm-meter__bar {
+  height: 8px;
+}
+/* A 2px card-colored gap every plan's worth of changes. */
+.qm-meter::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0 calc(100% / var(--segments) - 2px),
+    var(--surface) calc(100% / var(--segments) - 2px) calc(100% / var(--segments))
+  );
+  pointer-events: none;
+}
+.qm-allow__facts {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-top: var(--space-3);
   border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+.qm-allow__facts div {
+  display: grid;
+  gap: 2px;
+}
+.qm-allow__facts dt {
+  color: var(--text-muted);
+}
+.qm-allow__facts dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.qm-rules {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
   color: var(--text-muted);
   font-size: 13px;
   list-style: none;
 }
+.qm-rules li {
+  display: grid;
+  grid-template-columns: 8px 1fr;
+  gap: var(--space-2);
+  align-items: baseline;
+}
 .qm-rules li::before {
   content: "";
-  display: inline-block;
   width: 8px;
   height: 8px;
-  margin-right: var(--space-2);
   border-radius: 50%;
   background: var(--go);
-  vertical-align: 1px;
+  transform: translateY(-1px);
 }
+
+/* The waiting plan: what it adds, notes, build bar, then "Change this plan". */
 .qm-plan {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--accent-strong);
+  border-radius: var(--radius-lg);
   background: var(--surface);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
   scroll-margin-top: 80px;
 }
 .qm-plan__head {
@@ -1491,9 +1614,40 @@ select[multiple].g-input option {
   padding: var(--space-4);
 }
 .qm-plan__head h2 {
-  margin: var(--space-3) 0 var(--space-1);
-  font-size: 22px;
+  margin: var(--space-1) 0 0;
+  font-size: 20px;
   line-height: 28px;
+}
+.qm-plan__head p {
+  margin: 0;
+}
+.qm-plan__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+.qm-plan__timer {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.qm-lineage {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.qm-notes {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--intel) 6%, var(--surface));
+}
+.qm-notes p {
+  max-width: 68ch;
+  margin: 0;
+  font-size: 14px;
 }
 .qm-plan__foot {
   display: flex;
@@ -1502,18 +1656,157 @@ select[multiple].g-input option {
   align-items: center;
   justify-content: space-between;
   padding: var(--space-4);
-  border-top: 1px solid var(--line);
 }
 .qm-plan__foot p {
   flex: 1 1 280px;
+  max-width: 68ch;
   margin: 0;
 }
 .qm-plan__foot strong {
   color: var(--accent-strong);
   font-weight: 600;
 }
-.qm-plan .sp {
-  border-width: 1px 0;
+.qm-plan__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+.qm-revise {
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-raised) 45%, var(--surface));
+}
+.qm-revise__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+.qm-revise__summary::-webkit-details-marker {
+  display: none;
+}
+.qm-revise__summary .g-help {
+  flex: 1 1 240px;
+  font-weight: 400;
+}
+.qm-revise[open] .panel__cue {
+  transform: translateY(2px) rotate(-135deg);
+}
+.qm-revise__form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: end;
+  padding: 0 var(--space-4) var(--space-4);
+}
+.qm-revise__form textarea {
+  resize: vertical;
+}
+
+/* Builds: one line per version, its diff folded away. */
+.qm-builds {
+  padding: 0;
+  overflow: hidden;
+}
+.qm-builds__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.qm-build {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--line);
+}
+.qm-build:first-child {
+  border-top: 0;
+}
+.qm-build__v {
+  padding-top: 1px;
+  color: var(--text-muted);
+  font: 600 14px / 22px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.qm-build__main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.qm-build__title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  align-items: center;
+}
+.qm-build__title strong {
+  font-weight: 600;
+}
+.qm-build__meta {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.qm-build__more {
+  margin-top: var(--space-1);
+}
+.qm-build .qm-build__more > summary {
+  width: fit-content;
+  color: var(--accent-strong);
+  font-size: 13px;
+  cursor: pointer;
+}
+.qm-build__more[open] {
+  display: grid;
+  gap: var(--space-2);
+}
+.qm-build__more p {
+  margin: 0;
+}
+.qm-build .notice {
+  margin-top: var(--space-2);
+}
+.qm-build__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+.qm-build__actions .confirm[open] {
+  flex-basis: 100%;
+}
+@media (max-width: 1100px) {
+  .qm-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .qm-aside {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+  .qm-compose__left {
+    display: block;
+  }
+}
+@media (max-width: 720px) {
+  .qm-build {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+  .qm-build__actions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+  .qm-revise__form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .qm-plan__timer {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
 }
 
 /* The server, drawn the way Discord lists it. */
@@ -1522,6 +1815,10 @@ select[multiple].g-input option {
   border-radius: var(--radius-lg);
   background: var(--bg);
   overflow: hidden;
+}
+.qm-plan .sp {
+  border-width: 1px 0;
+  border-radius: 0;
 }
 .sp__bar {
   display: flex;
@@ -1759,10 +2056,6 @@ select[multiple].g-input option {
   .sp__pane--roles {
     border-top: 1px solid var(--line);
     border-left: 0;
-  }
-  .qm-compose__label {
-    font-size: 19px;
-    line-height: 24px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -2935,6 +3228,7 @@ form[data-pending] [aria-busy="true"]::after {
 }
 .board .xpbar,
 .op-bar .xpbar,
+.qm-meter,
 .uptime-bars {
   animation: gauge 0.8s var(--ease-out) 0.15s both;
 }
@@ -3093,6 +3387,7 @@ form[data-pending] [aria-busy="true"]::after {
   }
   .board .xpbar,
   .op-bar .xpbar,
+  .qm-meter,
   .uptime-bars,
   .sp-row.is-new {
     animation-name: fade-in;

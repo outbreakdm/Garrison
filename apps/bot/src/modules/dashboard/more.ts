@@ -19,7 +19,6 @@ import { cardMessage } from "../../lib/card.js";
 import { formatDuration, MAX_TIMEOUT_SECONDS } from "../../lib/duration.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { announcePromotion, refreshOpsCard } from "../ops/service.js";
-import { MAX_OPERATIONS } from "../quartermaster/plan.js";
 import { applyBuild, planBuild, REQUEST_MAX } from "../quartermaster/service.js";
 import { lfgCard } from "../rally/card.js";
 import { notifyTemplateRole } from "../rally/commands.js";
@@ -81,7 +80,10 @@ const raidSignup = z.object({
   spec: z.string().trim().max(20).nullable(),
 });
 const raidWithdraw = z.object({ eventId: uuid });
-const qmPlan = z.object({ request: z.string().trim().min(1).max(REQUEST_MAX) });
+const qmPlan = z.object({
+  request: z.string().trim().min(1).max(REQUEST_MAX),
+  continues: uuid.optional(),
+});
 
 const PERMISSION_NAME: Record<string, string> = {
   warn: "Moderate Members",
@@ -328,19 +330,26 @@ export async function doQmPlan(ctx: BotContext, guild: Guild, member: GuildMembe
   if (!p.success) return fail("Describe what to build, in 500 characters or fewer.");
   if (!ctx.planner)
     return fail("The AI builder isn't set up on this Garrison: the bot has no Claude API key.");
+  const continues = p.data.continues ? await getQmBuild(ctx.db, guild.id, p.data.continues) : null;
+  if (p.data.continues && !continues) return fail("That plan doesn't exist any more.");
   const outcome = await planBuild(
     ctx,
     ctx.planner,
     guild,
     { id: member.id, tag: member.user.username },
     p.data.request,
+    { continues: continues ?? undefined },
   );
   if (!outcome.ok) return fail(outcome.error.replace(/\n- /g, " · ").replace(/\n/g, " "));
   const n = outcome.build.plan.length;
-  const left = outcome.notes ? ` Left out: ${outcome.notes}` : "";
+  const what = outcome.replaced
+    ? `replaces v${outcome.replaced.version}`
+    : continues
+      ? `adds onto v${continues.version}`
+      : "is ready";
   return {
     ok: true,
-    message: `Plan v${outcome.build.version} is ready: ${n} of ${MAX_OPERATIONS} changes at most. Nothing is built until you apply it.${left}`,
+    message: `Plan v${outcome.build.version} ${what}: ${n} ${n === 1 ? "change" : "changes"}, ${outcome.changesLeft} left today. Nothing is built until you apply it.`,
   };
 }
 

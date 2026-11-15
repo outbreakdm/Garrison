@@ -13,11 +13,36 @@ export type GuildPlan = (typeof PLANS)[number];
 /** What a server's AI use is counted under: Agency is Pro from a seat (guild_plans.bundle_id). */
 export type AiTier = GuildPlan | "agency";
 
+/** The most changes one AI builder plan can make. */
+export const QM_CHANGES_PER_PLAN = 20;
+
 /**
- * AI builder plans a day. Pro and Agency count per server. Free counts per server and also
- * per person across every Free server they ask from, so extra servers don't add free AI.
+ * Full AI builder plans a day, the unit the plans are sold in. The allowance itself is
+ * counted in changes (AI_CHANGES_PER_DAY): a plan uses only the changes it makes, and the
+ * rest carry to the next plan the same day.
  */
 export const AI_PLANS_PER_DAY = { free: 2, pro: 15, agency: 20 } as const satisfies Record<
+  AiTier,
+  number
+>;
+
+/**
+ * AI builder changes a day: full plans times 20. Pro and Agency count per server. Free
+ * counts per server and also per person across every Free server they ask from, so extra
+ * servers don't add free AI.
+ */
+export const AI_CHANGES_PER_DAY = {
+  free: AI_PLANS_PER_DAY.free * QM_CHANGES_PER_PLAN,
+  pro: AI_PLANS_PER_DAY.pro * QM_CHANGES_PER_PLAN,
+  agency: AI_PLANS_PER_DAY.agency * QM_CHANGES_PER_PLAN,
+} as const satisfies Record<AiTier, number>;
+
+/**
+ * AI requests a day, counted like the changes. Every request costs the same to run however
+ * few changes it makes, so this keeps a string of tiny plans from running up the AI bill
+ * (docs/pricing.md). A request that fails gives its slot back.
+ */
+export const AI_REQUESTS_PER_DAY = { free: 6, pro: 40, agency: 50 } as const satisfies Record<
   AiTier,
   number
 >;
@@ -37,7 +62,7 @@ export const PRICING = {
     highlights: [
       "Moderation, anti-raid, anti-nuke, verification and logs, in full",
       "Every module with the standard look and sensible limits",
-      "2 AI builder plans a day",
+      "AI builder: 40 changes a day, carried between plans",
       "Undo and history on every change",
     ],
   },
@@ -52,7 +77,7 @@ export const PRICING = {
       "Ticket forms, auto-assign, stats and a year of transcripts",
       "Custom rank cards, XP boosts and seasons",
       "Raid attendance, roles from game stats, scheduled backups",
-      "15 AI builder plans a day and server templates",
+      "AI builder: 300 changes a day, and server templates",
     ],
   },
   agency: {
@@ -64,7 +89,7 @@ export const PRICING = {
     highlights: [
       "Everything in Pro, on each of 5 servers",
       "Put a server in a seat, or free it, from its Plan page",
-      "20 AI builder plans a day on each server",
+      "AI builder: 400 changes a day on each server",
       "One bill: $7.00 a server a month",
     ],
   },
@@ -327,9 +352,9 @@ export const FEATURES = {
   "qm.dailyCredits": {
     module: "qm",
     about:
-      "AI builder plans a day, each up to 20 changes (Agency: 20 a day on each server; Free: 2 a day per person across all their servers)",
-    free: AI_PLANS_PER_DAY.free,
-    pro: AI_PLANS_PER_DAY.pro,
+      "AI builder changes a day. A plan makes up to 20 and uses only what it makes; the rest carry to the next plan (Agency: 400 on each server; Free: 40 per person across all their servers)",
+    free: AI_CHANGES_PER_DAY.free,
+    pro: AI_CHANGES_PER_DAY.pro,
   },
   "rally.templates": {
     module: "rally",

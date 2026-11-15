@@ -775,3 +775,12 @@ Decided (2026-11-12, owner):
   server's naming, list what didn't fit in notes) instead of "keep plans small". Output cap
   raised from 4,000 to 6,000 tokens; worst-case plan cost $0.0036. Not yet tried against the
   real model. Not deployed.
+- 2026-11-15: AI builder counts changes, not plans: a plan makes up to 20 and uses only what it
+  makes, the rest carry to the next plan (`AI_CHANGES_PER_DAY`: Free 40 per person, Pro 300,
+  Agency 400 per server), with a separate request cap for AI cost (`AI_REQUESTS_PER_DAY`: 6,
+  40, 50). Continuing: a waiting plan can be revised into the next version (it replaces the
+  old one), and a built plan can be continued, with the model told what it built, the line's
+  earlier requests and its own notes. Page redesigned: work column (describe or continue,
+  plan with notes and "Change this plan"), a rail with today's changes as a plan-segmented
+  gauge and the rules, and a compact Builds timeline. Needs migration `0056_qm_continue`
+  (notes, continues_id on qm_builds) in production before deploying. Not deployed.
