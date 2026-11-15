@@ -1,5 +1,4 @@
 import {
-  AI_SUPPLIES_PER_FULL_PLAN,
   AI_SUPPLIES_PER_MESSAGE,
   aiAllowance,
   entitlements,
@@ -9,7 +8,6 @@ import {
   listQmBuilds,
   listQmThread,
   listTemplates,
-  QM_CHANGES_PER_PLAN,
   QM_PLAN_TTL_MS,
   type QmBuild,
   qmChangeCount,
@@ -17,7 +15,6 @@ import {
   TEMPLATES_PER_USER,
 } from "@garrison/db";
 import type { Metadata } from "next";
-import { Fragment, type ReactNode } from "react";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { ProTag } from "@/components/cards/CardEditor";
 import { formatTime } from "@/components/format";
@@ -26,15 +23,7 @@ import { ServerPreview } from "@/components/ServerPreview";
 import { getDb } from "@/lib/db";
 import { getServerLayout, guildOwnerId } from "@/lib/discord";
 import { readFlash } from "@/lib/flash";
-import {
-  addedText,
-  planLines,
-  postLines,
-  postPreviews,
-  previewServer,
-  settingDiffs,
-  settingLines,
-} from "@/lib/qm-preview";
+import { addedText, postPreviews, previewServer, settingDiffs } from "@/lib/qm-preview";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
 import { removeTemplate } from "./actions";
@@ -44,13 +33,14 @@ export const metadata: Metadata = { title: "AI assistant" };
 /** A request is at most this long, as the bot enforces. */
 const REQUEST_MAX = 500;
 
-const STATUS: Record<QmBuild["status"], { label: string; tone: string }> = {
-  pending: { label: "Not built", tone: "g-badge--intel" },
-  applied: { label: "Built", tone: "g-badge--go" },
-  cancelled: { label: "Discarded", tone: "g-badge--off" },
-  expired: { label: "Expired", tone: "g-badge--off" },
-  failed: { label: "Stopped partway", tone: "g-badge--alert" },
-  rolled_back: { label: "Undone", tone: "g-badge--caution" },
+/** What became of a draft, shown on the chat message that made it. */
+const OUTCOME: Record<QmBuild["status"], string> = {
+  pending: "Expired",
+  applied: "Applied",
+  cancelled: "Discarded",
+  expired: "Expired",
+  failed: "Stopped partway",
+  rolled_back: "Undone",
 };
 
 /** First messages to tap when a conversation is empty. */
@@ -68,11 +58,6 @@ const CAN_DO = [
   "Post your saved role menus, ticket panels and messages",
   "Answer questions about how Garrison is set up here",
 ];
-
-/** Changes a build counts against its day: what it built, or what it plans while it waits. */
-function changesOf(b: QmBuild) {
-  return b.status === "failed" || b.status === "rolled_back" ? b.created.length : qmChangeCount(b);
-}
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
@@ -106,14 +91,19 @@ export default async function QuartermasterPage({
   const now = Date.now();
   const waiting = (b: QmBuild) =>
     b.status === "pending" && now - b.createdAt.getTime() < QM_PLAN_TTL_MS;
-  const plan = builds.find(waiting) ?? null;
-  const history = builds.filter((b) => b !== plan);
-  const versionOf = new Map(builds.map((b) => [b.id, b.version]));
-  const nextVersion = (builds[0]?.version ?? 0) + 1;
-  const planning = actions.some(
-    (a) => a.kind === "qm_plan" && (a.status === "pending" || a.status === "running"),
+
+  // The draft: the one this conversation made last, or one of yours still waiting.
+  const lastDraftId = [...messages].reverse().find((m) => m.buildId)?.buildId;
+  const plan =
+    builds.find((b) => b.id === lastDraftId && waiting(b)) ??
+    builds.find((b) => waiting(b) && b.requestedById === session.userId) ??
+    null;
+  const mine = plan?.requestedById === session.userId;
+  // Builds that reached the server, newest first. Drafts that were replaced or discarded don't.
+  const history = builds.filter(
+    (b) => b.status === "applied" || b.status === "failed" || b.status === "rolled_back",
   );
-  const building = plan
+  const applying = plan
     ? actions.some(
         (a) =>
           a.kind === "qm_apply" &&
@@ -124,40 +114,20 @@ export default async function QuartermasterPage({
   const preview = layout ? previewServer(layout, plan?.plan ?? []) : null;
   const diffs = plan ? settingDiffs(layout, plan.plan, plan.settings ?? []) : [];
   const posts = plan ? postPreviews(layout, plan.plan, plan.posts ?? []) : [];
-  // What building does, in words: "adds …, changes 2 settings and posts 1 saved item".
-  const doing: ReactNode[] = plan
-    ? [
-        plan.plan.length && preview ? (
-          <>
-            adds <strong>{addedText(preview.added)}</strong> to {guild.name}
-          </>
-        ) : null,
-        diffs.length ? (
-          <>
-            changes <strong>{plural(diffs.length, "setting")}</strong>
-          </>
-        ) : null,
-        posts.length ? (
-          <>
-            posts <strong>{plural(posts.length, "saved item")}</strong>
-          </>
-        ) : null,
-      ].filter(Boolean)
-    : [];
+  const changes = plan ? qmChangeCount(plan) : 0;
+  // What applying does, in one sentence: "Adds 2 channels, changes 1 setting and posts 1 item."
+  const doing = [
+    plan?.plan.length && preview ? `adds ${addedText(preview.added)}` : null,
+    diffs.length ? `changes ${plural(diffs.length, "setting")}` : null,
+    posts.length ? `posts ${plural(posts.length, "saved item")}` : null,
+  ].filter((x): x is string => Boolean(x));
+  const sentence = doing.length
+    ? `${doing.slice(0, -1).join(", ")}${doing.length > 1 ? " and " : ""}${doing.at(-1)}`
+    : "";
   const minutesLeft = plan
     ? Math.max(1, Math.ceil((plan.createdAt.getTime() + QM_PLAN_TTL_MS - now) / 60_000))
     : 0;
-  const mine = plan?.requestedById === session.userId;
 
-  // Continuing a built plan: ?continue=<version> on a build that was built (or partly).
-  const asked = Number(query.continue);
-  const cont =
-    history.find((b) => b.version === asked && (b.status === "applied" || b.status === "failed")) ??
-    null;
-  const prefill =
-    cont && query.use === "notes" && cont.notes
-      ? `Add what you suggested next: ${cont.notes}`.slice(0, REQUEST_MAX)
-      : "";
   // A message on its way: queued (shown as sent) or being answered (Garrison is typing).
   const myChat = actions.filter(
     (a) =>
@@ -173,29 +143,24 @@ export default async function QuartermasterPage({
   const lastBot = [...messages].reverse().find((m) => m.role === "assistant");
   const choices = thinking
     ? []
-    : messages.length === 0 && !cont
+    : messages.length === 0
       ? STARTERS
       : messages.at(-1)?.role === "assistant"
         ? (lastBot?.choices ?? [])
         : [];
-  // Where the next message goes: this conversation, or a new one (fresh or continuing).
-  const newThread = fresh || cont !== null;
   const chatHidden = (
     <>
       <input type="hidden" name="guildId" value={guild.id} />
       <input type="hidden" name="page" value="quartermaster" />
       <input type="hidden" name="kind" value="qm_chat" />
-      {threadId && !newThread ? <input type="hidden" name="threadId" value={threadId} /> : null}
-      {newThread ? <input type="hidden" name="fresh" value="1" /> : null}
-      {cont ? <input type="hidden" name="continues" value={cont.id} /> : null}
+      {threadId && !fresh ? <input type="hidden" name="threadId" value={threadId} /> : null}
+      {fresh ? <input type="hidden" name="fresh" value="1" /> : null}
     </>
   );
 
   const { suppliesLeft, suppliesPerDay, perPerson } = allowance;
-  const fullPlans = Math.floor(suppliesLeft / AI_SUPPLIES_PER_FULL_PLAN);
-  const messagesLeft = Math.floor(suppliesLeft / AI_SUPPLIES_PER_MESSAGE);
   const canMessage = suppliesLeft >= AI_SUPPLIES_PER_MESSAGE;
-  const blocked = thinking ? "Sending…" : canMessage ? null : "Out of supplies today";
+  const blocked = thinking ? "Sending…" : canMessage ? null : "Out of supplies";
 
   return (
     <>
@@ -203,596 +168,398 @@ export default async function QuartermasterPage({
         <div>
           <h1>AI assistant</h1>
           <p>
-            Ask for channels, roles and settings in plain words, or ask how Garrison is set up here.
-            See every change before you build it in one click. Keep going from any version, and undo
-            any build.
+            Tell Garrison what you need in plain words. It drafts the changes as you talk; apply
+            them whenever you like what you see, and undo them any time.
           </p>
         </div>
       </div>
 
-      <div className="qm-layout">
-        <div className="qm-main">
-          <section
-            className={`g-card qm-chat${cont ? " qm-chat--continue" : ""}`}
-            id="describe"
-            aria-labelledby="qm-chat-title"
-          >
-            {thinking ? <AutoRefresh every={2000} forMs={90_000} /> : null}
-            <div className="qm-chat__head">
-              <div>
-                <h2 className="qm-chat__title" id="qm-chat-title">
-                  {cont ? `Keep building v${cont.version}` : "Talk it through"}
-                </h2>
-                <p className="g-help">
-                  Tell Garrison what you need. It asks what it needs, suggests ideas, and drafts a
-                  plan you can preview and build.
-                </p>
-              </div>
-              {messages.length || cont ? (
-                <a className="g-btn g-btn--ghost g-btn--sm" href="?fresh=1#describe">
-                  New conversation
-                </a>
-              ) : null}
-            </div>
-            {cont ? (
-              <div className="qm-thread">
-                <span className="g-badge g-badge--accent">Continuing v{cont.version}</span>
-                <span className="qm-thread__what">{cont.summary}</span>
-                <a className="qm-thread__clear" href="?#describe">
-                  Back to your conversation
-                </a>
-              </div>
-            ) : null}
-            <ol className="qm-chat__log" aria-live="polite" aria-label="Conversation">
-              {messages.length === 0 && !queued.length ? (
-                <li className="qm-msg qm-msg--bot">
-                  <span className="qm-msg__mark" aria-hidden="true" />
-                  <div className="qm-msg__bubble">
-                    {cont ? (
-                      <p>
-                        v{cont.version} is built. What should it get next? I can also suggest what's
-                        missing.
-                      </p>
-                    ) : (
-                      <>
-                        <p>Hi! What's your community about, and what do you need? I can:</p>
-                        <ul className="qm-msg__can">
-                          {CAN_DO.map((c) => (
-                            <li key={c}>{c}</li>
-                          ))}
-                        </ul>
-                        <p>Nothing changes until you build it.</p>
-                      </>
-                    )}
-                  </div>
-                </li>
-              ) : null}
-              {messages.map((m) => {
-                const drafted = m.buildId ? builds.find((b) => b.id === m.buildId) : undefined;
-                return (
-                  <li
-                    key={m.id}
-                    className={`qm-msg ${m.role === "user" ? "qm-msg--me" : "qm-msg--bot"}`}
-                  >
-                    {m.role === "user" ? null : (
-                      <span className="qm-msg__mark" aria-hidden="true" />
-                    )}
-                    <div className="qm-msg__bubble">
-                      <p>{m.text}</p>
-                      {drafted ? (
-                        <a
-                          className="qm-msg__plan"
-                          href={drafted === plan ? "#plan" : "#qm-builds-title"}
-                        >
-                          <span className="g-badge g-badge--accent">Plan v{drafted.version}</span>
-                          <span>
-                            {plural(qmChangeCount(drafted), "change")} ·{" "}
-                            {drafted === plan
-                              ? "preview below"
-                              : STATUS[drafted.status === "pending" ? "expired" : drafted.status]
-                                  .label}
-                          </span>
-                        </a>
-                      ) : null}
-                    </div>
-                  </li>
-                );
-              })}
-              {queued.map((text, i) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: queued messages have no id yet
-                <li key={`q${i}`} className="qm-msg qm-msg--me qm-msg--queued">
-                  <div className="qm-msg__bubble">
-                    <p>{text}</p>
-                  </div>
-                </li>
-              ))}
-              {thinking ? (
-                <li className="qm-msg qm-msg--bot" role="status">
-                  <span className="qm-msg__mark" aria-hidden="true" />
-                  <div className="qm-msg__bubble qm-msg__typing">
-                    <span className="qm-typing" aria-hidden="true">
-                      <i />
-                      <i />
-                      <i />
-                    </span>
-                    <span className="sr-only">Garrison is replying</span>
-                  </div>
-                </li>
-              ) : null}
-            </ol>
-            {choices.length ? (
-              <form action={requestAction} className="qm-chat__choices">
-                {chatHidden}
-                {choices.map((c) => (
-                  <button
-                    key={c}
-                    type="submit"
-                    name="message"
-                    value={c}
-                    className="chip"
-                    disabled={blocked !== null}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </form>
-            ) : null}
-            <form
-              action={requestAction}
-              className="qm-chat__composer"
-              key={`${threadId ?? "new"}:${messages.length}:${cont?.id ?? ""}`}
-            >
-              {chatHidden}
-              <label className="sr-only" htmlFor="qm-message">
-                Message the AI assistant
-              </label>
-              <textarea
-                className="g-input qm-chat__input"
-                id="qm-message"
-                name="message"
-                rows={2}
-                maxLength={REQUEST_MAX}
-                required
-                placeholder={
-                  cont
-                    ? "A clips channel, a ranked voice room and a Diamond role"
-                    : messages.length
-                      ? "Answer, or ask for changes"
-                      : "We play Valorant and Apex, about 200 members, mostly ranked"
-                }
-                defaultValue={prefill}
-              />
-              <button type="submit" className="g-btn g-btn--primary" disabled={blocked !== null}>
-                {blocked ?? "Send"}
-              </button>
-            </form>
-            <p className="qm-compose__left">
-              Each message uses {AI_SUPPLIES_PER_MESSAGE} supplies · {suppliesLeft} of{" "}
-              {suppliesPerDay} left today
-            </p>
-          </section>
-
-          <RequestsPanel
-            guildId={guild.id}
-            kinds={[
-              "qm_plan",
-              "qm_apply",
-              "qm_cancel",
-              "undo_build",
-              "template_save",
-              "template_apply",
-            ]}
-            query={query}
-          />
-
-          {plan && preview ? (
-            <section className="qm-plan" id="plan" aria-label={`Plan v${plan.version}`}>
-              <div className="qm-plan__head">
-                <div className="qm-plan__tags">
-                  <span className="g-badge g-badge--accent">Plan v{plan.version}</span>
-                  {plan.continuesId && versionOf.has(plan.continuesId) ? (
-                    <span className="qm-lineage">Continues v{versionOf.get(plan.continuesId)}</span>
-                  ) : null}
-                  <span className="qm-plan__timer">
-                    Waits {minutesLeft} more min · asked by {plan.requestedByTag}
-                  </span>
-                </div>
-                <h2>{plan.summary}</h2>
-                {/* The request is user text; React escapes it. */}
-                <p className="muted">“{plan.prompt}”</p>
-              </div>
-              {plan.plan.length || (!diffs.length && !posts.length) ? (
-                <ServerPreview name={guild.name} preview={preview} planned />
-              ) : null}
-              {diffs.length ? (
-                <div className="qm-settings">
-                  <h3 className="g-label">Settings it changes</h3>
-                  <dl className="qm-settings__list">
-                    {diffs.map((d) => (
-                      <div key={d.label}>
-                        <dt>{d.label}</dt>
-                        <dd>
-                          <span className="qm-settings__from">{d.from}</span>
-                          <span aria-hidden="true"> → </span>
-                          <span className="sr-only"> becomes </span>
-                          <strong>{d.to}</strong>
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                </div>
-              ) : null}
-              {posts.length ? (
-                <div className="qm-settings">
-                  <h3 className="g-label">What it posts</h3>
-                  <dl className="qm-settings__list">
-                    {posts.map((x) => (
-                      <div key={x.what}>
-                        <dt>{x.what}</dt>
-                        <dd>
-                          in <strong>{x.where}</strong>
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                  <p className="g-help">Posts stay if you undo this build.</p>
-                </div>
-              ) : null}
-              {plan.notes ? (
-                <div className="qm-notes">
-                  <h3 className="g-label">Notes from the AI assistant</h3>
-                  <p>{plan.notes}</p>
-                </div>
-              ) : null}
-              <div className="qm-plan__foot">
-                <p>
-                  Building this{" "}
-                  {doing.map((d, i) => (
-                    // biome-ignore lint/suspicious/noArrayIndexKey: a fixed, ordered sentence
-                    <Fragment key={i}>
-                      {i ? (i === doing.length - 1 ? " and " : ", ") : ""}
-                      {d}
-                    </Fragment>
-                  ))}
-                  . It uses {plural(qmChangeCount(plan), "supply", "supplies")}, held from today's
-                  until it's built or expires.
-                  {mine
-                    ? ""
-                    : ` Only ${plan.requestedByTag} can build it; you can change or discard it.`}
-                </p>
-                <div className="qm-plan__actions">
-                  <form action={requestAction}>
-                    <input type="hidden" name="guildId" value={guild.id} />
-                    <input type="hidden" name="page" value="quartermaster" />
-                    <input type="hidden" name="kind" value="qm_cancel" />
-                    <input type="hidden" name="id" value={plan.id} />
-                    <button type="submit" className="g-btn g-btn--ghost" disabled={building}>
-                      Discard
-                    </button>
-                  </form>
-                  {mine ? (
-                    <form action={requestAction}>
-                      <input type="hidden" name="guildId" value={guild.id} />
-                      <input type="hidden" name="page" value="quartermaster" />
-                      <input type="hidden" name="kind" value="qm_apply" />
-                      <input type="hidden" name="id" value={plan.id} />
-                      <button type="submit" className="g-btn g-btn--primary" disabled={building}>
-                        {building ? "Building…" : `Build v${plan.version}`}
-                      </button>
-                    </form>
-                  ) : null}
-                </div>
-              </div>
-              <details className="qm-revise" id="revise">
-                <summary className="qm-revise__summary">
-                  <span>Change this plan</span>
-                  <span className="g-help">
-                    Ask for edits or more. It becomes v{nextVersion} and replaces v{plan.version}.
-                  </span>
-                  <span className="panel__cue" aria-hidden="true" />
-                </summary>
-                <form action={requestAction} className="qm-revise__form">
-                  <input type="hidden" name="guildId" value={guild.id} />
-                  <input type="hidden" name="page" value="quartermaster" />
-                  <input type="hidden" name="kind" value="qm_plan" />
-                  <input type="hidden" name="continues" value={plan.id} />
-                  <label className="sr-only" htmlFor="qm-revise">
-                    What should change in v{plan.version}?
-                  </label>
-                  <textarea
-                    className="g-input"
-                    id="qm-revise"
-                    name="request"
-                    rows={2}
-                    maxLength={REQUEST_MAX}
-                    required
-                    placeholder="Make ranked LFG Gold+ only, and add a clips channel"
-                  />
-                  <button
-                    type="submit"
-                    className="g-btn g-btn--secondary"
-                    disabled={building || planning || suppliesLeft <= AI_SUPPLIES_PER_MESSAGE}
-                  >
-                    {planning ? "Planning…" : `Revise into v${nextVersion}`}
-                  </button>
-                </form>
-              </details>
-            </section>
-          ) : (
-            <section className="card-col" aria-label="Your server">
-              {planning ? (
-                <div className="notice notice--ok" role="status">
-                  Garrison is revising the plan. The preview appears here by itself, usually within
-                  30 seconds.
-                </div>
-              ) : null}
-              {preview ? (
-                <ServerPreview name={guild.name} preview={preview} planned={false} />
-              ) : (
-                <div className="g-card muted">
-                  Discord didn't answer, so there's no preview right now. Plans still work.
-                </div>
-              )}
-            </section>
-          )}
-        </div>
-
-        <aside className="qm-aside" aria-label="Today's supplies and rules">
-          <section className="g-card qm-allow" aria-labelledby="qm-allow-title">
-            <h2 className="card-title" id="qm-allow-title">
-              Today's supplies
+      <div className="qm-stack">
+        <section className="g-card qm-chat" id="describe" aria-labelledby="qm-chat-title">
+          {thinking ? <AutoRefresh every={2000} forMs={90_000} /> : null}
+          <div className="qm-chat__head">
+            <h2 className="qm-chat__title" id="qm-chat-title">
+              Chat
             </h2>
-            <p className="qm-allow__count">
-              <span className="qm-allow__num">{suppliesLeft}</span>
-              <span className="muted">of {suppliesPerDay} left</span>
-            </p>
-            <div className={`qm-meter qm-meter--n${suppliesPerDay / QM_CHANGES_PER_PLAN}`}>
-              <progress
-                className="xpbar qm-meter__bar"
-                max={suppliesPerDay}
-                value={suppliesLeft}
-                aria-label={`${suppliesLeft} of ${suppliesPerDay} supplies left today`}
-              />
-            </div>
-            <p className="g-help">
-              {canMessage
-                ? `Enough for about ${plural(fullPlans, "full plan")} or ${plural(messagesLeft, "message")}. Back at midnight UTC.`
-                : "Back at midnight UTC."}
-            </p>
-            <dl className="qm-allow__facts">
-              <div>
-                <dt>A message</dt>
-                <dd>
-                  {AI_SUPPLIES_PER_MESSAGE} supplies: asking, answering, or drafting and revising a
-                  plan
-                </dd>
-              </div>
-              <div>
-                <dt>A change</dt>
-                <dd>
-                  1 supply for each channel, category or role a plan makes, up to{" "}
-                  {QM_CHANGES_PER_PLAN} a plan
-                </dd>
-              </div>
-              <div>
-                <dt>Given back</dt>
-                <dd>Discarded and expired plans, and messages that fail</dd>
-              </div>
-            </dl>
-            {perPerson ? (
-              <p className="g-help">
-                On Free, your supplies count across every Free server you use. Pro gives this server
-                its own 300 a day.
-              </p>
+            {messages.length ? (
+              <a className="g-btn g-btn--ghost g-btn--sm" href="?fresh=1#describe">
+                New conversation
+              </a>
             ) : null}
-          </section>
-
-          <section className="g-card qm-rules-card" aria-labelledby="qm-rules-title">
-            <h2 className="card-title" id="qm-rules-title">
-              How it builds
-            </h2>
-            <ul className="qm-rules">
-              <li>Adds channels and roles; nothing you have is edited or deleted</li>
-              <li>
-                Changes settings only where you see them in the plan, with the same checks as their
-                pages
+          </div>
+          <ol className="qm-chat__log" aria-live="polite" aria-label="Conversation">
+            {messages.length === 0 && !queued.length ? (
+              <li className="qm-msg qm-msg--bot">
+                <span className="qm-msg__mark" aria-hidden="true" />
+                <div className="qm-msg__bubble">
+                  <p>Hi! What's your community about, and what do you need? I can:</p>
+                  <ul className="qm-msg__can">
+                    {CAN_DO.map((c) => (
+                      <li key={c}>{c}</li>
+                    ))}
+                  </ul>
+                  <p>Nothing changes until you apply it.</p>
+                </div>
               </li>
-              <li>New roles get only member permissions, never moderation or admin</li>
-              <li>Nothing is built until you approve the plan</li>
-              <li>Posts only the role menus, ticket panels and messages you've saved</li>
-              <li>Undo removes what a build made and puts its settings back</li>
-            </ul>
-          </section>
-        </aside>
-      </div>
-
-      <section className="g-card qm-builds" aria-labelledby="qm-builds-title">
-        <div className="table-card__head row-between">
-          <h2 className="card-title" id="qm-builds-title">
-            Builds
-          </h2>
-          <span className="g-help">Continue any built version to add onto it</span>
-        </div>
-        {history.length === 0 ? (
-          <p className="queue__empty muted">
-            No builds yet. Describe something above and your first plan appears here.
-          </p>
-        ) : (
-          <ol className="qm-builds__list">
-            {history.map((b) => {
-              // A plan nobody built in time reads as expired, whatever the row still says.
-              const st = STATUS[b.status === "pending" ? "expired" : b.status];
-              const built = b.status === "applied" || b.status === "failed";
-              const parent = b.continuesId ? versionOf.get(b.continuesId) : undefined;
-              const replaced = b.status === "cancelled" && b.error?.startsWith("Replaced by");
+            ) : null}
+            {messages.map((m) => {
+              const drafted = m.buildId ? builds.find((b) => b.id === m.buildId) : undefined;
+              const replaced =
+                drafted?.status === "cancelled" && drafted.error?.startsWith("Replaced by");
               return (
-                <li className="qm-build" key={b.id}>
-                  <span className="qm-build__v">v{b.version}</span>
-                  <div className="qm-build__main">
-                    <div className="qm-build__title">
-                      <strong>{b.summary}</strong>
-                      <span className={`g-badge ${st.tone}`}>
-                        {replaced ? "Revised" : st.label}
-                      </span>
-                    </div>
-                    <span className="qm-build__meta">
-                      {plural(changesOf(b), "change")}
-                      {parent ? ` · continues v${parent}` : ""} · {b.requestedByTag} ·{" "}
-                      {formatTime(b.createdAt)}
-                    </span>
-                    <details className="qm-build__more">
-                      <summary>Request and changes</summary>
-                      <p className="muted">“{b.prompt}”</p>
-                      <pre className="diff">
-                        {[
-                          ...planLines(b.plan),
-                          ...settingLines(b.settings ?? []),
-                          ...postLines(b.posts ?? []),
-                        ].join("\n")}
-                      </pre>
-                      {b.notes ? <p className="g-help">Notes: {b.notes}</p> : null}
-                    </details>
-                    {b.error && !replaced ? <span className="notice">{b.error}</span> : null}
-                  </div>
-                  <div className="qm-build__actions">
-                    {built ? (
-                      <a
-                        className="g-btn g-btn--secondary g-btn--sm"
-                        href={`?continue=${b.version}#describe`}
-                      >
-                        Continue
-                      </a>
-                    ) : null}
-                    {built ? (
-                      <details className="confirm">
-                        <summary className="confirm__toggle g-btn g-btn--ghost g-btn--sm">
-                          Undo…
-                        </summary>
-                        <form action={requestAction} className="card-col">
-                          <input type="hidden" name="guildId" value={guild.id} />
-                          <input type="hidden" name="page" value="quartermaster" />
-                          <input type="hidden" name="kind" value="undo_build" />
-                          <input type="hidden" name="version" value={b.version} />
-                          <p className="g-help">
-                            Deletes exactly the{" "}
-                            {plural(b.created.length, "channel or role", "channels and roles")} v
-                            {b.version} created, with any messages posted in them since. Nothing
-                            else is touched.
-                          </p>
-                          <button type="submit" className="g-btn g-btn--danger g-btn--sm">
-                            Yes, undo v{b.version}
-                          </button>
-                        </form>
-                      </details>
+                <li
+                  key={m.id}
+                  className={`qm-msg ${m.role === "user" ? "qm-msg--me" : "qm-msg--bot"}`}
+                >
+                  {m.role === "user" ? null : <span className="qm-msg__mark" aria-hidden="true" />}
+                  <div className="qm-msg__bubble">
+                    <p>{m.text}</p>
+                    {drafted ? (
+                      drafted === plan ? (
+                        <a className="qm-msg__plan" href="#change-list">
+                          {plural(qmChangeCount(drafted), "change")} · Show changes
+                        </a>
+                      ) : (
+                        <span className="qm-msg__plan qm-msg__plan--past">
+                          {plural(qmChangeCount(drafted), "change")} ·{" "}
+                          {replaced ? "Updated later" : OUTCOME[drafted.status]}
+                        </span>
+                      )
                     ) : null}
                   </div>
                 </li>
               );
             })}
+            {queued.map((text, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: queued messages have no id yet
+              <li key={`q${i}`} className="qm-msg qm-msg--me qm-msg--queued">
+                <div className="qm-msg__bubble">
+                  <p>{text}</p>
+                </div>
+              </li>
+            ))}
+            {thinking ? (
+              <li className="qm-msg qm-msg--bot" role="status">
+                <span className="qm-msg__mark" aria-hidden="true" />
+                <div className="qm-msg__bubble qm-msg__typing">
+                  <span className="qm-typing" aria-hidden="true">
+                    <i />
+                    <i />
+                    <i />
+                  </span>
+                  <span className="sr-only">Garrison is replying</span>
+                </div>
+              </li>
+            ) : null}
           </ol>
-        )}
-      </section>
-
-      <section className="g-card card-col" id="templates" aria-labelledby="templates-title">
-        <div className="queue__head">
-          <h2 className="card-title" id="templates-title">
-            Server templates <ProTag on={ent["qm.templates"]} />
-          </h2>
-          <span className="g-help">
-            {templates.length} of {TEMPLATES_PER_USER}
-          </span>
-        </div>
-        <p className="g-help">
-          Save this server's roles, categories, channels and their role permissions to your account,
-          then copy them into another server you own. Applying only adds what that server doesn't
-          already have by name; it never changes or deletes anything.
-        </p>
-        {flash?.ok ? (
-          <div className="notice notice--ok" role="status">
-            {flash.ok}
-          </div>
-        ) : null}
-        {flash?.error ? (
-          <div className="notice" role="alert">
-            {flash.error}
-          </div>
-        ) : null}
-        {ent["qm.templates"] ? (
-          <form action={requestAction} className="row-between">
-            <input type="hidden" name="guildId" value={guild.id} />
-            <input type="hidden" name="page" value="quartermaster" />
-            <input type="hidden" name="kind" value="template_save" />
-            <input
-              className="g-input"
-              name="name"
-              maxLength={TEMPLATE_NAME_MAX}
-              placeholder={guild.name}
-              aria-label="Template name"
+          {choices.length ? (
+            <form action={requestAction} className="qm-chat__choices">
+              {chatHidden}
+              {choices.map((c) => (
+                <button
+                  key={c}
+                  type="submit"
+                  name="message"
+                  value={c}
+                  className="chip"
+                  disabled={blocked !== null}
+                >
+                  {c}
+                </button>
+              ))}
+            </form>
+          ) : null}
+          <form
+            action={requestAction}
+            className="qm-chat__composer"
+            key={`${threadId ?? "new"}:${messages.length}`}
+          >
+            {chatHidden}
+            <label className="sr-only" htmlFor="qm-message">
+              Message the AI assistant
+            </label>
+            <textarea
+              className="g-input qm-chat__input"
+              id="qm-message"
+              name="message"
+              rows={2}
+              maxLength={REQUEST_MAX}
+              required
+              placeholder={
+                messages.length
+                  ? "Answer, or ask for changes"
+                  : "We play Valorant and Apex, about 200 members, mostly ranked"
+              }
             />
-            <button
-              type="submit"
-              className="g-btn g-btn--secondary"
-              disabled={templates.length >= TEMPLATES_PER_USER}
-            >
-              Save this server as a template
+            <button type="submit" className="g-btn g-btn--primary" disabled={blocked !== null}>
+              {blocked ?? "Send"}
             </button>
           </form>
+          <div className="qm-usage">
+            <progress
+              className="qm-usage__bar"
+              max={suppliesPerDay}
+              value={suppliesLeft}
+              aria-label={`${suppliesLeft} of ${suppliesPerDay} supplies left today`}
+            />
+            <p className="qm-usage__text">
+              <span>
+                <strong>{suppliesLeft}</strong> of {suppliesPerDay} supplies left today
+              </span>
+              <span className="muted">
+                {AI_SUPPLIES_PER_MESSAGE} a message, 1 a change
+                {perPerson ? " · shared across your Free servers" : ""} · back at midnight UTC
+              </span>
+            </p>
+          </div>
+        </section>
+
+        {plan ? (
+          <section className="g-card qm-changes" id="changes" aria-labelledby="qm-changes-title">
+            <div className="qm-changes__bar">
+              <div className="qm-changes__what">
+                <h2 className="qm-changes__title" id="qm-changes-title">
+                  {plan.summary}
+                </h2>
+                <p className="g-help">
+                  {sentence ? `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)}. ` : ""}
+                  Uses {plural(changes, "supply", "supplies")}, held for {minutesLeft} more min.
+                  {mine ? "" : ` Only ${plan.requestedByTag} can apply it.`}
+                </p>
+              </div>
+              <div className="qm-changes__actions">
+                <form action={requestAction}>
+                  <input type="hidden" name="guildId" value={guild.id} />
+                  <input type="hidden" name="page" value="quartermaster" />
+                  <input type="hidden" name="kind" value="qm_cancel" />
+                  <input type="hidden" name="id" value={plan.id} />
+                  <button type="submit" className="g-btn g-btn--ghost" disabled={applying}>
+                    Discard
+                  </button>
+                </form>
+                {mine ? (
+                  <form action={requestAction}>
+                    <input type="hidden" name="guildId" value={guild.id} />
+                    <input type="hidden" name="page" value="quartermaster" />
+                    <input type="hidden" name="kind" value="qm_apply" />
+                    <input type="hidden" name="id" value={plan.id} />
+                    <button type="submit" className="g-btn g-btn--primary" disabled={applying}>
+                      {applying ? "Applying…" : "Apply build"}
+                    </button>
+                  </form>
+                ) : null}
+              </div>
+            </div>
+            <details className="qm-changes__more">
+              <summary className="qm-changes__toggle">
+                <span>Show changes</span>
+                <span className="muted">{plural(changes, "change")}</span>
+                <span className="panel__cue" aria-hidden="true" />
+              </summary>
+              <div className="qm-changes__body" id="change-list">
+                {preview && (plan.plan.length || (!diffs.length && !posts.length)) ? (
+                  <ServerPreview name={guild.name} preview={preview} planned />
+                ) : null}
+                {diffs.length ? (
+                  <div className="qm-settings">
+                    <h3 className="g-label">Settings</h3>
+                    <dl className="qm-settings__list">
+                      {diffs.map((d) => (
+                        <div key={d.label}>
+                          <dt>{d.label}</dt>
+                          <dd>
+                            <span className="qm-settings__from">{d.from}</span>
+                            <span aria-hidden="true"> → </span>
+                            <span className="sr-only"> becomes </span>
+                            <strong>{d.to}</strong>
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                ) : null}
+                {posts.length ? (
+                  <div className="qm-settings">
+                    <h3 className="g-label">Posts</h3>
+                    <dl className="qm-settings__list">
+                      {posts.map((x) => (
+                        <div key={x.what}>
+                          <dt>{x.what}</dt>
+                          <dd>
+                            in <strong>{x.where}</strong>
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                ) : null}
+                {plan.notes ? (
+                  <div className="qm-notes">
+                    <h3 className="g-label">Next, Garrison suggests</h3>
+                    <p>{plan.notes}</p>
+                  </div>
+                ) : null}
+                <p className="qm-changes__rules">
+                  Only adds channels and roles; nothing you have is edited or deleted. New roles get
+                  member permissions only. Settings use the same checks as their pages. Undo removes
+                  what was made and puts settings back; posts stay.
+                </p>
+              </div>
+            </details>
+          </section>
         ) : null}
-        {templates.length ? (
-          <ul className="queue__list">
-            {templates.map((t) => (
-              <li key={t.id} className="gw-row">
-                <span className="gw-row__main">
-                  <span className="ticket-row__topic">{t.name}</span>
-                  <span className="ticket-row__who">
-                    From {t.sourceGuildName || "a server"} · {t.roleCount} roles · {t.channelCount}{" "}
-                    channels · {formatTime(t.createdAt)}
-                  </span>
-                </span>
-                <span />
-                <span className="gw-row__actions">
-                  {isOwner && ent["qm.templates"] && t.sourceGuildId !== guild.id ? (
+
+        <RequestsPanel
+          guildId={guild.id}
+          kinds={["qm_apply", "qm_cancel", "undo_build", "template_save", "template_apply"]}
+          query={query}
+        />
+
+        {history.length ? (
+          <details className="g-card qm-history">
+            <summary className="qm-history__toggle">
+              <span>Build history</span>
+              <span className="muted">{plural(history.length, "build")}</span>
+              <span className="panel__cue" aria-hidden="true" />
+            </summary>
+            <ol className="qm-history__list">
+              {history.map((b) => (
+                <li className="qm-history__row" key={b.id}>
+                  <div className="qm-history__main">
+                    <strong>{b.summary}</strong>
+                    <span className="muted">
+                      {plural(b.created.length, "change")} · {b.requestedByTag} ·{" "}
+                      {formatTime(b.appliedAt ?? b.createdAt)}
+                      {b.status === "applied" ? "" : ` · ${OUTCOME[b.status]}`}
+                    </span>
+                  </div>
+                  {b.status === "applied" || b.status === "failed" ? (
                     <details className="confirm">
-                      <summary className="confirm__toggle g-btn g-btn--secondary g-btn--sm">
-                        Apply here…
+                      <summary className="confirm__toggle g-btn g-btn--ghost g-btn--sm">
+                        Undo…
                       </summary>
                       <form action={requestAction} className="card-col">
                         <input type="hidden" name="guildId" value={guild.id} />
                         <input type="hidden" name="page" value="quartermaster" />
-                        <input type="hidden" name="kind" value="template_apply" />
-                        <input type="hidden" name="templateId" value={t.id} />
+                        <input type="hidden" name="kind" value="undo_build" />
+                        <input type="hidden" name="version" value={b.version} />
                         <p className="g-help">
-                          Creates the roles, categories and channels from “{t.name}” that this
-                          server doesn't have yet.
+                          Deletes the channels and roles it made, with any messages posted in them
+                          since, and puts its settings back. Posts stay. Nothing else is touched.
                         </p>
-                        <button type="submit" className="g-btn g-btn--primary g-btn--sm">
-                          Yes, apply it
+                        <button type="submit" className="g-btn g-btn--danger g-btn--sm">
+                          Yes, undo it
                         </button>
                       </form>
                     </details>
                   ) : null}
-                  <form action={removeTemplate}>
-                    <input type="hidden" name="guildId" value={guild.id} />
-                    <input type="hidden" name="templateId" value={t.id} />
-                    <button type="submit" className="g-btn g-btn--ghost g-btn--sm">
-                      Delete
-                    </button>
-                  </form>
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="queue__empty muted">
-            {ent["qm.templates"]
-              ? "No templates yet. Save one here, then apply it in another server you own."
-              : "On Pro: save a server's layout and copy it into another server you own."}
-          </p>
-        )}
-        {templates.length && !isOwner ? (
-          <p className="g-help">Only the server owner can apply a template here.</p>
+                </li>
+              ))}
+            </ol>
+          </details>
         ) : null}
-      </section>
+
+        <section className="g-card card-col" id="templates" aria-labelledby="templates-title">
+          <div className="queue__head">
+            <h2 className="card-title" id="templates-title">
+              Server templates <ProTag on={ent["qm.templates"]} />
+            </h2>
+            <span className="g-help">
+              {templates.length} of {TEMPLATES_PER_USER}
+            </span>
+          </div>
+          <p className="g-help">
+            Save this server's roles, categories, channels and their role permissions to your
+            account, then copy them into another server you own. Applying only adds what that server
+            doesn't already have by name; it never changes or deletes anything.
+          </p>
+          {flash?.ok ? (
+            <div className="notice notice--ok" role="status">
+              {flash.ok}
+            </div>
+          ) : null}
+          {flash?.error ? (
+            <div className="notice" role="alert">
+              {flash.error}
+            </div>
+          ) : null}
+          {ent["qm.templates"] ? (
+            <form action={requestAction} className="row-between">
+              <input type="hidden" name="guildId" value={guild.id} />
+              <input type="hidden" name="page" value="quartermaster" />
+              <input type="hidden" name="kind" value="template_save" />
+              <input
+                className="g-input"
+                name="name"
+                maxLength={TEMPLATE_NAME_MAX}
+                placeholder={guild.name}
+                aria-label="Template name"
+              />
+              <button
+                type="submit"
+                className="g-btn g-btn--secondary"
+                disabled={templates.length >= TEMPLATES_PER_USER}
+              >
+                Save this server as a template
+              </button>
+            </form>
+          ) : null}
+          {templates.length ? (
+            <ul className="queue__list">
+              {templates.map((t) => (
+                <li key={t.id} className="gw-row">
+                  <span className="gw-row__main">
+                    <span className="ticket-row__topic">{t.name}</span>
+                    <span className="ticket-row__who">
+                      From {t.sourceGuildName || "a server"} · {t.roleCount} roles ·{" "}
+                      {t.channelCount} channels · {formatTime(t.createdAt)}
+                    </span>
+                  </span>
+                  <span />
+                  <span className="gw-row__actions">
+                    {isOwner && ent["qm.templates"] && t.sourceGuildId !== guild.id ? (
+                      <details className="confirm">
+                        <summary className="confirm__toggle g-btn g-btn--secondary g-btn--sm">
+                          Apply here…
+                        </summary>
+                        <form action={requestAction} className="card-col">
+                          <input type="hidden" name="guildId" value={guild.id} />
+                          <input type="hidden" name="page" value="quartermaster" />
+                          <input type="hidden" name="kind" value="template_apply" />
+                          <input type="hidden" name="templateId" value={t.id} />
+                          <p className="g-help">
+                            Creates the roles, categories and channels from “{t.name}” that this
+                            server doesn't have yet.
+                          </p>
+                          <button type="submit" className="g-btn g-btn--primary g-btn--sm">
+                            Yes, apply it
+                          </button>
+                        </form>
+                      </details>
+                    ) : null}
+                    <form action={removeTemplate}>
+                      <input type="hidden" name="guildId" value={guild.id} />
+                      <input type="hidden" name="templateId" value={t.id} />
+                      <button type="submit" className="g-btn g-btn--ghost g-btn--sm">
+                        Delete
+                      </button>
+                    </form>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="queue__empty muted">
+              {ent["qm.templates"]
+                ? "No templates yet. Save one here, then apply it in another server you own."
+                : "On Pro: save a server's layout and copy it into another server you own."}
+            </p>
+          )}
+          {templates.length && !isOwner ? (
+            <p className="g-help">Only the server owner can apply a template here.</p>
+          ) : null}
+        </section>
+      </div>
     </>
   );
 }

@@ -847,3 +847,9 @@ Decided (2026-11-12, owner):
 - 2026-11-15: Deployed `234cd49` (run 43748483303) after applying migration 0059 in production:
   AI assistant posts and the rename are live. Site, /healthz and /status answer; the bot is
   online. Not yet tried with the real model.
+- 2026-11-15: AI assistant page condensed: one column with the chat, a thin supplies bar under
+  the composer, then the running draft with one Apply build button (each new draft replaces
+  the last, so there's nothing to approve per version) and a collapsible Show changes (the
+  server preview, settings from → to, posts, notes). The Builds list is a collapsible Build
+  history with Undo; Plan vN, Change this plan, Continue and the sidebar are gone (the chat
+  continues from what was built). Polished with impeccable. Not deployed.

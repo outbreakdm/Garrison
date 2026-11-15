@@ -379,7 +379,7 @@ export async function doQmChat(ctx: BotContext, guild: Guild, member: GuildMembe
   return {
     ok: true,
     message: outcome.build
-      ? `Garrison drafted plan v${outcome.build.version}. Preview it below.`
+      ? "Garrison updated the draft. Open Show changes to see it."
       : "Garrison replied.",
   };
 }
@@ -397,8 +397,11 @@ export async function doQmApply(ctx: BotContext, guild: Guild, member: GuildMemb
     return fail(result.error.replace("ask again with /qm build", "describe it again"));
   const made = `${result.created.length} of ${qmChangeCount(build)}`;
   return result.failed
-    ? fail(`v${build.version}: built ${made}, then stopped. ${result.failed}`)
-    : { ok: true, message: `Built v${build.version}: ${result.created.length} created.` };
+    ? fail(`Applied ${made} changes, then stopped. ${result.failed}`)
+    : {
+        ok: true,
+        message: `Applied: ${result.created.length} ${result.created.length === 1 ? "change" : "changes"} made.`,
+      };
 }
 
 export async function doQmCancel(ctx: BotContext, guild: Guild, raw: unknown) {
