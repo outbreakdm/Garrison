@@ -1,0 +1,358 @@
+/* --- The Console world (2026-11-15) -------------------------------------------------------
+   Garrison's own style, heavily inspired by Peak Bot: a near-black floor, flat panels with
+   hairline edges, header bars that carry state, white primary actions and switches, and a
+   full-height server rail. Loaded after app.css and cards.css, so it settles the shell and
+   the shared parts every page uses. Tokens live in packages/brand/css/tokens.css. */
+
+/* --- Shell: rail beside body -------------------------------------------------------------- */
+.console {
+  --rail-w: 256px;
+  display: block;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+.console__side {
+  display: none;
+}
+.console__body {
+  min-width: 0;
+}
+.console .main {
+  gap: var(--space-6);
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--space-6) 32px var(--space-12);
+}
+@media (min-width: 721px) {
+  .console {
+    display: grid;
+    grid-template-columns: var(--rail-w) minmax(0, 1fr);
+    align-items: start;
+  }
+  .console__side {
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    height: 100dvh;
+    padding: var(--space-4) var(--space-3) var(--space-3);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-right: 1px solid var(--line);
+    background: color-mix(in srgb, var(--surface) 55%, var(--bg));
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--text-muted) 30%, transparent) transparent;
+    view-transition-name: server-nav;
+  }
+  .console__side::-webkit-scrollbar {
+    width: 6px;
+  }
+  .console__side::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--text-muted) 30%, transparent);
+  }
+  /* The menu flows inside the rail, which does the scrolling. */
+  .console .console__side .g-nav {
+    position: static;
+    flex: 1 0 auto;
+    width: auto;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    view-transition-name: none;
+  }
+  /* Beside the rail, the bar drops the logo and switcher the rail already carries. */
+  .topbar--railed .topbar__logo,
+  .topbar--railed .switcher {
+    display: none;
+  }
+  .topbar--railed {
+    min-height: 60px;
+    padding: 10px 32px;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+  }
+  .topbar--railed .topbar__spacer {
+    display: none;
+  }
+  .topbar--railed .searchbox {
+    flex: 1 1 auto;
+    max-width: 440px;
+    margin-right: auto;
+  }
+}
+.console__brand {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 var(--space-2);
+  color: var(--text);
+  text-decoration: none;
+}
+
+/* --- The server card at the top of the rail ----------------------------------------------- */
+.switcher--card {
+  position: relative;
+}
+.switcher__card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  list-style: none;
+  cursor: pointer;
+  transition:
+    border-color 0.15s var(--ease-out),
+    background-color 0.15s var(--ease-out);
+}
+.switcher__card::-webkit-details-marker {
+  display: none;
+}
+.switcher__card:hover,
+.switcher--card[open] > .switcher__card {
+  border-color: var(--line-strong);
+  background: var(--surface-raised);
+}
+.switcher__card:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.switcher__card::after {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-right: 4px;
+  border-right: 2px solid var(--text-muted);
+  border-bottom: 2px solid var(--text-muted);
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.2s var(--ease-out);
+}
+.switcher--card[open] > .switcher__card::after {
+  transform: translateY(2px) rotate(-135deg);
+}
+.switcher__mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--id, var(--accent)) 18%, var(--surface-raised));
+  color: var(--id-text, var(--text));
+  font-weight: 750;
+  font-size: 15px;
+}
+.switcher__text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 1px;
+}
+.switcher--card .switcher__name {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.switcher__hint {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 16px;
+}
+.switcher--card .switcher__menu {
+  right: 0;
+  left: 0;
+  min-width: 0;
+}
+
+/* --- The rail's menu ------------------------------------------------------------------------ */
+.console__side .g-nav__group {
+  padding: var(--space-4) 10px 6px;
+  font-size: 11.5px;
+}
+.console__side .g-nav__item {
+  min-height: 34px;
+  padding: 6px 10px 6px 28px;
+  color: var(--text-muted);
+  font-size: 13.5px;
+}
+.console__side .g-nav__item:hover {
+  background: var(--surface-raised);
+  color: var(--text);
+}
+/* Where you are: the one white pill in the rail, its section gem still in it. */
+.console__side .g-nav__item[aria-current="page"] {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-ink);
+  font-weight: 650;
+}
+
+/* --- The plan at the foot of the rail ------------------------------------------------------- */
+.plan-foot {
+  display: grid;
+  gap: 6px;
+  margin-top: var(--space-2);
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.plan-foot__name {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.plan-foot--pro .plan-foot__name,
+.plan-foot--agency .plan-foot__name {
+  color: var(--volt-text);
+}
+.plan-foot__line {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 17px;
+}
+.plan-foot__go {
+  width: 100%;
+  margin-top: 6px;
+}
+
+/* --- Phones: the bar, then the pinned menu, then the page -------------------------------- */
+@media (max-width: 720px) {
+  .console .nav-sheet {
+    flex: none;
+    margin: 0;
+    padding: var(--space-2) var(--space-4);
+  }
+  .console .main {
+    padding: var(--space-2) var(--space-4) var(--space-8);
+  }
+}
+
+/* --- Page head: an icon tile and the title on one line, no card --------------------------- */
+.main .page-head,
+.picker__head {
+  padding: 0 0 var(--space-4);
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+[data-theme="light"] .main .page-head,
+[data-theme="light"] .picker__head {
+  background: none;
+}
+.main .page-head h1 {
+  font-size: 22px;
+  font-stretch: 104%;
+  line-height: 30px;
+}
+.main .page-head p {
+  margin-top: var(--space-1);
+  padding-top: 0;
+  border-top: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+/* The section gem sits in a tinted tile, like every panel's icon. */
+.main .page-head h1::before {
+  width: 10px;
+  height: 10px;
+  margin: 0 20px 0 10px;
+  border-radius: 2px;
+  box-shadow: 0 0 0 9px color-mix(in srgb, var(--id, var(--accent)) 16%, var(--surface));
+  transform: rotate(45deg) translateY(-2px);
+}
+.page-head h1::after {
+  vertical-align: 3px;
+}
+
+/* --- Panels: flat faces; a header bar that carries state ---------------------------------- */
+.g-card {
+  border-color: var(--line);
+}
+.card-title {
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 22px;
+}
+.block-title {
+  font-size: 17px;
+  line-height: 24px;
+}
+.card-sub {
+  font-size: 13px;
+  line-height: 19px;
+}
+.panel__summary {
+  min-height: 56px;
+  padding: 10px var(--space-4);
+}
+.panel__summary:hover {
+  background: color-mix(in srgb, var(--surface-raised) 60%, var(--surface));
+}
+.panel__title {
+  font-size: 14px;
+}
+/* Open is "you are editing": a firmer edge and the header bar's hairline, no glow. */
+.panel[open] {
+  border-color: var(--line-strong);
+  box-shadow: none;
+}
+.panel[open] > .panel__summary {
+  background: none;
+}
+.panel__icon {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--id, var(--accent)) 14%, var(--surface-raised));
+  color: var(--id-text, var(--accent-strong));
+}
+
+/* --- Controls -------------------------------------------------------------------------------- */
+a.g-btn--primary,
+a.g-btn--primary:hover {
+  color: var(--primary-ink);
+}
+.switch input,
+.check input[type="checkbox"] {
+  border-color: var(--line-strong);
+}
+.switch input:checked,
+.check input[type="checkbox"]:checked {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+.switch input:checked::after,
+.check input[type="checkbox"]:checked::after {
+  background: var(--primary-ink);
+}
+.chip {
+  border-color: var(--line);
+  background: var(--surface-raised);
+  color: var(--text);
+}
+.chip:hover {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+.g-badge {
+  border-radius: var(--radius-sm);
+}
+
+/* --- Browser surfaces in the world's own colors ------------------------------------------- */
+::selection {
+  background: color-mix(in srgb, var(--id, var(--accent)) 35%, transparent);
+  color: var(--text);
+}

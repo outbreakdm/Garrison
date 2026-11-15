@@ -2,6 +2,7 @@ import "@garrison/brand/css/tokens.css";
 import "@garrison/brand/css/components.css";
 import "./app.css";
 import "./cards.css";
+import "./console.css";
 import type { Metadata } from "next";
 import { Archivo } from "next/font/google";
 import { type ReactNode, Suspense } from "react";

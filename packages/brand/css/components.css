@@ -1,4 +1,4 @@
-/* Garrison components: the Card Table world. Fonts load separately (next/font in the
+/* Garrison components: the Console world. Fonts load separately (next/font in the
    dashboard). Every value comes from tokens.css. Prefix: g- */
 
 .g-root { background: var(--bg); color: var(--text); font-family: var(--font-sans); font-size: 15px; line-height: 22px; padding: var(--space-4); }
@@ -8,13 +8,13 @@
 /* Label: a field or figure name, in a sentence and in plain weight. */
 .g-label { font: 600 12px/16px var(--font-sans); color: var(--text-muted); }
 
-/* Buttons: one obvious primary in the page's identity color. */
-.g-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: 36px; font: 600 14px/20px var(--font-sans); padding: var(--space-2) 14px; border: 1px solid transparent; border-radius: var(--radius-md); background: transparent; color: var(--text); cursor: pointer; text-decoration: none; }
+/* Buttons: one obvious primary, white on the dark floor (black on light). */
+.g-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: 36px; font: 600 13.5px/20px var(--font-sans); padding: var(--space-2) 14px; border: 1px solid transparent; border-radius: var(--radius-md); background: transparent; color: var(--text); cursor: pointer; text-decoration: none; }
 .g-btn:focus-visible, .g-input:focus-visible, .g-toggle:focus-visible, .g-nav__item:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.g-btn--primary { background: var(--accent); color: var(--accent-ink); box-shadow: 0 1px 0 rgb(255 255 255 / 0.18) inset, 0 1px 2px rgb(4 7 20 / 0.3); }
-.g-btn--primary:hover { background: color-mix(in srgb, var(--accent) 88%, var(--text)); }
-.g-btn--secondary { border-color: var(--line); background: var(--surface); }
-.g-btn--secondary:hover { border-color: var(--text-muted); }
+.g-btn--primary { background: var(--primary); color: var(--primary-ink); }
+.g-btn--primary:hover { background: color-mix(in srgb, var(--primary) 86%, var(--bg)); }
+.g-btn--secondary { border-color: var(--line); background: var(--surface-raised); }
+.g-btn--secondary:hover { border-color: var(--line-strong); background: color-mix(in srgb, var(--surface-raised) 70%, var(--line)); }
 .g-btn--ghost { color: var(--text-muted); }
 .g-btn--ghost:hover { color: var(--text); background: var(--surface-raised); }
 .g-btn--danger { color: var(--alert); border-color: color-mix(in srgb, var(--alert) 60%, var(--line)); }
@@ -36,31 +36,32 @@
 .g-badge--intel { --tone: var(--intel); }
 .g-badge--intel::before { width: 7px; height: 7px; border-radius: 1px; transform: rotate(45deg); }
 
-/* Card: the face everything sits on. 10px stock, a crisp edge, a soft drop. */
+/* Panel: the flat face everything sits on, a hairline edge and no drop. */
 .g-card { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: var(--space-4); box-shadow: var(--shadow-card); }
 .g-stat { font: 650 28px/32px var(--font-sans); font-variant-numeric: tabular-nums; color: var(--text); }
 .g-stat__delta { font: 500 13px/18px var(--font-sans); font-variant-numeric: tabular-nums; color: var(--go); }
 
 /* Input */
 .g-field { display: flex; flex-direction: column; gap: 6px; }
-.g-input { min-height: 36px; background: color-mix(in srgb, var(--bg) 45%, var(--surface)); border: 1px solid var(--line); border-radius: var(--radius-md); color: var(--text); font: 400 14px/20px var(--font-sans); padding: var(--space-2) var(--space-3); width: 100%; box-sizing: border-box; }
+.g-input { min-height: 38px; background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius-md); color: var(--text); font: 400 14px/20px var(--font-sans); padding: var(--space-2) var(--space-3); width: 100%; box-sizing: border-box; transition: border-color .15s ease; }
+.g-input:hover { border-color: var(--line-strong); }
 .g-input::placeholder { color: var(--text-muted); }
 .g-input--invalid { border-color: var(--alert); }
 .g-help { font-size: 13px; line-height: 18px; color: var(--text-muted); }
 .g-help--error { color: var(--alert); }
 
-/* Toggle */
-.g-toggle { position: relative; width: 38px; height: 22px; border: 1px solid var(--line); background: var(--surface-raised); border-radius: 999px; cursor: pointer; padding: 0; flex: none; }
-.g-toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; background: var(--text-muted); border-radius: 50%; transition: transform .15s ease; }
-.g-toggle[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
-.g-toggle[aria-checked="true"]::after { transform: translateX(16px); background: var(--accent-ink); }
+/* Toggle: white when on, a dark slot when off. */
+.g-toggle { position: relative; width: 38px; height: 22px; border: 1px solid var(--line-strong); background: var(--surface-raised); border-radius: 999px; cursor: pointer; padding: 0; flex: none; transition: background-color .15s ease, border-color .15s ease; }
+.g-toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; background: var(--text-muted); border-radius: 50%; transition: transform .18s cubic-bezier(.2,.8,.2,1), background-color .15s ease; }
+.g-toggle[aria-checked="true"] { background: var(--primary); border-color: var(--primary); }
+.g-toggle[aria-checked="true"]::after { transform: translateX(16px); background: var(--primary-ink); }
 
 /* Side rail: groups led by their identity gem; the current page is a raised card. */
 .g-nav { display: flex; flex-direction: column; gap: 1px; width: 232px; padding: 0; }
 .g-nav__group { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-4) 10px 6px; color: var(--text-muted); }
 .g-nav__item { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 7px 10px 7px 28px; border: 1px solid transparent; border-radius: var(--radius-md); color: var(--text-muted); font-size: 14px; line-height: 20px; text-decoration: none; }
 .g-nav__item:hover { background: color-mix(in srgb, var(--surface) 60%, transparent); color: var(--text); }
-.g-nav__item[aria-current="page"] { background: var(--surface); border-color: var(--line); box-shadow: var(--shadow-card); color: var(--text); font-weight: 600; }
+.g-nav__item[aria-current="page"] { background: var(--surface-raised); border-color: var(--line); color: var(--text); font-weight: 600; }
 .g-nav__name { flex: 1; }
 .g-nav__plain { font-size: 12px; color: var(--text-muted); font-weight: 400; }
 

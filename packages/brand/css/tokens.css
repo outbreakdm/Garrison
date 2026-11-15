@@ -1,13 +1,17 @@
-/* Garrison design tokens: the Card Table world (2026-11-13). Mirrored in
-   packages/brand/src/index.ts (colors). A lifted slate-blue table, card faces two
-   steps lighter, and four color identities, one for each part of a server. */
+/* Garrison design tokens: the Console world (2026-11-15, replaces Card Table). Mirrored
+   in packages/brand/src/index.ts (colors). A near-black floor, flat panels a step up with
+   hairline edges, white primary actions, and four section colors that tint icons and gems. */
 :root, [data-theme="dark"] {
-  --bg: #151a2c;
-  --surface: #1e2540;
-  --surface-raised: #283152;
-  --line: #3a4570;
-  --text: #eef1fa;
-  --text-muted: #a9b2cf;
+  --bg: #0b0c0e;
+  --surface: #131418;
+  --surface-raised: #1b1c21;
+  --line: #26282f;
+  --line-strong: #34363f;
+  --text: #ededf0;
+  --text-muted: #8f929d;
+  /* The primary action: white on the dark floor. */
+  --primary: #f2f2f4;
+  --primary-ink: #0b0c0e;
   --go: #2bd99f;
   --caution: #ffb547;
   --alert: #ff6b6b;
@@ -29,17 +33,21 @@
   --accent-strong: var(--volt-text);
   --accent-ink: var(--volt-ink);
   --focus: var(--accent-strong);
-  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 2px 6px -2px rgb(4 7 20 / 0.55);
-  --shadow-lift: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 16px 32px -14px rgb(4 7 20 / 0.8);
-  --shadow-overlay: 0 12px 32px -6px rgb(4 7 20 / 0.7);
+  /* Flat panels: depth only where something floats over the page. */
+  --shadow-card: none;
+  --shadow-lift: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 18px 40px -16px rgb(0 0 0 / 0.75);
+  --shadow-overlay: 0 16px 40px -8px rgb(0 0 0 / 0.7);
 }
 [data-theme="light"] {
-  --bg: #eceff7;
+  --bg: #f3f3f5;
   --surface: #ffffff;
-  --surface-raised: #f2f4fa;
-  --line: #c8cfe2;
-  --text: #141a2e;
-  --text-muted: #4d5779;
+  --surface-raised: #f3f3f5;
+  --line: #e2e3e8;
+  --line-strong: #cfd1d8;
+  --text: #121317;
+  --text-muted: #5b5e69;
+  --primary: #121317;
+  --primary-ink: #ffffff;
   --go: #0b7a57;
   --caution: #9a5b00;
   --alert: #c62828;
@@ -56,9 +64,9 @@
   --steel: #4a5d75;
   --steel-ink: #ffffff;
   --steel-text: #45576e;
-  --shadow-card: 0 1px 2px rgb(20 26 46 / 0.06), 0 2px 8px -4px rgb(20 26 46 / 0.1);
-  --shadow-lift: 0 2px 4px rgb(20 26 46 / 0.06), 0 16px 32px -14px rgb(20 26 46 / 0.24);
-  --shadow-overlay: 0 12px 32px -8px rgb(20 26 46 / 0.22);
+  --shadow-card: none;
+  --shadow-lift: 0 2px 4px rgb(18 19 23 / 0.05), 0 16px 32px -14px rgb(18 19 23 / 0.2);
+  --shadow-overlay: 0 12px 32px -8px rgb(18 19 23 / 0.2);
 }
 :root {
   --space-1: 4px;
@@ -68,10 +76,10 @@
   --space-6: 24px;
   --space-8: 32px;
   --space-12: 48px;
-  /* Card stock: 10px faces, 8px controls, 6px chips. */
+  /* Panels 14px, controls 9px, chips 6px. */
   --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
+  --radius-md: 9px;
+  --radius-lg: 14px;
   --font-display: Archivo, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-sans: var(--font-display);
   --font-mono: var(--font-display);

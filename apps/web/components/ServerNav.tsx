@@ -32,7 +32,8 @@ const ITEMS = [
   { group: null, id: "steel", href: "/plan", name: "Plan" },
 ] as const;
 
-export function ServerNav({ guildId }: { guildId: string }) {
+/** `rail`: the grouped menu in the server rail. `sheet`: the pinned phone menu. */
+export function ServerNav({ guildId, variant }: { guildId: string; variant: "rail" | "sheet" }) {
   const pathname = usePathname();
   const base = `/servers/${guildId}`;
   const sheet = useRef<HTMLDetailsElement>(null);
@@ -42,8 +43,10 @@ export function ServerNav({ guildId }: { guildId: string }) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: re-run when the page changes
   useEffect(() => {
     if (sheet.current) sheet.current.open = false;
-    const nav = rail.current;
-    const here = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+    // The rail scrolls inside the server sidebar.
+    const nav = (rail.current?.closest<HTMLElement>(".console__side") ??
+      rail.current) as HTMLElement | null;
+    const here = rail.current?.querySelector<HTMLElement>('[aria-current="page"]');
     if (!nav || !here || nav.scrollHeight <= nav.clientHeight) return;
     const top = here.getBoundingClientRect().top - nav.getBoundingClientRect().top + nav.scrollTop;
     if (top < nav.scrollTop || top + here.offsetHeight > nav.scrollTop + nav.clientHeight)
@@ -82,10 +85,10 @@ export function ServerNav({ guildId }: { guildId: string }) {
     name,
     items: items.filter((i) => i.section === name),
   }));
-  return (
-    <>
-      {/* Desktop and tablet: the rail, grouped by section, each group led by its gem. */}
-      <nav className="g-nav" aria-label="Server" ref={rail}>
+  if (variant === "rail")
+    return (
+      // Desktop and tablet: the rail, grouped by section, each group led by its gem.
+      <nav className="g-nav" aria-label="Server pages" ref={rail}>
         {/* The section each item sits under, named beside the page title (app.css). */}
         {items.map((item) => (
           <div key={item.name}>
@@ -117,44 +120,45 @@ export function ServerNav({ guildId }: { guildId: string }) {
           </div>
         ))}
       </nav>
-      {/* Phones: one button naming where you are; it opens the four sections as a sheet. */}
-      <details className="nav-sheet" ref={sheet}>
-        <summary className="nav-sheet__bar" data-id={here.id}>
-          <span className="nav-sheet__gem" aria-hidden="true" />
-          <span className="nav-sheet__here">{here.name}</span>
-          <span className="nav-sheet__more">All pages</span>
-        </summary>
-        <nav className="nav-sheet__body" aria-label="Server pages">
-          <Link
-            className="nav-sheet__item nav-sheet__item--wide"
-            data-id={overview.id}
-            href={overview.href}
-            transitionTypes={["nav"]}
-            aria-current={overview.current ? "page" : undefined}
-          >
-            {overview.name}
-          </Link>
-          {groups.map((g) => (
-            <div className="nav-sheet__group" key={g.name}>
-              <div className="g-nav__group g-label" data-id={g.items[0]?.id}>
-                {g.name}
-              </div>
-              {g.items.map((item) => (
-                <Link
-                  key={item.name}
-                  className="nav-sheet__item"
-                  data-id={item.id}
-                  href={item.href}
-                  transitionTypes={["nav"]}
-                  aria-current={item.current ? "page" : undefined}
-                >
-                  {item.name}
-                </Link>
-              ))}
+    );
+  return (
+    // Phones: one button naming where you are; it opens the four sections as a sheet.
+    <details className="nav-sheet" ref={sheet}>
+      <summary className="nav-sheet__bar" data-id={here.id}>
+        <span className="nav-sheet__gem" aria-hidden="true" />
+        <span className="nav-sheet__here">{here.name}</span>
+        <span className="nav-sheet__more">All pages</span>
+      </summary>
+      <nav className="nav-sheet__body" aria-label="Server pages">
+        <Link
+          className="nav-sheet__item nav-sheet__item--wide"
+          data-id={overview.id}
+          href={overview.href}
+          transitionTypes={["nav"]}
+          aria-current={overview.current ? "page" : undefined}
+        >
+          {overview.name}
+        </Link>
+        {groups.map((g) => (
+          <div className="nav-sheet__group" key={g.name}>
+            <div className="g-nav__group g-label" data-id={g.items[0]?.id}>
+              {g.name}
             </div>
-          ))}
-        </nav>
-      </details>
-    </>
+            {g.items.map((item) => (
+              <Link
+                key={item.name}
+                className="nav-sheet__item"
+                data-id={item.id}
+                href={item.href}
+                transitionTypes={["nav"]}
+                aria-current={item.current ? "page" : undefined}
+              >
+                {item.name}
+              </Link>
+            ))}
+          </div>
+        ))}
+      </nav>
+    </details>
   );
 }
