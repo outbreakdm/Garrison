@@ -893,3 +893,8 @@ Decided (2026-11-12, owner):
   v2 is built (steps 1 to 4); not deployed: production needs migrations 0060, 0061 and 0062
   before the code. Docs (`AI_SUPPLIES_V2.md`, `pricing.md`, `GO-LIVE.md`) updated. All checks
   pass (558 tests).
+- 2026-11-15: Deployed supplies v2 (`28aad3d`, run 43770218778). Migrations 0060, 0061 and
+  0062 applied in production first (drizzle log: 63 rows; the 7 earlier calls backfilled at
+  3 supplies). Landing page shows the monthly pools, the Refund Policy covers packs,
+  /healthz and /status answer, and the bot is online. Not yet seen in production: a real
+  pack purchase, and cached tokens on a real AI call.
