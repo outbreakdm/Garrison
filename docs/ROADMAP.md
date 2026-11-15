@@ -801,3 +801,10 @@ Decided (2026-11-12, owner):
   (recorded; 58 rows). Live: the AI builder chat, read-only and listen-only channels, safe role
   permissions, and the wider invite. Bot online. Not yet tried with the real model; the
   Developer Portal install link still needs the new permissions integer (1546577637110).
+- 2026-11-15: Planned the AI assistant (`docs/AI_ASSISTANT.md`): one daily currency,
+  **Supplies** (change 1, message 3; Free 40 per person, Pro 300, Agency 400 per server),
+  replacing plans, changes, requests and chat caps; and dashboard tools for the AI (read
+  settings; propose settings changes through `EDITABLE_FIELDS` and the dashboard's own
+  checks; post role menus, ticket panels and saved messages; never moderation, anti-nuke or
+  billing). Five phases; nothing built yet. Open: bot grants for settings, rename to
+  "Assistant", model choice.
