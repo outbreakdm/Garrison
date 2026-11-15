@@ -44,46 +44,71 @@ plan, a revision) costs 3, because each is a paid model call; every change a pla
 A full plan is 23 (the message plus 20 changes). Failed calls and discarded or expired plans
 give their supplies back.
 
-The heaviest possible call (6,000 tokens in, 6,000 out) costs $0.0036. Supplies cap the calls at
-a third of the day's supplies, so a server that spends every supply on messages every day for a
-month, each at the ceiling, costs at most:
+### What a message really costs (measured 2026-11-15)
 
-- Free (13 a day per person): **$1.40** a person
-- Pro (100 a day): **$10.80**
-- Agency (5 servers × 133 a day): **$71.82**
+Claude Haiku 5.5 is $0.10 per million input tokens and $0.50 per million output tokens. From
+production `ai_usage` (7 calls so far, all drafting a plan) and a capture of the request the
+bot sends today:
 
-That's lower than before supplies (Pro could make 40 plan requests and 100 chat messages a day,
-$15.12), but above what Pro and Agency bring in, so the table below is a theoretical bound only.
+- **Every call carries about 6,000 to 6,500 tokens before the conversation:** the
+  instructions (~3,000, including the list of settings it may change), the structured-output
+  schema (~1,200), the server snapshot (~1,300 for 40 channels and 25 roles) and the two read
+  tools (~700). The conversation adds to that. The one call since the 2026-11-15 deploy used
+  9,264 input tokens; earlier chat calls used 4,800 to 6,100.
+- **Output is most of the bill.** Chat calls averaged 3,906 output tokens (mostly the model's
+  reasoning, then the JSON answer), $0.0020 of an average $0.0026 a call: about 75%.
 
-After Stripe (2.9% + $0.30 a charge), that absolute worst case, monthly billing:
+| A message that… | Rounds | Cost |
+|---|---|---|
+| Drafts or revises a plan (measured average) | 1 | $0.0026 (highest seen $0.0032) |
+| Looks at settings, then answers or drafts (estimate) | 2 | about $0.004 |
+| Worst case: 4 rounds, each at the 6,000-token output cap | 4 | about $0.016 |
 
-| Plan | Price | Stripe | Net | Worst-case AI | Left | AI share |
-|---|---|---|---|---|---|---|
-| Pro monthly | $8.99 | $0.56 | $8.43 | $10.80 | **-$2.37** | 128% |
-| Pro yearly | $6.67/mo | $0.22/mo | $6.45 | $10.80 | **-$4.35** | 167% |
-| Agency monthly | $34.99 | $1.31 | $33.68 | $71.82 | **-$38.14** | 213% |
-| Agency yearly | $29.17/mo | $0.87/mo | $28.30 | $71.82 | **-$43.52** | 254% |
+Supplies cap messages at a third of the day's supplies. A server that spends every supply on
+messages every day for a month costs:
 
-That worst case needs every message at the token ceiling, every day, all month, which the
-hourly limits (40 chat messages and 10 plans an hour per server) and the global cap
-(`QM_DAILY_BUDGET_USD`, $5 a day) make impractical: the global cap stops the AI builder for
-everyone long before many servers could do it. A typical message costs $0.0005 to $0.002, so
-even 100 a day every day is about $1.50 to $6 a month, and a realistic admin sends far fewer.
-If real use ever trends toward the cap, raise `AI_SUPPLIES_PER_MESSAGE` first (each step of 1
-cuts the message ceiling by about a quarter); the supplies a day can stay as sold.
+| Plan | Messages a day | Typical ($0.0026) | Worst case ($0.016) |
+|---|---|---|---|
+| Free, per person | 13 | $1.01 | $6.24 |
+| Pro | 100 | $7.80 | $48.00 |
+| Agency (5 servers) | 665 | $51.87 | $319.20 |
 
-Since phase 2 of `docs/AI_ASSISTANT.md` a chat message can look at the server's settings
-first, and each look is another round with the model, at most 4 a message
-(`QM_CHAT_ROUNDS`). The ceiling for one chat message is therefore 4 × $0.0036 = $0.0144, and
-the bot holds that much against the global budget while the message runs. That would
-quadruple the table's chat ceiling, so the hourly limit and the global cap matter more still.
-A look adds a short tool result (at most 6,000 characters), so a typical message that looks
-once costs about $0.001 to $0.003.
+After Stripe (2.9% + $0.30 a charge), monthly billing:
+
+| Plan | Net | Typical at full use | Left | Worst case | Left |
+|---|---|---|---|---|---|
+| Pro monthly | $8.43 | $7.80 | **$0.63** | $48.00 | **-$39.57** |
+| Pro yearly | $6.45/mo | $7.80 | **-$1.35** | $48.00 | **-$41.55** |
+| Agency monthly | $33.68 | $51.87 | **-$18.19** | $319.20 | **-$285.52** |
+| Agency yearly | $28.30/mo | $51.87 | **-$23.57** | $319.20 | **-$290.90** |
+
+"Full use" means every supply spent on messages, every day, all month, which nobody does: an
+admin who sends 20 messages on 10 days of the month costs about $0.52. But at full use even
+typical messages now cost about what Pro brings in, so the levers below matter more than
+before. The global cap (`QM_DAILY_BUDGET_USD`, $5 a day) is about 1,900 typical messages a
+day across all servers, and it pauses the assistant for everyone when it's reached.
+
+**Levers, cheapest first:**
+
+1. **Prompt caching** (free, no quality change). The instructions, schema and tools (~4,900
+   tokens) are the same on every call and come first, so they can be cached and re-read at a
+   tenth of the price for 5 minutes, across all servers. About 15 to 20% off a one-round
+   message and more on messages that look at settings first, and replies start sooner. Not
+   built yet.
+2. **A correct budget hold.** The bot holds 4 × `qmReserveMicros` per chat message, which
+   assumes 6,000 input tokens a round (`QM_MAX_INPUT_TOKENS`); a round now takes 6,500 to
+   12,000. Raising it to 12,000 makes the hold $0.0168, covering the worst case. Not built yet.
+3. **Lower reasoning effort for chat** (`effort: "low"`, now `"medium"`). Output is about 75%
+   of the cost, so this is the biggest lever, but it can make plans worse: test it on real
+   conversations before switching.
+4. **Price, if real use trends toward the cap:** raise `AI_SUPPLIES_PER_MESSAGE` from 3 to 4
+   (Pro becomes 75 messages a day; typical full use $5.85). The supplies a day can stay as
+   sold. Raise `QM_DAILY_BUDGET_USD` as paying servers grow, about $0.30 a day per Pro server.
 
 **The one real exposure is Free.** Free brings in nothing, so since 2026-11-15 it's counted per
 person: 40 supplies a day across every Free server someone asks from (and the same per
-server), so making more servers doesn't make more free AI. At worst that's $1.40 a month per
-active person. The global cap (`QM_DAILY_BUDGET_USD`, $5 a day, $150 a month) still bounds the total.
+server), so making more servers doesn't make more free AI. At worst that's $6.24 a month per
+active person, about $1 at typical message sizes. The global cap (`QM_DAILY_BUDGET_USD`, $5 a day, $150 a month) still bounds the total.
 If Free ever crowds paid servers out of that cap, split it into a Free pool and a paid pool;
 not built, as per-person limits make it unlikely. The limits live in `AI_SUPPLIES_PER_DAY`
 (`packages/db/src/plans.ts`).
