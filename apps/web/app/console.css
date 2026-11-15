@@ -356,3 +356,331 @@ a.g-btn--primary:hover {
   background: color-mix(in srgb, var(--id, var(--accent)) 35%, transparent);
   color: var(--text);
 }
+
+/* --- AI builder: chat beside the plan ------------------------------------------------------
+   The chat is the work and fills the screen's height, its log scrolling inside; the plan
+   panel beside it is the server as it will be, with what's new marked, and the one
+   Apply build button. Below them: requests, build history and templates. */
+.qm-stack {
+  max-width: none;
+}
+.qm-work {
+  display: grid;
+  gap: var(--space-4);
+  align-items: start;
+}
+.qm-chat {
+  border-color: var(--line);
+  background: var(--surface);
+}
+.qm-chat__head {
+  align-items: center;
+  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) 0;
+  padding: 12px var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+.qm-chat__title {
+  font-size: 15px;
+  line-height: 22px;
+}
+@media (min-width: 1100px) {
+  .qm-work {
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 400px);
+  }
+  .qm-chat {
+    height: calc(100dvh - 224px);
+    min-height: 520px;
+  }
+  .qm-chat__log {
+    flex: 1 1 auto;
+    min-height: 0;
+    margin-right: calc(-1 * var(--space-2));
+    padding-right: var(--space-2);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--text-muted) 30%, transparent) transparent;
+  }
+  .qm-plan {
+    position: sticky;
+    top: 76px;
+    max-height: calc(100dvh - 92px);
+  }
+}
+
+/* The plan panel */
+.qm-plan {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+.qm-plan__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 12px 12px 12px var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+.qm-plan__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+}
+.qm-plan__heading {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.qm-plan__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 20px;
+}
+.qm-plan__counts {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.qm-plan__counts strong {
+  color: var(--text);
+  font-weight: 650;
+}
+.qm-plan__summary {
+  display: grid;
+  gap: var(--space-1);
+  padding: 12px var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+.qm-plan__what {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.qm-plan__summary .g-help {
+  margin: 0;
+}
+.qm-plan__empty {
+  margin: 0;
+  padding: 12px var(--space-4);
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 19px;
+}
+/* Now / with changes: a quieter switch than the panel's tabs. */
+.qm-plan .sp-switch {
+  border-color: var(--line);
+  background: none;
+}
+.qm-plan .sp-switch span {
+  padding: 2px 10px;
+  font-size: 12px;
+}
+.qm-plan .sp-switch input:checked + span {
+  background: var(--surface-raised);
+  color: var(--text);
+}
+/* In the narrow panel, each setting reads as its name over its change. */
+.qm-plan .qm-settings__list div {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+}
+
+/* Tabs: radios drawn as a segmented control, so they work before any script loads. */
+.qm-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+}
+.qm-tabs label {
+  position: relative;
+  cursor: pointer;
+}
+.qm-tabs input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.qm-tabs__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+}
+.qm-tabs label:hover > .qm-tabs__label {
+  color: var(--text);
+}
+.qm-tabs input:checked + .qm-tabs__label {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-ink);
+}
+.qm-tabs input:focus-visible + .qm-tabs__label {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.qm-tabs__count {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.qm-plan__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text-muted) 30%, transparent) transparent;
+}
+/* Inside the panel the server preview loses its own frame and shows one tab at a time. */
+.qm-plan .sp {
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+.qm-plan .sp__bar {
+  padding: 8px 12px;
+  background: none;
+}
+.qm-plan .sp__server {
+  display: none;
+}
+.qm-plan .sp:not(.sp--planned) .sp__bar {
+  display: none;
+}
+.qm-plan .sp__body {
+  display: block;
+}
+.qm-plan .sp__pane {
+  max-height: none;
+  overflow: visible;
+}
+.qm-plan .sp__pane--roles {
+  border-left: 0;
+}
+.qm-plan .sp__title {
+  display: none;
+}
+.qm-plan__changes {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+.qm-plan:has(input[name="qm-tab"][value="channels"]:checked) .sp__pane--roles,
+.qm-plan:has(input[name="qm-tab"][value="channels"]:checked) .qm-plan__changes,
+.qm-plan:has(input[name="qm-tab"][value="roles"]:checked) .sp__pane:not(.sp__pane--roles),
+.qm-plan:has(input[name="qm-tab"][value="roles"]:checked) .qm-plan__changes,
+.qm-plan:has(input[name="qm-tab"][value="changes"]:checked) .sp {
+  display: none;
+}
+.qm-plan__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 8px 12px 8px var(--space-4);
+  border-top: 1px solid var(--line);
+}
+.qm-plan__delta {
+  display: flex;
+  gap: var(--space-3);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.qm-plan__add {
+  color: var(--go);
+}
+.qm-plan__edit {
+  color: var(--caution);
+}
+.qm-plan__rules {
+  margin: 0;
+  padding: 0 var(--space-4) 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 17px;
+}
+
+/* Messages: Garrison speaks in plain text beside its mark; your messages are the bubbles. */
+.qm-msg {
+  align-items: flex-start;
+}
+.qm-msg__mark {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--id, var(--accent)) 16%, var(--surface-raised));
+  transform: none;
+}
+.qm-msg__mark::after {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--id-text, var(--accent-strong));
+  transform: rotate(45deg);
+}
+.qm-msg--bot .qm-msg__bubble {
+  max-width: min(100%, 68ch);
+  padding: 3px 0 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-size: 14.5px;
+}
+.qm-msg--me .qm-msg__bubble {
+  padding: 8px 14px;
+  border-color: var(--line);
+  border-radius: 16px 16px 4px;
+  background: var(--surface-raised);
+  font-size: 14.5px;
+}
+.qm-msg__plan {
+  border-color: var(--line);
+  background: var(--surface-raised);
+}
+/* The composer: one rounded box, the send button inside its corner. */
+.qm-chat__composer {
+  position: relative;
+  display: block;
+}
+.qm-chat__input {
+  min-height: 84px;
+  padding: 12px 104px 12px 14px;
+  border-radius: var(--radius-lg);
+  resize: none;
+}
+.qm-chat__composer > .g-btn {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+}
+.qm-usage {
+  padding-top: 0;
+  border-top: 0;
+}
