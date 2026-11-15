@@ -853,3 +853,5 @@ Decided (2026-11-12, owner):
   server preview, settings from → to, posts, notes). The Builds list is a collapsible Build
   history with Undo; Plan vN, Change this plan, Continue and the sidebar are gone (the chat
   continues from what was built). Polished with impeccable. Not deployed.
+- 2026-11-15: Deployed `9de6e3f` (run 43753878809): the condensed AI assistant page is live.
+  Site, /healthz and /status answer; the bot is online.
