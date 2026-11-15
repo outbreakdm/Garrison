@@ -163,7 +163,7 @@ modules. The two ways considered:
    from → to. `/qm build` in Discord stays structure-only. The rest (anti-raid,
    verification, tickets, role menus, messages, alerts, raid templates, the warning ladder,
    rewards, game accounts) stays on its page. *Large.*
-4. **Safe posts.** *Done 2026-11-15, not deployed; needs migration 0059.* A chat plan can
+4. **Safe posts.** *Done and deployed 2026-11-15 (migration 0059 applied).* A chat plan can
    post the server's saved role menus, ticket panels and messages (at most 5, each one
    change) into a text channel, including one the same plan creates. The overview tool lists
    what can be posted with ids; `checkQmPosts` checks the item is saved and the channel is a
@@ -171,7 +171,7 @@ modules. The two ways considered:
    (`doPostRoleMenu`, `doPostTicketPanel`, `postMessageNow`) with the requesting admin as the
    member, so every existing check applies. Stored in `qm_builds.posts`; Undo leaves posts
    and says so. The preview lists what it posts and where. *Small.*
-5. **Rename and polish.** *Done 2026-11-15, not deployed.* Renamed "AI assistant" (owner's
+5. **Rename and polish.** *Done and deployed 2026-11-15.* Renamed "AI assistant" (owner's
    choice) everywhere people read it: menu, page, landing, Plan page, legal pages, bot
    messages; the URL and `/qm` stay. New starter prompts ("Set up moderation", "Welcome new
    members", "What's missing on my server?") and an "I can" list in the empty chat. *Small.*

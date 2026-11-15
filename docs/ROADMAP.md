@@ -844,3 +844,6 @@ Decided (2026-11-12, owner):
   AI builder is now called the AI assistant everywhere people read it (URL and `/qm` stay),
   with new starter prompts and an "I can" list in the empty chat. Migration 0059
   (`qm_builds.posts`). Not deployed; 0059 must be applied in production first.
+- 2026-11-15: Deployed `234cd49` (run 43748483303) after applying migration 0059 in production:
+  AI assistant posts and the rename are live. Site, /healthz and /status answer; the bot is
+  online. Not yet tried with the real model.
