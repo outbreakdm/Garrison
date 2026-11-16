@@ -101,13 +101,16 @@ export function MessageEditor(props: Props) {
               Post now
             </button>
           </form>
-          <form action={removeAction}>
-            <input type="hidden" name="guildId" value={guildId} />
-            <input type="hidden" name="messageId" value={saved.id} />
-            <button type="submit" className="g-btn g-btn--ghost g-btn--sm">
-              Remove
-            </button>
-          </form>
+          <details className="confirm">
+            <summary className="confirm__toggle g-btn g-btn--ghost g-btn--sm">Remove…</summary>
+            <form action={removeAction}>
+              <input type="hidden" name="guildId" value={guildId} />
+              <input type="hidden" name="messageId" value={saved.id} />
+              <button type="submit" className="g-btn g-btn--danger g-btn--sm">
+                Yes, remove it
+              </button>
+            </form>
+          </details>
         </span>
       }
     >

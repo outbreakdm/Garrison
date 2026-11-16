@@ -77,7 +77,7 @@ export default async function GiveawaysPage({
   const shown = show === "all" ? list : list.filter((g) => g.status === show);
 
   const act = (id: string, op: "end" | "reroll" | "cancel", label: string, ghost = false) => (
-    <form action={requestAction}>
+    <form action={requestAction} key={op}>
       <input type="hidden" name="guildId" value={guild.id} />
       <input type="hidden" name="page" value="spoils" />
       <input type="hidden" name="kind" value="giveaway_action" />
@@ -174,8 +174,18 @@ export default async function GiveawaysPage({
                   <span className="gw-row__actions">
                     {g.status === "running" ? (
                       <>
-                        {act(g.id, "end", "Draw now")}
-                        {act(g.id, "cancel", "Cancel", true)}
+                        <details className="confirm gw-confirm">
+                          <summary className="confirm__toggle g-btn g-btn--secondary g-btn--sm">
+                            Draw now…
+                          </summary>
+                          {act(g.id, "end", `Yes, draw ${g.prize} now`)}
+                        </details>
+                        <details className="confirm gw-confirm">
+                          <summary className="confirm__toggle g-btn g-btn--ghost g-btn--sm">
+                            Cancel…
+                          </summary>
+                          {act(g.id, "cancel", "Yes, cancel it: no winners")}
+                        </details>
                       </>
                     ) : g.status === "ended" &&
                       entries > new Set([...g.drawnIds, ...g.winnerIds]).size ? (

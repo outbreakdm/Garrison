@@ -3054,8 +3054,8 @@ form[data-locked] .seg__opt:has(input:disabled) {
   content: "";
   width: 9px;
   height: 5px;
-  border-bottom: 1.5px solid var(--go);
-  border-left: 1.5px solid var(--go);
+  border-bottom: 1.5px solid var(--text-muted);
+  border-left: 1.5px solid var(--text-muted);
   transform: rotate(-45deg) translateY(-2px);
 }
 .choice__rec-use {
@@ -3075,23 +3075,36 @@ form[data-locked] .seg__opt:has(input:disabled) {
   display: none;
 }
 /* The recommended segment carries a small dot. */
+/* The recommended segment: a small star, so it never reads as the "on" dot. */
 .seg__opt:has(.seg__input[data-rec]) .seg__label::after {
   content: "";
   display: inline-block;
-  width: 5px;
-  height: 5px;
+  width: 8px;
+  height: 8px;
   margin-left: 6px;
-  border-radius: 50%;
-  background: var(--go);
-  vertical-align: 2px;
+  background: currentColor;
+  clip-path: polygon(
+    50% 0,
+    61% 35%,
+    98% 35%,
+    68% 57%,
+    79% 91%,
+    50% 70%,
+    21% 91%,
+    32% 57%,
+    2% 35%,
+    39% 35%
+  );
+  opacity: 0.7;
+  vertical-align: 0;
 }
 .rec-tag {
   display: inline-block;
   margin-left: 8px;
   padding: 0 6px;
-  border: 1px solid color-mix(in srgb, var(--go) 45%, var(--line));
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
-  color: var(--go);
+  color: var(--text-muted);
   font-size: 11px;
   font-weight: 600;
   line-height: 16px;
@@ -3124,8 +3137,8 @@ form[data-locked] .seg__opt:has(input:disabled) {
   content: "";
   width: 9px;
   height: 5px;
-  border-bottom: 1.5px solid var(--go);
-  border-left: 1.5px solid var(--go);
+  border-bottom: 1.5px solid var(--text-muted);
+  border-left: 1.5px solid var(--text-muted);
   transform: rotate(-45deg) translateY(-2px);
 }
 .rec-value__go {
@@ -3262,4 +3275,25 @@ form[data-locked] .seg__opt:has(input:disabled) {
 }
 .plan-foot--here {
   border-color: var(--line-strong);
+}
+
+/* The phone menu marks where you are the way the rail does: the one white pill. */
+@media (max-width: 720px) {
+  .nav-sheet__item[aria-current="page"] {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: var(--primary-ink);
+  }
+  .nav-sheet__item[aria-current="page"] .g-nav__icon {
+    color: inherit;
+  }
+}
+
+/* An open "Are you sure?" shows the way back: its toggle reads Never mind. */
+.confirm[open] > .confirm__toggle {
+  font-size: 0;
+}
+.confirm[open] > .confirm__toggle::after {
+  content: "Never mind";
+  font-size: 13px;
 }

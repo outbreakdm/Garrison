@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { RecUse } from "./RecUse";
 
 /**
  * Choices shown, not typed: a pick among a few is a row or a set of cards, never a select.
@@ -11,7 +12,7 @@ import type { ReactNode } from "react";
  *
  * One option can be Garrison's recommendation (its setting for a new server). It's marked,
  * and the line under the choice says so: a quiet check when it's picked, else "Recommended:
- * Balanced. Use it", where Use it is a label for that radio, so it picks it with no script.
+ * Balanced. Use it", where Use it is a button that picks that radio.
  */
 
 export interface Choice {
@@ -32,10 +33,7 @@ export function RecLine({ name, options }: { name: string; options: Choice[] }) 
     <span className="choice__rec">
       <span className="choice__rec-is">Recommended setting</span>
       <span className="choice__rec-use">
-        Recommended: {rec.label}.{" "}
-        <label className="choice__rec-go" htmlFor={choiceId(name, rec.value)}>
-          Use it
-        </label>
+        Recommended: {rec.label}. <RecUse target={choiceId(name, rec.value)} />
       </span>
     </span>
   );

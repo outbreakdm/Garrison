@@ -25,7 +25,7 @@ import { requestAction } from "../requests";
 import { addFeed, removeFeed, saveFeed } from "./actions";
 import { FeedEditor } from "./FeedEditor";
 
-export const metadata: Metadata = { title: "Alerts" };
+export const metadata: Metadata = { title: "Stream alerts" };
 
 /** The list filters (?show=), in pill order. */
 const SHOWS = ["all", "twitch", "youtube"] as const;

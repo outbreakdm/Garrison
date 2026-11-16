@@ -2,16 +2,14 @@ import {
   entitlements,
   getAccessGrants,
   getGuildPlan,
-  getLedgerSettings,
   getOpsTimezone,
-  getOverview,
-  getRanksSettings,
   listSettingsChanges,
   type SettingsChange,
   STAT_SOURCES,
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AutoSaveCard } from "@/components/AutoSave";
 import { formatTime } from "@/components/format";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { SettingsNotice } from "@/components/settings";
@@ -99,6 +97,12 @@ function describe(
           )
           .join(", ")
       : "nobody";
+  if (field === "userLimit") return Number(value) > 0 ? String(value) : "no limit";
+  if (field === "creatorChannelIds")
+    return Array.isArray(value) && value.length
+      ? value.map((id) => channels.get(String(id)) ?? "a deleted channel").join(", ")
+      : "none";
+  if (field === "categoryId") return value ? "a category" : "none";
   if (field === "templates")
     return Array.isArray(value) && value.length
       ? value.map((t: { name?: string }) => t.name ?? "?").join(", ")
@@ -106,9 +110,22 @@ function describe(
   if (value === null || value === undefined || value === "") return "none";
   if (typeof value === "boolean") return value ? "on" : "off";
   if (field === "announce") return ANNOUNCE[String(value)] ?? String(value);
+  if (field === "action") return AFTER_REMOVAL[String(value)] ?? String(value);
+  if (field === "aiStrictness") return STRICTNESS[String(value)] ?? String(value);
   if (/channelId$/i.test(field)) return `#${channels.get(String(value)) ?? "deleted-channel"}`;
   return String(value);
 }
+
+/** "off → on"; when both sides read the same (a card edited inside), just "edited". */
+const historyLine = (from: string, to: string) => (from === to ? "edited" : `${from} → ${to}`);
+
+/** Automod: what happens after a message is removed, as the page words it. */
+const AFTER_REMOVAL: Record<string, string> = {
+  delete: "nothing more",
+  warn: "warn",
+  timeout: "time out",
+};
+const STRICTNESS: Record<string, string> = { low: "relaxed", medium: "balanced", high: "strict" };
 
 const ANNOUNCE: Record<string, string> = {
   off: "off",
@@ -148,27 +165,19 @@ export default async function SettingsPage({
     accessQuery ? searchMembers(guild.id, accessQuery).catch(() => null) : Promise.resolve([]),
     readFlash(),
   ]);
-  const [overview, timezone, ranks, ledger, history, channels, roles, theme, plan, look] =
-    await Promise.all([
-      getOverview(db, guild.id),
-      getOpsTimezone(db, guild.id),
-      getRanksSettings(db, guild.id),
-      getLedgerSettings(db, guild.id),
-      listSettingsChanges(db, guild.id),
-      listTextChannels(guild.id).catch(() => []),
-      listGuildRoles(guild.id).catch(() => []),
-      currentTheme(),
-      getGuildPlan(db, guild.id),
-      botLook(guild.id),
-    ]);
-  const w = overview.watch;
-  const g = overview.gatehouse;
+  const [timezone, history, channels, roles, theme, plan, look] = await Promise.all([
+    getOpsTimezone(db, guild.id),
+    listSettingsChanges(db, guild.id),
+    listTextChannels(guild.id).catch(() => []),
+    listGuildRoles(guild.id).catch(() => []),
+    currentTheme(),
+    getGuildPlan(db, guild.id),
+    botLook(guild.id),
+  ]);
   const names = new Map(channels.map((c) => [c.id, c.name]));
   const roleNames = new Map(roles.map((r) => [r.id, r.name]));
   const undone = new Set(history.map((h) => h.revertsChangeId).filter(Boolean));
   const base = `/servers/${guild.id}`;
-  const channel = (id: string | null | undefined, none: string) =>
-    id ? `#${names.get(id) ?? "deleted-channel"}` : none;
 
   return (
     <>
@@ -185,16 +194,15 @@ export default async function SettingsPage({
 
       <div className="settings-layout">
         <div className="card-col">
-          {/* Keyed by the stored value: after a save or undo the form re-mounts with it,
-              instead of keeping stale browser state that a later save would re-apply. */}
-          <form
-            action={formAction(saveOps)}
+          <AutoSaveCard
             id="server"
-            className="g-card card-col"
-            key={`ops-${timezone}`}
+            title="Server"
+            action={saveOps}
+            undo={undoChange}
+            guildId={guild.id}
+            stamp={timezone}
+            saveLabel="Save time zone"
           >
-            <input type="hidden" name="guildId" value={guild.id} />
-            <h2 className="card-title">Server</h2>
             <label className="g-field" htmlFor="timezone">
               <span>Time zone</span>
               <input
@@ -209,12 +217,7 @@ export default async function SettingsPage({
                 Used when /raid create gets a date without a time zone.
               </span>
             </label>
-            <div className="form-foot">
-              <button type="submit" className="g-btn g-btn--primary">
-                Save time zone
-              </button>
-            </div>
-          </form>
+          </AutoSaveCard>
 
           <div className="g-card card-col" id="account">
             <h2 className="card-title">Your account</h2>
@@ -248,86 +251,26 @@ export default async function SettingsPage({
           </div>
         </div>
 
-        <nav className="g-card card-col" aria-label="Module settings">
-          <h2 className="card-title">Where the rest lives</h2>
+        <nav className="g-card card-col" aria-label="Settings inside other pages">
+          <h2 className="card-title">Inside other pages</h2>
+          <p className="g-help">
+            Every module's settings are on its own page in the menu. These three sit inside one.
+          </p>
           <div className="places">
-            <Place
-              href={`${base}/watch?edit=settings#settings`}
-              name="Moderation"
-              value={`Log ${channel(w?.logChannelId, "off")} · DMs ${(w?.dmMembers ?? true) ? "on" : "off"}`}
-            />
             <Place
               href={`${base}/watch?edit=edit-ladder#edit-ladder`}
               name="Escalation ladder"
-              value="What happens as warnings add up"
-            />
-            <Place
-              href={`${base}/gatehouse?edit=anti-raid#anti-raid`}
-              name="Anti-raid"
-              value={
-                g?.antiRaidEnabled
-                  ? `Armed · ${g.raidJoinCount} joins in ${g.raidWindowSeconds} s`
-                  : "Off"
-              }
-            />
-            <Place
-              href={`${base}/gatehouse?edit=verification#verification`}
-              name="Verification"
-              value={
-                g?.verifyRoleId
-                  ? `Gives @${roleNames.get(g.verifyRoleId) ?? "deleted-role"}`
-                  : "Off"
-              }
-            />
-            <Place
-              href={`${base}/gatehouse`}
-              name="Lockdown and anti-nuke"
-              value="Anti-nuke is owner only"
-            />
-            <Place
-              href={`${base}/ledger?edit=settings#settings`}
-              name="Logs"
-              value={`${channel(ledger.channelId, "Dashboard only")} · kept ${ledger.retentionDays} days`}
-            />
-            <Place
-              href={`${base}/ranks?edit=settings#settings`}
-              name="Leveling"
-              value={`XP ${ranks.enabled ? "on" : "off"} · level-ups ${ANNOUNCE[ranks.announce] ?? ranks.announce}`}
+              value="On Moderation: what happens as warnings add up"
             />
             <Place
               href={`${base}/ranks#rewards`}
               name="Level rewards"
-              value="Roles given at a level"
+              value="On Leveling: roles given at a level"
             />
             <Place
               href={`${base}/rally/templates`}
               name="LFG templates"
-              value="Roles and wording per game"
-            />
-            <Place
-              href={`${base}/dispatch`}
-              name="Messages"
-              value="Cards posted now or on a schedule"
-            />
-            <Place
-              href={`${base}/herald`}
-              name="Welcome"
-              value="Join and leave cards, roles on join"
-            />
-            <Place
-              href={`${base}/insignia`}
-              name="Role menus"
-              value="Roles members pick for themselves"
-            />
-            <Place
-              href={`${base}/honors`}
-              name="Starboard"
-              value="Where starred messages go, and how many stars"
-            />
-            <Place
-              href={`${base}/parley`}
-              name="Tickets"
-              value="Panels, staff roles, where tickets open"
+              value="On Groups and raids: roles and wording per game"
             />
           </div>
         </nav>
@@ -408,7 +351,10 @@ export default async function SettingsPage({
                         field === "panels" ||
                         field === "feeds"
                           ? templatesChangeText(from, to)
-                          : `${describe(field, from, names, roleNames)} → ${describe(field, to, names, roleNames)}`}
+                          : historyLine(
+                              describe(field, from, names, roleNames),
+                              describe(field, to, names, roleNames),
+                            )}
                       </div>
                     ))}
                   </td>

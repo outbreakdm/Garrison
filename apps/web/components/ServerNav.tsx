@@ -27,7 +27,7 @@ const ITEMS: {
   { group: "Safety", id: "cobalt", href: "/watch", name: "Moderation", icon: "moderation" },
   { group: null, id: "cobalt", href: "/gatehouse", name: "Security", icon: "security" },
   { group: null, id: "cobalt", href: "/ledger", name: "Logs", icon: "logs" },
-  { group: "Welcome", id: "orchid", href: "/herald", name: "Welcome", icon: "welcome" },
+  { group: "Onboarding", id: "orchid", href: "/herald", name: "Welcome", icon: "welcome" },
   { group: null, id: "orchid", href: "/insignia", name: "Role menus", icon: "roles" },
   { group: "Engagement", id: "orchid", href: "/ranks", name: "Leveling", icon: "leveling" },
   { group: null, id: "orchid", href: "/spoils", name: "Giveaways", icon: "giveaways" },
