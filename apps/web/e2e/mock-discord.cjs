@@ -71,6 +71,34 @@ http
       return user[1] === "700000000000000009"
         ? json(200, { id: user[1], username: "gone.raider", avatar: null })
         : json(404, {});
+    // The server's invites: one a member made, one Disboard made (for the invite tracker).
+    const invites = req.url.match(/^\/guilds\/(\d+)\/invites$/);
+    if (invites)
+      return json(200, [
+        {
+          code: "ironVG",
+          uses: 41,
+          max_uses: 0,
+          expires_at: null,
+          created_at: "2026-10-01T12:00:00Z",
+          inviter: { username: "brakk" },
+          channel: { name: "general" },
+        },
+        {
+          code: "dsbrd7Kq",
+          uses: 12,
+          max_uses: 0,
+          expires_at: null,
+          created_at: "2026-10-20T12:00:00Z",
+          inviter: { username: "DISBOARD" },
+          channel: { name: "general" },
+        },
+      ]);
+    const invite = req.url.match(/^\/invites\/([\w-]+)$/);
+    if (invite)
+      return invite[1] === "partnerX1"
+        ? json(200, { code: invite[1], guild: { id: "111111111111111111" } })
+        : json(404, {});
     // Open threads: one in #general, for the message builder's thread picker.
     if (/^\/guilds\/\d+\/threads\/active$/.test(req.url))
       return json(200, {

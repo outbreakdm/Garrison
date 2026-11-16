@@ -117,6 +117,10 @@ function describe(
       ? value.map((id) => channels.get(String(id)) ?? "a deleted channel").join(", ")
       : "none";
   if (field === "categoryId") return value ? "a category" : "none";
+  if (field === "labels")
+    return Array.isArray(value) && value.length
+      ? value.map((l: { name?: string }) => `“${l.name ?? "?"}”`).join(", ")
+      : "none";
   if (field === "counters")
     return Array.isArray(value) && value.length
       ? value

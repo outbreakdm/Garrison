@@ -484,6 +484,13 @@
       "when": 1794868896359,
       "tag": "0068_verify_questions",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1794870302493,
+      "tag": "0069_invite_labels",
+      "breakpoints": true
     }
   ]
 }

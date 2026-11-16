@@ -21,6 +21,7 @@ import type { AlertFeed } from "./alerts";
 import type { ServerBackup } from "./backups";
 import type { CustomCard } from "./cards";
 import type { BonusRole } from "./giveaways";
+import type { InviteLabel } from "./invite-labels";
 import type { SavedMessage } from "./messages";
 import type { GuildPlan } from "./plans";
 import type { RallyTemplate, RallyWording } from "./rally";
@@ -486,6 +487,7 @@ export const settingsModule = pgEnum("settings_module", [
   "access",
   "members",
   "stats",
+  "invites",
 ]);
 
 /** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */
@@ -2240,6 +2242,28 @@ export const automodRules = pgTable("automod_rules", {
 }).enableRLS();
 
 export type AutomodRule = typeof automodRules.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Invite tracker (labels on a server's invites)
+// ---------------------------------------------------------------------------
+
+/** A server's invite labels, one list, edited on the dashboard with history and undo. */
+export const inviteSettings = pgTable(
+  "invite_settings",
+  {
+    guildId: text("guild_id")
+      .primaryKey()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    labels: jsonb("labels").$type<InviteLabel[]>().notNull().default(sql`'[]'::jsonb`),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      "invite_labels_list",
+      sql`jsonb_typeof(${t.labels}) = 'array' AND jsonb_array_length(${t.labels}) <= 100`,
+    ),
+  ],
+).enableRLS();
 
 // ---------------------------------------------------------------------------
 // Server stats (channels whose names show a count)

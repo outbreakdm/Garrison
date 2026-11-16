@@ -155,6 +155,7 @@ type Module =
   | "qm"
   | "voice"
   | "stats"
+  | "invites"
   | "suggestions"
   | "insights";
 
@@ -427,6 +428,12 @@ export const FEATURES = {
     about: "Patterns (regular expressions) Discord's AutoMod blocks",
     free: 3,
     pro: 10,
+  },
+  "invites.labels": {
+    module: "invites",
+    about: "Labelled invites: names, colors, categories, partner details and join roles",
+    free: 10,
+    pro: 100,
   },
   "stats.counters": {
     module: "stats",

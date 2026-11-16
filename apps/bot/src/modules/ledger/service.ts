@@ -21,6 +21,7 @@ import { cardMessage } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { safeText } from "../../lib/text.js";
 import { type Change, describeAudit, type LedgerDraft, TYPE_LABELS } from "./describe.js";
+import { giveInviteRole } from "./invite-roles.js";
 import { inviteForJoin } from "./invites.js";
 
 const SETTINGS_TTL_MS = 60_000;
@@ -115,6 +116,10 @@ export function onAuditEntry(ctx: BotContext, entry: GuildAuditLogsEntry, guild:
 export async function onMemberJoin(ctx: BotContext, member: GuildMember) {
   const days = Math.floor((Date.now() - member.user.createdTimestamp) / 86_400_000);
   const invite = await inviteForJoin(member.guild).catch(() => null);
+  if (invite)
+    await giveInviteRole(ctx, member, invite.code).catch((error: unknown) =>
+      ctx.logger.warn("Invite role failed", { guildId: member.guild.id, error }),
+    );
   const via = invite
     ? ` · invite ${invite.code}${invite.inviterName ? ` by ${invite.inviterName}` : ""}`
     : "";

@@ -8,8 +8,8 @@ design.
 shared Insights link can be embedded in other sites when the owner switches that on.
 
 **Status:** 1 to 3 **deployed** (2026-11-16, `7849b5a`, run 43974339633; migrations 0065 to 0068
-applied). 4. Threads and forum posts **built**, not deployed (no migration). Next: 5. Invite
-tracker.
+applied). 4. Threads and forum posts and 5–6. the invite tracker with partners **built**, not
+deployed (the tracker needs migration `0069_invite_labels`). Next: 7. Share Insights.
 
 | # | Request | Garrison today | Size |
 |---|---|---|---|
@@ -99,7 +99,14 @@ Plus **edit a posted message** by link: Garrison can only edit its own messages,
 for messages Garrison posted. Richer embeds: an author icon, a timestamp, inline fields, and
 more than one embed per message.
 
-## 5. Invite tracker
+## 5. Invite tracker (built)
+
+Built as planned: an **Invites** page under Community lists every invite (the vanity link too)
+with its creator, channel, uses, joins over 30 days and how many stayed a week. Each can be
+labelled (name, color, description, category, a join role; Free 10, Pro 100), filtered by
+category, and summed per category. A link pasted from Disboard or a social bio is checked
+with Discord to open this server, then tracked. Join roles are never managed roles or ones with
+admin or moderation powers, and are given only when Garrison can tell which invite was used.
 
 An **Invites** page under Community:
 
@@ -110,7 +117,11 @@ An **Invites** page under Community:
   Garrison checks it belongs to this server and tracks it like its own.
 - Joins per invite, and per category, over time, in Insights.
 
-## 6. Partnerships
+## 6. Partnerships (built, one server)
+
+Built on the tracker: the **Partners** category gives an invite the partner server's name, a
+contact and the deal, and a Partners list shows each with joins and how many stayed. The
+cross-server view on Agency is left for later.
 
 Built on the invite tracker: a **Partners** category whose invites carry the partner
 server's name, a contact, and a partnership note. A partners view lists each partner with

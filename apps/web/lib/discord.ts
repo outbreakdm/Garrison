@@ -75,6 +75,7 @@ interface RawGuild {
   approximate_member_count?: number;
   approximate_presence_count?: number;
   premium_subscription_count?: number;
+  vanity_url_code?: string | null;
   roles: {
     id: string;
     name: string;
@@ -290,6 +291,84 @@ export async function channelInfo(
       name: c.name,
       parentId: c.parent_id ?? null,
     };
+  } catch {
+    return null;
+  }
+}
+
+/** An invite to the server, as Discord lists them (Manage Server needed). */
+export interface ServerInvite {
+  code: string;
+  uses: number;
+  maxUses: number;
+  expiresAt: Date | null;
+  createdAt: Date | null;
+  inviter: string | null;
+  channel: string | null;
+  /** The server's own vanity link (discord.gg/name). */
+  vanity: boolean;
+}
+
+interface RawInvite {
+  code: string;
+  uses?: number;
+  max_uses?: number;
+  expires_at?: string | null;
+  created_at?: string;
+  inviter?: { username: string } | null;
+  channel?: { name: string } | null;
+  guild?: { id: string } | null;
+}
+
+const inviteReads = new Map<string, Shared<RawInvite[]>>();
+
+/**
+ * Every invite in the server, the vanity link first when there is one. Cached 30 s. Null when
+ * Discord refuses (Garrison lacks Manage Server) or doesn't answer.
+ */
+export async function listInvites(guildId: string): Promise<ServerInvite[] | null> {
+  const [raw, guild] = await Promise.all([
+    shared(inviteReads, guildId, () =>
+      discord<RawInvite[]>(`/guilds/${guildId}/invites`, {
+        headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` },
+      }),
+    ).catch(() => null),
+    rawGuild(guildId).catch(() => null),
+  ]);
+  if (!raw) return null;
+  const list: ServerInvite[] = raw.map((i) => ({
+    code: i.code,
+    uses: i.uses ?? 0,
+    maxUses: i.max_uses ?? 0,
+    expiresAt: i.expires_at ? new Date(i.expires_at) : null,
+    createdAt: i.created_at ? new Date(i.created_at) : null,
+    inviter: i.inviter?.username ?? null,
+    channel: i.channel?.name ?? null,
+    vanity: false,
+  }));
+  const vanity = guild?.vanity_url_code;
+  if (vanity && !list.some((i) => i.code === vanity))
+    list.unshift({
+      code: vanity,
+      uses: 0,
+      maxUses: 0,
+      expiresAt: null,
+      createdAt: null,
+      inviter: null,
+      channel: null,
+      vanity: true,
+    });
+  return list;
+}
+
+/** Which server an invite code opens, asked of Discord. Null when it's gone or unknown. */
+export async function inviteServer(code: string): Promise<string | null> {
+  if (!/^[A-Za-z0-9-]{2,32}$/.test(code)) return null;
+  try {
+    const i = await discord<RawInvite>(`/invites/${code}`, {
+      headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` },
+    });
+    return i.guild?.id ?? null;
   } catch {
     return null;
   }

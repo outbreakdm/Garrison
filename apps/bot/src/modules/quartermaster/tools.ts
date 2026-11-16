@@ -47,6 +47,10 @@ export const MODULE_GUIDE: Record<ReadableModule, { page: string; about: string 
   rally: { page: "Groups and raids", about: "LFG and raid templates" },
   ops: { page: "Groups and raids", about: "server timezone, raid attendance tracking" },
   voice: { page: "Voice rooms", about: "join-to-create voice rooms" },
+  invites: {
+    page: "Invites",
+    about: "invite labels: names, colors, categories, partner details, roles given on join",
+  },
   stats: {
     page: "Server stats",
     about: "voice channels named with live counts (members, bots, a role)",

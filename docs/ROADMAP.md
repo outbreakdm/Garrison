@@ -10,8 +10,8 @@ then updates **Status** and the **Log** before stopping.
 - **Community requests (2026-11-16):** `docs/COMMUNITY_REQUESTS.md`, built in the owner's
   order. Server stats, regex moderation, verification questions and the member pages are
   **deployed** (`7849b5a`, run 43974339633, dashboard and bot; migrations 0065 to 0068 applied
-  and recorded, 69 rows). Threads and forum posts are built, not deployed. Next: the invite
-  tracker.
+  and recorded, 69 rows). Threads and forum posts and the invite tracker (with partners) are
+  built, not deployed: **apply migration `0069_invite_labels`** first. Next: share Insights.
 - **Member pages (2026-11-16):** first build **deployed** with `7849b5a` (`docs/MEMBER_PAGES.md`).
   Next pieces: Roles, Suggestions, Giveaways.
 - **Latest deploy:** `2e2b93f` (run 43918628506, dashboard only): steps 6 to 8 of redesign v2,
@@ -1067,3 +1067,7 @@ Decided (2026-11-12, owner):
 - 2026-11-16: Messages into threads and forum posts built: grouped destinations (channels,
   forums, open threads), a thread by link, forum post title and tags, and updating a posted
   message by its link. No migration. Not deployed.
+- 2026-11-16: Invite tracker built: an Invites page (every invite, joins and week stays per
+  invite and category, labels with color, description, category and a join role, tracking a
+  pasted invite) and Partners (partner server, contact and deal per invite). Migration 0069
+  (`invite_settings`, settings module `invites`). Not deployed.

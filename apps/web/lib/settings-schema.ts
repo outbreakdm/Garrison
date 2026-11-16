@@ -255,6 +255,7 @@ export const FIELD_LABELS: Record<string, string> = {
   "voice.nameTemplate": "Voice rooms: room name",
   "voice.userLimit": "Voice rooms: member limit",
   "voice.categoryId": "Voice rooms: category",
+  "invites.labels": "Invite labels",
   "stats.enabled": "Server stats",
   "stats.counters": "Server stats: counters",
   "stats.categoryId": "Server stats: category",

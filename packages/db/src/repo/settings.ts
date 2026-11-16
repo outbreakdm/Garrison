@@ -8,6 +8,7 @@ import {
   type EscalationRule,
   escalationRules,
   gatehouseSettings,
+  inviteSettings,
   ledgerSettings,
   memberPages,
   messageSettings,
@@ -118,6 +119,8 @@ export const EDITABLE_FIELDS = {
   voice: ["enabled", "creatorChannelIds", "nameTemplate", "userLimit", "categoryId"],
   // Checked with checkServerStats before it gets here.
   stats: ["enabled", "counters", "categoryId"],
+  // Checked with checkInviteLabels before it gets here.
+  invites: ["labels"],
   // Checked with checkStarboard before it gets here.
   starboard: [
     "enabled",
@@ -262,6 +265,7 @@ const TABLES = {
   access: dashboardAccess,
   members: memberPages,
   stats: statsSettings,
+  invites: inviteSettings,
 } as const;
 
 /** Modules whose settings row is created on first use, by the bot or the dashboard. */
@@ -283,6 +287,7 @@ const LAZY = new Set<SettingsModule>([
   "access",
   "members",
   "stats",
+  "invites",
 ]);
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -446,6 +451,12 @@ async function writeRow(tx: Tx, module: SettingsModule, guildId: string, values:
         .update(voiceSettings)
         .set(set as Partial<typeof voiceSettings.$inferInsert>)
         .where(eq(voiceSettings.guildId, guildId));
+      return;
+    case "invites":
+      await tx
+        .update(inviteSettings)
+        .set(set as Partial<typeof inviteSettings.$inferInsert>)
+        .where(eq(inviteSettings.guildId, guildId));
       return;
     case "stats":
       await tx

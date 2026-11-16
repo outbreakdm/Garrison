@@ -2194,3 +2194,196 @@
   display: grid;
   gap: var(--space-2);
 }
+
+/* --- Invites ----------------------------------------------------------------------
+   A ledger of links: each row its color dot, name and code, where it came from, then
+   what it brought. Editing opens under the row; partners and categories sum it up. */
+
+.invites {
+  display: grid;
+  gap: var(--space-4);
+}
+.invites__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+.invites__track {
+  display: flex;
+  gap: var(--space-2);
+  flex: 1 1 280px;
+  max-width: 460px;
+}
+.invites__track .g-input {
+  flex: 1;
+  min-width: 0;
+}
+.chip-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.chip-filter__item {
+  position: relative;
+  display: inline-flex;
+}
+.chip-filter__item input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.chip-filter__chip {
+  padding: 4px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+.chip-filter__item input:checked + .chip-filter__chip {
+  border-color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--text);
+}
+.chip-filter__item input:focus-visible + .chip-filter__chip {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.invite-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.invite-row {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--line);
+}
+.invite-row:first-child {
+  border-top: 0;
+}
+.invite-row__main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+}
+.invite-row__dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--invite, var(--text-muted));
+}
+.invite-row__name {
+  display: grid;
+  min-width: 140px;
+}
+.invite-row__code {
+  font-size: 12px;
+}
+.invite-row[data-gone] .invite-row__name {
+  opacity: 0.6;
+}
+.invite-row__meta {
+  flex: 1 1 180px;
+  font-size: 13px;
+}
+.invite-row__stats {
+  display: flex;
+  gap: var(--space-3);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.invite-row__desc {
+  margin: 0;
+  padding-left: calc(10px + var(--space-3));
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.invite-row__edit {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+}
+.invite-row__wide {
+  grid-column: 1 / -1;
+}
+.invite-row__color input {
+  width: 48px;
+  height: 36px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.invite-row__partner {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.invite-row__partner > legend {
+  margin-bottom: var(--space-1);
+  padding: 0;
+}
+.invite-row__foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+.category-sums,
+.partner-list {
+  display: grid;
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-3);
+  list-style: none;
+}
+.category-sums li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+.category-sums li:first-child,
+.partner-list li:first-child {
+  border-top: 0;
+}
+.category-sums__name {
+  flex: 1 1 120px;
+  font-weight: 600;
+}
+.partner-list li {
+  display: grid;
+  gap: 4px;
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--line);
+}
+.partner-list__head {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+.partner-list__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.partner-list__note {
+  margin: 0;
+  font-size: 14px;
+}
