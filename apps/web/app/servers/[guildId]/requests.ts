@@ -6,6 +6,7 @@ import {
   checkProfileRequest,
   countRunningGiveaways,
   entitlements,
+  findSendByDiscordId,
   getAlertFeeds,
   getBackup,
   getCase,
@@ -26,6 +27,7 @@ import {
   isPanelPaused,
   isPaused,
   MANAGER_REQUEST_KINDS,
+  parseDiscordLink,
   QM_PLAN_TTL_MS,
   type QueueInput,
   queueDashboardAction,
@@ -43,6 +45,7 @@ import { z } from "zod";
 import { wakeBot } from "@/lib/bot";
 import { getDb } from "@/lib/db";
 import { guildOwnerId, listTextChannels } from "@/lib/discord";
+import { checkPostTarget } from "@/lib/post-target";
 import { checkGuildAccess } from "@/lib/session";
 import { slotsText } from "@/lib/slots";
 
@@ -302,8 +305,26 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       const channelId = field(form, "channelId");
       const m = readMessages(await getMessages(db, guildId)).find((x) => x.id === messageId);
       if (!m) return { ok: false, error: "not_found" };
-      const channels = await listTextChannels(guildId).catch(() => []);
-      if (!channels.some((c) => c.id === channelId)) return { ok: false, error: "channel" };
+      // Update a message Garrison posted from here, by its link, instead of posting anew.
+      const editLink = field(form, "editLink");
+      if (editLink) {
+        const link = parseDiscordLink(editLink);
+        if (!link?.messageId || link.guildId !== guildId) return { ok: false, error: "edit_link" };
+        if (!(await findSendByDiscordId(db, guildId, link.messageId)))
+          return { ok: false, error: "edit_not_ours" };
+        if (!(await checkPostTarget(guildId, link.channelId)))
+          return { ok: false, error: "channel" };
+        return {
+          ok: true,
+          input: {
+            kind,
+            payload: { messageId: m.id, channelId: link.channelId, edit: link.messageId },
+          },
+        };
+      }
+      const target = await checkPostTarget(guildId, channelId);
+      if (!target) return { ok: false, error: "channel" };
+      if (target.kind === "forum" && !m.forumPost) return { ok: false, error: "forum_title" };
       return { ok: true, input: { kind, payload: { messageId: m.id, channelId } } };
     }
     case "bot_profile": {

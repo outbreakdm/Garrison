@@ -7,7 +7,11 @@ import { formatTime } from "./format";
 const ERRORS: Record<string, string> = {
   invalid: "Some values weren't valid. Nothing was queued.",
   not_found: "That has changed since the page loaded. Refresh and try again.",
-  channel: "Pick a text channel from this server.",
+  channel: "Pick a channel, thread or forum from this server.",
+  forum_title: "Give it a forum post title first (Where and when), then post it in the forum.",
+  edit_link:
+    "Paste the posted message's link from this server (in Discord: the message's menu, Copy Message Link).",
+  edit_not_ours: "Garrison only updates messages it posted from Messages.",
   owner_only: "Only the server owner can change anti-nuke.",
   manager_only:
     "That acts on members or the server itself, so it needs Manage Server in Discord. Ask someone who has it.",

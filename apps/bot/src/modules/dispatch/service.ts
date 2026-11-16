@@ -3,6 +3,7 @@ import {
   dueOccurrence,
   type Entitlements,
   entitlements,
+  findSendByDiscordId,
   getGuildPlan,
   getMessages,
   getOpsTimezone,
@@ -18,6 +19,7 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  ChannelType,
   type Client,
   type Guild,
   type GuildMember,
@@ -49,16 +51,48 @@ export function dispatchMessage(m: SavedMessage, ent: Entitlements) {
   return customCardMessage(m.card, ent, rows);
 }
 
-async function post(guild: Guild, channelId: string, m: SavedMessage, ent: Entitlements) {
-  const channel = guild.channels.cache.get(channelId);
-  if (!channel?.isSendable()) return null;
+/** A channel or thread of this server, cached or asked of Discord (archived threads aren't cached). */
+async function target(guild: Guild, id: string) {
+  const ch = guild.channels.cache.get(id) ?? (await guild.channels.fetch(id).catch(() => null));
+  return ch && ch.guildId === guild.id ? ch : null;
+}
+
+const isForum = (type: ChannelType) =>
+  type === ChannelType.GuildForum || type === ChannelType.GuildMedia;
+
+/** What posting there takes: a forum takes Send Messages to start a post; a thread, its own. */
+const needs = (ch: { type: ChannelType; isThread(): boolean }) => [
+  PermissionFlagsBits.ViewChannel,
+  ch.isThread() ? PermissionFlagsBits.SendMessagesInThreads : PermissionFlagsBits.SendMessages,
+];
+
+/**
+ * Post a saved message: in a text channel or a thread (an archived one opens again), or as
+ * a new post in a forum, with the message's title and tags. Returns the posted message's ID
+ * (a forum post's first message shares the post's ID).
+ */
+async function post(
+  guild: Guild,
+  channelId: string,
+  m: SavedMessage,
+  ent: Entitlements,
+): Promise<{ id: string } | null> {
+  const channel = await target(guild, channelId);
+  if (!channel) return null;
   const me = guild.members.me ?? (await guild.members.fetchMe());
-  if (
-    !channel
-      .permissionsFor(me)
-      ?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages])
-  )
-    return null;
+  if (!channel.permissionsFor(me)?.has(needs(channel))) return null;
+  if (channel.type === ChannelType.GuildForum || channel.type === ChannelType.GuildMedia) {
+    if (!m.forumPost) return null;
+    const known = new Set(channel.availableTags.map((t) => t.id));
+    const thread = await channel.threads.create({
+      name: m.forumPost.title,
+      message: dispatchMessage(m, ent),
+      appliedTags: m.forumPost.tagIds.filter((id) => known.has(id)),
+      reason: `Message builder: ${m.name}`,
+    });
+    return { id: thread.id };
+  }
+  if (!channel.isSendable()) return null;
   return channel.send(dispatchMessage(m, ent));
 }
 
@@ -98,6 +132,11 @@ export async function sweepMessages(ctx: BotContext, client: Client<true>, now =
 const postNow = z.object({
   messageId: z.string().regex(/^[a-z0-9]{6,16}$/),
   channelId: z.string().regex(/^\d{17,20}$/),
+  /** A message Garrison posted before, to update instead of posting anew. */
+  edit: z
+    .string()
+    .regex(/^\d{17,20}$/)
+    .nullish(),
 });
 
 /** "Post now" from the dashboard, checked again here with the requester's own permissions. */
@@ -113,13 +152,24 @@ export async function postMessageNow(
     (x) => x.id === p.data.messageId,
   );
   if (!m) return { ok: false, message: "That message was removed. Refresh the page." };
-  const channel = guild.channels.cache.get(p.data.channelId);
-  if (!channel?.isSendable() || !channel.isTextBased())
-    return { ok: false, message: "Pick a text channel." };
-  const needed = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages];
-  if (!channel.permissionsFor(member)?.has(needed))
+  const channel = await target(guild, p.data.channelId);
+  if (!channel || !(channel.isTextBased() || isForum(channel.type)))
+    return { ok: false, message: "Pick a text channel, a thread or a forum." };
+  if (!channel.permissionsFor(member)?.has(needs(channel)))
     return { ok: false, message: "You can't post in that channel, so Garrison won't either." };
   const ent = entitlements(await getGuildPlan(ctx.db, guild.id));
+  if (p.data.edit) {
+    // Only a message Garrison posted from the message builder, in this server.
+    if (!(await findSendByDiscordId(ctx.db, guild.id, p.data.edit)) || !channel.isTextBased())
+      return { ok: false, message: "Garrison only updates messages it posted from Messages." };
+    const old = await channel.messages.fetch(p.data.edit).catch(() => null);
+    if (!old || old.author.id !== guild.client.user.id)
+      return { ok: false, message: "That message is gone, or Garrison didn't post it." };
+    await old.edit(dispatchMessage(m, ent));
+    return { ok: true, message: `Updated the message with ${m.name}.` };
+  }
+  if (isForum(channel.type) && !m.forumPost)
+    return { ok: false, message: "Give it a forum post title first (Where and when)." };
   const send = { guildId: guild.id, messageId: m.id, occurrence: new Date() };
   await claimSend(ctx.db, { ...send, channelId: channel.id });
   const sent = await post(guild, channel.id, m, ent).catch(() => null);
@@ -129,5 +179,10 @@ export async function postMessageNow(
     return { ok: false, message: "Garrison can't post in that channel. Check its permissions." };
   }
   await recordSentMessage(ctx.db, send, sent.id);
-  return { ok: true, message: `Posted ${m.name} in #${channel.name}.` };
+  return {
+    ok: true,
+    message: isForum(channel.type)
+      ? `Started a post in ${channel.name}.`
+      : `Posted ${m.name} in ${channel.isThread() ? "the thread" : "#"}${channel.name}.`,
+  };
 }

@@ -19,7 +19,7 @@ import { RequestsPanel } from "@/components/RequestsPanel";
 import { FormPanel } from "@/components/settings";
 import { formAction } from "@/lib/autosave";
 import { getDb } from "@/lib/db";
-import { listGuildRoles, listTextChannels } from "@/lib/discord";
+import { listGuildRoles, listPostTargets } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
@@ -56,7 +56,7 @@ export default async function MessagesPage({
     getGuildPlan(db, guild.id),
     getOpsTimezone(db, guild.id),
     lastSends(db, guild.id),
-    listTextChannels(guild.id).catch(() => []),
+    listPostTargets(guild.id).catch(() => []),
     listGuildRoles(guild.id).catch(() => []),
   ]);
   const ent = entitlements(plan);
@@ -70,7 +70,9 @@ export default async function MessagesPage({
   const limit = ent["messages.scheduled"];
   const full = messages.length >= MESSAGE_LIMITS.saved;
   const editing = typeof query.edit === "string" ? query.edit : null;
-  const channelName = new Map(channels.map((c) => [c.id, c.name]));
+  const channelName = new Map(
+    channels.map((c) => [c.id, c.kind === "text" ? `#${c.name}` : c.name]),
+  );
   const roleNames = roles.map((r) => [r.id, r.name] as [string, string]);
   const when = (d: Date) =>
     new Intl.DateTimeFormat("en-US", {
@@ -166,7 +168,7 @@ export default async function MessagesPage({
             );
             const facts = [
               m.schedule
-                ? `${REPEAT[m.schedule.repeat]}${m.channelId ? ` in #${channelName.get(m.channelId) ?? "deleted-channel"}` : ""}`
+                ? `${REPEAT[m.schedule.repeat]}${m.channelId ? ` in ${channelName.get(m.channelId) ?? "a thread"}` : ""}`
                 : "Not scheduled",
               next ? `Next ${when(next)}` : null,
               sent ? `Last sent ${when(sent)}` : "Never sent",

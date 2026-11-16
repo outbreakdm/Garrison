@@ -8,13 +8,12 @@ then updates **Status** and the **Log** before stopping.
 ## Pick up here
 
 - **Community requests (2026-11-16):** `docs/COMMUNITY_REQUESTS.md`, built in the owner's
-  order. Server stats, regex moderation and verification questions are built, not deployed:
-  **apply migrations `0066_server_stats`, `0067_automod_patterns` and
-  `0068_verify_questions`** (after 0065) before deploying; deploy the bot too (new AutoMod
-  execution intent, not privileged). Next: messages into threads and forum posts.
-- **Member pages (2026-11-16):** first build done, not deployed (`docs/MEMBER_PAGES.md`). **Before
-  deploying, apply migration `0065_member_pages`** in production. Next pieces: Roles,
-  Suggestions, Giveaways.
+  order. Server stats, regex moderation, verification questions and the member pages are
+  **deployed** (`7849b5a`, run 43974339633, dashboard and bot; migrations 0065 to 0068 applied
+  and recorded, 69 rows). Threads and forum posts are built, not deployed. Next: the invite
+  tracker.
+- **Member pages (2026-11-16):** first build **deployed** with `7849b5a` (`docs/MEMBER_PAGES.md`).
+  Next pieces: Roles, Suggestions, Giveaways.
 - **Latest deploy:** `2e2b93f` (run 43918628506, dashboard only): steps 6 to 8 of redesign v2,
   the critique fixes, colorize, animate and the landing GIFs.
 - **Redesign v2 (2026-11-16):** all five steps and Settings access are **deployed** (`3989146`,
@@ -1062,3 +1061,9 @@ Decided (2026-11-12, owner):
   channel as a card, instant or staff-approved (card buttons, or a manager's request from the
   Security page's waiting list), kept 30 days. Migration 0068 (`verify_answers`, the bot's to
   write; question columns on `gatehouse_settings`; `verify_decide` request). Not deployed.
+- 2026-11-16: Deployed `7849b5a` (run 43974339633, everything): member pages, server stats,
+  regex moderation, verification questions. Migrations 0065 to 0068 applied in production
+  with their log rows; preflight passed; the new bot started 22:57 UTC.
+- 2026-11-16: Messages into threads and forum posts built: grouped destinations (channels,
+  forums, open threads), a thread by link, forum post title and tags, and updating a posted
+  message by its link. No migration. Not deployed.

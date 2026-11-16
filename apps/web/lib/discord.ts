@@ -96,6 +96,9 @@ interface RawChannel {
   topic?: string | null;
   /** type 0: a role (or @everyone, whose id is the guild's); 1: a member. */
   permission_overwrites?: { id: string; type?: number; allow?: string; deny: string }[];
+  /** Forums: the tags a post can carry. */
+  available_tags?: { id: string; name: string }[];
+  guild_id?: string;
 }
 
 const guildReads = new Map<string, Shared<RawGuild>>();
@@ -215,6 +218,81 @@ export async function listTextChannels(guildId: string) {
     .filter((c) => c.type === 0 || c.type === 5)
     .sort((a, b) => a.position - b.position)
     .map(({ id, name }) => ({ id, name }));
+}
+
+/** Where a message can go: a text channel, a forum (each send starts a post), or a thread. */
+export interface PostTarget {
+  id: string;
+  name: string;
+  kind: "text" | "forum" | "thread";
+  /** A thread's channel, or a forum's name for its posts. */
+  parent: string | null;
+  tags: { id: string; name: string }[];
+}
+
+const threadReads = new Map<string, Shared<RawChannel[]>>();
+/** Threads open now (not archived) the bot can see. Cached 30 s; empty when Discord is silent. */
+const rawThreads = (guildId: string) =>
+  shared(threadReads, guildId, () =>
+    discord<{ threads: RawChannel[] }>(`/guilds/${guildId}/threads/active`, {
+      headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` },
+    }).then((r) => r.threads ?? []),
+  );
+
+/** Text channels, forums and open threads, in Discord's order, for the message builder. */
+export async function listPostTargets(guildId: string): Promise<PostTarget[]> {
+  const [channels, threads] = await Promise.all([
+    rawChannels(guildId),
+    rawThreads(guildId).catch(() => []),
+  ]);
+  const names = new Map(channels.map((c) => [c.id, c.name]));
+  const sorted = [...channels].sort((a, b) => a.position - b.position);
+  return [
+    ...sorted
+      .filter((c) => c.type === 0 || c.type === 5)
+      .map((c) => ({ id: c.id, name: c.name, kind: "text" as const, parent: null, tags: [] })),
+    ...sorted
+      .filter((c) => c.type === 15 || c.type === 16)
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        kind: "forum" as const,
+        parent: null,
+        tags: (c.available_tags ?? []).map((t) => ({ id: t.id, name: t.name })),
+      })),
+    // Public and announcement threads; private ones only open to their members.
+    ...threads
+      .filter((t) => t.type === 10 || t.type === 11)
+      .map((t) => ({
+        id: t.id,
+        name: t.name,
+        kind: "thread" as const,
+        parent: t.parent_id ? (names.get(t.parent_id) ?? null) : null,
+        tags: [],
+      })),
+  ];
+}
+
+/**
+ * A channel or thread by ID, asked of Discord: its server, kind and name (an archived thread
+ * isn't in the open list). Null when it's gone or Garrison can't see it.
+ */
+export async function channelInfo(
+  id: string,
+): Promise<{ guildId: string | null; type: number; name: string; parentId: string | null } | null> {
+  try {
+    const c = await discord<RawChannel>(`/channels/${id}`, {
+      headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` },
+    });
+    return {
+      guildId: c.guild_id ?? null,
+      type: c.type,
+      name: c.name,
+      parentId: c.parent_id ?? null,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export interface GuildRole {

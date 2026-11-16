@@ -5,6 +5,7 @@ import {
   type LinkButton,
   lockedCardFields,
   MESSAGE_LIMITS,
+  parseDiscordLink,
   type Repeat,
   restoreLockedCard,
   type SavedMessage,
@@ -14,6 +15,7 @@ import { AutoSaveCard, useSaveSignal } from "@/components/AutoSave";
 import { CardEditor, move, ProNotice, ProTag, RowTools } from "@/components/cards/CardEditor";
 import { CardPreview, PreviewLinkButtons } from "@/components/cards/CardPreview";
 import type { AutoResult } from "@/lib/autosave";
+import type { PostTarget } from "@/lib/discord";
 
 type Action = (form: FormData) => Promise<void>;
 type SaveAction = (form: FormData) => Promise<AutoResult>;
@@ -26,6 +28,44 @@ const WHEN: [When, string][] = [
   ["weekly", "Weekly"],
 ];
 
+/** The destinations, grouped the way Discord lists them: channels, forums, threads. */
+function TargetOptions({ targets, extra }: { targets: PostTarget[]; extra: string | null }) {
+  const text = targets.filter((t) => t.kind === "text");
+  const forums = targets.filter((t) => t.kind === "forum");
+  const threads = targets.filter((t) => t.kind === "thread");
+  return (
+    <>
+      {extra ? <option value={extra}>A thread from a link</option> : null}
+      <optgroup label="Channels">
+        {text.map((c) => (
+          <option key={c.id} value={c.id}>
+            #{c.name}
+          </option>
+        ))}
+      </optgroup>
+      {forums.length ? (
+        <optgroup label="Forums: a new post each time">
+          {forums.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </optgroup>
+      ) : null}
+      {threads.length ? (
+        <optgroup label="Threads">
+          {threads.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+              {c.parent ? ` (in ${c.parent})` : ""}
+            </option>
+          ))}
+        </optgroup>
+      ) : null}
+    </>
+  );
+}
+
 /** Tomorrow at 20:00, as a datetime-local value: a sensible first pick. */
 const tomorrowEvening = () => {
   const d = new Date(Date.now() + 86_400_000);
@@ -37,7 +77,8 @@ interface Props {
   guildId: string;
   saved: SavedMessage;
   ent: Entitlements;
-  channels: { id: string; name: string }[];
+  /** Text channels, forums and open threads. */
+  channels: PostTarget[];
   roleNames: [string, string][];
   tz: string;
   nextSend: string | null;
@@ -87,11 +128,10 @@ export function MessageEditor(props: Props) {
               value={postIn}
               onChange={(e) => setPostIn(e.target.value)}
             >
-              {channels.map((c) => (
-                <option key={c.id} value={c.id}>
-                  #{c.name}
-                </option>
-              ))}
+              <TargetOptions
+                targets={channels}
+                extra={postIn && !channels.some((c) => c.id === postIn) ? postIn : null}
+              />
             </select>
             <button
               type="submit"
@@ -101,6 +141,34 @@ export function MessageEditor(props: Props) {
               Post now
             </button>
           </form>
+          <details className="confirm post-bar__update">
+            <summary className="confirm__toggle g-btn g-btn--ghost g-btn--sm">
+              Update a post…
+            </summary>
+            <form action={requestAction} className="post-bar__form">
+              <input type="hidden" name="guildId" value={guildId} />
+              <input type="hidden" name="page" value="dispatch" />
+              <input type="hidden" name="kind" value="post_message" />
+              <input type="hidden" name="messageId" value={saved.id} />
+              <label className="sr-only" htmlFor={`${saved.id}-edit`}>
+                Link to the message to update
+              </label>
+              <input
+                className="g-input g-input--sm mono"
+                id={`${saved.id}-edit`}
+                name="editLink"
+                required
+                placeholder="Paste its message link"
+                autoComplete="off"
+              />
+              <button type="submit" className="g-btn g-btn--secondary g-btn--sm">
+                Update it
+              </button>
+            </form>
+            <span className="g-help">
+              A message Garrison posted from here: it changes in place to this one.
+            </span>
+          </details>
           <details className="confirm">
             <summary className="confirm__toggle g-btn g-btn--ghost g-btn--sm">Remove…</summary>
             <form action={removeAction}>
@@ -167,16 +235,22 @@ function MessageFields({
         schedule: repeatLocked ? saved.schedule : x.schedule,
       };
     });
+  const target = channels.find((c) => c.id === m.channelId) ?? null;
+  const forum = target?.kind === "forum";
+  const [link, setLink] = useState("");
+  const linked = link.trim() ? parseDiscordLink(link) : null;
   const badButton = m.buttons.some((b) => !b.label.trim() || !/^https:\/\/\S+$/.test(b.url));
   const blocked = locked.length
     ? "Undo the Pro changes to save, or upgrade."
     : badButton
       ? "Each link button needs a label and an https:// link."
-      : m.schedule && !m.channelId
-        ? "Pick a channel to schedule it in."
-        : m.schedule && !m.schedule.at
-          ? "Pick a date and time."
-          : null;
+      : forum && !m.forumPost?.title.trim()
+        ? "Give the forum post a title."
+        : m.schedule && !m.channelId
+          ? "Pick a channel to schedule it in."
+          : m.schedule && !m.schedule.at
+            ? "Pick a date and time."
+            : null;
 
   return (
     <div ref={signal} className="editor-layout" data-hold={blocked ?? undefined}>
@@ -265,7 +339,7 @@ function MessageFields({
           <legend className="g-label">Where and when</legend>
           <div className="field-row">
             <label className="g-field" htmlFor={id("channel")}>
-              <span>Channel</span>
+              <span>Where</span>
               <select
                 className="g-input"
                 id={id("channel")}
@@ -276,11 +350,10 @@ function MessageFields({
                 }}
               >
                 <option value="">Pick a channel</option>
-                {channels.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    #{c.name}
-                  </option>
-                ))}
+                <TargetOptions
+                  targets={channels}
+                  extra={m.channelId && !target ? m.channelId : null}
+                />
               </select>
             </label>
             {m.schedule ? (
@@ -300,6 +373,90 @@ function MessageFields({
               </label>
             ) : null}
           </div>
+          <label className="g-field" htmlFor={id("link")}>
+            <span className="field-label">Or a thread by its link</span>
+            <span className="link-field">
+              <input
+                className="g-input mono"
+                id={id("link")}
+                value={link}
+                placeholder="https://discord.com/channels/…"
+                autoComplete="off"
+                aria-invalid={Boolean(link.trim() && !linked)}
+                onChange={(e) => setLink(e.target.value)}
+              />
+              <button
+                type="button"
+                className="g-btn g-btn--secondary g-btn--sm"
+                disabled={!linked}
+                onClick={() => {
+                  if (!linked) return;
+                  set({ channelId: linked.channelId });
+                  onChannel(linked.channelId);
+                  setLink("");
+                }}
+              >
+                Use it
+              </button>
+            </span>
+            <span className="g-help">
+              For a thread or post that isn't open right now: in Discord, right-click it and Copy
+              Link. Posting opens it again.
+            </span>
+          </label>
+          {forum ? (
+            <div className="forum-post">
+              <label className="g-field" htmlFor={id("post-title")}>
+                <span className="field-label">Post title</span>
+                <input
+                  className="g-input"
+                  id={id("post-title")}
+                  value={m.forumPost?.title ?? ""}
+                  maxLength={MESSAGE_LIMITS.postTitle}
+                  placeholder="What the post is called in the forum"
+                  aria-invalid={!m.forumPost?.title.trim()}
+                  onChange={(e) =>
+                    set({
+                      forumPost: { title: e.target.value, tagIds: m.forumPost?.tagIds ?? [] },
+                    })
+                  }
+                />
+              </label>
+              {target?.tags.length ? (
+                <fieldset className="tag-picks">
+                  <legend className="field-label">
+                    Tags <span className="muted">up to {MESSAGE_LIMITS.postTags}</span>
+                  </legend>
+                  {target.tags.map((t) => {
+                    const on = m.forumPost?.tagIds.includes(t.id) ?? false;
+                    const full = (m.forumPost?.tagIds.length ?? 0) >= MESSAGE_LIMITS.postTags;
+                    return (
+                      <label className="tag-pick" key={t.id}>
+                        <input
+                          type="checkbox"
+                          checked={on}
+                          disabled={!on && full}
+                          onChange={(e) => {
+                            const tags = m.forumPost?.tagIds ?? [];
+                            set({
+                              forumPost: {
+                                title: m.forumPost?.title ?? "",
+                                tagIds: e.target.checked
+                                  ? [...tags, t.id]
+                                  : tags.filter((x) => x !== t.id),
+                              },
+                            });
+                          }}
+                        />
+                        <span className="tag-pick__chip">{t.name}</span>
+                      </label>
+                    );
+                  })}
+                </fieldset>
+              ) : null}
+              <p className="g-help">Each send starts a new post in {target?.name}.</p>
+            </div>
+          ) : null}
           <div className="segmented" role="radiogroup" aria-label="Schedule">
             {WHEN.map(([value, label]) => (
               <label className="segmented__item" key={value}>

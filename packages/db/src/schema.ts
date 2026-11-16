@@ -1253,10 +1253,11 @@ export interface BotProfilePayload {
   avatar?: string | null;
   banner?: string | null;
 }
-/** Post a saved message now. */
+/** Post a saved message now, or update a message Garrison posted (its Discord ID). */
 export interface PostMessagePayload {
   messageId: string;
   channelId: string;
+  edit?: string | null;
 }
 /** Post a ticket panel, or update the message it was last posted as. */
 export interface PostTicketPanelPayload {

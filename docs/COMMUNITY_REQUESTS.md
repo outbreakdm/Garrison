@@ -7,9 +7,9 @@ design.
 **Owner's picks (2026-11-16):** the proposed order; regex runs in Discord's own AutoMod; a
 shared Insights link can be embedded in other sites when the owner switches that on.
 
-**Status:** 1. Server stats, 2. regex moderation and 3. verification questions **built** (not
-deployed: need migrations `0066_server_stats`, `0067_automod_patterns` and
-`0068_verify_questions`). Next: 4. Messages into threads and forums.
+**Status:** 1 to 3 **deployed** (2026-11-16, `7849b5a`, run 43974339633; migrations 0065 to 0068
+applied). 4. Threads and forum posts **built**, not deployed (no migration). Next: 5. Invite
+tracker.
 
 | # | Request | Garrison today | Size |
 |---|---|---|---|
@@ -83,7 +83,15 @@ verify page asks the same.
 - The answers card is only ever posted to the staff channel; nothing members wrote is shown
   publicly.
 
-## 4. Messages into threads and forums
+## 4. Messages into threads and forums (built)
+
+Built: a message's **Where** lists channels, forums ("a new post each time") and open threads;
+a thread or post that isn't open can be picked by pasting its link (posting opens it again). A
+forum needs a post title and can carry up to five of the forum's tags. **Update a post** in the
+post bar edits a message Garrison posted from Messages, by its link, in place. Left for later:
+richer embeds (author icon, timestamp, several embeds), which touch the shared card editor
+every module uses. Still to check on a test server: a post in a thread, a forum post with tags,
+an archived thread by link, and an update by link.
 
 Where a message posts becomes one of: a channel, a thread (picked from the server's active
 threads, or a pasted link), or a **new forum post** in a forum channel (its title and tags).

@@ -34,11 +34,46 @@ export interface SavedMessage {
   card: CustomCard;
   /** Pro: up to 5 link buttons under the card. */
   buttons: LinkButton[];
+  /**
+   * Where it goes: a text channel, a thread, or a forum. In a forum each send starts a new
+   * post with this title and these tags.
+   */
   channelId: string | null;
+  forumPost?: ForumPost | null;
   schedule: Schedule | null;
 }
 
-export const MESSAGE_LIMITS = { name: 40, buttons: 5, label: 80, url: 512, saved: 50 } as const;
+export interface ForumPost {
+  title: string;
+  tagIds: string[];
+}
+
+export const MESSAGE_LIMITS = {
+  name: 40,
+  buttons: 5,
+  label: 80,
+  url: 512,
+  saved: 50,
+  /** A forum post's title, and the tags it may carry (Discord's limits). */
+  postTitle: 100,
+  postTags: 5,
+} as const;
+
+const DISCORD_LINK =
+  /^https:\/\/(?:(?:ptb|canary)\.)?discord(?:app)?\.com\/channels\/(\d{17,20})\/(\d{17,20})(?:\/(\d{17,20}))?\/?$/;
+
+/**
+ * A Discord link to a channel, thread or message ("Copy Message Link"), or a bare ID. The
+ * server in a link is kept so the caller can check it's this one.
+ */
+export function parseDiscordLink(
+  text: string,
+): { guildId: string | null; channelId: string; messageId: string | null } | null {
+  const t = text.trim();
+  if (SNOWFLAKE.test(t)) return { guildId: null, channelId: t, messageId: null };
+  const m = DISCORD_LINK.exec(t);
+  return m?.[1] && m[2] ? { guildId: m[1], channelId: m[2], messageId: m[3] ?? null } : null;
+}
 export const SCHEDULED_HARD_MAX = FEATURES["messages.scheduled"].pro;
 /** A send missed by more than this (the bot was offline) is skipped, not sent late. */
 export const MISSED_AFTER_MS = 60 * 60_000;
@@ -175,6 +210,24 @@ export function parseMessage(raw: unknown, index = 0): Parsed<SavedMessage> {
     channelId = r.channelId;
   }
 
+  let forumPost: ForumPost | null = null;
+  if (r.forumPost) {
+    const f = r.forumPost as Record<string, unknown>;
+    const title = line(f.title);
+    if (!title) return { ok: false, error: `${name}: give the forum post a title.` };
+    if (title.length > MESSAGE_LIMITS.postTitle)
+      return {
+        ok: false,
+        error: `${name}: post titles hold ${MESSAGE_LIMITS.postTitle} characters.`,
+      };
+    const tagIds = Array.isArray(f.tagIds)
+      ? [...new Set(f.tagIds.map(String))].filter((x) => SNOWFLAKE.test(x))
+      : [];
+    if (tagIds.length > MESSAGE_LIMITS.postTags)
+      return { ok: false, error: `${name}: a post carries ${MESSAGE_LIMITS.postTags} tags.` };
+    forumPost = { title, tagIds };
+  }
+
   let schedule: Schedule | null = null;
   if (r.schedule) {
     const s = r.schedule as Record<string, unknown>;
@@ -184,7 +237,10 @@ export function parseMessage(raw: unknown, index = 0): Parsed<SavedMessage> {
     if (!channelId) return { ok: false, error: `${name}: pick a channel to schedule it in.` };
     schedule = { at, repeat };
   }
-  return { ok: true, value: { id: r.id, name, card: card.value, buttons, channelId, schedule } };
+  return {
+    ok: true,
+    value: { id: r.id, name, card: card.value, buttons, channelId, forumPost, schedule },
+  };
 }
 
 /** Stored messages, read leniently: anything that no longer parses is skipped. */

@@ -2126,3 +2126,71 @@
 .editor-layout--fit {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
 }
+
+/* --- Messages: threads and forum posts ------------------------------------------ */
+.link-field {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+.link-field .g-input {
+  flex: 1;
+  min-width: 0;
+}
+.forum-post {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+.forum-post .g-help {
+  margin: 0;
+}
+.tag-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.tag-picks > legend {
+  width: 100%;
+  margin-bottom: var(--space-1);
+  padding: 0;
+}
+.tag-pick {
+  position: relative;
+  display: inline-flex;
+}
+.tag-pick input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.tag-pick__chip {
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+.tag-pick input:checked + .tag-pick__chip {
+  border-color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--text);
+}
+.tag-pick input:focus-visible + .tag-pick__chip {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.tag-pick input:disabled + .tag-pick__chip {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.post-bar__update[open] {
+  display: grid;
+  gap: var(--space-2);
+}

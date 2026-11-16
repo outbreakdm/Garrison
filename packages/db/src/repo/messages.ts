@@ -93,3 +93,18 @@ export async function recordSentMessage(
       ),
     );
 }
+
+/**
+ * A message Garrison posted from the message builder, by its Discord ID: the only messages
+ * "update a posted message" may edit.
+ */
+export async function findSendByDiscordId(db: Db, guildId: string, discordMessageId: string) {
+  const [row] = await db
+    .select()
+    .from(messageSends)
+    .where(
+      and(eq(messageSends.guildId, guildId), eq(messageSends.discordMessageId, discordMessageId)),
+    )
+    .limit(1);
+  return row ?? null;
+}

@@ -71,6 +71,19 @@ http
       return user[1] === "700000000000000009"
         ? json(200, { id: user[1], username: "gone.raider", avatar: null })
         : json(404, {});
+    // Open threads: one in #general, for the message builder's thread picker.
+    if (/^\/guilds\/\d+\/threads\/active$/.test(req.url))
+      return json(200, {
+        threads: [
+          {
+            id: "300000000000000010",
+            name: "Raid night plans",
+            type: 11,
+            parent_id: "300000000000000001",
+            position: 0,
+          },
+        ],
+      });
     // Query strings (with_counts) don't change which guild is asked for.
     const m = req.url.split("?")[0].match(/^\/guilds\/(\d+)(\/members\/(\w+)|\/channels)?$/);
     const g = m && guilds[m[1]];
@@ -91,6 +104,17 @@ http
           permission_overwrites: hide,
         },
         { id: "300000000000000003", name: "Voice", type: 2, position: 2, parent_id: cat.info },
+        {
+          id: "300000000000000004",
+          name: "clips",
+          type: 15,
+          position: 3,
+          parent_id: cat.info,
+          available_tags: [
+            { id: "330000000000000001", name: "PvP" },
+            { id: "330000000000000002", name: "Raids" },
+          ],
+        },
       ]);
     }
     if (m[3]) {

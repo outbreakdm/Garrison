@@ -15,8 +15,8 @@ import {
 import { redirect } from "next/navigation";
 import type { AutoResult } from "@/lib/autosave";
 import { getDb } from "@/lib/db";
-import { listTextChannels } from "@/lib/discord";
 import { answer, type Outcome } from "@/lib/outcome";
+import { checkPostTarget } from "@/lib/post-target";
 import { checkGuildAccess } from "@/lib/session";
 
 /**
@@ -75,6 +75,7 @@ export async function addMessage(form: FormData): Promise<AutoResult> {
     card: preset.card,
     buttons: [],
     channelId: null,
+    forumPost: null,
     schedule: null,
   };
   return save(
@@ -97,9 +98,24 @@ export async function saveMessage(form: FormData): Promise<AutoResult> {
   if (!ctx.messages.some((x) => x.id === id))
     return back(form, ctx.guild.id, { error: "That message was removed. Refresh and try again." });
   if (m.channelId) {
-    const channels = await listTextChannels(ctx.guild.id).catch(() => []);
-    if (!channels.some((c) => c.id === m.channelId))
-      return back(form, ctx.guild.id, { error: "Pick a text channel from this server." }, id);
+    const target = await checkPostTarget(ctx.guild.id, m.channelId);
+    if (!target)
+      return back(
+        form,
+        ctx.guild.id,
+        { error: "Pick a channel, thread or forum from this server." },
+        id,
+      );
+    // A forum post's title and tags only mean something in a forum, and only its own tags.
+    if (target.kind !== "forum") m = { ...m, forumPost: null };
+    else if (m.forumPost)
+      m = {
+        ...m,
+        forumPost: {
+          ...m.forumPost,
+          tagIds: (m.forumPost.tagIds ?? []).filter((t) => target.tags.some((x) => x.id === t)),
+        },
+      };
   }
   const name = typeof m.name === "string" ? m.name.trim() : "the message";
   return save(
