@@ -255,24 +255,26 @@
   background: none;
 }
 .main .page-head h1 {
-  font-size: 22px;
-  font-stretch: 104%;
-  line-height: 30px;
+  font-size: 18px;
+  font-stretch: 102%;
+  line-height: 26px;
 }
 .main .page-head p {
-  margin-top: var(--space-1);
+  max-width: 80ch;
+  margin-top: 2px;
   padding-top: 0;
   border-top: 0;
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 19px;
 }
 /* The section gem sits in a tinted tile, like every panel's icon. */
 .main .page-head h1::before {
-  width: 10px;
-  height: 10px;
-  margin: 0 20px 0 10px;
+  width: 8px;
+  height: 8px;
+  margin: 0 16px 0 8px;
   border-radius: 2px;
-  box-shadow: 0 0 0 9px color-mix(in srgb, var(--id, var(--accent)) 16%, var(--surface));
+  box-shadow: 0 0 0 7px color-mix(in srgb, var(--id, var(--accent)) 16%, var(--surface));
   transform: rotate(45deg) translateY(-2px);
 }
 .page-head h1::after {
@@ -1668,4 +1670,12 @@ a.g-btn--primary:hover {
 .qm-seg__opt:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 1px;
+}
+
+/* Phones keep the same quiet title size as desktop. */
+@media (max-width: 720px) {
+  .console .main .page-head h1 {
+    font-size: 18px;
+    line-height: 26px;
+  }
 }

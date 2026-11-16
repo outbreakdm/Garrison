@@ -2,15 +2,15 @@
 name: Garrison
 description: "Guard the gate. Rally the squad. The dashboard as the server's control room: flat panels on a near-black floor, each led by a header bar that carries its state."
 colors:
-  floor: "#0b0c0e"
-  panel: "#131418"
-  panel-raised: "#1b1c21"
-  hairline: "#26282f"
-  hairline-strong: "#34363f"
-  ink: "#ededf0"
-  ink-muted: "#8f929d"
-  primary: "#f2f2f4"
-  primary-ink: "#0b0c0e"
+  floor: "#0a0a0a"
+  panel: "#171717"
+  panel-raised: "#1f1f1f"
+  hairline: "#262626"
+  hairline-strong: "#333333"
+  ink: "#ededed"
+  ink-muted: "#a1a1a1"
+  primary: "#fafafa"
+  primary-ink: "#0a0a0a"
   go: "#2bd99f"
   caution: "#ffb547"
   alert: "#ff6b6b"
@@ -27,9 +27,9 @@ colors:
 typography:
   headline:
     fontFamily: "Archivo, system-ui, -apple-system, Segoe UI, sans-serif"
-    fontSize: "22px"
+    fontSize: "18px"
     fontWeight: 700
-    lineHeight: "30px"
+    lineHeight: "26px"
   title:
     fontFamily: "Archivo, system-ui, sans-serif"
     fontSize: "15px"
@@ -52,8 +52,8 @@ typography:
     lineHeight: "16px"
 rounded:
   chip: "6px"
-  control: "9px"
-  panel: "14px"
+  control: "8px"
+  panel: "12px"
   pill: "999px"
 spacing:
   "1": "4px"
@@ -120,7 +120,7 @@ Density is high but calm: 13 to 14px UI text, 52px header bars, 16px panel paddi
 A neutral near-black ladder with one white action color and four section hues that only ever tint.
 
 ### Primary
-- **Signal White** (#f2f2f4): primary buttons, switches when on, the current menu pill, the selected tab. The one thing to press on a panel. In light theme it inverts to **Ink** (#121317) with white text.
+- **Signal White** (#fafafa): primary buttons, switches when on, the current menu pill, the selected tab. The one thing to press on a panel. In light theme it inverts to **Ink** (#121317) with white text.
 
 ### Section identities (tints, never fills of large areas)
 - **Safety Cobalt** (#7b93ff): Moderation, Security, Logs.
@@ -137,11 +137,11 @@ The current page's color reaches its icon tiles, gems, the server card's initial
 - **Intel** (#5ab0ff): informational chips.
 
 ### Neutral
-- **Floor** (#0b0c0e): page background.
-- **Panel** (#131418): every panel face.
-- **Panel Raised** (#1b1c21): inputs, hover rows, count pills, user message bubbles.
-- **Hairline** (#26282f) and **Hairline Strong** (#34363f): panel edges and dividers; the strong one for hover, open panels and dashed "new" tiles.
-- **Ink** (#ededf0) and **Ink Muted** (#8f929d): text and secondary text.
+- **Floor** (#0a0a0a): page background.
+- **Panel** (#171717): every panel face.
+- **Panel Raised** (#1f1f1f): inputs, hover rows, count pills, user message bubbles.
+- **Hairline** (#262626) and **Hairline Strong** (#333333): panel edges and dividers; the strong one for hover, open panels and dashed "new" tiles.
+- **Ink** (#ededed) and **Ink Muted** (#a1a1a1): text and secondary text.
 
 ### Named Rules
 **The One White Rule.** Each panel has at most one white control: its primary action or its on switch. Secondary actions are grey.
@@ -154,7 +154,7 @@ The current page's color reaches its icon tiles, gems, the server card's initial
 **Character:** one grotesque, set small and tight, so panels hold a lot without shouting.
 
 ### Hierarchy
-- **Headline** (700, 22px/30px, width 104%): the page title, beside its gem tile.
+- **Headline** (700, 18px/26px): the page title, beside its gem tile.
 - **Title** (650, 15px/22px): panel titles in header bars.
 - **Body** (400, 14px/20px): descriptions and settings sentences; 68ch measure for page intros.
 - **UI** (600, 13.5px/20px): buttons, menu items, tabs.
@@ -176,7 +176,7 @@ Flat by default. Panels use hairlines and one step of tone, not shadows (`--shad
 
 ## Shapes
 
-Panels 14px, controls 9px, chips and badges 6px, pills and switches fully round. Gems are 8 to 10px squares rotated 45° with 2px corners, set in 28 to 36px tinted tiles. "New" tiles are dashed with the strong hairline.
+Panels 12px, controls 8px, chips and badges 6px, pills and switches fully round. Gems are 8 to 10px squares rotated 45° with 2px corners, set in 28 to 36px tinted tiles. "New" tiles are dashed with the strong hairline.
 
 ## Components
 

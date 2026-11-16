@@ -66,9 +66,15 @@ starts the AI assistant after sign-in, two buttons (Dashboard, See it in action)
 bots with one" with three feature blocks (AI assistant, Insights, run it from Discord); a
 scrolling wall of server templates; pricing; FAQ; help.
 
+## Decisions (owner, 2026-11-16)
+
+- Keep Archivo.
+- Autosave with an Undo toast; every change still in Settings history.
+- Build in the order below.
+
 ## Order
 
-1. **System**: greys, corners, page head, the Pro sheet, autosave with toast and undo, preset /
+1. **System**: greys, corners, page head (done 2026-11-16), the Pro sheet, autosave with toast and undo, preset /
    level / segmented controls, the list template. *Large.*
 2. **Safety pages**: Moderation, Security, Logs. *Large.*
 3. **Community pages**: Welcome, Role menus, Tickets, Leveling. *Large.*
