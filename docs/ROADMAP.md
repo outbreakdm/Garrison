@@ -933,3 +933,8 @@ Decided (2026-11-12, owner):
   it). A Features tab: the eight modules the assistant can set, each with its switch and
   fields, saved one at a time through the same checks and Settings history as their pages.
   Migration 0063 (the new request kind). Not deployed.
+- 2026-11-16: Walked Peak Bot's landing page and all 23 dashboard pages (read only, the
+  owner's account) and wrote `docs/REDESIGN_V2.md`: what makes it feel polished, the system
+  changes (neutral greys, open panels that save themselves, a Pro sheet, preset and level
+  cards, one list template, quiet page heads), a page-by-page map and an order. Waiting on the
+  owner's decisions (font, autosave, where to start).
