@@ -8,18 +8,18 @@ import {
   getSuggestionSettings,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
+import type { AutoResult } from "@/lib/autosave";
 import { getDb } from "@/lib/db";
 import { listTextChannels } from "@/lib/discord";
-import { flashBack } from "@/lib/flash";
+import { answer, type Outcome } from "@/lib/outcome";
 import { checkGuildAccess } from "@/lib/session";
 
 /** Suggestions settings. Re-checks access, the plan, and that the channel is in this server. */
-export async function saveSuggestions(form: FormData) {
+export async function saveSuggestions(form: FormData): Promise<AutoResult> {
   const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
   if (!access) redirect("/servers");
   const { guild, session } = access;
-  const back = (outcome: { ok: string } | { error: string }) =>
-    flashBack(`/servers/${guild.id}/suggestions`, outcome);
+  const back = (outcome: Outcome) => answer(form, `/servers/${guild.id}/suggestions`, outcome);
   const db = await getDb();
   const [before, plan, channels] = await Promise.all([
     getSuggestionSettings(db, guild.id),
@@ -44,12 +44,11 @@ export async function saveSuggestions(form: FormData) {
     username: session.username,
   });
   if (!result.ok)
-    return back({
-      error: result.reason === "unchanged" ? "Nothing changed." : "Try again in a minute.",
-    });
+    return back(result.reason === "unchanged" ? "unchanged" : { error: "Try again in a minute." });
   return back({
     ok: checked.value.enabled
       ? "Saved. Members can use /suggest now."
       : "Saved. Suggestions are off; cards already posted keep their votes.",
+    changeId: result.change.id,
   });
 }

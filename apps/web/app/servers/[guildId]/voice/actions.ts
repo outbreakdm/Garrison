@@ -8,21 +8,21 @@ import {
   getVoiceRooms,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
+import type { AutoResult } from "@/lib/autosave";
 import { getDb } from "@/lib/db";
 import { getServerLayout } from "@/lib/discord";
-import { flashBack } from "@/lib/flash";
+import { answer, type Outcome } from "@/lib/outcome";
 import { checkGuildAccess } from "@/lib/session";
 
 /**
  * Voice room settings. Re-checks access and the plan, and that every channel is a voice
  * channel (or category) in this server.
  */
-export async function saveVoiceRooms(form: FormData) {
+export async function saveVoiceRooms(form: FormData): Promise<AutoResult> {
   const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
   if (!access) redirect("/servers");
   const { guild, session } = access;
-  const back = (outcome: { ok: string } | { error: string }) =>
-    flashBack(`/servers/${guild.id}/voice`, outcome);
+  const back = (outcome: Outcome) => answer(form, `/servers/${guild.id}/voice`, outcome);
   const db = await getDb();
   const [before, plan, layout] = await Promise.all([
     getVoiceRooms(db, guild.id),
@@ -57,12 +57,11 @@ export async function saveVoiceRooms(form: FormData) {
     username: session.username,
   });
   if (!result.ok)
-    return back({
-      error: result.reason === "unchanged" ? "Nothing changed." : "Try again in a minute.",
-    });
+    return back(result.reason === "unchanged" ? "unchanged" : { error: "Try again in a minute." });
   return back({
     ok: checked.value.enabled
       ? "Saved. Joining a creator channel now makes a room, within a few seconds of the change."
       : "Saved. Voice rooms are off; rooms already open close when they empty.",
+    changeId: result.change.id,
   });
 }

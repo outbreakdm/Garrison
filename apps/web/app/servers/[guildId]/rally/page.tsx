@@ -23,6 +23,7 @@ import { ProTag } from "@/components/cards/CardEditor";
 import { EmptyState } from "@/components/EmptyState";
 import { formatTime } from "@/components/format";
 import { SlotRows } from "@/components/ListField";
+import { ListHead } from "@/components/ListHead";
 import { OpsCalendar } from "@/components/OpsCalendar";
 import { FormPanel } from "@/components/settings";
 import { getDb } from "@/lib/db";
@@ -132,17 +133,9 @@ export default async function RallyPage({
             without Manage Server join on the <a href={`/play/${guild.id}`}>player page</a>.
           </p>
         </div>
-        <div className="row-between">
-          <a className="g-btn g-btn--secondary" href={`/servers/${guild.id}/rally/templates`}>
-            LFG templates
-          </a>
-          <a className="g-btn g-btn--secondary" href="?post=1#post-group">
-            Post a group
-          </a>
-          <a className="g-btn g-btn--primary" href="?create=1#create-raid">
-            Create raid
-          </a>
-        </div>
+        <a className="g-btn g-btn--secondary" href={`/servers/${guild.id}/rally/templates`}>
+          LFG templates
+        </a>
       </div>
       {working ? <AutoRefresh /> : null}
       {queued || attendanceNote ? (
@@ -335,9 +328,12 @@ export default async function RallyPage({
       </FormPanel>
       <div className="rally-board">
         <section aria-labelledby="open-groups" className="block">
-          <h2 className="block-title" id="open-groups">
-            Open groups <span className="count">{posts.length}</span>
-          </h2>
+          <ListHead
+            title="Open groups"
+            titleId="open-groups"
+            count={`${posts.length} open`}
+            create={{ label: "Post a group", href: "?post=1#post-group" }}
+          />
           {posts.length ? (
             posts.map((p, i) => {
               const members = postMembers[i] ?? [];
@@ -471,9 +467,12 @@ export default async function RallyPage({
           )}
         </section>
         <section aria-labelledby="upcoming-raids" className="block">
-          <h2 className="block-title" id="upcoming-raids">
-            Upcoming raids <span className="count">{raids.length}</span>
-          </h2>
+          <ListHead
+            title="Upcoming raids"
+            titleId="upcoming-raids"
+            count={`${raids.length} scheduled`}
+            create={{ label: "Create a raid", href: "?create=1#create-raid" }}
+          />
           {raids.length ? (
             raids.map((r, i) => {
               const signups = raidSignups[i] ?? [];

@@ -8,9 +8,10 @@ import {
   STAT_ROLES_MAX,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
+import type { AutoResult } from "@/lib/autosave";
 import { getDb } from "@/lib/db";
 import { listGuildRoles } from "@/lib/discord";
-import { flashBack } from "@/lib/flash";
+import { answer, type Outcome } from "@/lib/outcome";
 import { isDangerousRole } from "@/lib/permissions";
 import { checkGuildAccess } from "@/lib/session";
 
@@ -19,12 +20,12 @@ import { checkGuildAccess } from "@/lib/session";
  * must be in the server and carry no admin or moderation powers (the bot checks
  * again before giving it). A server back on Free can still clear its rules.
  */
-export async function saveStatRoles(form: FormData) {
+export async function saveStatRoles(form: FormData): Promise<AutoResult> {
   const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
   if (!access) redirect("/servers");
   const { guild, session } = access;
-  const back = (outcome: { ok: string } | { error: string }) =>
-    flashBack(`/servers/${guild.id}/barracks`, outcome, "?edit=stat-roles#stat-roles");
+  const back = (outcome: Outcome) =>
+    answer(form, `/servers/${guild.id}/barracks`, outcome, "#stat-roles");
   const raw: { source: string; min: number; roleId: string }[] = [];
   for (let i = 0; i < STAT_ROLES_MAX; i++) {
     const roleId = String(form.get(`rule${i}_role`) ?? "");
@@ -58,8 +59,9 @@ export async function saveStatRoles(form: FormData) {
     username: session.username,
   });
   if (!result.ok)
-    return back({
-      error: result.reason === "unchanged" ? "Nothing changed." : "Try again in a minute.",
-    });
-  return back({ ok: "Saved. Garrison updates members' roles within 30 minutes." });
+    return back(result.reason === "unchanged" ? "unchanged" : { error: "Try again in a minute." });
+  return back({
+    ok: "Saved. Garrison updates members' roles within 30 minutes.",
+    changeId: result.change.id,
+  });
 }

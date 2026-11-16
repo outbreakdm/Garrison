@@ -15,6 +15,7 @@ export interface ListFilter {
 
 export function ListHead({
   title,
+  titleId,
   filters = [],
   current = "",
   count,
@@ -22,6 +23,8 @@ export function ListHead({
 }: {
   /** For a list with nothing to filter: its name where the pills would be. */
   title?: string;
+  /** The title element's id, for a section labelled by it. */
+  titleId?: string;
   filters?: ListFilter[];
   current?: string;
   /** "1 of 2 running": where the list stands against the plan. */
@@ -31,7 +34,11 @@ export function ListHead({
 }) {
   return (
     <div className="list-head">
-      {title ? <h2 className="list-head__title">{title}</h2> : null}
+      {title ? (
+        <h2 className="list-head__title" id={titleId}>
+          {title}
+        </h2>
+      ) : null}
       {filters.length ? (
         <nav className="list-head__filters" aria-label="Filter">
           {filters.map((f) => (

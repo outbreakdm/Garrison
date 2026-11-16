@@ -10,21 +10,21 @@ import {
   resolveEmoji,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
+import type { AutoResult } from "@/lib/autosave";
 import { getDb } from "@/lib/db";
 import { listGuildEmojis, listTextChannels } from "@/lib/discord";
-import { flashBack } from "@/lib/flash";
+import { answer, type Outcome } from "@/lib/outcome";
 import { checkGuildAccess } from "@/lib/session";
 
 /**
  * Starboard settings. Re-checks access for the server in the form and the plan,
  * and checks every channel belongs to this server.
  */
-export async function saveStarboard(form: FormData) {
+export async function saveStarboard(form: FormData): Promise<AutoResult> {
   const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
   if (!access) redirect("/servers");
   const { guild, session } = access;
-  const back = (outcome: { ok: string } | { error: string }) =>
-    flashBack(`/servers/${guild.id}/honors`, outcome);
+  const back = (outcome: Outcome) => answer(form, `/servers/${guild.id}/honors`, outcome);
   const db = await getDb();
   const [before, plan, channels, serverEmoji] = await Promise.all([
     getStarboard(db, guild.id),
@@ -62,12 +62,11 @@ export async function saveStarboard(form: FormData) {
     username: session.username,
   });
   if (!result.ok)
-    return back({
-      error: result.reason === "unchanged" ? "Nothing changed." : "Try again in a minute.",
-    });
+    return back(result.reason === "unchanged" ? "unchanged" : { error: "Try again in a minute." });
   return back({
     ok: checked.value.enabled
       ? `Saved. Messages with ${checked.value.threshold} ${checked.value.emoji} go to the starboard.`
       : "Saved. The starboard is off.",
+    changeId: result.change.id,
   });
 }
