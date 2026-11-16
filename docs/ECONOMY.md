@@ -65,9 +65,9 @@ Items the staff make on the dashboard, each with a name, price, description and 
 | | Free | Pro |
 |---|---|---|
 | Shop items | 10 | 50 |
-| Earning sources | chatting, daily, staff | all, with per-channel and per-role rates |
+| Earning sources | chatting, daily, paying, staff | also voice and level-ups |
 | Timed roles in the shop | no | yes |
-| Ledger | 30 days | a year, with export |
+| Ledger | kept 400 days on both (a Free window and a Pro export are later) | |
 
 ## Data
 
