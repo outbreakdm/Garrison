@@ -56,6 +56,7 @@ export * from "./scam-links";
 export type {
   AlertStateRow,
   Appeal,
+  AutomodRule,
   BotProfilePayload,
   CallSignupsPayload,
   CaseAction,

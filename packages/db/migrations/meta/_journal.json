@@ -470,6 +470,13 @@
       "when": 1794852895547,
       "tag": "0066_server_stats",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1794853631204,
+      "tag": "0067_automod_patterns",
+      "breakpoints": true
     }
   ]
 }

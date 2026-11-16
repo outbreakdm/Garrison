@@ -282,6 +282,8 @@ export const FIELD_LABELS: Record<string, string> = {
   "automod.spamCount": "Automod: spam messages",
   "automod.spamSeconds": "Automod: spam window (s)",
   "automod.words": "Automod: blocked words",
+  "automod.regexPatterns": "Automod: patterns",
+  "automod.regexAllow": "Automod: always allowed",
   "automod.action": "Automod: after removing a message",
   "automod.timeoutMinutes": "Automod: timeout (min)",
   "automod.exemptRoleIds": "Automod: exempt roles",

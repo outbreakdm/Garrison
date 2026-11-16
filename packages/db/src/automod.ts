@@ -41,6 +41,14 @@ export interface AutomodConfig {
   aiEnabled: boolean;
   aiCategories: AiCategory[];
   aiStrictness: AiStrictness;
+  /**
+   * Patterns (regular expressions) Discord's own AutoMod blocks before anyone sees the
+   * message: Garrison keeps one AutoMod rule in step with these and records a case for
+   * each block. Discord runs them with Rust's regex engine, so a pattern can't hang.
+   */
+  regexPatterns: string[];
+  /** Words the patterns never block, even when they match. */
+  regexAllow: string[];
 }
 
 export const AI_CATEGORIES: Record<AiCategory, { label: string; openai: string[] }> = {
@@ -66,6 +74,13 @@ export const AUTOMOD_LIMITS = {
   exempt: 25,
 } as const;
 export const WORDS_HARD_MAX = FEATURES["automod.words"].pro;
+/** Discord's own limits for a keyword rule's patterns and allowed words. */
+export const PATTERN_LIMITS = { patterns: 10, length: 260, allow: 100, allowLength: 60 } as const;
+/** What Discord shows the member when it blocks their message. */
+export const PATTERN_BLOCK_MESSAGE =
+  "This message matches a pattern this server doesn't allow, so it wasn't sent.";
+/** Discord exempts at most this many roles and channels from a rule. */
+export const DISCORD_EXEMPT = { roles: 20, channels: 50 } as const;
 
 export const DEFAULT_AUTOMOD: AutomodConfig = {
   enabled: false,
@@ -82,6 +97,8 @@ export const DEFAULT_AUTOMOD: AutomodConfig = {
   aiEnabled: false,
   aiCategories: ["harassment", "hate", "sexual", "selfharm"],
   aiStrictness: "medium",
+  regexPatterns: [],
+  regexAllow: [],
 };
 
 const SNOWFLAKE = /^\d{17,20}$/;
@@ -104,6 +121,64 @@ export function cleanWords(raw: unknown): string[] {
   return [...new Set(list.map((w) => w.trim().toLowerCase().replace(/\s+/g, " ")).filter(Boolean))];
 }
 
+const strings = (v: unknown, max: number, length: number) =>
+  Array.isArray(v)
+    ? [...new Set(v.map((x) => String(x).trim()).filter((x) => x && x.length <= length))].slice(
+        0,
+        max,
+      )
+    : [];
+
+/**
+ * Why Discord would refuse a pattern, said plainly, or null. Discord uses Rust's regex
+ * engine, which has no look-around and no back-references (the features that let a pattern
+ * run forever); anything else it rejects comes back from Discord when Garrison sends it.
+ */
+export function patternProblem(pattern: string): string | null {
+  if (!pattern.trim()) return "A pattern can't be empty.";
+  if (pattern.length > PATTERN_LIMITS.length)
+    return `Patterns hold ${PATTERN_LIMITS.length} characters.`;
+  if (/\(\?<?[=!]/.test(pattern))
+    return "Discord's patterns can't look ahead or behind, like (?=…) or (?<!…).";
+  // A backslash and a digit, not itself escaped (\\1 is a backslash then "1").
+  if (/(^|[^\\])(\\\\)*\\[1-9]/.test(pattern) || /\\k</.test(pattern))
+    return "Discord's patterns can't refer back to a group, like \\1.";
+  // Only wildcards and anchors ("", ".*", "^", "(.+)"): every message would match.
+  if (/^[.*+?^$|()\s]*$/.test(pattern.trim())) return "That pattern would match every message.";
+  return null;
+}
+
+/**
+ * Try the patterns on a sample line, in the browser: the first that matches, which ones
+ * this browser can't run (Rust-only syntax, like (?i) up front), and whether an allowed
+ * word saves it. An approximation of Discord's engine, for checking a pattern does what
+ * you meant; Discord has the last word.
+ */
+export function tryPatterns(
+  patterns: string[],
+  allow: string[],
+  text: string,
+): { match: { index: number; found: string } | null; untested: number[]; allowed: string | null } {
+  const untested: number[] = [];
+  for (const [index, raw] of patterns.entries()) {
+    // Discord matches any case, with Unicode on, for every pattern. A leading inline flag
+    // group like "(?i)" is Rust's way of saying so; JavaScript says it with flags.
+    let re: RegExp;
+    try {
+      re = new RegExp(raw.replace(/^\(\?[imsux]+\)/, ""), "iu");
+    } catch {
+      untested.push(index);
+      continue;
+    }
+    const found = re.exec(text)?.[0];
+    if (!found) continue;
+    const lower = found.toLowerCase();
+    const allowed = allow.find((w) => lower.includes(w.toLowerCase())) ?? null;
+    return { match: { index, found }, untested, allowed };
+  }
+  return { match: null, untested, allowed: null };
+}
+
 /** A stored row, read leniently. */
 export function readAutomod(
   raw: Partial<Record<keyof AutomodConfig, unknown>> | null,
@@ -124,6 +199,8 @@ export function readAutomod(
     aiEnabled: raw.aiEnabled === true,
     aiCategories: Array.isArray(raw.aiCategories) ? raw.aiCategories.filter(isCategory) : [],
     aiStrictness: isStrictness(raw.aiStrictness) ? raw.aiStrictness : "medium",
+    regexPatterns: strings(raw.regexPatterns, PATTERN_LIMITS.patterns, PATTERN_LIMITS.length),
+    regexAllow: strings(raw.regexAllow, PATTERN_LIMITS.allow, PATTERN_LIMITS.allowLength),
   };
 }
 
@@ -171,6 +248,31 @@ export function checkAutomod(
     : [];
   if (aiEnabled && !aiCategories.length)
     return { ok: false, error: "Pick at least one thing for AI moderation to look for." };
+  const regexPatterns = Array.isArray(raw.regexPatterns)
+    ? [...new Set(raw.regexPatterns.map((x) => String(x).trim()).filter(Boolean))]
+    : [];
+  if (regexPatterns.length > PATTERN_LIMITS.patterns)
+    return { ok: false, error: `Discord holds ${PATTERN_LIMITS.patterns} patterns.` };
+  const patternLimit = ent["automod.patterns"];
+  if (regexPatterns.length > patternLimit && regexPatterns.length > before.regexPatterns.length)
+    return {
+      ok: false,
+      error: `Free servers block ${patternLimit} patterns. Garrison Pro blocks up to ${PATTERN_LIMITS.patterns}.`,
+    };
+  for (const [i, p] of regexPatterns.entries()) {
+    const problem = patternProblem(p);
+    if (problem) return { ok: false, error: `Pattern ${i + 1}: ${problem}` };
+  }
+  const regexAllow = Array.isArray(raw.regexAllow)
+    ? [...new Set(raw.regexAllow.map((x) => String(x).trim()).filter(Boolean))]
+    : [];
+  if (regexAllow.length > PATTERN_LIMITS.allow)
+    return { ok: false, error: `Up to ${PATTERN_LIMITS.allow} allowed words.` };
+  if (regexAllow.some((w) => w.length > PATTERN_LIMITS.allowLength))
+    return {
+      ok: false,
+      error: `Allowed words can be ${PATTERN_LIMITS.allowLength} characters each.`,
+    };
   return {
     ok: true,
     value: {
@@ -188,6 +290,8 @@ export function checkAutomod(
       aiEnabled,
       aiCategories,
       aiStrictness: isStrictness(raw.aiStrictness) ? raw.aiStrictness : "medium",
+      regexPatterns,
+      regexAllow,
     },
   };
 }
@@ -249,16 +353,18 @@ export function aiFlags(
   );
 }
 
-export const RULE_TEXT: Record<RuleHit["rule"] | "spam" | "scam" | AiCategory, string> = {
-  scam: "a scam or phishing link",
-  word: "a blocked word",
-  invite: "an invite to another server",
-  mentions: "too many mentions",
-  spam: "sending messages too fast",
-  harassment: "harassment (AI)",
-  hate: "hate (AI)",
-  sexual: "sexual content (AI)",
-  violence: "violence (AI)",
-  illicit: "illegal activity (AI)",
-  selfharm: "self-harm (AI)",
-};
+export const RULE_TEXT: Record<RuleHit["rule"] | "spam" | "scam" | "pattern" | AiCategory, string> =
+  {
+    scam: "a scam or phishing link",
+    pattern: "a blocked pattern",
+    word: "a blocked word",
+    invite: "an invite to another server",
+    mentions: "too many mentions",
+    spam: "sending messages too fast",
+    harassment: "harassment (AI)",
+    hate: "hate (AI)",
+    sexual: "sexual content (AI)",
+    violence: "violence (AI)",
+    illicit: "illegal activity (AI)",
+    selfharm: "self-harm (AI)",
+  };

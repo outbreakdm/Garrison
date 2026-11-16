@@ -47,6 +47,7 @@ import {
 } from "./modules/tickets/service.js";
 import { onVoiceRoomUpdate, sweepVoiceRooms } from "./modules/voice/service.js";
 import { onAutomodMessage } from "./modules/watch/automod.js";
+import { onPatternBlock, sweepPatterns } from "./modules/watch/patterns.js";
 import { liftExpiredBans } from "./modules/watch/service.js";
 import { welcomeJoin, welcomeLeave } from "./modules/welcome/service.js";
 
@@ -103,6 +104,8 @@ const client = new Client({
     GatewayIntentBits.DirectMessages,
     // Not privileged. Ledger: which invite each member joined with.
     GatewayIntentBits.GuildInvites,
+    // Not privileged. Automod patterns: Discord says when its AutoMod blocked a message.
+    GatewayIntentBits.AutoModerationExecution,
   ],
   // Never ping from bot messages. Reasons and other user-typed text are echoed
   // back, and must not be able to trigger @everyone, role or user pings.
@@ -151,6 +154,7 @@ client.once(Events.ClientReady, async (ready) => {
     await sweepStatRoles(ctx, ready).catch((error) => logger.error("Stat roles failed", { error }));
     // Runs on its own: a rename Discord makes wait mustn't hold up the other sweeps.
     sweepServerStats(ctx, ready);
+    sweepPatterns(ctx, ready);
     await sweepMessages(ctx, ready).catch((error) =>
       logger.error("Scheduled messages failed", { error }),
     );
@@ -252,6 +256,11 @@ client.on(Events.MessageReactionAdd, (reaction) => {
 client.on(Events.MessageReactionRemove, (reaction) => {
   onStarReaction(ctx, reaction).catch((error) =>
     logger.warn("Starboard failed", { guildId: reaction.message.guildId, error }),
+  );
+});
+client.on(Events.AutoModerationActionExecution, (execution) => {
+  onPatternBlock(ctx, execution).catch((error) =>
+    logger.warn("Automod pattern case failed", { guildId: execution.guild.id, error }),
   );
 });
 client.on(Events.InviteCreate, (invite) => {

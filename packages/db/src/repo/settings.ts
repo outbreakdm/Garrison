@@ -103,6 +103,9 @@ export const EDITABLE_FIELDS = {
     "aiEnabled",
     "aiCategories",
     "aiStrictness",
+    // Patterns are checked with patternProblem; Discord's AutoMod runs them.
+    "regexPatterns",
+    "regexAllow",
   ],
   // Checked with checkSuggestions before it gets here.
   suggestions: ["enabled", "channelId", "anonymous"],

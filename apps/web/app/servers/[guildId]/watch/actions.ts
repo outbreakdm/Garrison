@@ -167,6 +167,8 @@ export async function saveAutomod(form: FormData): Promise<AutoResult> {
     aiStrictness: take("aiStrictness")
       ? String(form.get("aiStrictness") ?? "medium")
       : before.aiStrictness,
+    regexPatterns: all("regexPatterns"),
+    regexAllow: all("regexAllow"),
   };
   const roleIds = new Set(roles.map((r) => r.id));
   const channelIds = new Set(channels.map((c) => c.id));
@@ -190,12 +192,16 @@ export async function saveAutomod(form: FormData): Promise<AutoResult> {
       : back({ error: "Try again in a minute." });
   const ok = own?.has("words")
     ? "Saved the blocked words."
-    : own?.has("aiEnabled")
-      ? "Saved AI moderation."
-      : own?.has("exemptRoleIds")
-        ? "Saved who automod skips."
-        : checked.value.enabled
-          ? "Saved. Automod is on."
-          : "Saved. Automod is off.";
+    : own?.has("regexPatterns")
+      ? checked.value.enabled
+        ? "Saved the patterns. Discord blocks with them within a minute."
+        : "Saved the patterns. They start blocking when Automod is on."
+      : own?.has("aiEnabled")
+        ? "Saved AI moderation."
+        : own?.has("exemptRoleIds")
+          ? "Saved who automod skips."
+          : checked.value.enabled
+            ? "Saved. Automod is on."
+            : "Saved. Automod is off.";
   return back({ ok, changeId: result.change.id });
 }

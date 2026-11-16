@@ -7,8 +7,8 @@ design.
 **Owner's picks (2026-11-16):** the proposed order; regex runs in Discord's own AutoMod; a
 shared Insights link can be embedded in other sites when the owner switches that on.
 
-**Status:** 1. Server stats **built** (not deployed: needs migration `0066_server_stats`).
-Next: 2. Regex moderation.
+**Status:** 1. Server stats and 2. regex moderation **built** (not deployed: need migrations
+`0066_server_stats` and `0067_automod_patterns`). Next: 3. Verification questions.
 
 | # | Request | Garrison today | Size |
 |---|---|---|---|
@@ -39,7 +39,15 @@ category.
   channels the owner picks. Discord lets a channel be renamed twice in ten minutes, so the
   bot updates every ten minutes, and only when a number changed.
 
-## 2. Regex moderation
+## 2. Regex moderation (built)
+
+Built as planned: a **Patterns** panel on Moderation (Free 3, Pro 10), always-allowed words, a
+tester that runs the patterns in the browser (any case, Unicode, as Discord does), and
+Discord's answer under them. The bot keeps one keyword rule ("Garrison: blocked patterns") in
+step, sends only when something changed, records Discord's refusal per pattern, and turns
+each block into a case through the AutoMod execution intent (not privileged). Still to check
+on a test server: the rule appears in Server Settings → AutoMod, a matching message is
+blocked, the case and timeout follow, and removing every pattern deletes the rule.
 
 Patterns are run by Discord's own AutoMod, not by Garrison: Discord's engine can't be made
 to hang on a bad pattern, and it's what people asked for by name. Garrison keeps one AutoMod

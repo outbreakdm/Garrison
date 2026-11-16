@@ -40,7 +40,12 @@ const setting = (panel: string, module: string, title: string, keywords: string)
 
 export const SEARCH_INDEX: SearchEntry[] = [
   page("", "Overview", null, "home dashboard stats health activity"),
-  page("/watch", "Moderation", null, "cases warn timeout kick ban mod escalation watch"),
+  page(
+    "/watch",
+    "Moderation",
+    null,
+    "cases warn timeout kick ban mod escalation watch automod regex pattern regular expression filter",
+  ),
   page("/gatehouse", "Security", null, "lockdown raid nuke verify quarantine gatehouse"),
   page("/ledger", "Logs", null, "audit log events history joins leaves ledger"),
   page("/rally", "Groups and raids", null, "lfg group raid ops roster signups rally"),

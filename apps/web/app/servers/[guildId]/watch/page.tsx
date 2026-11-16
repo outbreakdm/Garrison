@@ -6,11 +6,13 @@ import {
   cleanQuery,
   entitlements,
   getAutomod,
+  getAutomodRule,
   getGuildPlan,
   getOverview,
   listAppeals,
   listEscalationRules,
   listRecentCases,
+  PATTERN_LIMITS,
   searchCases,
   WORDS_HARD_MAX,
 } from "@garrison/db";
@@ -55,6 +57,7 @@ import { ago } from "../parley/when";
 import { requestAction } from "../requests";
 import { saveLadder, saveWatch, undoChange } from "../settings/actions";
 import { decide, saveAutomod } from "./actions";
+import { PatternTester } from "./PatternTester";
 
 export const metadata: Metadata = { title: "Moderation" };
 
@@ -83,22 +86,48 @@ export default async function WatchPage({
   const q = cleanQuery(query.q);
   const memberQuery = typeof query.member === "string" ? query.member.trim().slice(0, 32) : "";
   const db = await getDb();
-  const [cases, rules, { watch: w }, channels, found, appealsOn, appeals, flash, am, plan, roles] =
-    await Promise.all([
-      q ? searchCases(db, guild.id, q, 50) : listRecentCases(db, guild.id, 50),
-      listEscalationRules(db, guild.id),
-      getOverview(db, guild.id),
-      listTextChannels(guild.id).catch(() => []),
-      // null means Discord didn't answer, which the page says rather than showing nobody.
-      memberQuery ? searchMembers(guild.id, memberQuery).catch(() => null) : null,
-      appealsOpen(db, guild.id),
-      listAppeals(db, guild.id),
-      readFlash(),
-      getAutomod(db, guild.id),
-      getGuildPlan(db, guild.id),
-      listGuildRoles(guild.id).catch(() => []),
-    ]);
+  const [
+    cases,
+    rules,
+    { watch: w },
+    channels,
+    found,
+    appealsOn,
+    appeals,
+    flash,
+    am,
+    plan,
+    roles,
+    patternRule,
+  ] = await Promise.all([
+    q ? searchCases(db, guild.id, q, 50) : listRecentCases(db, guild.id, 50),
+    listEscalationRules(db, guild.id),
+    getOverview(db, guild.id),
+    listTextChannels(guild.id).catch(() => []),
+    // null means Discord didn't answer, which the page says rather than showing nobody.
+    memberQuery ? searchMembers(guild.id, memberQuery).catch(() => null) : null,
+    appealsOpen(db, guild.id),
+    listAppeals(db, guild.id),
+    readFlash(),
+    getAutomod(db, guild.id),
+    getGuildPlan(db, guild.id),
+    listGuildRoles(guild.id).catch(() => []),
+    getAutomodRule(db, guild.id),
+  ]);
   const ent = entitlements(plan);
+  // What Discord said about the patterns, from the bot's record of the rule it keeps.
+  const patternState = !am.regexPatterns.length
+    ? null
+    : !am.enabled
+      ? { tone: "off", text: "Automod is off, so Discord isn't blocking these yet." }
+      : patternRule?.error
+        ? { tone: "warn", text: `Discord refused the last list: ${patternRule.error}` }
+        : patternRule?.ruleId
+          ? {
+              tone: "ok",
+              text: "In Discord's AutoMod as “Garrison: blocked patterns”. Changes reach it within a minute.",
+            }
+          : { tone: "off", text: "Garrison gives these to Discord within a minute of saving." };
   const appealUrl = `${env().APP_URL}/appeal/${guild.id}`;
   const first = rules[0]?.warnCount ?? 0;
   const logChannel = channels.find((c) => c.id === w?.logChannelId);
@@ -395,6 +424,57 @@ export default async function WatchPage({
               Whole words, any case. Each one saves when you press Enter or move on.
               {ent["automod.words"] < WORDS_HARD_MAX ? ` Pro holds ${WORDS_HARD_MAX}.` : ""}
             </span>
+          </AutoSaveCard>
+
+          <AutoSaveCard
+            id="patterns"
+            title="Patterns"
+            action={saveAutomod}
+            undo={undoChange}
+            guildId={guild.id}
+            stamp={amStamp}
+            saveLabel="Save patterns"
+            fields={["regexPatterns", "regexAllow"]}
+            footer={<PatternTester formId="patterns-form" />}
+          >
+            <p className="g-help">
+              Regular expressions Discord's own AutoMod checks: a matching message is blocked before
+              anyone sees it, and Garrison records a case and does what Automod does after removing
+              a message. Any case matches. People with Manage Server, and the roles and channels
+              Automod skips, are never checked.
+            </p>
+            <div className="mono-list">
+              <ListField
+                name="regexPatterns"
+                noun="pattern"
+                defaultItems={am.regexPatterns}
+                max={Math.min(ent["automod.patterns"], PATTERN_LIMITS.patterns)}
+                maxLength={PATTERN_LIMITS.length}
+                placeholder="fr[e3]{2}\s*n[i1]tro"
+              />
+            </div>
+            <span className="g-help">
+              Discord reads Rust's pattern syntax: no look-ahead or back-references.
+              {ent["automod.patterns"] < PATTERN_LIMITS.patterns
+                ? ` Free blocks ${ent["automod.patterns"]}; Pro up to ${PATTERN_LIMITS.patterns}.`
+                : ""}
+            </span>
+            {patternState ? (
+              <p className="pattern-state" data-tone={patternState.tone} role="status">
+                {patternState.text}
+              </p>
+            ) : null}
+            <fieldset className="editor-group">
+              <legend className="g-label">Always allowed</legend>
+              <ListField
+                name="regexAllow"
+                noun="word"
+                defaultItems={am.regexAllow}
+                max={PATTERN_LIMITS.allow}
+                maxLength={PATTERN_LIMITS.allowLength}
+                placeholder="A word the patterns never block"
+              />
+            </fieldset>
           </AutoSaveCard>
 
           <AutoSaveCard

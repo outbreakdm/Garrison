@@ -422,6 +422,12 @@ export const FEATURES = {
     free: false,
     pro: true,
   },
+  "automod.patterns": {
+    module: "automod",
+    about: "Patterns (regular expressions) Discord's AutoMod blocks",
+    free: 3,
+    pro: 10,
+  },
   "stats.counters": {
     module: "stats",
     about: "Server stats counters (channels that show a live count)",

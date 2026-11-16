@@ -8,8 +8,9 @@ then updates **Status** and the **Log** before stopping.
 ## Pick up here
 
 - **Community requests (2026-11-16):** `docs/COMMUNITY_REQUESTS.md`, built in the owner's
-  order. Server stats is built, not deployed: **apply migration `0066_server_stats`** (after
-  0065) before deploying. Next: regex moderation through Discord's AutoMod.
+  order. Server stats and regex moderation are built, not deployed: **apply migrations
+  `0066_server_stats` and `0067_automod_patterns`** (after 0065) before deploying; deploy the
+  bot too (new AutoMod execution intent, not privileged). Next: verification questions.
 - **Member pages (2026-11-16):** first build done, not deployed (`docs/MEMBER_PAGES.md`). **Before
   deploying, apply migration `0065_member_pages`** in production. Next pieces: Roles,
   Suggestions, Giveaways.
@@ -1051,3 +1052,7 @@ Decided (2026-11-12, owner):
   numbers current within Discord's rename limit and removes the channels it made. Migration
   0066 (`stats_settings` edited by the dashboard, `stat_channels` kept by the bot). Free 3,
   Pro 10 counters. Not deployed.
+- 2026-11-16: Regex moderation built: Patterns on Moderation (Free 3, Pro 10) with always-allowed
+  words, a tester and Discord's answer; the bot keeps one Discord AutoMod keyword rule in step
+  (`automod_rules`, migration 0067) and makes each block a case with the automod action. Not
+  deployed.

@@ -2067,9 +2067,14 @@ export const automodSettings = pgTable(
       .notNull()
       .default(sql`'{harassment,hate,sexual,selfharm}'::text[]`),
     aiStrictness: text("ai_strictness").notNull().default("medium"),
+    /** Patterns Discord's own AutoMod blocks (Garrison keeps the rule in step). */
+    regexPatterns: text("regex_patterns").array().notNull().default(sql`'{}'::text[]`),
+    regexAllow: text("regex_allow").array().notNull().default(sql`'{}'::text[]`),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
+    check("automod_patterns", sql`cardinality(${t.regexPatterns}) <= 10`),
+    check("automod_regex_allow", sql`cardinality(${t.regexAllow}) <= 100`),
     check("automod_action", sql`${t.action} IN ('delete', 'warn', 'timeout')`),
     check("automod_strictness", sql`${t.aiStrictness} IN ('low', 'medium', 'high')`),
     check("automod_words", sql`cardinality(${t.words}) <= 250`),
@@ -2165,6 +2170,24 @@ export const voiceRooms = pgTable(
 ).enableRLS();
 
 export type VoiceRoom = typeof voiceRooms.$inferSelect;
+
+/**
+ * The Discord AutoMod rule Garrison keeps for a server's patterns: its ID, what was last
+ * sent (a hash, so an unchanged list isn't sent again), and Discord's answer. The bot's
+ * own record; the dashboard reads it to say whether Discord accepted the patterns.
+ */
+export const automodRules = pgTable("automod_rules", {
+  guildId: text("guild_id")
+    .primaryKey()
+    .references(() => guilds.id, { onDelete: "cascade" }),
+  ruleId: text("rule_id"),
+  sent: text("sent").notNull(),
+  /** Discord's refusal, in its words; null when it accepted. */
+  error: text("error"),
+  syncedAt: timestamp("synced_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
+
+export type AutomodRule = typeof automodRules.$inferSelect;
 
 // ---------------------------------------------------------------------------
 // Server stats (channels whose names show a count)

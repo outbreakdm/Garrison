@@ -12,7 +12,7 @@ import {
   RULE_TEXT,
   type ScamHit,
 } from "@garrison/db";
-import { type GuildMember, type Message, PermissionFlagsBits } from "discord.js";
+import { type Guild, type GuildMember, type Message, PermissionFlagsBits } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
 import { cardMessage } from "../../lib/card.js";
 import { safeText } from "../../lib/text.js";
@@ -41,6 +41,13 @@ const recent = new Map<string, number[]>();
 /** At most one automod case per member every 30 s, so a burst is one warning, not ten. */
 const lastCase = new Map<string, number>();
 const CASE_GAP_MS = 30_000;
+/** Whether this member may get another automod case now (one every 30 s); takes the slot. */
+export function caseDue(guildId: string, userId: string, now = Date.now()) {
+  const key = `${guildId}:${userId}`;
+  if (now - (lastCase.get(key) ?? 0) < CASE_GAP_MS) return false;
+  lastCase.set(key, now);
+  return true;
+}
 /** AI checks per server per minute, so a busy server can't run up the API. */
 const aiBudget = new Map<string, { minute: number; used: number }>();
 const AI_PER_MINUTE = 60;
@@ -79,8 +86,22 @@ function takeAiBudget(guildId: string, now = Date.now()) {
   return true;
 }
 
-async function logToWatch(ctx: BotContext, message: Message<true>, title: string, why: string) {
-  const settings = await getWatchSettings(ctx.db, message.guildId);
+/** Where a message was and what it said: a sent message, or one Discord blocked. */
+export interface Said {
+  guild: Guild;
+  channelId: string;
+  authorId: string;
+  content: string;
+}
+const said = (m: Message<true>): Said => ({
+  guild: m.guild,
+  channelId: m.channelId,
+  authorId: m.author.id,
+  content: m.content,
+});
+
+export async function logToWatch(ctx: BotContext, message: Said, title: string, why: string) {
+  const settings = await getWatchSettings(ctx.db, message.guild.id);
   if (!settings.logChannelId) return;
   const channel = message.guild.channels.cache.get(settings.logChannelId);
   if (!channel?.isSendable()) return;
@@ -92,7 +113,7 @@ async function logToWatch(ctx: BotContext, message: Message<true>, title: string
       cardMessage({
         tone: "caution",
         title,
-        lead: `<@${message.author.id}> in <#${message.channelId}>`,
+        lead: `<@${message.authorId}> in <#${message.channelId}>`,
         blocks: [{ text: `${why}${quoted}` }],
         module: "watch",
         compact: true,
@@ -133,7 +154,7 @@ async function removeScam(
   if (!result.ok)
     await logToWatch(
       ctx,
-      message,
+      said(message),
       "Removed a scam link",
       `${scam.host} ${scam.why}. ${result.error}`,
     );
@@ -184,7 +205,7 @@ export async function onAutomodMessage(ctx: BotContext, message: Message, keys: 
   if (aiHits.includes("selfharm")) {
     await logToWatch(
       ctx,
-      message,
+      said(message),
       "Someone may need support",
       "AI moderation thinks this message mentions self-harm. Nothing was removed; please check on them.",
     );
@@ -198,7 +219,7 @@ export async function onAutomodMessage(ctx: BotContext, message: Message, keys: 
   if (canDelete) await message.delete().catch(() => null);
 
   if (config.action === "delete" || now - (lastCase.get(key) ?? 0) < CASE_GAP_MS) {
-    await logToWatch(ctx, message, "Automod removed a message", `For ${reason}.`);
+    await logToWatch(ctx, said(message), "Automod removed a message", `For ${reason}.`);
     return;
   }
   lastCase.set(key, now);
@@ -213,5 +234,10 @@ export async function onAutomodMessage(ctx: BotContext, message: Message, keys: 
     source: "automod",
   });
   if (!result.ok)
-    await logToWatch(ctx, message, "Automod removed a message", `For ${reason}. ${result.error}`);
+    await logToWatch(
+      ctx,
+      said(message),
+      "Automod removed a message",
+      `For ${reason}. ${result.error}`,
+    );
 }
