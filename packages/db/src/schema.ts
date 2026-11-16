@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
+  bigint,
   bigserial,
   boolean,
   check,
@@ -20,6 +21,7 @@ import type { AccessGrant } from "./access";
 import type { AlertFeed } from "./alerts";
 import type { ServerBackup } from "./backups";
 import type { CustomCard } from "./cards";
+import type { Currency, EarnRules, ShopItem } from "./economy";
 import type { BonusRole } from "./giveaways";
 import type { InviteLabel } from "./invite-labels";
 import type { SavedMessage } from "./messages";
@@ -488,6 +490,7 @@ export const settingsModule = pgEnum("settings_module", [
   "members",
   "stats",
   "invites",
+  "economy",
 ]);
 
 /** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */
@@ -1189,6 +1192,9 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "qm_chat",
   "qm_remove",
   "verify_decide",
+  "economy_adjust",
+  "economy_buy",
+  "economy_purchase",
 ]);
 
 /**
@@ -2242,6 +2248,129 @@ export const automodRules = pgTable("automod_rules", {
 }).enableRLS();
 
 export type AutomodRule = typeof automodRules.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Economy (docs/ECONOMY.md)
+// ---------------------------------------------------------------------------
+
+/** A server's currency, earning and shop: one row, edited on the dashboard with history. */
+export const economySettings = pgTable(
+  "economy_settings",
+  {
+    guildId: text("guild_id")
+      .primaryKey()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    enabled: boolean("enabled").notNull().default(false),
+    currency: jsonb("currency").$type<Currency>(),
+    earn: jsonb("earn").$type<EarnRules>(),
+    shop: jsonb("shop").$type<ShopItem[]>().notNull().default(sql`'[]'::jsonb`),
+    staffChannelId: text("staff_channel_id"),
+    noEarnChannelIds: text("no_earn_channel_ids").array().notNull().default(sql`'{}'::text[]`),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      "economy_shop_list",
+      sql`jsonb_typeof(${t.shop}) = 'array' AND jsonb_array_length(${t.shop}) <= 50`,
+    ),
+  ],
+).enableRLS();
+
+/** A member's balance in one server. Never below zero; the bot alone changes it. */
+export const wallets = pgTable(
+  "wallets",
+  {
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    balance: bigint("balance", { mode: "number" }).notNull().default(0),
+    /** Days in a row the daily claim was taken, and when it last was (UTC day). */
+    streak: integer("streak").notNull().default(0),
+    lastDaily: date("last_daily"),
+    /** Paid to other members today (UTC), for the daily cap. */
+    paidToday: bigint("paid_today", { mode: "number" }).notNull().default(0),
+    paidDay: date("paid_day"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.guildId, t.userId] }),
+    index("wallets_rich").on(t.guildId, t.balance),
+    check("wallets_balance", sql`${t.balance} >= 0`),
+  ],
+).enableRLS();
+
+/**
+ * Every change to a balance. Chatting and voice add up into one row per member per day
+ * (`day`); everything else is a row of its own.
+ */
+export const economyLedger = pgTable(
+  "economy_ledger",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    amount: bigint("amount", { mode: "number" }).notNull(),
+    balanceAfter: bigint("balance_after", { mode: "number" }).notNull(),
+    source: text("source").notNull(),
+    reason: text("reason"),
+    actorId: text("actor_id"),
+    actorName: text("actor_name"),
+    itemId: text("item_id"),
+    day: date("day"),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("economy_ledger_guild_at").on(t.guildId, t.at),
+    index("economy_ledger_member").on(t.guildId, t.userId, t.at),
+    uniqueIndex("economy_ledger_daily_sum")
+      .on(t.guildId, t.userId, t.source, t.day)
+      .where(sql`${t.day} IS NOT NULL`),
+    check(
+      "economy_ledger_source",
+      sql`${t.source} IN ('chat', 'voice', 'daily', 'level', 'give', 'take', 'pay_in', 'pay_out', 'buy', 'refund')`,
+    ),
+  ],
+).enableRLS();
+
+/** A shop purchase: a role given (and when it's taken back), or an item staff hand over. */
+export const economyPurchases = pgTable(
+  "economy_purchases",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    username: text("username").notNull(),
+    itemId: text("item_id").notNull(),
+    itemName: text("item_name").notNull(),
+    price: bigint("price", { mode: "number" }).notNull(),
+    kind: text("kind").notNull(),
+    roleId: text("role_id"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    /** done: given; waiting: for staff; refunded; expired: a timed role taken back. */
+    status: text("status").notNull(),
+    decidedBy: text("decided_by"),
+    channelId: text("channel_id"),
+    messageId: text("message_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("economy_purchases_item").on(t.guildId, t.itemId),
+    index("economy_purchases_member").on(t.guildId, t.userId),
+    check(
+      "economy_purchases_status",
+      sql`${t.status} IN ('done', 'waiting', 'refunded', 'expired')`,
+    ),
+  ],
+).enableRLS();
+
+export type Wallet = typeof wallets.$inferSelect;
+export type LedgerRow = typeof economyLedger.$inferSelect;
+export type Purchase = typeof economyPurchases.$inferSelect;
 
 // ---------------------------------------------------------------------------
 // Shared Insights (a read-only link to a server's counts and charts)

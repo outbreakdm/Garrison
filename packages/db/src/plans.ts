@@ -156,6 +156,7 @@ type Module =
   | "voice"
   | "stats"
   | "invites"
+  | "economy"
   | "suggestions"
   | "insights";
 
@@ -428,6 +429,18 @@ export const FEATURES = {
     about: "Patterns (regular expressions) Discord's AutoMod blocks",
     free: 3,
     pro: 10,
+  },
+  "economy.items": {
+    module: "economy",
+    about: "Items in the server's shop",
+    free: 10,
+    pro: 50,
+  },
+  "economy.extras": {
+    module: "economy",
+    about: "Earning in voice and at level-ups, and shop roles for a time",
+    free: false,
+    pro: true,
   },
   "invites.labels": {
     module: "invites",

@@ -498,6 +498,13 @@
       "when": 1794870745729,
       "tag": "0070_insights_shares",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1794871820122,
+      "tag": "0071_economy",
+      "breakpoints": true
     }
   ]
 }

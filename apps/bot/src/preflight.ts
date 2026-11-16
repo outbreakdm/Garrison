@@ -112,6 +112,11 @@ try {
 if (env) {
   // Newest tables first: if these exist with grants, everything older does too.
   const latest = [
+    // 0071: economy.
+    "economy_settings",
+    "wallets",
+    "economy_ledger",
+    "economy_purchases",
     // 0069: invite labels.
     "invite_settings",
     // 0068: verification questions.

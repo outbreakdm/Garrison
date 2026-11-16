@@ -47,6 +47,10 @@ export const MODULE_GUIDE: Record<ReadableModule, { page: string; about: string 
   rally: { page: "Groups and raids", about: "LFG and raid templates" },
   ops: { page: "Groups and raids", about: "server timezone, raid attendance tracking" },
   voice: { page: "Voice rooms", about: "join-to-create voice rooms" },
+  economy: {
+    page: "Economy",
+    about: "server currency: name and icon, earning (chat, daily, voice, levels), paying, the shop",
+  },
   invites: {
     page: "Invites",
     about: "invite labels: names, colors, categories, partner details, roles given on join",
