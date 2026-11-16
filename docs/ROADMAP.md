@@ -7,6 +7,9 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
+- **Member pages (2026-11-16):** proposed in `docs/MEMBER_PAGES.md`, waiting on the owner's picks.
+- **Latest deploy:** `2e2b93f` (run 43918628506, dashboard only): steps 6 to 8 of redesign v2,
+  the critique fixes, colorize, animate and the landing GIFs.
 - **Redesign v2 (2026-11-16):** all five steps and Settings access are **deployed** (`3989146`,
   run 43794232829, with the Overview and the AI assistant's plan panel before them).
   Migrations through `0064_dashboard_access` are applied in production and recorded (65 rows
@@ -29,7 +32,7 @@ then updates **Status** and the **Log** before stopping.
   server template then applying it in a second server you own. The calendar feed link should
   open in a calendar app. Next: Phase 2 (Stripe) once a price is set. The depth backlog is
   done; what's left needs the owner (Kick alerts, YouTube live, uploaded backgrounds).
-- **Branch:** `dashboard-first`, pushed; everything through commit `3989146` is deployed.
+- **Branch:** `dashboard-first`, pushed; everything through commit `2e2b93f` is deployed.
   The Card Table redesign and its critique fixes (through `c6d8efc`) are deployed (2026-11-13, run 43441441759).
 - **Before pushing:** `pnpm -r exec tsc --noEmit`, `pnpm test`, `pnpm exec biome check apps packages`.
 - **Deploying:** "deploy" means commit, push, then
@@ -1026,3 +1029,6 @@ Decided (2026-11-12, owner):
   on the landing page with three GIFs recorded from the dashboard (about 200 to 310 KB each,
   in apps/web/public/media; re-record with apps/web/scripts/record-gifs.mjs). The public site
   now serves /media and /art itself. 588 tests pass; checked on desktop and phone. Not deployed.
+- 2026-11-16: Deployed `2e2b93f` (run 43918628506, dashboard only; no bot change, no migration).
+  Live: Watch it work and its GIFs on garrisonbot.com, served from the public site itself;
+  /healthz and /status answer. Member pages proposed in docs/MEMBER_PAGES.md.
