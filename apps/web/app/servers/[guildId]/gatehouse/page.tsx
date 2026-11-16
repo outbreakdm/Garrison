@@ -15,6 +15,7 @@ import { formatTime } from "@/components/format";
 import { ListField } from "@/components/ListField";
 import { HeadSwitch } from "@/components/ModuleHead";
 import { PresetFill } from "@/components/PresetFill";
+import { RecValue } from "@/components/RecValue";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { ChannelSelect, CheckList, SettingsNotice, Switch } from "@/components/settings";
 import { getDb } from "@/lib/db";
@@ -209,6 +210,7 @@ export default async function GatehousePage({
                   max={1440}
                   defaultValue={g?.autoUnlockMinutes ?? 15}
                 />
+                <RecValue field="autoUnlockMinutes" value={15} />
               </label>
               <label className="g-field" htmlFor="flagAccountAgeDays">
                 <span>Flag accounts under (days)</span>
@@ -221,6 +223,7 @@ export default async function GatehousePage({
                   max={365}
                   defaultValue={g?.flagAccountAgeDays ?? 7}
                 />
+                <RecValue field="flagAccountAgeDays" value={7} />
               </label>
             </div>
             <span className="g-help">

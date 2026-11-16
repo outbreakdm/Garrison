@@ -177,5 +177,8 @@ Each step ships on its own, checked on desktop and phone.
      raids, Game accounts). Role menus count as on only once one is posted.
    - *Recommended*: choices mark Garrison's recommended option, with "Recommended setting"
      under it or "Recommended: X. Use it"; a few switches carry a Recommended tag while off.
-   Not done yet: checked on phone and in light theme; recommended marks on the remaining
-   pages; deploy.
+   - *Recommended numbers*: `RecValue` under the fields with a clear default (mention limit
+     5, timeout 10 min, unlock after 15 min, flag accounts under 7 days, logs kept 30 days,
+     starboard at 3), with the same "Use it". Recommended is always Garrison's setting for a
+     new server, never a new policy.
+   Checked on desktop, phone (the phone menu wraps long names) and light theme. Not deployed.

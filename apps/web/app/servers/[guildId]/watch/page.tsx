@@ -26,6 +26,7 @@ import { ListField } from "@/components/ListField";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { HeadSwitch } from "@/components/ModuleHead";
 import { PresetFill } from "@/components/PresetFill";
+import { RecValue } from "@/components/RecValue";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import {
   ChannelSelect,
@@ -305,6 +306,7 @@ export default async function WatchPage({
                   max={AUTOMOD_LIMITS.mentionLimit}
                   defaultValue={am.mentionLimit}
                 />
+                <RecValue field="mentionLimit" value={5} />
               </label>
             </div>
             <span className="g-help">0 turns a check off. Mentions count users and roles.</span>
@@ -330,6 +332,7 @@ export default async function WatchPage({
                 max={AUTOMOD_LIMITS.timeoutMinutes}
                 defaultValue={am.timeoutMinutes}
               />
+              <RecValue field="timeoutMinutes" value={10} />
             </label>
           </AutoSaveCard>
 

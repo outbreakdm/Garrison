@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { formatTime } from "@/components/format";
 import { HeadStatus } from "@/components/ModuleHead";
 import { ProUpsell } from "@/components/ProUpsell";
+import { RecValue } from "@/components/RecValue";
 import { ChannelSelect, SettingsNotice, Switch } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { listTextChannels, memberNames, searchMembers } from "@/lib/discord";
@@ -134,6 +135,7 @@ export default async function LedgerPage({
                   max={365}
                   defaultValue={settings.retentionDays}
                 />
+                <RecValue field="retentionDays" value={30} />
                 <span className="g-help">7 to 365. Older events are removed automatically.</span>
               </label>
             </div>

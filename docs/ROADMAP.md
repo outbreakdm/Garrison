@@ -1010,3 +1010,9 @@ Decided (2026-11-12, owner):
   dashboard host, `/build` sets the `__Host-` cookie and hands on to the server list, which
   asks to sign in; /healthz and /status answer, and the new bot container started at 02:50 UTC
   and is beating.
+- 2026-11-16: Redesign v2 step 6, menu and page clarity. The menu has icons, finer groups
+  (Safety, Welcome, Engagement, Community, Gaming) with the AI assistant near the top, and a
+  dot per module for on or off. Every module page says at the top right whether it runs: the
+  module's own switch (six pages, saving with Undo) or what's set up and the first thing to
+  do (nine pages). Garrison's recommended choices and numbers are marked, with "Use it" to
+  go back to them. Checked on desktop, phone and light theme; 588 tests pass. Not deployed.

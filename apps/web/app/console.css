@@ -3092,3 +3092,42 @@ form[data-locked] .seg__opt:has(input:disabled) {
 .switch:has(input[data-rec]:checked) .rec-tag {
   display: none;
 }
+/* In the phone menu's two columns a long name wraps instead of being cut ("Groups and raids"). */
+@media (max-width: 720px) {
+  .nav-sheet__item .g-nav__name {
+    overflow: visible;
+    line-height: 18px;
+    white-space: normal;
+  }
+}
+.rec-value {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 18px;
+}
+.rec-value--on {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.rec-value--on::before {
+  content: "";
+  width: 9px;
+  height: 5px;
+  border-bottom: 1.5px solid var(--go);
+  border-left: 1.5px solid var(--go);
+  transform: rotate(-45deg) translateY(-2px);
+}
+.rec-value__go {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-strong);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.rec-value__go:hover {
+  text-decoration: underline;
+}

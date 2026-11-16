@@ -11,6 +11,7 @@ import type { Metadata } from "next";
 import { AutoSaveCard } from "@/components/AutoSave";
 import { ProTag } from "@/components/cards/CardEditor";
 import { HeadSwitch } from "@/components/ModuleHead";
+import { RecValue } from "@/components/RecValue";
 import { CheckList } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { fetchMemberCard, listTextChannels } from "@/lib/discord";
@@ -173,6 +174,7 @@ export default async function StarboardPage({ params }: { params: Promise<{ guil
                     defaultValue={config.threshold}
                     required
                   />
+                  <RecValue field="threshold" value={3} />
                 </label>
               </div>
               <CheckList
