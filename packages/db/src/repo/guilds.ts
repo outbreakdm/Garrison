@@ -7,6 +7,7 @@ import {
   type WatchSettings,
   watchSettings,
 } from "../schema";
+import { readVerifyQuestions } from "../verify-questions";
 
 /** Rules every new guild starts with. Staff can change them later. */
 export const DEFAULT_ESCALATION_RULES = [
@@ -66,10 +67,19 @@ export async function webVerifySettings(db: Db, guildId: string) {
       roleId: gatehouseSettings.verifyRoleId,
       minAge: gatehouseSettings.verifyMinAccountAgeDays,
       web: gatehouseSettings.verifyWeb,
+      questions: gatehouseSettings.verifyQuestions,
+      intro: gatehouseSettings.verifyIntro,
     })
     .from(gatehouseSettings)
     .where(eq(gatehouseSettings.guildId, guildId));
-  return row?.roleId && row.web ? { roleId: row.roleId, minAge: row.minAge } : null;
+  return row?.roleId && row.web
+    ? {
+        roleId: row.roleId,
+        minAge: row.minAge,
+        questions: readVerifyQuestions(row.questions),
+        intro: row.intro,
+      }
+    : null;
 }
 
 /** Are appeals open for this server? Read-only (the dashboard can't create the settings row). */

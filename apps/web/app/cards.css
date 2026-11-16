@@ -1996,3 +1996,133 @@
   background: color-mix(in srgb, var(--ok) 12%, var(--surface));
   color: var(--text);
 }
+
+/* --- Verification questions -----------------------------------------------------
+   Discord's form, drawn in Discord's dark theme: title, the intro as Markdown, each
+   question with the line under it and its box. The answers list on Security reads like
+   a short dossier: who, status, then each answer under its question. */
+
+.dc-form {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--dc-bg);
+}
+.dc-form__title {
+  margin: 0;
+  color: #f2f3f5;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.dc-form__intro {
+  color: var(--dc-text);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.dc-form__field {
+  display: grid;
+  gap: 4px;
+}
+.dc-form__label {
+  color: var(--dc-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+.dc-form__req {
+  margin-left: 3px;
+  color: #f23f43;
+}
+.dc-form__help {
+  color: var(--dc-muted);
+  font-size: 13px;
+}
+.dc-form__box {
+  height: 40px;
+  border: 1px solid var(--dc-line);
+  border-radius: 8px;
+  background: var(--dc-field);
+}
+.dc-form__box--long {
+  height: 88px;
+}
+.dc-form__empty {
+  margin: 0;
+  color: var(--dc-muted);
+  font-size: 14px;
+}
+.dc-form__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+}
+.dc-form__cancel,
+.dc-form__submit {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.dc-form__cancel {
+  color: var(--dc-text);
+}
+.dc-form__submit {
+  background: var(--dc-blurple);
+  color: #fff;
+}
+
+.answers-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.answers-list__item {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+.answers-list__item[data-status="waiting"] {
+  background: color-mix(in srgb, var(--caution) 6%, var(--surface));
+}
+.answers-list__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+.answers-list__answers {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+.answers-list__answers dt {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.answers-list__answers dd {
+  margin: 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.answers-list__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+.verify-intro {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  font-size: 14px;
+  line-height: 1.5;
+}
+/* An editor in a narrower panel: fields and preview side by side only when both fit. */
+.editor-layout--fit {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+}

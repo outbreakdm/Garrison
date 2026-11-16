@@ -112,6 +112,8 @@ try {
 if (env) {
   // Newest tables first: if these exist with grants, everything older does too.
   const latest = [
+    // 0068: verification questions.
+    "verify_answers",
     // 0067: regex moderation (the Discord AutoMod rule).
     "automod_rules",
     // 0066: server stats.

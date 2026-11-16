@@ -48,6 +48,11 @@ export const EDITABLE_FIELDS = {
     "verifyRoleId",
     "verifyMinAccountAgeDays",
     "verifyWeb",
+    // Checked with checkVerifyQuestions before they get here.
+    "verifyQuestions",
+    "verifyIntro",
+    "verifyReview",
+    "verifyAnswersChannelId",
     "backupWeekly",
   ],
   ops: ["timezone", "trackAttendance"],

@@ -22,4 +22,5 @@ export * from "./server-stats";
 export * from "./starboard";
 export * from "./stat-roles";
 export * from "./tickets";
+export * from "./verify-questions";
 export * from "./welcome";

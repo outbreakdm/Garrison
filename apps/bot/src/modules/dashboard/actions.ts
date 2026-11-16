@@ -32,6 +32,7 @@ import { postMessageNow } from "../dispatch/service.js";
 import { restoreQuarantine } from "../gatehouse/anti-nuke.js";
 import { doBackupCreate, doBackupRestore } from "../gatehouse/backup.js";
 import { verifyPanel } from "../gatehouse/embeds.js";
+import { decideAnswers, questionsOf, receiveAnswers } from "../gatehouse/questions.js";
 import {
   invalidateGatehouseSettings,
   lockGuild,
@@ -82,6 +83,10 @@ const fail = (message: string): Outcome => ({ ok: false, message });
 
 const snowflake = z.string().regex(/^\d{17,20}$/);
 const uuid = z.string().uuid();
+const webAnswers = z.object({
+  answers: z.record(z.string().max(20), z.string().max(1000)).optional(),
+});
+const verifyDecision = z.object({ id: uuid, approve: z.boolean() });
 const createRaid = z.object({
   channelId: snowflake,
   title: z.string().trim().min(1).max(80),
@@ -417,15 +422,35 @@ export async function doPostRoleMenu(
   return { ok: true, message: `Posted ${menu.name} in #${channel.name}.` };
 }
 
-/** A member passed the website's verify page: the same checks as the Verify button. */
-async function doWebVerify(ctx: BotContext, guild: Guild, userId: string): Promise<Outcome> {
+/**
+ * A member passed the website's verify page: the same checks as the Verify button, and the
+ * same questions when the server asks some.
+ */
+async function doWebVerify(
+  ctx: BotContext,
+  guild: Guild,
+  userId: string,
+  raw: unknown,
+): Promise<Outcome> {
   const settings = await getGatehouseSettings(ctx.db, guild.id);
   if (!settings.verifyWeb || !settings.verifyRoleId)
     return fail("This server doesn't verify on the website anymore.");
   const member = await guild.members.fetch(userId).catch(() => null);
   if (!member) return fail("Join the server first, then verify.");
+  if (questionsOf(settings).length) {
+    const p = webAnswers.safeParse(raw);
+    if (!p.success) return fail("Your answers didn't arrive whole. Try again.");
+    return receiveAnswers(ctx, member, p.data.answers ?? {});
+  }
   const message = await verifyMember(ctx, member);
   return { ok: message.startsWith("Verified") || message.startsWith("You're already"), message };
+}
+
+/** Staff decide on verification answers from the dashboard (managers only). */
+async function doVerifyDecide(ctx: BotContext, guild: Guild, member: GuildMember, raw: unknown) {
+  const p = verifyDecision.safeParse(raw);
+  if (!p.success) return fail("That decision wasn't valid.");
+  return decideAnswers(ctx, guild, p.data.id, p.data.approve, member.user.username);
 }
 
 /** Owner only, checked here against Discord: anti-nuke is the guard against rogue admins. */
@@ -455,7 +480,8 @@ export async function runDashboardAction(
   const guild = client.guilds.cache.get(action.guildId);
   if (!guild) return fail("Garrison isn't in that server anymore.");
   // Website verification is asked for by the member themself, not a manager.
-  if (action.kind === "web_verify") return doWebVerify(ctx, guild, action.requestedById);
+  if (action.kind === "web_verify")
+    return doWebVerify(ctx, guild, action.requestedById, action.payload);
   // Joining and leaving groups and raids act only on the person asking: any member may.
   const member = SELF_SERVICE.has(action.kind)
     ? await guild.members.fetch(action.requestedById).catch(() => null)
@@ -490,6 +516,8 @@ export async function runDashboardAction(
       return doUndoBuild(ctx, guild, member, action.payload);
     case "run_health":
       return doRunHealth(ctx, guild);
+    case "verify_decide":
+      return doVerifyDecide(ctx, guild, member, action.payload);
     case "post_verify_panel":
       return doPostVerifyPanel(ctx, guild, member, action.payload);
     case "anti_nuke":

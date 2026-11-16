@@ -30,6 +30,7 @@ import type { RoleMenu } from "./role-menus";
 import type { StatCounter } from "./server-stats";
 import type { StatRole } from "./stat-roles";
 import type { TicketPanel } from "./tickets";
+import type { VerifyAnswer, VerifyQuestion } from "./verify-questions";
 
 /**
  * Every table enables row-level security with no policies. The bot and the
@@ -175,6 +176,17 @@ export const gatehouseSettings = pgTable(
     verifyMinAccountAgeDays: integer("verify_min_account_age_days").notNull().default(0),
     /** Verify on the website (sign in with Discord, captcha when configured) instead of in Discord. */
     verifyWeb: boolean("verify_web").notNull().default(false),
+    /** Questions a member answers before getting the role (docs/COMMUNITY_REQUESTS.md). */
+    verifyQuestions: jsonb("verify_questions")
+      .$type<VerifyQuestion[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    /** Markdown at the top of the questions form. */
+    verifyIntro: text("verify_intro"),
+    /** Staff approve each member from the answers card; off: answering is enough. */
+    verifyReview: boolean("verify_review").notNull().default(false),
+    /** The staff channel answers go to. */
+    verifyAnswersChannelId: text("verify_answers_channel_id"),
     /** Pro: take a server backup every week. */
     backupWeekly: boolean("backup_weekly").notNull().default(false),
     /** Anti-nuke: stop one actor deleting channels/roles or mass-banning. Owner-only to change. */
@@ -191,6 +203,10 @@ export const gatehouseSettings = pgTable(
   (t) => [
     check("gatehouse_verify_age", sql`${t.verifyMinAccountAgeDays} BETWEEN 0 AND 365`),
     check("gatehouse_staff_roles", sql`cardinality(${t.staffRoleIds}) <= 10`),
+    check(
+      "gatehouse_verify_questions",
+      sql`jsonb_typeof(${t.verifyQuestions}) = 'array' AND jsonb_array_length(${t.verifyQuestions}) <= 5`,
+    ),
   ],
 ).enableRLS();
 
@@ -1170,6 +1186,7 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "suggestion_status",
   "qm_chat",
   "qm_remove",
+  "verify_decide",
 ]);
 
 /**
@@ -2170,6 +2187,40 @@ export const voiceRooms = pgTable(
 ).enableRLS();
 
 export type VoiceRoom = typeof voiceRooms.$inferSelect;
+
+/**
+ * A member's answers to the verification questions, kept 30 days. The bot writes them (and
+ * the decision, whether from the card's buttons or a dashboard request); the dashboard reads
+ * them for the waiting list on Security.
+ */
+export const verifyAnswers = pgTable(
+  "verify_answers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    username: text("username").notNull(),
+    answers: jsonb("answers").$type<VerifyAnswer[]>().notNull(),
+    /** waiting: for staff; verified: answering was enough; approved or denied by staff. */
+    status: text("status").notNull(),
+    decidedBy: text("decided_by"),
+    channelId: text("channel_id"),
+    messageId: text("message_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+  },
+  (t) => [
+    check(
+      "verify_answers_status",
+      sql`${t.status} IN ('waiting', 'verified', 'approved', 'denied')`,
+    ),
+    index("verify_answers_guild").on(t.guildId, t.createdAt),
+  ],
+).enableRLS();
+
+export type VerifyAnswersRow = typeof verifyAnswers.$inferSelect;
 
 /**
  * The Discord AutoMod rule Garrison keeps for a server's patterns: its ID, what was last

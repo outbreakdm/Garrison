@@ -1,6 +1,11 @@
 "use server";
 
-import { getActiveGuild, queueDashboardAction, webVerifySettings } from "@garrison/db";
+import {
+  checkVerifyAnswers,
+  getActiveGuild,
+  queueDashboardAction,
+  webVerifySettings,
+} from "@garrison/db";
 import { redirect } from "next/navigation";
 import { wakeBot } from "@/lib/bot";
 import { getDb } from "@/lib/db";
@@ -41,14 +46,23 @@ export async function submitVerify(form: FormData) {
     return flashBack(path, { error: "Join the server in Discord first." });
   if (!(await passedCaptcha(String(form.get("cf-turnstile-response") ?? ""))))
     return flashBack(path, { error: "The check didn't pass. Try again." });
+  // The server's questions: every one answered, within its box. The bot checks again.
+  const given: Record<string, string> = {};
+  for (const q of settings.questions) given[q.id] = String(form.get(`a:${q.id}`) ?? "");
+  const answers = checkVerifyAnswers(settings.questions, given);
+  if (!answers.ok) return flashBack(path, { error: answers.error });
   const queued = await queueDashboardAction(
     db,
     guild.id,
     { id: session.userId, name: session.username },
-    { kind: "web_verify", payload: {} },
+    { kind: "web_verify", payload: settings.questions.length ? { answers: given } : {} },
   );
   wakeBot();
   if (!queued.ok)
     return flashBack(path, { error: "Lots of people are verifying. Try again in a minute." });
-  return flashBack(path, { ok: "Done. Garrison is giving you the role; head back to Discord." });
+  return flashBack(path, {
+    ok: settings.questions.length
+      ? "Sent. Garrison passes your answers on; check Discord in a moment."
+      : "Done. Garrison is giving you the role; head back to Discord.",
+  });
 }

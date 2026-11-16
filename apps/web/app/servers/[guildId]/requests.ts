@@ -22,6 +22,7 @@ import {
   getTemplate,
   getTicket,
   getTicketConfig,
+  getVerifyAnswers,
   isPanelPaused,
   isPaused,
   MANAGER_REQUEST_KINDS,
@@ -265,6 +266,15 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       const g = uuid.safeParse(id).success ? await getGiveaway(db, guildId, id) : null;
       if (!g) return { ok: false, error: "not_found" };
       return { ok: true, input: { kind, payload: { giveawayId: g.id, op } } };
+    }
+    case "verify_decide": {
+      const id = field(form, "id");
+      const a = uuid.safeParse(id).success ? await getVerifyAnswers(db, guildId, id) : null;
+      if (a?.status !== "waiting") return { ok: false, error: "not_found" };
+      return {
+        ok: true,
+        input: { kind, payload: { id: a.id, approve: field(form, "op") === "approve" } },
+      };
     }
     case "suggestion_status": {
       const status = SUGGESTION_STATUSES.find((s) => s === field(form, "status"));

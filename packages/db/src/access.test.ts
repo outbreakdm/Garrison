@@ -51,7 +51,14 @@ describe("access rules", () => {
   });
 
   it("keeps acting on members and the server's structure for managers", () => {
-    for (const k of ["mod_action", "purge", "lockdown_start", "backup_restore", "qm_apply"])
+    for (const k of [
+      "mod_action",
+      "purge",
+      "lockdown_start",
+      "backup_restore",
+      "qm_apply",
+      "verify_decide",
+    ])
       expect(MANAGER_REQUEST_KINDS.has(k), k).toBe(true);
     for (const k of ["post_message", "start_giveaway", "qm_chat", "ticket_action"])
       expect(MANAGER_REQUEST_KINDS.has(k), k).toBe(false);

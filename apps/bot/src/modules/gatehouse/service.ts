@@ -17,6 +17,7 @@ import {
   type Guild,
   type GuildMember,
   PermissionFlagsBits,
+  type Role,
   Routes,
 } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
@@ -334,19 +335,39 @@ export async function handleMemberJoin(ctx: BotContext, member: GuildMember) {
 
 // --- Verification ----------------------------------------------------------
 
-export async function verifyMember(ctx: BotContext, member: GuildMember): Promise<string> {
+export type VerifyReady =
+  | { ok: true; role: Role; settings: GatehouseSettings }
+  | { ok: false; message: string; verified?: boolean };
+
+/**
+ * Can this member get the verified role now? The role, or why not in a sentence for them.
+ * Staff approving answers skip the account-age check: they decided.
+ */
+export async function verifyReady(
+  ctx: BotContext,
+  member: GuildMember,
+  { staffApproved = false }: { staffApproved?: boolean } = {},
+): Promise<VerifyReady> {
   const settings = await getGatehouseSettings(ctx.db, member.guild.id);
-  if (!settings.verifyRoleId) return "Verification is off in this server.";
+  if (!settings.verifyRoleId) return { ok: false, message: "Verification is off in this server." };
   const role = member.guild.roles.cache.get(settings.verifyRoleId);
-  if (!role) return "The verified role was deleted. Ask a moderator to run /verify setup again.";
-  if (member.roles.cache.has(role.id)) return "You're already verified.";
+  if (!role)
+    return {
+      ok: false,
+      message: "The verified role was deleted. Ask a moderator to run /verify setup again.",
+    };
+  if (member.roles.cache.has(role.id))
+    return { ok: false, message: "You're already verified.", verified: true };
 
   const days = accountAgeDays(member.user.createdTimestamp);
-  if (days < settings.verifyMinAccountAgeDays) {
+  if (!staffApproved && days < settings.verifyMinAccountAgeDays) {
     const ready = new Date(
       member.user.createdTimestamp + settings.verifyMinAccountAgeDays * 86_400_000,
     );
-    return `Your account is ${describeAccountAge(days)}. This server needs accounts at least ${settings.verifyMinAccountAgeDays} days old. Try again <t:${Math.floor(ready.getTime() / 1000)}:R>.`;
+    return {
+      ok: false,
+      message: `Your account is ${describeAccountAge(days)}. This server needs accounts at least ${settings.verifyMinAccountAgeDays} days old. Try again <t:${Math.floor(ready.getTime() / 1000)}:R>.`,
+    };
   }
 
   const me = member.guild.members.me ?? (await member.guild.members.fetchMe());
@@ -354,8 +375,17 @@ export async function verifyMember(ctx: BotContext, member: GuildMember): Promis
     !me.permissions.has(PermissionFlagsBits.ManageRoles) ||
     role.position >= me.roles.highest.position
   ) {
-    return `I can't give <@&${role.id}>: my role sits below it. Ask a moderator to drag Garrison above it in Server Settings → Roles.`;
+    return {
+      ok: false,
+      message: `I can't give <@&${role.id}>: my role sits below it. Ask a moderator to drag Garrison above it in Server Settings → Roles.`,
+    };
   }
-  await member.roles.add(role, "Passed verification");
+  return { ok: true, role, settings };
+}
+
+export async function verifyMember(ctx: BotContext, member: GuildMember): Promise<string> {
+  const ready = await verifyReady(ctx, member);
+  if (!ready.ok) return ready.message;
+  await member.roles.add(ready.role, "Passed verification");
   return "Verified. Welcome in.";
 }

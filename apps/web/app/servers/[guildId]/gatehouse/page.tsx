@@ -5,6 +5,8 @@ import {
   getOverview,
   listBackups,
   listOpenQuarantines,
+  listVerifyAnswers,
+  readVerifyQuestions,
 } from "@garrison/db";
 import type { Metadata } from "next";
 import { AutoSaveCard } from "@/components/AutoSave";
@@ -23,7 +25,14 @@ import { guildOwnerId, listGuildRoles, listTextChannels } from "@/lib/discord";
 import { isDangerousRole } from "@/lib/permissions";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
-import { saveAntiRaid, saveBackupWeekly, saveVerification, undoChange } from "../settings/actions";
+import {
+  saveAntiRaid,
+  saveBackupWeekly,
+  saveVerification,
+  saveVerifyQuestions,
+  undoChange,
+} from "../settings/actions";
+import { QuestionsEditor } from "./QuestionsEditor";
 
 export const metadata: Metadata = { title: "Security" };
 
@@ -45,6 +54,13 @@ function Row({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+const ANSWER_STATUS: Record<string, string> = {
+  waiting: "Waiting",
+  verified: "Verified by answering",
+  approved: "Approved",
+  denied: "Denied",
+};
 
 function Hidden({ guildId, kind }: { guildId: string; kind: string }) {
   return (
@@ -75,6 +91,7 @@ export default async function GatehousePage({
     ownerId,
     backups,
     plan,
+    answers,
   ] = await Promise.all([
     getOverview(db, guild.id),
     listOpenQuarantines(db, guild.id),
@@ -83,7 +100,9 @@ export default async function GatehousePage({
     guildOwnerId(guild.id).catch(() => null),
     listBackups(db, guild.id),
     getGuildPlan(db, guild.id),
+    listVerifyAnswers(db, guild.id, 12),
   ]);
+  const waiting = answers.filter((a) => a.status === "waiting");
   const ent = entitlements(plan);
   const isOwner = ownerId === session.userId;
   // Anti-raid, verification and weekly backups share one stored row (and its time).
@@ -337,6 +356,73 @@ export default async function GatehousePage({
               help="The Verify button links to a page where members sign in with Discord (and pass a captcha if the host has Turnstile keys) before getting the role."
             />
           </AutoSaveCard>
+
+          <QuestionsEditor
+            guildId={guild.id}
+            questions={readVerifyQuestions(g?.verifyQuestions)}
+            intro={g?.verifyIntro ?? null}
+            review={g?.verifyReview ?? false}
+            channelId={g?.verifyAnswersChannelId ?? null}
+            channels={channels}
+            off={!g?.verifyRoleId}
+            action={saveVerifyQuestions}
+            undo={undoChange}
+            stamp={String(stamp)}
+          />
+
+          {answers.length ? (
+            <section className="g-card card-col" id="answers" aria-labelledby="answers-title">
+              <div className="card-head">
+                <h2 className="card-title" id="answers-title">
+                  {waiting.length ? "Waiting for staff" : "Latest answers"}
+                </h2>
+                {waiting.length ? <span className="count">{waiting.length}</span> : null}
+              </div>
+              <ul className="answers-list">
+                {answers.map((a) => (
+                  <li key={a.id} className="answers-list__item" data-status={a.status}>
+                    <div className="answers-list__head">
+                      <strong>{a.username}</strong>
+                      <span className="muted">
+                        {ANSWER_STATUS[a.status] ?? a.status}
+                        {a.decidedBy ? ` by ${a.decidedBy}` : ""} · {formatTime(a.createdAt)}
+                      </span>
+                    </div>
+                    <dl className="answers-list__answers">
+                      {a.answers.map((x) => (
+                        <div key={x.label}>
+                          <dt>{x.label}</dt>
+                          <dd>{x.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                    {a.status === "waiting" ? (
+                      <div className="answers-list__actions">
+                        {(["approve", "deny"] as const).map((op) => (
+                          <form action={requestAction} key={op}>
+                            <Hidden guildId={guild.id} kind="verify_decide" />
+                            <input type="hidden" name="id" value={a.id} />
+                            <input type="hidden" name="op" value={op} />
+                            <button
+                              type="submit"
+                              className={
+                                op === "approve"
+                                  ? "g-btn g-btn--secondary g-btn--sm"
+                                  : "g-btn g-btn--danger g-btn--sm"
+                              }
+                            >
+                              {op === "approve" ? "Approve" : "Deny"}
+                            </button>
+                          </form>
+                        ))}
+                      </div>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+              <p className="g-help">Answers are deleted after 30 days.</p>
+            </section>
+          ) : null}
 
           <section className="g-card card-col" id="anti-nuke" aria-labelledby="anti-nuke-title">
             <div className="card-head">

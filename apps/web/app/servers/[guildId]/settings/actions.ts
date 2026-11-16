@@ -2,6 +2,7 @@
 
 import {
   applySettingsChange,
+  checkVerifyQuestions,
   entitlements,
   getGuildPlan,
   type SettingsModule,
@@ -50,6 +51,7 @@ const PLACES = {
   ladder: { page: "watch", panel: "edit-ladder" },
   antiRaid: { page: "gatehouse", panel: "anti-raid" },
   verification: { page: "gatehouse", panel: "verification" },
+  questions: { page: "gatehouse", panel: "questions" },
   backups: { page: "gatehouse", panel: "backups" },
   ranks: { page: "ranks", panel: "settings" },
   rewards: { page: "ranks", panel: "rewards" },
@@ -194,6 +196,33 @@ export async function saveVerification(form: FormData): Promise<AutoResult> {
       return failed(form, guild.id, PLACES.verification, "dangerous_role");
     else return save("gatehouse", form, parsed.data, PLACES.verification, "verification");
   }
+}
+
+/**
+ * Verification questions: the list arrives as one JSON value (the editor's rows), checked
+ * with the bot's own rules; the answers channel must be one of this server's text channels.
+ */
+export async function saveVerifyQuestions(form: FormData): Promise<AutoResult> {
+  const { guild } = await authorize(form);
+  let list: unknown;
+  try {
+    list = JSON.parse(String(form.get("verifyQuestions") ?? "[]"));
+  } catch {
+    return failed(form, guild.id, PLACES.questions, "range");
+  }
+  const checked = checkVerifyQuestions({
+    verifyQuestions: list,
+    verifyIntro: String(form.get("verifyIntro") ?? ""),
+    verifyReview: form.get("verifyReview") === "on",
+    verifyAnswersChannelId: String(form.get("verifyAnswersChannelId") ?? ""),
+  });
+  if (!checked.ok) {
+    if (isAuto(form)) return { status: "error", message: checked.error };
+    return failed(form, guild.id, PLACES.questions, "range");
+  }
+  if (!(await channelBelongs(guild.id, checked.value.verifyAnswersChannelId)))
+    return failed(form, guild.id, PLACES.questions, "bad_channel");
+  return save("gatehouse", form, { ...checked.value }, PLACES.questions, "questions");
 }
 
 /** Level rewards are edited on the Ranks page and saved like any other setting. */

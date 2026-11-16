@@ -1,7 +1,8 @@
-import { getActiveGuild, webVerifySettings } from "@garrison/db";
+import { getActiveGuild, VERIFY_LIMITS, webVerifySettings } from "@garrison/db";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { DiscordMarkdown } from "@/components/cards/markdown";
 import { Topbar } from "@/components/Topbar";
 import { getDb } from "@/lib/db";
 import { isGuildMember } from "@/lib/discord";
@@ -13,6 +14,8 @@ import { currentTheme } from "@/lib/theme";
 import { submitVerify } from "./actions";
 
 export const metadata: Metadata = { title: "Verify" };
+
+const NO_NAMES = { roles: new Map<string, string>(), channels: new Map<string, string>() };
 
 /**
  * Website verification: the member signs in with Discord (a bot can't), passes the
@@ -67,6 +70,35 @@ export default async function VerifyPage({ params }: { params: Promise<{ guildId
           {member ? (
             <form action={submitVerify} className="g-card card-col">
               <input type="hidden" name="guildId" value={guild.id} />
+              {settings.intro ? (
+                <div className="verify-intro">
+                  <DiscordMarkdown text={settings.intro} names={NO_NAMES} />
+                </div>
+              ) : null}
+              {settings.questions.map((q) => (
+                <label className="g-field" htmlFor={`a-${q.id}`} key={q.id}>
+                  <span className="field-label">{q.label}</span>
+                  {q.help ? <span className="g-help">{q.help}</span> : null}
+                  {q.long ? (
+                    <textarea
+                      className="g-input"
+                      id={`a-${q.id}`}
+                      name={`a:${q.id}`}
+                      rows={4}
+                      required
+                      maxLength={VERIFY_LIMITS.long}
+                    />
+                  ) : (
+                    <input
+                      className="g-input"
+                      id={`a-${q.id}`}
+                      name={`a:${q.id}`}
+                      required
+                      maxLength={VERIFY_LIMITS.short}
+                    />
+                  )}
+                </label>
+              ))}
               {siteKey ? (
                 <>
                   <script
@@ -80,9 +112,13 @@ export default async function VerifyPage({ params }: { params: Promise<{ guildId
               ) : null}
               <div className="form-foot">
                 <button type="submit" className="g-btn g-btn--primary">
-                  Verify me
+                  {settings.questions.length ? "Send my answers" : "Verify me"}
                 </button>
-                <span className="g-help">Garrison gives you the role within a few seconds.</span>
+                <span className="g-help">
+                  {settings.questions.length
+                    ? "Your answers go to the server's staff."
+                    : "Garrison gives you the role within a few seconds."}
+                </span>
               </div>
             </form>
           ) : (

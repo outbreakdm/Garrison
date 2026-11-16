@@ -1,4 +1,4 @@
-import { getGatehouseSettings, updateGatehouseSettings } from "@garrison/db";
+import { getGatehouseSettings, updateGatehouseSettings, waitingVerifyAnswers } from "@garrison/db";
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -10,7 +10,8 @@ import { ephemeral, guildCommand } from "../../../commands/builders.js";
 import type { ButtonHandler, Command } from "../../../commands/types.js";
 import { ensureGuild } from "../../../lib/guild-registry.js";
 import { VERIFY_BUTTON_ID, verifyPanel } from "../embeds.js";
-import { invalidateGatehouseSettings, verifyMember } from "../service.js";
+import { questionsForm, questionsOf } from "../questions.js";
+import { invalidateGatehouseSettings, verifyMember, verifyReady } from "../service.js";
 
 export const verify: Command = {
   data: guildCommand(
@@ -122,6 +123,26 @@ export const verifyButton: ButtonHandler = {
         ],
         ...ephemeral,
       });
+      return;
+    }
+    // Questions first: checked before the form opens, so nobody answers for nothing.
+    const questions = questionsOf(settings);
+    if (questions.length) {
+      const ready = await verifyReady(ctx, interaction.member);
+      if (!ready.ok) {
+        await interaction.reply({ content: ready.message, ...ephemeral });
+        return;
+      }
+      if (await waitingVerifyAnswers(ctx.db, interaction.guildId, interaction.user.id)) {
+        await interaction.reply({
+          content: "Your answers are with the staff. You'll get the role once they approve.",
+          ...ephemeral,
+        });
+        return;
+      }
+      await interaction.showModal(
+        questionsForm(interaction.guildId, questions, settings.verifyIntro),
+      );
       return;
     }
     await interaction.deferReply(ephemeral);

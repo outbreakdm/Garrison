@@ -7,8 +7,9 @@ design.
 **Owner's picks (2026-11-16):** the proposed order; regex runs in Discord's own AutoMod; a
 shared Insights link can be embedded in other sites when the owner switches that on.
 
-**Status:** 1. Server stats and 2. regex moderation **built** (not deployed: need migrations
-`0066_server_stats` and `0067_automod_patterns`). Next: 3. Verification questions.
+**Status:** 1. Server stats, 2. regex moderation and 3. verification questions **built** (not
+deployed: need migrations `0066_server_stats`, `0067_automod_patterns` and
+`0068_verify_questions`). Next: 4. Messages into threads and forums.
 
 | # | Request | Garrison today | Size |
 |---|---|---|---|
@@ -61,7 +62,16 @@ each), allowed words, and who it skips.
 - Needs the AutoMod execution gateway intent (not privileged). Manage Server is already
   granted.
 
-## 3. Verification questions
+## 3. Verification questions (built)
+
+Built as planned, with one change: Discord's forms now show Markdown, so the formatted text is
+an **intro** at the top of the form (it takes one of the form's five places), and each question
+has a plain line under it. Questions panel on Security with a preview of the form; answers go to
+a staff channel as a card (Approve and Deny when staff approve each member); a "Waiting for
+staff" list on Security approves or denies through a manager's dashboard request; the website
+verify page asks the same questions. Answers are deleted after 30 days. Still to check on a
+test server: the form opens from Verify with the intro, answers post to the staff channel, the
+buttons decide once, and the website form (the local preview's test user isn't a real member).
 
 Up to 5 questions (Discord's modal holds 5), each a short or long answer, with a description
 written with the same Markdown as cards. Pressing Verify opens them in Discord; the website

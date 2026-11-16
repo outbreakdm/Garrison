@@ -47,6 +47,7 @@ export * from "./repo/stats";
 export * from "./repo/suggestions";
 export * from "./repo/templates";
 export * from "./repo/tickets";
+export * from "./repo/verify";
 export * from "./repo/voice";
 export * from "./repo/web";
 export * from "./repo/welcome";
@@ -120,6 +121,7 @@ export type {
   TicketMessage,
   TicketNote,
   TicketPanelPost,
+  VerifyAnswersRow,
   WatchSettings,
   WebSession,
 } from "./schema";
@@ -131,5 +133,6 @@ export * from "./stat-roles";
 export * from "./suggestions";
 export * from "./tickets";
 export * from "./time";
+export * from "./verify-questions";
 export * from "./voice-rooms";
 export * from "./welcome";

@@ -60,6 +60,11 @@ function describe(
   if (field === "parentId") return value ? "a category" : "the top of the channel list";
   if (field === "card") return value ? "a custom card" : "the standard card";
   if (field === "words") return Array.isArray(value) ? `${value.length} words` : "none";
+  if (field === "verifyQuestions")
+    return Array.isArray(value) && value.length
+      ? value.map((q: { label?: string }) => `“${q.label ?? "?"}”`).join(", ")
+      : "none";
+  if (field === "verifyIntro") return value ? "an intro" : "none";
   if (field === "regexPatterns")
     return Array.isArray(value) && value.length
       ? `${value.length} ${value.length === 1 ? "pattern" : "patterns"}`

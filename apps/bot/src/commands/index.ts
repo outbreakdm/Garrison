@@ -1,5 +1,6 @@
 import { link, roster, unlink } from "../modules/barracks/commands.js";
 import { gatehouseButtons, gatehouseCommands } from "../modules/gatehouse/commands/index.js";
+import { questionModals } from "../modules/gatehouse/questions.js";
 import { giveaway } from "../modules/giveaways/commands.js";
 import { giveawayButtons } from "../modules/giveaways/handlers.js";
 import { health } from "../modules/health/command.js";
@@ -45,6 +46,6 @@ export const buttons: ButtonHandler[] = [
   suggestionButtons,
 ];
 export const selects: SelectHandler[] = [roleMenuSelects];
-export const modals: ModalHandler[] = [opsModals, ticketModals, rankcardModals];
+export const modals: ModalHandler[] = [opsModals, ticketModals, rankcardModals, questionModals];
 
 export const commandsByName = new Map(commands.map((c) => [c.data.name, c]));
