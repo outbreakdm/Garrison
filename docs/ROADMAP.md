@@ -7,14 +7,14 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **Redesign v2 (2026-11-16):** all five steps and Settings access are committed, not deployed.
-  **Before deploying, apply migration `0064_dashboard_access`** in production (the access list,
-  the bot's read grant, `web_sessions.member_guild_ids`): the dashboard and the bot both read
-  it. Sessions from before it list only servers shared by name until their next sign-in.
-  After deploying, try the landing page's "Build me a…" box signed out on garrisonbot.com: it
-  crosses to the dashboard host, which the site's `form-action` now allows. Left over from the
-  redesign (docs/REDESIGN_V2.md): editing on the Discord preview, Insights moderation and
-  safety tabs, a ready-made template gallery.
+- **Redesign v2 (2026-11-16):** all five steps and Settings access are **deployed** (`3989146`,
+  run 43794232829, with the Overview and the AI assistant's plan panel before them).
+  Migrations through `0064_dashboard_access` are applied in production and recorded (65 rows
+  in `drizzle.__drizzle_migrations`). Sessions from before 0064 list only servers shared by
+  name until their next sign-in. Still to try by hand: the "Build me a…" box signed out in a
+  browser on garrisonbot.com through Discord sign-in, an Editor's request in the bot, and
+  "Remove from plan". Left over from the redesign (docs/REDESIGN_V2.md): editing on the
+  Discord preview, Insights moderation and safety tabs, a ready-made template gallery.
 - **Now:** Phases 1 and 3 to 11, the depth backlog and the Quartermaster cost controls are
   **deployed** (2026-11-12, run 43331916135). Migrations through `0050_plan_bundles` are applied
   in production and recorded in `drizzle.__drizzle_migrations` (0021 and 0022 had been
@@ -29,7 +29,7 @@ then updates **Status** and the **Log** before stopping.
   server template then applying it in a second server you own. The calendar feed link should
   open in a calendar app. Next: Phase 2 (Stripe) once a price is set. The depth backlog is
   done; what's left needs the owner (Kick alerts, YouTube live, uploaded backgrounds).
-- **Branch:** `dashboard-first`, pushed; everything through commit `341d88b` is deployed.
+- **Branch:** `dashboard-first`, pushed; everything through commit `3989146` is deployed.
   The Card Table redesign and its critique fixes (through `c6d8efc`) are deployed (2026-11-13, run 43441441759).
 - **Before pushing:** `pnpm -r exec tsc --noEmit`, `pnpm test`, `pnpm exec biome check apps packages`.
 - **Deploying:** "deploy" means commit, push, then
@@ -1002,3 +1002,11 @@ Decided (2026-11-12, owner):
   hand-off, and a help row (/health, status, support email) after the FAQ. Tests for the
   prompt cleaning and the cookie packing. Checked locally on desktop, phone and light theme,
   signed in and with direct requests signed out. Not deployed.
+- 2026-11-16: Deployed redesign v2 (`3989146`, run 43794232829: preflight, slash commands,
+  dashboard and bot all passed). Production had 0063 already; 0064 applied first through the
+  Supabase connector (table, grants and policies checked: the bot reads, only the dashboard
+  writes; drizzle log at 65). The preflight now stops a deploy while `dashboard_access` is
+  missing. Live: garrisonbot.com shows the new sections, its `form-action` allows the
+  dashboard host, `/build` sets the `__Host-` cookie and hands on to the server list, which
+  asks to sign in; /healthz and /status answer, and the new bot container started at 02:50 UTC
+  and is beating.
