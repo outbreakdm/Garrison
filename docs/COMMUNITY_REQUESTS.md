@@ -10,7 +10,7 @@ shared Insights link can be embedded in other sites when the owner switches that
 **Status:** 1 to 3 **deployed** (2026-11-16, `7849b5a`, run 43974339633; migrations 0065 to 0068
 applied). 4. Threads and forum posts, 5–6. the invite tracker with partners and 7. the Insights
 share link **built**, not deployed (need migrations `0069_invite_labels` and
-`0070_insights_shares`). Next: 8. Economy.
+`0070_insights_shares`). 8. Economy: designed in `docs/ECONOMY.md`, waiting on the owner's picks.
 
 | # | Request | Garrison today | Size |
 |---|---|---|---|

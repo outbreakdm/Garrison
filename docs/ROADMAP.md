@@ -12,7 +12,8 @@ then updates **Status** and the **Log** before stopping.
   **deployed** (`7849b5a`, run 43974339633, dashboard and bot; migrations 0065 to 0068 applied
   and recorded, 69 rows). Threads and forum posts and the invite tracker (with partners) are
   built, and the Insights share link, not deployed: **apply migrations `0069_invite_labels` and
-  `0070_insights_shares`** first. Next: the economy.
+  `0070_insights_shares`** first. The economy is designed (`docs/ECONOMY.md`) and waits on
+  the owner's three picks before it's built.
 - **Member pages (2026-11-16):** first build **deployed** with `7849b5a` (`docs/MEMBER_PAGES.md`).
   Next pieces: Roles, Suggestions, Giveaways.
 - **Latest deploy:** `2e2b93f` (run 43918628506, dashboard only): steps 6 to 8 of redesign v2,
@@ -1076,3 +1077,5 @@ Decided (2026-11-12, owner):
   names), optional embedding in other sites, replace or stop at any time. Insights' body moved
   into `components/insights/InsightsView.tsx` for both pages. Migration 0070
   (`insights_shares`, dashboard only). Not deployed.
+- 2026-11-16: Economy designed (`docs/ECONOMY.md`): earning, a shop of roles and staff-handled
+  items, wallets on member pages, a ledger, no gambling. Waiting on the owner's picks.
