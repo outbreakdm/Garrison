@@ -2908,7 +2908,8 @@ form[data-locked] .seg__opt:has(input:disabled) {
 }
 .g-nav__icon {
   flex: none;
-  color: var(--text-muted);
+  /* Its section's tint, so Safety reads blue before you read a word. */
+  color: color-mix(in srgb, var(--gem-text, var(--text-muted)) 70%, var(--text-muted));
   transition: color 0.15s var(--ease-out);
 }
 .g-nav__item:hover .g-nav__icon,
@@ -3206,6 +3207,9 @@ form[data-locked] .seg__opt:has(input:disabled) {
   text-decoration: none;
 }
 .ov-worth__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   font-size: 14px;
   font-weight: 600;
 }
@@ -3346,4 +3350,48 @@ form[data-locked] .seg__opt:has(input:disabled) {
   .main .page-head:has(.head-state) > div:first-child > p {
     display: none;
   }
+}
+
+/* --- Color as place (colorize, 2026-11-16) -------------------------------------------------
+   The four section colors say where something lives. A panel or tile that belongs to
+   another part of the server than the page it's on (the Overview's Security panel, a stat
+   about moderation) takes that part's color on its tile, gem and icon: data-tint sets the
+   section color for its own tiles only. Links, focus and selection keep the page's color,
+   because those are set on the shell. Tints only, never fills. */
+[data-tint="cobalt"] {
+  --id: var(--cobalt);
+  --id-text: var(--cobalt-text);
+}
+[data-tint="orchid"] {
+  --id: var(--orchid);
+  --id-text: var(--orchid-text);
+}
+[data-tint="volt"] {
+  --id: var(--volt);
+  --id-text: var(--volt-text);
+}
+[data-tint="steel"] {
+  --id: var(--steel);
+  --id-text: var(--steel-text);
+}
+/* The menu's icons carry their section's tint, so Safety reads blue before you read a word. */
+[data-id="cobalt"] {
+  --gem-text: var(--cobalt-text);
+}
+[data-id="orchid"] {
+  --gem-text: var(--orchid-text);
+}
+[data-id="volt"] {
+  --gem-text: var(--volt-text);
+}
+[data-id="steel"] {
+  --gem-text: var(--steel-text);
+}
+.ov-worth__gem {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--id-text, var(--accent-strong));
+  transform: rotate(45deg);
 }

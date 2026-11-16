@@ -293,14 +293,21 @@ const HELP: { title: string; text: string; href: string; link: string }[] = [
 function AppWindow({
   path,
   className = "",
+  tint,
   children,
 }: {
   path: string;
   className?: string;
+  /** The section color of the page it shows, as the dashboard paints it. */
+  tint?: "cobalt" | "orchid" | "volt" | "steel";
   children: ReactNode;
 }) {
   return (
-    <figure className={`lp-win ${className}`} aria-label={`Example: the dashboard, ${path}`}>
+    <figure
+      className={`lp-win ${className}`}
+      data-tint={tint}
+      aria-label={`Example: the dashboard, ${path}`}
+    >
       <div className="lp-win__bar" aria-hidden="true">
         <span className="lp-win__dots">
           <i />
@@ -536,7 +543,7 @@ export default async function Home() {
 
           {/* The focal moment: lock the server from the dashboard, and the message lands in Discord. */}
           <div className="lp-stage" id="demo">
-            <AppWindow path="Security" className="lp-stage__app">
+            <AppWindow path="Security" className="lp-stage__app" tint="cobalt">
               <div className="lp-app">
                 <div className="lp-app__head">
                   <h2 className="lp-app__title">Security</h2>
@@ -655,7 +662,7 @@ export default async function Home() {
             icon="lp-icon-quartermaster"
             title="Describe the channels you want. Review. Build. Undo."
             visual={
-              <AppWindow path="AI assistant" className="lp-win--qm">
+              <AppWindow path="AI assistant" className="lp-win--qm" tint="steel">
                 <div className="lp-app lp-app--stack">
                   <p className="lp-qm-ask">
                     “A Valorant section with ranked and casual LFG, a voice room, and a Gold+ role
@@ -679,7 +686,7 @@ export default async function Home() {
             title="Know what your server is doing"
             flip
             visual={
-              <AppWindow path="Insights">
+              <AppWindow path="Insights" tint="steel">
                 <div className="lp-app lp-app--stack">
                   <div className="stat-tiles lp-stats">
                     {DEMO_STATS.map((t) => (
@@ -757,7 +764,7 @@ export default async function Home() {
             flip
             visual={
               <div className="lp-pair">
-                <AppWindow path="Moderation">
+                <AppWindow path="Moderation" tint="cobalt">
                   <div className="lp-app lp-app--stack">
                     <div className="g-card card-col">
                       <h3 className="card-title">Escalation ladder</h3>
@@ -802,7 +809,7 @@ export default async function Home() {
             icon="lp-icon-rally"
             title="From LFG post to full squad"
             visual={
-              <AppWindow path="Groups and raids">
+              <AppWindow path="Groups and raids" tint="volt">
                 <div className="lp-app lp-app--stack">
                   <article className="g-card lfg" aria-label="Example group">
                     <div className="lfg__head">

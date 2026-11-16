@@ -32,33 +32,43 @@ const WEEK_MS = 7 * 86_400_000;
 export const metadata: Metadata = { title: "Overview" };
 
 /** Off modules the Overview suggests, most protective first, each with why in a line. */
-const WORTH: { name: string; href: string; why: string }[] = [
+const WORTH: { name: string; href: string; why: string; tint: "cobalt" | "orchid" }[] = [
   {
     name: "Automod",
     href: "/watch",
     why: "Removes scam links, spam and mass mentions as they're posted.",
+    tint: "cobalt",
   },
   {
     name: "Anti-raid",
     href: "/gatehouse",
     why: "Locks the server when too many people join too fast.",
+    tint: "cobalt",
   },
   {
     name: "Moderation log",
     href: "/watch",
     why: "Posts every warning, timeout and ban to a staff channel.",
+    tint: "cobalt",
   },
   {
     name: "Verification",
     href: "/gatehouse",
     why: "New members press a button before they can talk.",
+    tint: "cobalt",
   },
   {
     name: "Welcome",
     href: "/herald",
     why: "Greets new members with a card in a channel you pick.",
+    tint: "orchid",
   },
-  { name: "Leveling", href: "/ranks", why: "XP for chatting, levels and role rewards." },
+  {
+    name: "Leveling",
+    href: "/ranks",
+    why: "XP for chatting, levels and role rewards.",
+    tint: "orchid",
+  },
 ];
 
 /** A plan's status, in words. */
@@ -433,7 +443,7 @@ export default async function OverviewPage({
       <RequestsPanel guildId={guild.id} kinds={["run_health"]} query={query} />
 
       <section className="g-card ov-stats" aria-label="This week">
-        <div className="ov-stat">
+        <div className="ov-stat" data-tint="orchid">
           <span className="ov-stat__label">
             <span className="ov-stat__icon">
               <Icon d={ICONS.members} />
@@ -451,7 +461,7 @@ export default async function OverviewPage({
             net, joins minus leaves · 7 d
           </span>
         </div>
-        <div className="ov-stat">
+        <div className="ov-stat" data-tint="steel">
           <span className="ov-stat__label">
             <span className="ov-stat__icon">
               <Icon d={ICONS.messages} />
@@ -461,7 +471,7 @@ export default async function OverviewPage({
           <span className="ov-stat__value">{num(messages7)}</span>
           <Delta value={messagesChange} />
         </div>
-        <div className="ov-stat">
+        <div className="ov-stat" data-tint="steel">
           <span className="ov-stat__label">
             <span className="ov-stat__icon">
               <Icon d={ICONS.active} />
@@ -471,7 +481,7 @@ export default async function OverviewPage({
           <span className="ov-stat__value">{num(activity.activeMembers7d)}</span>
           <Delta value={activeChange} />
         </div>
-        <div className="ov-stat">
+        <div className="ov-stat" data-tint="cobalt">
           <span className="ov-stat__label">
             <span className="ov-stat__icon">
               <Icon d={ICONS.cases} />
@@ -483,7 +493,7 @@ export default async function OverviewPage({
             {o.automatic24h} automatic · {o.modActions24h - o.automatic24h} by staff
           </span>
         </div>
-        <div className="ov-stat">
+        <div className="ov-stat" data-tint="steel">
           <span className="ov-stat__label">
             <span className="ov-stat__icon">
               <Icon d={ICONS.reply} />
@@ -507,7 +517,7 @@ export default async function OverviewPage({
       </section>
 
       <div className="ov-charts">
-        <section className="g-card card-col" aria-labelledby="ov-messages">
+        <section className="g-card card-col" aria-labelledby="ov-messages" data-tint="steel">
           <div className="card-head">
             <h2 className="card-title" id="ov-messages">
               Messages <span className="count">14 days</span>
@@ -536,7 +546,7 @@ export default async function OverviewPage({
           />
         </section>
 
-        <section className="g-card card-col" aria-labelledby="ov-channels">
+        <section className="g-card card-col" aria-labelledby="ov-channels" data-tint="steel">
           <div className="card-head">
             <h2 className="card-title" id="ov-channels">
               Top channels <span className="count">14 days</span>
@@ -583,13 +593,16 @@ export default async function OverviewPage({
             </div>
             <ul className="ov-worth">
               {worth.map((w) => (
-                <li key={w.name}>
+                <li key={w.name} data-tint={w.tint}>
                   <Link
                     className="ov-worth__link"
                     href={`${base}${w.href}`}
                     transitionTypes={["nav"]}
                   >
-                    <span className="ov-worth__name">{w.name}</span>
+                    <span className="ov-worth__name">
+                      <span className="ov-worth__gem" aria-hidden="true" />
+                      {w.name}
+                    </span>
                     <span className="ov-worth__why">{w.why}</span>
                   </Link>
                 </li>
@@ -598,7 +611,7 @@ export default async function OverviewPage({
           </section>
         ) : null}
 
-        <section className="g-card card-col" aria-labelledby="cases-title">
+        <section className="g-card card-col" aria-labelledby="cases-title" data-tint="cobalt">
           <div className="card-head">
             <h2 className="card-title" id="cases-title">
               Recent cases <span className="count">{cases.length}</span>
@@ -625,7 +638,7 @@ export default async function OverviewPage({
       </div>
 
       <div className="overview-grid">
-        <section className="g-card card-col" aria-labelledby="next-op">
+        <section className="g-card card-col" aria-labelledby="next-op" data-tint="volt">
           <div className="card-head">
             <h2 className="card-title" id="next-op">
               Next raid
@@ -676,7 +689,7 @@ export default async function OverviewPage({
           )}
         </section>
 
-        <section className="g-card card-col" aria-labelledby="gatehouse-title">
+        <section className="g-card card-col" aria-labelledby="gatehouse-title" data-tint="cobalt">
           <div className="card-head">
             <h2 className="card-title" id="gatehouse-title">
               Security
@@ -726,7 +739,7 @@ export default async function OverviewPage({
           </Link>
         </section>
 
-        <section className="g-card card-col" aria-labelledby="groups-title">
+        <section className="g-card card-col" aria-labelledby="groups-title" data-tint="volt">
           <div className="card-head">
             <h2 className="card-title" id="groups-title">
               Open groups
@@ -741,7 +754,12 @@ export default async function OverviewPage({
           </div>
         </section>
 
-        <section className="g-card card-col span-3" id="health" aria-labelledby="health-title">
+        <section
+          className="g-card card-col span-3"
+          id="health"
+          aria-labelledby="health-title"
+          data-tint="steel"
+        >
           <div className="card-head">
             <h2 className="card-title" id="health-title">
               Health checks
