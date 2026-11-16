@@ -18,9 +18,11 @@ import {
   type TicketPanel,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
+import type { AutoResult } from "@/lib/autosave";
 import { getDb } from "@/lib/db";
 import { getServerLayout, listGuildEmojis, listGuildRoles, listTextChannels } from "@/lib/discord";
 import { flashBack } from "@/lib/flash";
+import { answer, type Outcome } from "@/lib/outcome";
 import { checkGuildAccess } from "@/lib/session";
 
 /**
@@ -135,15 +137,16 @@ export async function removePanel(form: FormData) {
 }
 
 /** Who handles tickets, where they open, and where closed ones are logged. */
-export async function saveTicketOptions(form: FormData) {
+/** Who handles tickets: saved by its panel as it changes (lib/outcome), or by a plain post. */
+export async function saveTicketOptions(form: FormData): Promise<AutoResult> {
   const ctx = await load(form);
+  const reply = (o: Outcome) => answer(form, `/servers/${ctx.guild.id}/parley`, o, "#setup");
   const [roles, channels, layout] = await Promise.all([
     listGuildRoles(ctx.guild.id).catch(() => null),
     listTextChannels(ctx.guild.id).catch(() => null),
     getServerLayout(ctx.guild.id).catch(() => null),
   ]);
-  if (!roles || !channels || !layout)
-    return back(ctx.guild.id, { error: "Discord didn't answer. Try again." }, "setup");
+  if (!roles || !channels || !layout) return reply({ error: "Discord didn't answer. Try again." });
   const raw = {
     staffRoleIds: form.getAll("staffRoleIds").map(String),
     parentId: String(form.get("parentId") ?? "") || null,
@@ -155,14 +158,23 @@ export async function saveTicketOptions(form: FormData) {
   };
   const roleIds = new Set(roles.filter((r) => !r.managed).map((r) => r.id));
   if (!raw.staffRoleIds.every((id) => roleIds.has(id)))
-    return back(ctx.guild.id, { error: "Pick staff roles from this server's list." }, "setup");
+    return reply({ error: "Pick staff roles from this server's list." });
   if (raw.parentId && !layout.categories.some((c) => c.id === raw.parentId))
-    return back(ctx.guild.id, { error: "Pick a category from this server's list." }, "setup");
+    return reply({ error: "Pick a category from this server's list." });
   if (raw.logChannelId && !channels.some((c) => c.id === raw.logChannelId))
-    return back(ctx.guild.id, { error: "Pick a log channel from this server's list." }, "setup");
+    return reply({ error: "Pick a log channel from this server's list." });
   const checked = checkTicketOptions(raw, ctx.ent, ctx.config);
-  if (!checked.ok) return back(ctx.guild.id, { error: checked.error }, "setup");
-  return apply(ctx, checked.value, "Saved who handles tickets.", "setup");
+  if (!checked.ok) return reply({ error: checked.error });
+  const result = await applySettingsChange(await getDb(), {
+    guildId: ctx.guild.id,
+    module: "tickets",
+    patch: checked.value,
+    userId: ctx.session.userId,
+    username: ctx.session.username,
+  });
+  if (!result.ok)
+    return reply(result.reason === "unchanged" ? "unchanged" : { error: "Try again in a minute." });
+  return reply({ ok: "Saved who handles tickets.", changeId: result.change.id });
 }
 
 /** A staff note on a ticket. Only the dashboard shows it; the member never sees it. */

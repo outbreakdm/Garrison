@@ -265,11 +265,16 @@ const LAZY = new Set<SettingsModule>([
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 type Row = Record<string, unknown>;
 
-/** JSON with object keys sorted, because JSONB doesn't keep key order. */
+/**
+ * JSON with object keys sorted, because JSONB doesn't keep key order, and a key that is null
+ * counted as missing: a card saved before a field existed equals the same card with that
+ * field empty, so re-saving it isn't a change (and never lands in Settings history).
+ */
 function stable(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
   if (value && typeof value === "object")
     return `{${Object.keys(value)
+      .filter((k) => (value as Row)[k] != null)
       .sort()
       .map((k) => `${JSON.stringify(k)}:${stable((value as Row)[k])}`)
       .join(",")}}`;

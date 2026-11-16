@@ -109,7 +109,21 @@ scrolling wall of server templates; pricing; FAQ; help.
      table's header.
    Not done here: the escalation ladder keeps its Edit form and Save (a half-built step
    would fail every check while you type), and spam/raid presets are Garrison's own numbers.
-3. **Community pages**: Welcome, Role menus, Tickets, Leveling. *Large.*
+3. **Community pages**: done 2026-11-16.
+   - *Welcome*: the welcome, leave and DM cards are open panels that save themselves, each
+     beside its preview, full width (in a side column the DM's full card editor would be too
+     narrow, so this departs from the plan); roles on join and the welcome image sit two up
+     between them. Editors use `useSaveSignal` and `data-hold` (components/AutoSave).
+   - *Role menus*: the list head (All, Posted, Not posted, "N of M menus", New menu) over the
+     tile grid. The menu editor keeps Save and Post: it publishes to Discord.
+   - *Tickets*: a stat row (open now, need a reply, unclaimed, and Pro's 30-day numbers), the
+     queue with filter pills beside "Who handles tickets" (saves itself; tickets per member is
+     a segmented row), then the panels as tiles with the dashed new tile.
+   - *Leveling*: the leaderboard beside Leveling (its switch in the header, level-up messages
+     as a segmented row), XP boosts (save themselves) and Seasons; the rank card saves itself
+     below; level rewards keep Save (a row needs its level and its role together).
+   Also: Settings history no longer records a "change" when a card is re-saved with empty
+   fields its stored copy didn't have (a null key counts as missing, `repo/settings.ts`).
 4. **The rest**: lists, Messages builder, Insights tabs, Settings access, templates gallery.
 5. **Landing page.**
 

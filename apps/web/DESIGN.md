@@ -189,6 +189,8 @@ Settings are open on the page, never folded behind "Change". `AutoSaveCard` is a
 
 A panel's own on/off (Automod, AI moderation, Anti-raid) is a switch at the far right of its header bar, after the save mark. When one action's settings are split over several panels (automod's five), each panel sends only its own fields.
 
+Card editors (welcome, leave, DM, rank card) save themselves too: their fields are React state, so the editor tells its panel about each change (`useSaveSignal`), and a save that can't go through yet (no channel picked, a Pro field on Free) is held, with the reason under the fields and "Not saved yet" in the caution color in the header. Undo resets the editor; ordinary saves never re-create it, so focus stays where you're typing. Builders that publish to Discord (role menus, ticket panels, messages) and multi-row editors whose rows are only valid once complete (the escalation ladder, level rewards) keep an explicit Save.
+
 ### Sensitivity presets
 Where a setting is a pair of numbers (spam, what counts as a raid, when anti-nuke steps in), level cards stand for them, with Custom last: Relaxed, Balanced (marked as the default in its line), Strict. Picking a card fills the numbers, which stay on the page underneath; typing your own lights the card they match, or Custom. Four cards go two by two on a phone.
 

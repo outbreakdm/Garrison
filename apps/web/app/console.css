@@ -2077,15 +2077,16 @@ a.pro-sheet__go:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 30px;
-  padding: 0 10px;
+  min-height: 30px;
+  height: 100%;
+  padding: 5px 8px;
   border-radius: 7px;
   color: var(--text-muted);
   font-size: 13px;
   font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 16px;
+  text-align: center;
+  text-wrap: balance;
   transition:
     background-color 0.15s ease,
     color 0.15s ease;
@@ -2507,4 +2508,24 @@ a.pro-sheet__go:hover {
     flex: 1 1 130px;
     max-width: none;
   }
+}
+.save-mark--held {
+  color: var(--caution);
+}
+.save-mark--held .save-mark__icon {
+  border-style: dashed;
+  opacity: 1;
+}
+/* Two small panels side by side (roles on join and the welcome image); stacked on phones. */
+.split-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+/* A list with nothing to filter names itself where the pills would be. */
+.list-head__title {
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 22px;
 }

@@ -957,3 +957,12 @@ Decided (2026-11-12, owner):
   download, filters in the table head. `saveAutomod` returns its outcome to a self-saving
   panel and keeps the fields a panel doesn't send. Checked locally on desktop, phone and
   light theme. Not deployed. Next: step 3, the community pages.
+- 2026-11-16: Redesign v2, step 3 (community pages) done. Welcome: the welcome, leave and DM
+  cards save themselves beside their previews (held with the reason when a channel is
+  missing or a Pro field is on Free), roles on join and the welcome image two up. Role menus:
+  the list head with Posted / Not posted. Tickets: stat row, queue pills beside a self-saving
+  "Who handles tickets", panels as tiles. Leveling: leaderboard beside Leveling, boosts and
+  seasons; the rank card saves itself; level rewards keep Save. Settings diffs count a null
+  key as missing, so re-saving an older card isn't a change (new test). Checked locally on
+  desktop and phone. Not deployed. Next: step 4 (the other list pages, Messages builder,
+  Insights tabs, Settings access, templates gallery).

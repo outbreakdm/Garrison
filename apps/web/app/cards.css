@@ -229,10 +229,13 @@
   flex-wrap: wrap;
   align-self: flex-start;
   gap: 2px;
-  padding: 2px;
+  padding: 3px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--surface-sunken);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg) 65%, var(--surface));
+}
+[data-theme="light"] .segmented {
+  background: var(--surface-raised);
 }
 .segmented__item {
   position: relative;
@@ -246,9 +249,13 @@
   cursor: pointer;
 }
 .segmented__item span {
-  padding: 4px 12px;
-  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 7px;
   font-size: 13px;
+  font-weight: 600;
   line-height: 20px;
   color: var(--text-muted);
   transition:
@@ -260,13 +267,18 @@
 }
 .segmented__item input:checked + span {
   background: var(--surface-raised);
-  box-shadow: inset 0 0 0 1px var(--line);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
   color: var(--text);
-  font-weight: 600;
 }
 .segmented__item input:focus-visible + span {
   outline: 2px solid var(--focus);
   outline-offset: 1px;
+}
+[data-theme="light"] .segmented__item input:checked + span {
+  background: var(--surface);
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    0 1px 2px rgb(18 19 23 / 0.08);
 }
 
 /* Pro styling tried on Free: the preview keeps it, the save button won't. */

@@ -5,7 +5,30 @@ import type { AutoResult } from "@/lib/autosave";
 import { toast } from "./Toaster";
 
 type Action = (form: FormData) => Promise<AutoResult>;
-type Mark = "idle" | "saving" | "saved" | "error";
+type Mark = "idle" | "saving" | "saved" | "error" | "held";
+
+const SIGNAL = "garrison:save";
+
+/**
+ * For editors whose fields are React state (a card editor, rows added and removed with
+ * buttons): call with the editor's value and attach the ref to an element inside the panel.
+ * Each change after the first render tells the panel to save, after `delay` ms (typing
+ * still waits for its own pause). To stop a save that can't go through yet (no channel
+ * picked, Pro fields on Free), put data-hold="<why>" on any element inside the panel.
+ */
+export function useSaveSignal<T extends HTMLElement>(value: string, delay = 600) {
+  const ref = useRef<T>(null);
+  // Compared with the last value, not "skip the first run": effects can run twice on mount.
+  const last = useRef(value);
+  useEffect(() => {
+    if (last.current === value) return;
+    last.current = value;
+    ref.current?.dispatchEvent(
+      new CustomEvent(SIGNAL, { bubbles: true, detail: { delay, value } }),
+    );
+  }, [value, delay]);
+  return ref;
+}
 
 /**
  * Switches, picks and selects save at once. Typing waits for a pause: short for a number,
@@ -118,6 +141,11 @@ export function AutoSaveCard({
   const save = async (): Promise<void> => {
     const el = form.current;
     if (!el) return;
+    // An editor inside says this can't save yet; it shows why, the mark says "Not saved yet".
+    if (root.current?.querySelector("[data-hold]")) {
+      show("held");
+      return;
+    }
     if (busy.current) {
       again.current = true;
       return;
@@ -159,7 +187,10 @@ export function AutoSaveCard({
   useEffect(() => {
     const el = root.current;
     if (!el) return;
-    const schedule = (ms: number, typing = false) => {
+    const schedule = (ms: number, typing = false, ifIdle = false) => {
+      // A signal only starts a save when nothing is waiting: a switch flipped this instant
+      // saves now, and typing keeps its own pause.
+      if (ifIdle && timer.current) return;
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => {
         timer.current = null;
@@ -175,17 +206,23 @@ export function AutoSaveCard({
     };
     // A typed field commits on blur or Enter; everything else commits as it changes.
     const onChange = () => schedule(0);
+    const onSignal = (e: Event) => {
+      const delay = (e as CustomEvent<{ delay?: number }>).detail?.delay ?? 600;
+      schedule(delay, false, true);
+    };
     // Leaving with a change still waiting: send it now, and ask before closing the tab.
     const onLeave = (e: BeforeUnloadEvent) => {
       if (timer.current || busy.current) e.preventDefault();
     };
     el.addEventListener("input", onInput);
     el.addEventListener("change", onChange);
+    el.addEventListener(SIGNAL, onSignal);
     window.addEventListener("beforeunload", onLeave);
     setLive(true);
     return () => {
       el.removeEventListener("input", onInput);
       el.removeEventListener("change", onChange);
+      el.removeEventListener(SIGNAL, onSignal);
       window.removeEventListener("beforeunload", onLeave);
       if (timer.current) {
         clearTimeout(timer.current);
@@ -251,6 +288,7 @@ const WORDS: Record<Mark, string> = {
   saving: "Saving…",
   saved: "Saved",
   error: "Not saved",
+  held: "Not saved yet",
 };
 
 function SaveMark({ mark }: { mark: Mark }) {

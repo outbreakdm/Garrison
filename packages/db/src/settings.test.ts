@@ -166,6 +166,23 @@ describe("dashboard settings, as garrison_web", () => {
     expect(await undoSettingsChange(db, G, ledger.change.id, kel)).toMatchObject({ ok: true });
   });
 
+  it("counts a field set to null the same as a field that isn't there", async () => {
+    // A card saved before `hint` existed, then saved again by an editor that sends it empty.
+    const card = { background: "dusk", accent: null, fields: [{ id: "a", label: "Main" }] };
+    expect(
+      await applySettingsChange(db, { guildId: G, module: "ranks", patch: { card }, ...taner }),
+    ).toMatchObject({ ok: true });
+    const resent = { ...card, showLinked: null, fields: [{ id: "a", label: "Main", hint: null }] };
+    expect(
+      await applySettingsChange(db, {
+        guildId: G,
+        module: "ranks",
+        patch: { card: resent },
+        ...taner,
+      }),
+    ).toEqual({ ok: false, reason: "unchanged" });
+  });
+
   it("holds Ledger retention to 7..365 days, keeps XP bot-only, and bounds reward levels", async () => {
     const tooShort = await applySettingsChange(db, {
       guildId: G,

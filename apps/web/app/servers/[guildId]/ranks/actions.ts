@@ -12,9 +12,10 @@ import {
   readRankCard,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
+import type { AutoResult } from "@/lib/autosave";
 import { getDb } from "@/lib/db";
 import { getServerLayout } from "@/lib/discord";
-import { flashBack } from "@/lib/flash";
+import { answer, type Outcome } from "@/lib/outcome";
 import { checkGuildAccess } from "@/lib/session";
 
 /**
@@ -22,12 +23,11 @@ import { checkGuildAccess } from "@/lib/session";
  * plan, and checks the card with the same rules the bot draws by. The standard
  * card is stored as null, so a server that never customized has nothing saved.
  */
-export async function saveRankCard(form: FormData) {
+export async function saveRankCard(form: FormData): Promise<AutoResult> {
   const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
   if (!access) redirect("/servers");
   const { guild, session } = access;
-  const back = (outcome: { ok: string } | { error: string }) =>
-    flashBack(`/servers/${guild.id}/ranks`, outcome, "?edit=card#card");
+  const back = (outcome: Outcome) => answer(form, `/servers/${guild.id}/ranks`, outcome, "#card");
   let raw: unknown;
   try {
     raw = JSON.parse(String(form.get("card") ?? ""));
@@ -50,10 +50,11 @@ export async function saveRankCard(form: FormData) {
     username: session.username,
   });
   if (!result.ok)
-    return back({
-      error: result.reason === "unchanged" ? "Nothing changed." : "Try again in a minute.",
-    });
-  return back({ ok: "Saved the rank card. /rank draws it from now on." });
+    return back(result.reason === "unchanged" ? "unchanged" : { error: "Try again in a minute." });
+  return back({
+    ok: "Saved the rank card. /rank draws it from now on.",
+    changeId: result.change.id,
+  });
 }
 
 /**
@@ -61,12 +62,11 @@ export async function saveRankCard(form: FormData) {
  * blank rows are skipped. Targets must exist in this server. A server back on
  * Free can still clear its boosts.
  */
-export async function saveBoosts(form: FormData) {
+export async function saveBoosts(form: FormData): Promise<AutoResult> {
   const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
   if (!access) redirect("/servers");
   const { guild, session } = access;
-  const back = (outcome: { ok: string } | { error: string }) =>
-    flashBack(`/servers/${guild.id}/ranks`, outcome, "?edit=boosts#boosts");
+  const back = (outcome: Outcome) => answer(form, `/servers/${guild.id}/ranks`, outcome, "#boosts");
   const raw: { kind: string; id: string; multiplier: number }[] = [];
   for (let i = 0; i < BOOSTS_MAX; i++) {
     const target = String(form.get(`boost${i}_target`) ?? "");
@@ -96,8 +96,9 @@ export async function saveBoosts(form: FormData) {
     username: session.username,
   });
   if (!result.ok)
-    return back({
-      error: result.reason === "unchanged" ? "Nothing changed." : "Try again in a minute.",
-    });
-  return back({ ok: "Saved the boosts. They apply from the next XP earned." });
+    return back(result.reason === "unchanged" ? "unchanged" : { error: "Try again in a minute." });
+  return back({
+    ok: "Saved the boosts. They apply from the next XP earned.",
+    changeId: result.change.id,
+  });
 }

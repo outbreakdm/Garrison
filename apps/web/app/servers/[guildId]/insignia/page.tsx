@@ -11,6 +11,7 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ListHead } from "@/components/ListHead";
 import { PlansLink } from "@/components/ProUpsell";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { FormPanel } from "@/components/settings";
@@ -24,6 +25,14 @@ import { addMenu, removeMenu, saveMenu } from "./actions";
 import { type RoleChoice, RoleMenuEditor } from "./RoleMenuEditor";
 
 export const metadata: Metadata = { title: "Role menus" };
+
+/** The list filters (?show=), in pill order. */
+const SHOWS = ["all", "posted", "unposted"] as const;
+const SHOW_LABELS: Record<(typeof SHOWS)[number], string> = {
+  all: "All",
+  posted: "Posted",
+  unposted: "Not posted",
+};
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
@@ -54,6 +63,12 @@ export default async function RoleMenusPage({
   const pausedCount = Math.max(0, menus.length - limit);
   const editing = typeof query.edit === "string" ? query.edit : null;
   const channelName = new Map(channels.map((c) => [c.id, c.name]));
+  const postedIds = new Set(posts.map((p) => p.menuId));
+  const show = SHOWS.find((k) => k === query.show) ?? "all";
+  const shown = menus
+    .map((menu, index) => ({ menu, index }))
+    .filter(({ menu }) => show === "all" || postedIds.has(menu.id) === (show === "posted"));
+  const base = `/servers/${guild.id}/insignia`;
 
   // Roles a menu can hand out: never managed by an integration, never with
   // moderation or admin powers. The bot checks again on every click.
@@ -79,9 +94,6 @@ export default async function RoleMenusPage({
             saved.
           </p>
         </div>
-        <span className="mono">
-          {plan === "pro" ? "Pro" : "Free"} · {menus.length} of {limit} menus
-        </span>
       </div>
 
       {flash?.ok ? (
@@ -107,8 +119,29 @@ export default async function RoleMenusPage({
 
       <RequestsPanel guildId={guild.id} kinds={["post_role_menu"]} query={query} />
 
+      <ListHead
+        filters={SHOWS.map((k) => ({
+          key: k,
+          label: SHOW_LABELS[k],
+          n:
+            k === "all"
+              ? menus.length
+              : menus.filter((m) => postedIds.has(m.id) === (k === "posted")).length,
+          href: k === "all" ? base : `${base}?show=${k}`,
+        }))}
+        current={show}
+        count={`${menus.length} of ${limit} menus`}
+        create={{
+          label: "New menu",
+          href: `${base}?edit=new#new`,
+          disabled: full
+            ? `${limit} of ${limit} menus used${plan === "pro" ? "" : `. Pro runs ${MENU_HARD_MAX}`}.`
+            : undefined,
+        }}
+      />
+
       <div className="item-grid">
-        {menus.map((menu, index) => {
+        {shown.map(({ menu, index }) => {
           const post = posts.find((p) => p.menuId === menu.id) ?? null;
           const paused = isPaused(index, ent);
           const facts = [

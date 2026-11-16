@@ -14,13 +14,16 @@ export interface ListFilter {
 }
 
 export function ListHead({
-  filters,
-  current,
+  title,
+  filters = [],
+  current = "",
   count,
   create,
 }: {
-  filters: ListFilter[];
-  current: string;
+  /** For a list with nothing to filter: its name where the pills would be. */
+  title?: string;
+  filters?: ListFilter[];
+  current?: string;
   /** "1 of 2 running": where the list stands against the plan. */
   count?: string;
   /** The one white button; `disabled` names why it's resting (a limit reached). */
@@ -28,20 +31,23 @@ export function ListHead({
 }) {
   return (
     <div className="list-head">
-      <nav className="list-head__filters" aria-label="Filter">
-        {filters.map((f) => (
-          <Link
-            key={f.key}
-            className="list-pill"
-            href={f.href}
-            scroll={false}
-            aria-current={f.key === current ? "true" : undefined}
-          >
-            {f.label}
-            {f.n !== undefined ? <span className="list-pill__n">{f.n}</span> : null}
-          </Link>
-        ))}
-      </nav>
+      {title ? <h2 className="list-head__title">{title}</h2> : null}
+      {filters.length ? (
+        <nav className="list-head__filters" aria-label="Filter">
+          {filters.map((f) => (
+            <Link
+              key={f.key}
+              className="list-pill"
+              href={f.href}
+              scroll={false}
+              aria-current={f.key === current ? "true" : undefined}
+            >
+              {f.label}
+              {f.n !== undefined ? <span className="list-pill__n">{f.n}</span> : null}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
       {count || create ? (
         <span className="list-head__end">
           {count ? <span className="list-head__count">{count}</span> : null}
