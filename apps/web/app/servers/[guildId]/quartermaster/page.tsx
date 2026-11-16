@@ -10,16 +10,20 @@ import {
   listTemplates,
   QM_MIN_MESSAGE_SUPPLIES,
   QM_PLAN_TTL_MS,
+  QM_SETTINGS_MODULES,
   type QmBuild,
   qmChangeCount,
   qmHoldSupplies,
+  readSettings,
   TEMPLATE_NAME_MAX,
   TEMPLATES_PER_USER,
 } from "@garrison/db";
 import type { Metadata } from "next";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { ProTag } from "@/components/cards/CardEditor";
+import { FeaturesPanel } from "@/components/FeaturesPanel";
 import { formatTime } from "@/components/format";
+import { PlanDetails } from "@/components/PlanDetails";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { ScrollToEnd } from "@/components/ScrollToEnd";
 import { ServerPreview } from "@/components/ServerPreview";
@@ -91,7 +95,24 @@ export default async function QuartermasterPage({
       aiAllowance(db, guild.id, session.userId),
       fresh ? null : latestQmThread(db, guild.id, session.userId),
     ]);
-  const messages = threadId ? await listQmThread(db, guild.id, session.userId, threadId) : [];
+  const [messages, featureValues] = await Promise.all([
+    threadId ? listQmThread(db, guild.id, session.userId, threadId) : [],
+    Promise.all(
+      QM_SETTINGS_MODULES.map(
+        async (m) => [m, await readSettings(db, guild.id, m).catch(() => null)] as const,
+      ),
+    ).then((rows) => Object.fromEntries(rows)),
+  ]);
+  // The Features tab opens on its own after a save there.
+  const tab = query.tab === "modules" ? "modules" : "channels";
+  const featureChannels = {
+    text: layout
+      ? [...layout.loose, ...layout.categories.flatMap((c) => c.channels)]
+          .filter((c) => c.kind === "text")
+          .map((c) => ({ id: c.id, name: c.name }))
+      : [],
+    categories: layout ? layout.categories.map((c) => ({ id: c.id, name: c.name })) : [],
+  };
   const ent = entitlements(guildPlan);
   const isOwner = ownerId === session.userId;
   const now = Date.now();
@@ -117,7 +138,27 @@ export default async function QuartermasterPage({
           (a.payload as { id?: string }).id === plan.id,
       )
     : false;
-  const preview = layout ? previewServer(layout, plan?.plan ?? []) : null;
+  const preview = layout ? previewServer(layout, plan?.plan ?? [], guild.id) : null;
+  // Taking one item out of the draft: the bot stores the rest as the next version.
+  const removeForm = (what: Record<string, string>, label = "Remove from plan") =>
+    plan && mine ? (
+      <form action={requestAction} className="qm-remove">
+        <input type="hidden" name="guildId" value={guild.id} />
+        <input type="hidden" name="page" value="quartermaster" />
+        <input type="hidden" name="kind" value="qm_remove" />
+        <input type="hidden" name="id" value={plan.id} />
+        {Object.entries(what).map(([k, v]) => (
+          <input type="hidden" name={k} value={v} key={k} />
+        ))}
+        <button
+          type="submit"
+          className="g-btn g-btn--ghost g-btn--sm qm-remove__btn"
+          disabled={applying}
+        >
+          {label}
+        </button>
+      </form>
+    ) : null;
   const diffs = plan ? settingDiffs(layout, plan.plan, plan.settings ?? []) : [];
   const posts = plan ? postPreviews(layout, plan.plan, plan.posts ?? []) : [];
   const changes = plan ? qmChangeCount(plan) : 0;
@@ -411,7 +452,12 @@ export default async function QuartermasterPage({
             <fieldset className="qm-tabs">
               <legend className="sr-only">Show</legend>
               <label>
-                <input type="radio" name="qm-tab" value="channels" defaultChecked />
+                <input
+                  type="radio"
+                  name="qm-tab"
+                  value="channels"
+                  defaultChecked={tab === "channels"}
+                />
                 <span className="qm-tabs__label">Channels</span>
               </label>
               <label>
@@ -426,10 +472,28 @@ export default async function QuartermasterPage({
                   </span>
                 </label>
               ) : null}
+              <label>
+                <input
+                  type="radio"
+                  name="qm-tab"
+                  value="modules"
+                  defaultChecked={tab === "modules"}
+                />
+                <span className="qm-tabs__label qm-tabs__label--feat">Features</span>
+              </label>
             </fieldset>
             <div className="qm-plan__body" id="change-list">
+              {tab === "modules" && flash ? (
+                <div
+                  className={`notice qm-plan__notice${flash.ok ? " notice--ok" : ""}`}
+                  role={flash.ok ? "status" : "alert"}
+                >
+                  {flash.ok ?? flash.error}
+                </div>
+              ) : null}
+              <FeaturesPanel guildId={guild.id} values={featureValues} channels={featureChannels} />
               {preview ? (
-                <ServerPreview name={guild.name} preview={preview} planned={Boolean(plan)} />
+                <ServerPreview name={guild.name} preview={preview} planned={Boolean(plan)} linked />
               ) : (
                 <p className="qm-plan__empty">
                   Garrison can't read this server's channels right now.
@@ -442,7 +506,7 @@ export default async function QuartermasterPage({
                       <h3 className="g-label">Settings</h3>
                       <dl className="qm-settings__list">
                         {diffs.map((d) => (
-                          <div key={d.label}>
+                          <div key={d.key}>
                             <dt>{d.label}</dt>
                             <dd>
                               <span className="qm-settings__from">{d.from}</span>
@@ -450,6 +514,7 @@ export default async function QuartermasterPage({
                               <span className="sr-only"> becomes </span>
                               <strong>{d.to}</strong>
                             </dd>
+                            {removeForm({ setting: d.key }, "Remove")}
                           </div>
                         ))}
                       </dl>
@@ -459,12 +524,13 @@ export default async function QuartermasterPage({
                     <div className="qm-settings">
                       <h3 className="g-label">Posts</h3>
                       <dl className="qm-settings__list">
-                        {posts.map((x) => (
+                        {posts.map((x, i) => (
                           <div key={x.what}>
                             <dt>{x.what}</dt>
                             <dd>
                               in <strong>{x.where}</strong>
                             </dd>
+                            {removeForm({ post: String(i) }, "Remove")}
                           </div>
                         ))}
                       </dl>
@@ -477,6 +543,9 @@ export default async function QuartermasterPage({
                     </div>
                   ) : null}
                 </div>
+              ) : null}
+              {preview ? (
+                <PlanDetails preview={preview} remove={(ref) => removeForm({ ref })} />
               ) : null}
             </div>
             {plan ? (
@@ -519,7 +588,14 @@ export default async function QuartermasterPage({
 
         <RequestsPanel
           guildId={guild.id}
-          kinds={["qm_apply", "qm_cancel", "undo_build", "template_save", "template_apply"]}
+          kinds={[
+            "qm_apply",
+            "qm_cancel",
+            "qm_remove",
+            "undo_build",
+            "template_save",
+            "template_apply",
+          ]}
           query={query}
         />
 

@@ -14,7 +14,13 @@ import {
   upsertGuild,
 } from "@garrison/db";
 import { createTestDb } from "@garrison/db/testing";
-import { ChannelType, Collection, type Guild, PermissionFlagsBits } from "discord.js";
+import {
+  ChannelType,
+  Collection,
+  type Guild,
+  type GuildMember,
+  PermissionFlagsBits,
+} from "discord.js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { BotContext } from "../../commands/types.js";
 import { createLogger } from "../../lib/logger.js";
@@ -447,6 +453,28 @@ describe("Quartermaster end to end", () => {
     expect(!blocked.ok && blocked.error).toMatch(/lot of AI assistant use in one hour/);
     const spend = await aiSpendSince(ctx.db, since);
     expect(spend.dollars).toBeCloseTo((9 * 550 + 2620) / 1e6, 6);
+  });
+
+  it("takes one item out of a waiting draft as its next version, with what depended on it", async () => {
+    const { doQmRemove } = await import("../dashboard/more.js");
+    const { getQmBuild } = await import("@garrison/db");
+    const f = fakeGuild("q27");
+    const a = asker(f);
+    const v1 = await planBuild(ctx, stub(sectionPlan), f.guild, a, "a WARDOGS section");
+    if (!v1.ok) throw new Error(v1.error);
+    const me = { id: a.id } as unknown as GuildMember;
+    // Someone else can't change it.
+    const other = { id: "97999" } as unknown as GuildMember;
+    expect(await doQmRemove(ctx, f.guild, other, { id: v1.build.id, ref: "gold" })).toMatchObject({
+      ok: false,
+    });
+    const out = await doQmRemove(ctx, f.guild, me, { id: v1.build.id, ref: "gold" });
+    expect(out).toMatchObject({ ok: true, message: expect.stringMatching(/Gold\+ and 1 more/) });
+    expect((await getQmBuild(ctx.db, "q27", v1.build.id))?.status).toBe("cancelled");
+    const { listQmBuilds } = await import("@garrison/db");
+    const [v2] = await listQmBuilds(ctx.db, "q27", 1);
+    expect(v2?.status).toBe("pending");
+    expect(v2?.plan.map((o) => o.ref)).toEqual(["wardogs", "vc"]);
   });
 
   it("stops every server once the day's budget is spent", async () => {

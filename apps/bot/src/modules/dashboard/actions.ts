@@ -62,6 +62,7 @@ import {
   doQmCancel,
   doQmChat,
   doQmPlan,
+  doQmRemove,
   doRaidSignup,
   doRaidWithdraw,
 } from "./more.js";
@@ -492,6 +493,8 @@ export async function runDashboardAction(
       return doQmApply(ctx, guild, member, action.payload);
     case "qm_cancel":
       return doQmCancel(ctx, guild, action.payload);
+    case "qm_remove":
+      return doQmRemove(ctx, guild, member, action.payload);
     case "post_role_menu":
       return doPostRoleMenu(ctx, guild, member, action.payload);
     case "bot_profile":

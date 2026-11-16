@@ -124,11 +124,21 @@ describe("settingDiffs", () => {
         { module: "watch", field: "logChannelId", from: "gone", to: null },
       ]),
     ).toEqual([
-      { label: "Suggestions · On", from: "Off", to: "On" },
-      { label: "Suggestions · Channel", from: "#general", to: "#ideas (new)" },
-      { label: "Automod · Blocked words", from: "none", to: "2 words" },
-      { label: "Leveling · Level-ups", from: "same channel", to: "off" },
-      { label: "Moderation · Mod log", from: "a deleted channel or role", to: "none" },
+      { key: "suggestions.enabled", label: "Suggestions · On", from: "Off", to: "On" },
+      {
+        key: "suggestions.channelId",
+        label: "Suggestions · Channel",
+        from: "#general",
+        to: "#ideas (new)",
+      },
+      { key: "automod.words", label: "Automod · Blocked words", from: "none", to: "2 words" },
+      { key: "ranks.announce", label: "Leveling · Level-ups", from: "same channel", to: "off" },
+      {
+        key: "watch.logChannelId",
+        label: "Moderation · Mod log",
+        from: "a deleted channel or role",
+        to: "none",
+      },
     ]);
   });
 });

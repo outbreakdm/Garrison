@@ -16,6 +16,15 @@ import type { LayoutChannel, ServerLayout } from "./discord";
  * Discord will put them. Pure, so it's unit tested. A plan only ever adds.
  */
 
+/** One role's overwrite on a channel, in words: what it's allowed and denied there. */
+export interface PermRow {
+  key: string;
+  who: string;
+  color: number;
+  allowed: string[];
+  denied: string[];
+}
+
 export interface PreviewChannel {
   key: string;
   name: string;
@@ -24,6 +33,11 @@ export interface PreviewChannel {
   isNew: boolean;
   /** What's worth knowing about a new channel: who sees it, topic, limits. */
   details: string[];
+  topic?: string | null;
+  /** Per-role overwrites, @everyone first. */
+  perms?: PermRow[];
+  /** A new channel's ref in the plan, so it can be taken out of it. */
+  ref?: string;
 }
 export interface PreviewCategory {
   key: string;
@@ -39,6 +53,12 @@ export interface PreviewRole {
   color: number;
   isNew: boolean;
   details: string[];
+  /** What the role can do server-wide, from its permissions. */
+  power?: "Admin" | "Moderator" | "Member";
+  perms?: string[];
+  /** Position from the top (1 is highest); new roles go to the bottom. */
+  position?: number | null;
+  ref?: string;
 }
 export interface ServerPreview {
   loose: PreviewChannel[];
@@ -47,23 +67,132 @@ export interface ServerPreview {
   added: { categories: number; channels: number; roles: number };
 }
 
-const existing = (c: LayoutChannel): PreviewChannel => ({
-  key: c.id,
-  name: c.name,
-  kind: c.kind,
-  locked: c.locked,
-  isNew: false,
-  details: [],
-});
+/** Discord permission bits worth naming, in the order people think of them. */
+const PERMS: [bigint, string][] = [
+  [1n << 3n, "Administrator"],
+  [1n << 5n, "Manage server"],
+  [1n << 28n, "Manage roles"],
+  [1n << 4n, "Manage channels"],
+  [1n << 2n, "Ban members"],
+  [1n << 1n, "Kick members"],
+  [1n << 40n, "Time out members"],
+  [1n << 13n, "Manage messages"],
+  [1n << 17n, "Mention everyone"],
+  [1n << 29n, "Manage webhooks"],
+  [1n << 10n, "View channel"],
+  [1n << 11n, "Send messages"],
+  [1n << 16n, "Read history"],
+  [1n << 14n, "Embed links"],
+  [1n << 15n, "Attach files"],
+  [1n << 6n, "Add reactions"],
+  [1n << 18n, "External emoji"],
+  [1n << 35n, "Create threads"],
+  [1n << 38n, "Talk in threads"],
+  [1n << 20n, "Connect"],
+  [1n << 21n, "Speak"],
+  [1n << 9n, "Video"],
+  [1n << 0n, "Create invites"],
+  [1n << 26n, "Change nickname"],
+];
+const MOD_BITS =
+  (1n << 1n) | (1n << 2n) | (1n << 4n) | (1n << 5n) | (1n << 13n) | (1n << 28n) | (1n << 40n);
+
+const bits = (s: string | undefined) => {
+  try {
+    return BigInt(s ?? "0");
+  } catch {
+    return 0n;
+  }
+};
+/** The named permissions in a bit set; anything unnamed is counted as "N more". */
+export function permLabels(set: bigint) {
+  const named = PERMS.filter(([b]) => (set & b) !== 0n).map(([, l]) => l);
+  const known = PERMS.reduce((a, [b]) => a | b, 0n);
+  let rest = set & ~known;
+  let more = 0;
+  while (rest) {
+    more += Number(rest & 1n);
+    rest >>= 1n;
+  }
+  return more ? [...named, `${more} more`] : named;
+}
+export function rolePower(set: bigint): NonNullable<PreviewRole["power"]> {
+  if (set & (1n << 3n)) return "Admin";
+  return set & MOD_BITS ? "Moderator" : "Member";
+}
 
 const isChannel = (o: QmOperation) =>
   o.kind === "create_text_channel" || o.kind === "create_voice_channel";
 
-export function previewServer(layout: ServerLayout, plan: QmOperation[]): ServerPreview {
+/** `everyoneId`: the server's id, which is also @everyone's role id in overwrites. */
+export function previewServer(
+  layout: ServerLayout,
+  plan: QmOperation[],
+  everyoneId = "",
+): ServerPreview {
   const roleName = new Map<string, string>([
     ...layout.roles.map((r) => [r.id, r.name] as [string, string]),
     ...plan.filter((o) => o.kind === "create_role").map((o) => [o.ref, o.name] as [string, string]),
   ]);
+  const roleColor = new Map<string, number>([
+    ...layout.roles.map((r) => [r.id, r.color] as [string, number]),
+    ...plan
+      .filter((o) => o.kind === "create_role")
+      .map((o) => [o.ref, o.color ?? 0] as [string, number]),
+  ]);
+  const who = (id: string) =>
+    id === everyoneId || id === "everyone" ? "@everyone" : `@${roleName.get(id) ?? "deleted role"}`;
+  const everyoneFirst = (rows: PermRow[]) => [
+    ...rows.filter((x) => x.who === "@everyone"),
+    ...rows.filter((x) => x.who !== "@everyone"),
+  ];
+  const existing = (c: LayoutChannel): PreviewChannel => ({
+    key: c.id,
+    name: c.name,
+    kind: c.kind,
+    locked: c.locked,
+    isNew: false,
+    details: [],
+    topic: c.topic ?? null,
+    perms: everyoneFirst(
+      (c.overwrites ?? []).map((o) => ({
+        key: o.id,
+        who: who(o.id),
+        color: roleColor.get(o.id) ?? 0,
+        allowed: permLabels(bits(o.allow)),
+        denied: permLabels(bits(o.deny)),
+      })),
+    ),
+  });
+  /** A new channel's overwrites as Garrison will make them (service.ts channelOverwrites). */
+  const madePerms = (o: QmOperation): PermRow[] => {
+    const voice = o.kind === "create_voice_channel";
+    const use = voice
+      ? ["View channel", "Connect", "Speak"]
+      : ["View channel", "Send messages", "Read history"];
+    const talk = voice ? "Speak" : "Send messages";
+    const rows = new Map<string, PermRow>();
+    const row = (id: string) => {
+      let x = rows.get(id);
+      if (!x) {
+        x = { key: id, who: who(id), color: roleColor.get(id) ?? 0, allowed: [], denied: [] };
+        rows.set(id, x);
+      }
+      return x;
+    };
+    if (o.privateTo.length) {
+      row("everyone").denied.push("View channel");
+      for (const r of o.privateTo) row(r).allowed.push(...use);
+    }
+    if (o.readOnly) {
+      row("everyone").denied.push(talk);
+      for (const r of o.posters ?? []) {
+        const x = row(r);
+        if (!x.allowed.includes(talk)) x.allowed.push(talk);
+      }
+    }
+    return everyoneFirst([...rows.values()]);
+  };
   const made = (o: QmOperation): PreviewChannel => {
     const details: string[] = [];
     const at = (list: string[]) => list.map((r) => `@${roleName.get(r) ?? "?"}`).join(", ");
@@ -88,6 +217,9 @@ export function previewServer(layout: ServerLayout, plan: QmOperation[]): Server
       locked: o.privateTo.length > 0,
       isNew: true,
       details,
+      topic: o.topic ?? null,
+      perms: madePerms(o),
+      ref: o.ref,
     };
   };
   const channels = plan.filter(isChannel);
@@ -130,12 +262,15 @@ export function previewServer(layout: ServerLayout, plan: QmOperation[]): Server
       })),
     ],
     roles: [
-      ...layout.roles.map((r) => ({
+      ...layout.roles.map((r, i) => ({
         key: r.id,
         name: r.name,
         color: r.color,
         isNew: false,
         details: r.managed ? ["Managed by an app"] : [],
+        power: rolePower(bits(r.permissions)),
+        perms: permLabels(bits(r.permissions)),
+        position: i + 1,
       })),
       // New roles start at the bottom, with no permissions.
       ...plan
@@ -150,6 +285,14 @@ export function previewServer(layout: ServerLayout, plan: QmOperation[]): Server
             ...(o.hoist ? ["Shown separately"] : []),
             ...(o.mentionable ? ["Anyone can mention"] : []),
           ],
+          power: "Member" as const,
+          perms: (o.permissions ?? [])
+            .map((p) => QM_ROLE_PERMISSIONS[p as QmRolePermission]?.label)
+            .filter((l): l is (typeof QM_ROLE_PERMISSIONS)[QmRolePermission]["label"] =>
+              Boolean(l),
+            ),
+          position: null,
+          ref: o.ref,
         })),
     ],
     added: {
@@ -203,6 +346,8 @@ export function planLines(plan: QmOperation[]) {
 }
 
 export interface SettingDiff {
+  /** "automod.scamLinks": which change it is, to take it out of a draft. */
+  key: string;
   /** "Automod · Scam links" */
   label: string;
   from: string;
@@ -237,6 +382,7 @@ export function settingDiffs(
     return channels.get(v) ?? roles.get(v) ?? "a deleted channel or role";
   };
   return settings.map((c) => ({
+    key: `${c.module}.${c.field}`,
     label: qmSettingLabel(c.module, c.field),
     from: qmSettingValueText(c.module, c.field, c.from, name),
     to: qmSettingValueText(c.module, c.field, c.to, name),
@@ -280,3 +426,6 @@ export function postPreviews(
 export function postLines(posts: QmPost[]) {
   return posts.map((p) => `> ${qmPostLabel(p.kind)} ${p.name}`);
 }
+
+/** The id of an item's details section in the plan panel, from its preview key. */
+export const detailId = (key: string) => `qm-d-${key.replace(/[^a-zA-Z0-9_-]/g, "-")}`;

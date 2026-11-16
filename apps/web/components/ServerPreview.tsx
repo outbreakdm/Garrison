@@ -1,4 +1,13 @@
-import type { ServerPreview as Preview, PreviewChannel } from "@/lib/qm-preview";
+import { detailId, type ServerPreview as Preview, type PreviewChannel } from "@/lib/qm-preview";
+
+/** In the plan panel each row opens its details (a :target section the panel shows). */
+function Open({ id, name }: { id: string; name: string }) {
+  return (
+    <a className="sp-row__open" href={`#${detailId(id)}`}>
+      <span className="sr-only">Details for {name}</span>
+    </a>
+  );
+}
 
 /**
  * The server drawn the way Discord lists it: categories, channels and roles.
@@ -41,7 +50,7 @@ function Glyph({ kind, locked }: { kind: PreviewChannel["kind"]; locked: boolean
   );
 }
 
-function Channel({ c }: { c: PreviewChannel }) {
+function Channel({ c, linked }: { c: PreviewChannel; linked?: boolean }) {
   const what = `${c.kind === "voice" ? "Voice channel" : "Channel"}${c.locked ? ", private" : ""}`;
   return (
     <li className={`sp-row ${c.isNew ? "is-new" : ""}`}>
@@ -54,6 +63,7 @@ function Channel({ c }: { c: PreviewChannel }) {
         {c.details.length ? <span className="sp-row__detail">{c.details.join(" · ")}</span> : null}
       </span>
       {c.isNew ? <span className="sp-new">New</span> : null}
+      {linked ? <Open id={c.key} name={c.name} /> : null}
     </li>
   );
 }
@@ -62,11 +72,14 @@ export function ServerPreview({
   name,
   preview,
   planned,
+  linked = false,
 }: {
   name: string;
   preview: Preview;
   /** A plan is waiting: mark its additions and offer the now / with changes switch. */
   planned: boolean;
+  /** Rows open their details (the AI assistant's plan panel). */
+  linked?: boolean;
 }) {
   const total =
     preview.loose.length + preview.categories.reduce((n, c) => n + c.channels.length, 0);
@@ -109,7 +122,7 @@ export function ServerPreview({
           {preview.loose.length ? (
             <ul className="sp-list">
               {preview.loose.map((c) => (
-                <Channel c={c} key={c.key} />
+                <Channel c={c} key={c.key} linked={linked} />
               ))}
             </ul>
           ) : null}
@@ -132,7 +145,7 @@ export function ServerPreview({
               {cat.channels.length ? (
                 <ul className="sp-list">
                   {cat.channels.map((c) => (
-                    <Channel c={c} key={c.key} />
+                    <Channel c={c} key={c.key} linked={linked} />
                   ))}
                 </ul>
               ) : (
@@ -182,6 +195,7 @@ export function ServerPreview({
                   ) : null}
                 </span>
                 {r.isNew ? <span className="sp-new">New</span> : null}
+                {linked ? <Open id={r.key} name={r.name} /> : null}
               </li>
             ))}
             <li className="sp-row sp-row--quiet">

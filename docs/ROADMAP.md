@@ -925,3 +925,11 @@ Decided (2026-11-12, owner):
   week-over-week changes, a 14-day messages chart beside top channels, a modules list with
   on/off dots beside recent cases, then raids, security and health. The e2e Discord mock
   ignores query strings and returns counts. Not deployed.
+- 2026-11-15: AI assistant plan panel, Peak-style depth: every channel and role in the tree
+  opens its details (a channel's topic and, per role, how many permissions are allowed or
+  denied, expandable to the names; a role's color, power and permissions). "Remove from
+  plan" on new channels, roles, settings and posts: a new `qm_remove` request the bot carries
+  out by storing the rest as the next version (taking whatever depended on the item with
+  it). A Features tab: the eight modules the assistant can set, each with its switch and
+  fields, saved one at a time through the same checks and Settings history as their pages.
+  Migration 0063 (the new request kind). Not deployed.

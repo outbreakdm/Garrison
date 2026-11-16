@@ -1123,7 +1123,19 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "template_apply",
   "suggestion_status",
   "qm_chat",
+  "qm_remove",
 ]);
+
+/**
+ * Take one item out of a waiting AI assistant draft: a channel, category or role it makes
+ * (by ref), a setting it changes ("module.field") or a post (by its place in the list).
+ */
+export interface QmRemovePayload {
+  id: string;
+  ref?: string;
+  setting?: string;
+  post?: number;
+}
 export const dashboardActionStatus = pgEnum("dashboard_action_status", [
   "pending",
   "running",

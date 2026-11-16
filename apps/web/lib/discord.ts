@@ -92,7 +92,9 @@ interface RawChannel {
   type: number;
   position: number;
   parent_id?: string | null;
-  permission_overwrites?: { id: string; deny: string }[];
+  topic?: string | null;
+  /** type 0: a role (or @everyone, whose id is the guild's); 1: a member. */
+  permission_overwrites?: { id: string; type?: number; allow?: string; deny: string }[];
 }
 
 const guildReads = new Map<string, Shared<RawGuild>>();
@@ -482,13 +484,24 @@ export interface LayoutChannel {
   kind: "text" | "voice" | "other";
   /** Hidden from @everyone. */
   locked: boolean;
+  topic?: string | null;
+  /** Role overwrites (@everyone's id is the server's), as permission bit strings. */
+  overwrites?: { id: string; allow: string; deny: string }[];
 }
 export interface ServerLayout {
   /** Channels outside any category, as Discord lists them first. */
   loose: LayoutChannel[];
   categories: { id: string; name: string; channels: LayoutChannel[] }[];
   /** Highest first, without @everyone. */
-  roles: { id: string; name: string; color: number; managed: boolean }[];
+  roles: {
+    id: string;
+    name: string;
+    color: number;
+    managed: boolean;
+    /** Permission bits, as Discord sends them. */
+    permissions?: string;
+    position?: number;
+  }[];
 }
 
 const VIEW_CHANNEL = 1n << 10n;
@@ -509,6 +522,10 @@ export async function getServerLayout(guildId: string): Promise<ServerLayout> {
       name: c.name,
       kind: c.type === 0 || c.type === 5 ? "text" : isVoice(c.type) ? "voice" : "other",
       locked,
+      topic: c.topic ?? null,
+      overwrites: (c.permission_overwrites ?? [])
+        .filter((o) => (o.type ?? 0) === 0)
+        .map((o) => ({ id: o.id, allow: o.allow ?? "0", deny: o.deny ?? "0" })),
     };
   };
   // Discord lists text channels above voice ones inside each category.
@@ -528,7 +545,14 @@ export async function getServerLayout(guildId: string): Promise<ServerLayout> {
     roles: guild.roles
       .filter((r) => r.id !== guild.id)
       .sort((a, b) => b.position - a.position)
-      .map((r) => ({ id: r.id, name: r.name, color: r.color ?? 0, managed: r.managed === true })),
+      .map((r) => ({
+        id: r.id,
+        name: r.name,
+        color: r.color ?? 0,
+        managed: r.managed === true,
+        permissions: r.permissions ?? "0",
+        position: r.position,
+      })),
   };
   return layout;
 }

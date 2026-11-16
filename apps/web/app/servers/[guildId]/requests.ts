@@ -516,6 +516,24 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
         return { ok: false, error: "qm_not_yours" };
       return { ok: true, input: { kind, payload: { id: b.id } } };
     }
+    case "qm_remove": {
+      const id = uuid.safeParse(field(form, "id"));
+      const b = id.success ? await getQmBuild(db, guildId, id.data) : null;
+      if (b?.status !== "pending") return { ok: false, error: "not_found" };
+      if (b.requestedById !== requesterId) return { ok: false, error: "qm_not_yours" };
+      const ref = field(form, "ref");
+      const setting = field(form, "setting");
+      const post = field(form, "post");
+      // Exactly one thing, and it must be in this draft.
+      if (ref && b.plan.some((o) => o.ref === ref))
+        return { ok: true, input: { kind, payload: { id: b.id, ref } } };
+      if (setting && (b.settings ?? []).some((c) => `${c.module}.${c.field}` === setting))
+        return { ok: true, input: { kind, payload: { id: b.id, setting } } };
+      const n = Number(post);
+      if (post && Number.isInteger(n) && n >= 0 && n < (b.posts ?? []).length)
+        return { ok: true, input: { kind, payload: { id: b.id, post: n } } };
+      return { ok: false, error: "invalid" };
+    }
     default:
       return { ok: false, error: "invalid" };
   }

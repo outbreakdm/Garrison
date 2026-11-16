@@ -22,6 +22,7 @@ import {
   type PurgePayload,
   type QmChatPayload,
   type QmPlanPayload,
+  type QmRemovePayload,
   type RaidSignupPayload,
   type RaidWithdrawPayload,
   type StartGiveawayPayload,
@@ -55,6 +56,7 @@ export type QueueInput =
   | { kind: "qm_chat"; payload: QmChatPayload }
   | { kind: "qm_apply"; payload: IdPayload }
   | { kind: "qm_cancel"; payload: IdPayload }
+  | { kind: "qm_remove"; payload: QmRemovePayload }
   | { kind: "post_role_menu"; payload: PostRoleMenuPayload }
   | { kind: "bot_profile"; payload: BotProfilePayload }
   | { kind: "post_message"; payload: PostMessagePayload }

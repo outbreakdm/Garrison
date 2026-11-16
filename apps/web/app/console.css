@@ -587,6 +587,12 @@ a.g-btn--primary:hover {
   gap: var(--space-4);
   padding: var(--space-4);
 }
+/* An open detail hides the tree, its tabs and the changes. */
+.qm-plan:has(.qm-detail:target) .sp,
+.qm-plan:has(.qm-detail:target) .qm-plan__changes,
+.qm-plan:has(.qm-detail:target) .qm-tabs {
+  display: none;
+}
 .qm-plan:has(input[name="qm-tab"][value="channels"]:checked) .sp__pane--roles,
 .qm-plan:has(input[name="qm-tab"][value="channels"]:checked) .qm-plan__changes,
 .qm-plan:has(input[name="qm-tab"][value="roles"]:checked) .sp__pane:not(.sp__pane--roles),
@@ -1260,4 +1266,406 @@ a.g-btn--primary:hover {
 }
 .g-card > :is(.card-head, .queue__head):first-child > a:not([class]):hover {
   color: var(--text);
+}
+
+/* --- Plan panel details ----------------------------------------------------------------------
+   Every row in the panel's tree opens its details: the channel's topic and who's allowed or
+   denied what there, or the role's color, power and permissions. The details are :target
+   sections, so they open without scripts; picking one hides the tree until it's closed. */
+.qm-plan .sp-row {
+  position: relative;
+}
+.sp-row__open {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-sm);
+}
+.sp-row__open:hover {
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+.sp-row__open:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.qm-detail {
+  display: none;
+  scroll-margin-top: 0;
+}
+.qm-detail:target {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+.qm-detail__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+.qm-detail__title {
+  font-size: 14px;
+  font-weight: 650;
+}
+.qm-detail__close {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+}
+.qm-detail__close::before,
+.qm-detail__close::after {
+  content: "";
+  position: absolute;
+  top: 13px;
+  left: 8px;
+  width: 12px;
+  height: 1.5px;
+  background: var(--text-muted);
+  transform: rotate(45deg);
+}
+.qm-detail__close::after {
+  transform: rotate(-45deg);
+}
+.qm-detail__close:hover {
+  background: var(--surface-raised);
+}
+.qm-detail__body {
+  display: grid;
+  flex: 1;
+  align-content: start;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+.qm-detail__id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.qm-detail__id > span:last-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.qm-detail__tile {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text-muted);
+  font-size: 18px;
+  font-weight: 600;
+}
+.qm-detail__swatch {
+  flex: none;
+  color: var(--line-strong);
+}
+.qm-detail__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.qm-detail__kind {
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+.qm-detail__block {
+  display: grid;
+  gap: 6px;
+}
+.qm-detail .qm-detail__block p,
+.qm-detail .qm-detail__facts p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 20px;
+}
+.qm-detail__block .g-label,
+.qm-detail__facts .g-label {
+  margin: 0;
+}
+.qm-detail__facts {
+  display: flex;
+  gap: var(--space-6);
+}
+.qm-detail .qm-detail__facts > div {
+  display: grid;
+  gap: 6px;
+}
+.qm-detail__mono {
+  font-variant-numeric: tabular-nums;
+}
+.qm-detail__foot {
+  display: flex;
+  justify-content: center;
+  padding: 10px var(--space-4);
+  border-top: 1px solid var(--line);
+}
+.qm-perms {
+  display: grid;
+  gap: 6px;
+}
+.qm-perm {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+}
+.qm-perm > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 6px 10px;
+  list-style: none;
+  cursor: pointer;
+}
+.qm-perm > summary::-webkit-details-marker {
+  display: none;
+}
+.qm-perm__cue {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-top: 1.5px solid var(--text-muted);
+  border-right: 1.5px solid var(--text-muted);
+  transform: rotate(45deg);
+  transition: transform 0.15s var(--ease-out);
+}
+.qm-perm[open] .qm-perm__cue {
+  transform: rotate(135deg);
+}
+.qm-detail__dot {
+  flex: none;
+  color: var(--text-muted);
+}
+.qm-perm__who {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.qm-perm__counts {
+  display: flex;
+  gap: 4px;
+}
+.qm-pill {
+  padding: 1px 7px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--text-muted) 16%, transparent);
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 650;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.qm-pill--go {
+  background: color-mix(in srgb, var(--go) 15%, transparent);
+  color: var(--go);
+}
+.qm-pill--alert {
+  background: color-mix(in srgb, var(--alert) 15%, transparent);
+  color: var(--alert);
+}
+.qm-pill--caution {
+  background: color-mix(in srgb, var(--caution) 15%, transparent);
+  color: var(--caution);
+}
+.qm-perm__body {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0 12px 10px 32px;
+  font-size: 12.5px;
+}
+.qm-perm__body dt {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.qm-perm__body dd {
+  margin: 0;
+}
+/* Remove from plan: quiet until it matters, then the alert color. */
+.qm-remove {
+  margin: 0;
+}
+.qm-remove__btn {
+  color: var(--alert);
+}
+.qm-remove__btn:hover {
+  background: color-mix(in srgb, var(--alert) 12%, transparent);
+  color: var(--alert);
+}
+.qm-plan .qm-settings__list div {
+  position: relative;
+  padding-right: 64px;
+}
+.qm-plan .qm-settings__list .qm-remove {
+  position: absolute;
+  top: -2px;
+  right: 0;
+}
+
+/* --- Features: the modules the assistant can set up, switched and set right here -------- */
+.qm-feats,
+.qm-plan__notice {
+  display: none;
+}
+.qm-plan:has(input[name="qm-tab"][value="modules"]:checked) .qm-feats {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+.qm-plan:has(input[name="qm-tab"][value="modules"]:checked) .qm-plan__notice {
+  display: block;
+  margin: 12px 12px 0;
+}
+.qm-plan:has(input[name="qm-tab"][value="modules"]:checked) .sp,
+.qm-plan:has(input[name="qm-tab"][value="modules"]:checked) .qm-plan__changes {
+  display: none;
+}
+.qm-tabs__label--feat {
+  color: var(--go);
+}
+.qm-feat {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+}
+.qm-feat[open] {
+  border-color: var(--line-strong);
+}
+.qm-feat__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 10px;
+  list-style: none;
+  cursor: pointer;
+}
+.qm-feat__head::-webkit-details-marker {
+  display: none;
+}
+.qm-feat__cue {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-top: 1.5px solid var(--text-muted);
+  border-right: 1.5px solid var(--text-muted);
+  transform: rotate(45deg);
+  transition: transform 0.15s var(--ease-out);
+}
+.qm-feat[open] .qm-feat__cue {
+  transform: rotate(135deg);
+}
+.qm-feat__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--id, var(--accent)) 14%, var(--surface));
+}
+.qm-feat__icon::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--id-text, var(--accent-strong));
+  transform: rotate(45deg);
+}
+.qm-feat__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 650;
+}
+.qm-feat__switch {
+  display: flex;
+  margin: 0;
+}
+.qm-feat__body {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border-top: 1px solid var(--line);
+}
+.qm-feat__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.qm-feat__field {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+.qm-feat__label {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.qm-feat__control {
+  display: flex;
+  gap: 6px;
+}
+.qm-feat__control .g-input {
+  min-height: 34px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+.qm-feat__more {
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.qm-feat__more:hover {
+  color: var(--text);
+}
+/* A choice of a few: a segmented row, the current one lit in the go color. */
+.qm-seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  width: fit-content;
+  margin: 0;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.qm-seg__opt {
+  padding: 4px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.qm-seg__opt:hover {
+  color: var(--text);
+}
+.qm-seg__opt[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--go) 40%, transparent);
+  background: color-mix(in srgb, var(--go) 14%, transparent);
+  color: var(--go);
+}
+.qm-seg__opt:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
 }

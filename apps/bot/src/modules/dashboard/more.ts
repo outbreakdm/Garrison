@@ -1,11 +1,13 @@
 import {
   createLfgPost,
+  createQmPlan,
   getLfgPost,
   getOpsEvent,
   getQmBuild,
   joinLfg,
   leaveLfg,
   listActiveMembers,
+  QM_PLAN_TTL_MS,
   qmChangeCount,
   renderWording,
   setLfgMessage,
@@ -21,6 +23,7 @@ import { formatDuration, MAX_TIMEOUT_SECONDS } from "../../lib/duration.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { announcePromotion, refreshOpsCard } from "../ops/service.js";
 import { chatTurn } from "../quartermaster/chat.js";
+import { withoutItem } from "../quartermaster/remove.js";
 import { applyBuild, planBuild, REQUEST_MAX } from "../quartermaster/service.js";
 import { lfgCard } from "../rally/card.js";
 import { notifyTemplateRole } from "../rally/commands.js";
@@ -402,6 +405,61 @@ export async function doQmApply(ctx: BotContext, guild: Guild, member: GuildMemb
         ok: true,
         message: `Applied: ${result.created.length} ${result.created.length === 1 ? "change" : "changes"} made.`,
       };
+}
+
+const removeOne = z.object({
+  id: uuid,
+  ref: z.string().min(1).max(40).optional(),
+  setting: z.string().min(3).max(60).optional(),
+  post: z.number().int().min(0).max(20).optional(),
+});
+
+/**
+ * Take one item out of a waiting draft. The rest is stored as the next version and the old
+ * one retired, the same way a revision replaces a draft; nothing is asked of the AI. Only
+ * the person who asked for the draft can change it.
+ */
+export async function doQmRemove(ctx: BotContext, guild: Guild, member: GuildMember, raw: unknown) {
+  const p = removeOne.safeParse(raw);
+  if (!p.success) return fail("That request wasn't valid.");
+  const build = await getQmBuild(ctx.db, guild.id, p.data.id);
+  if (build?.status !== "pending" || Date.now() - build.createdAt.getTime() > QM_PLAN_TTL_MS)
+    return fail("That draft isn't waiting anymore.");
+  if (build.requestedById !== member.id)
+    return fail("Only the person who asked for this draft can change it.");
+  const { ref, setting, post } = p.data;
+  const t = withoutItem(build, { ref, setting, post });
+  if (!t.removed.length) return fail("That isn't in the draft anymore.");
+  const what =
+    t.removed.length > 1
+      ? `${t.removed[0]} and ${t.removed.length - 1} more that depended on it`
+      : (t.removed[0] as string);
+  if (!t.plan.length && !t.settings.length && !t.posts.length) {
+    await transitionQmBuild(ctx.db, build.id, "pending", "cancelled");
+    return { ok: true, message: `Removed ${what}. Nothing was left, so the draft is discarded.` };
+  }
+  const next = await createQmPlan(ctx.db, {
+    guildId: guild.id,
+    requestedById: build.requestedById,
+    requestedByTag: build.requestedByTag,
+    prompt: build.prompt,
+    summary: build.summary,
+    plan: t.plan,
+    settings: t.settings,
+    posts: t.posts,
+    notes: build.notes,
+    continuesId: build.id,
+    model: build.model,
+  });
+  const replaced = await transitionQmBuild(ctx.db, build.id, "pending", "cancelled", {
+    error: `Replaced by v${next.version}.`,
+  });
+  if (!replaced) {
+    // Applied or discarded in the meantime: the new copy must not linger.
+    await transitionQmBuild(ctx.db, next.id, "pending", "cancelled");
+    return fail("That draft changed while removing. Try again.");
+  }
+  return { ok: true, message: `Removed ${what} from the draft.` };
 }
 
 export async function doQmCancel(ctx: BotContext, guild: Guild, raw: unknown) {

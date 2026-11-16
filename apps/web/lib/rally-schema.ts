@@ -65,6 +65,7 @@ export const ACTION_KIND: Record<string, string> = {
   qm_chat: "Message the AI assistant",
   qm_apply: "Apply build",
   qm_cancel: "Discard plan",
+  qm_remove: "Remove from plan",
   post_role_menu: "Post role menu",
   bot_profile: "Change Garrison's profile",
   post_message: "Post message",

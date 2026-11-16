@@ -91,6 +91,7 @@ export type {
   QmCreated,
   QmOperation,
   QmPost,
+  QmRemovePayload,
   QmSettingChange,
   QmStatus,
   Quarantine,
