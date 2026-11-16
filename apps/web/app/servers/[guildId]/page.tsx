@@ -2,6 +2,7 @@ import { inviteUrl } from "@garrison/brand";
 import {
   capacity,
   getActivity,
+  getBotStatus,
   getHealthSnapshot,
   getInsights,
   getLatency,
@@ -10,6 +11,7 @@ import {
   listQmBuilds,
   listRecentCases,
   listSignups,
+  QM_PLAN_TTL_MS,
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -28,6 +30,45 @@ import { requestAction } from "./requests";
 const WEEK_MS = 7 * 86_400_000;
 
 export const metadata: Metadata = { title: "Overview" };
+
+/** Off modules the Overview suggests, most protective first, each with why in a line. */
+const WORTH: { name: string; href: string; why: string }[] = [
+  {
+    name: "Automod",
+    href: "/watch",
+    why: "Removes scam links, spam and mass mentions as they're posted.",
+  },
+  {
+    name: "Anti-raid",
+    href: "/gatehouse",
+    why: "Locks the server when too many people join too fast.",
+  },
+  {
+    name: "Moderation log",
+    href: "/watch",
+    why: "Posts every warning, timeout and ban to a staff channel.",
+  },
+  {
+    name: "Verification",
+    href: "/gatehouse",
+    why: "New members press a button before they can talk.",
+  },
+  {
+    name: "Welcome",
+    href: "/herald",
+    why: "Greets new members with a card in a channel you pick.",
+  },
+  { name: "Leveling", href: "/ranks", why: "XP for chatting, levels and role rewards." },
+];
+
+/** A plan's status, in words. */
+const BUILD_WORDS: Record<string, string> = {
+  applied: "built",
+  applying: "building",
+  discarded: "discarded",
+  failed: "didn't build",
+  undone: "undone",
+};
 
 /** Which page shows a request's outcome, so a failure links to where it can be retried. */
 const REQUEST_PAGE: Record<string, string> = {
@@ -147,7 +188,7 @@ export default async function OverviewPage({
   const query = await searchParams;
   const { guild } = await requireGuildAccess(guildId);
   const db = await getDb();
-  const [o, cases, activity, latency, health, [build], actions, ins, counts, mods, names] =
+  const [o, cases, activity, latency, health, [build], actions, ins, counts, mods, names, bot] =
     await Promise.all([
       getOverview(db, guild.id),
       listRecentCases(db, guild.id, 6),
@@ -158,8 +199,11 @@ export default async function OverviewPage({
       listDashboardActions(db, guild.id, 30),
       getInsights(db, guild.id, 14),
       guildCounts(guild.id).catch(() => null),
-      moduleStates(db, guild.id),
+      moduleStates(guild.id),
       channelNames(guild.id).catch(() => new Map<string, string>()),
+      getBotStatus(db, 1)
+        .then((b) => b.status)
+        .catch(() => null),
     ]);
   // This week against last: messages, members posting each day, joins less leaves.
   const week = ins.daily.slice(-7);
@@ -170,7 +214,12 @@ export default async function OverviewPage({
   const net7 = sum(week.map((d) => d.joins - d.leaves));
   const topChannels = ins.channels.slice(0, 5);
   const topMax = Math.max(1, ...topChannels.map((c) => c.messages));
-  const modulesOn = mods.filter((m) => m.on).length;
+  // Garrison is live when it checked in within the last 3 minutes.
+  const lastBeat = bot?.lastBeatAt.getTime() ?? null;
+  const live = lastBeat !== null && Date.now() - lastBeat < 3 * 60_000;
+  // Off modules worth turning on, safety first; at most four, each with why.
+  const offByName = new Map(mods.filter((m) => m.state === "off").map((m) => [m.name, m]));
+  const worth = WORTH.filter((w) => offByName.has(w.name)).slice(0, 4);
   const clientId = process.env.DISCORD_CLIENT_ID;
   const fixUrl = clientId && /^\d+$/.test(clientId) ? inviteUrl(clientId, guild.id) : null;
   const now = Date.now();
@@ -214,7 +263,9 @@ export default async function OverviewPage({
       href: "#health",
       go: "See checks",
     });
-  if (build?.status === "pending")
+  const planWaiting =
+    build?.status === "pending" && now - build.createdAt.getTime() < QM_PLAN_TTL_MS;
+  if (planWaiting && build)
     attention.push({
       tone: "caution",
       title: `AI assistant plan v${build.version} is waiting`,
@@ -222,7 +273,8 @@ export default async function OverviewPage({
       href: `${base}/quartermaster`,
       go: "Review plan",
     });
-  if (o.nextOp && o.nextOp.startsAt.getTime() - now < 3 * 86_400_000) {
+  const untilRaid = o.nextOp ? o.nextOp.startsAt.getTime() - now : null;
+  if (o.nextOp && untilRaid !== null && untilRaid > 0 && untilRaid < 3 * 86_400_000) {
     const short = o.nextOp.slots
       .map((s) => ({ name: s.name, n: s.count - seated.filter((x) => x.role === s.name).length }))
       .filter((s) => s.n > 0);
@@ -237,6 +289,29 @@ export default async function OverviewPage({
         go: "Groups and raids",
       });
   }
+  for (const m of mods.filter((x) => x.state === "blocked"))
+    attention.push({
+      tone: "caution",
+      title: `${m.name} is on but can't work`,
+      detail: m.reason ?? "Something it needs is missing.",
+      href: `${base}${m.href}`,
+      go: "Fix it",
+    });
+  const stuck = actions.filter(
+    (a) =>
+      (a.status === "pending" || a.status === "running") &&
+      now - a.createdAt.getTime() > 10 * 60_000,
+  );
+  if (stuck[0])
+    attention.push({
+      tone: "caution",
+      title: `${plural(stuck.length, "request has", "requests have")} waited over 10 minutes`,
+      detail: live
+        ? `${ACTION_KIND[stuck[0].kind] ?? "A request"}, asked ${ago(stuck[0].createdAt)}. Garrison may be busy; it runs them in order.`
+        : "Garrison hasn't checked in lately, so requests wait until it's back. See the status page.",
+      href: live ? `${base}${(REQUEST_PAGE[stuck[0].kind] ?? "").replace(/^#.*/, "")}` : "/status",
+      go: live ? "Open" : "Status",
+    });
   const failed = actions.filter(
     (a) => a.status === "failed" && now - a.createdAt.getTime() < 86_400_000,
   );
@@ -271,14 +346,25 @@ export default async function OverviewPage({
           </p>
         </div>
         <div className="ov-hero__side">
-          <span className="ov-live">
-            <span className="ov-live__dot" aria-hidden="true" />
-            Live
-          </span>
+          {lastBeat === null ? null : live ? (
+            <span className="ov-live">
+              <span className="ov-live__dot" aria-hidden="true" />
+              Live
+            </span>
+          ) : (
+            <a className="ov-live ov-live--late" href="/status">
+              <span className="ov-live__dot" aria-hidden="true" />
+              Last seen {ago(new Date(lastBeat))}
+            </a>
+          )}
           {build ? (
             <span className="ov-hero__build">
               AI assistant v{build.version} · {ago(build.createdAt)} ·{" "}
-              {build.status.replace("_", " ")}
+              {build.status === "pending"
+                ? planWaiting
+                  ? "waiting for review"
+                  : "expired"
+                : (BUILD_WORDS[build.status] ?? build.status.replace("_", " "))}
               {build.status === "applied" ? (
                 <>
                   {" "}
@@ -483,33 +569,30 @@ export default async function OverviewPage({
         </section>
       </div>
 
-      <div className="ov-pair">
-        <section className="g-card card-col" aria-labelledby="ov-modules">
-          <div className="card-head">
-            <h2 className="card-title" id="ov-modules">
-              Modules{" "}
-              <span className="count">
-                {modulesOn}/{mods.length}
-              </span>
-            </h2>
-          </div>
-          <ul className="ov-modules">
-            {mods.map((m) => (
-              <li key={m.name}>
-                <Link
-                  className="ov-modules__link"
-                  href={`${base}${m.href}`}
-                  transitionTypes={["nav"]}
-                >
-                  <span>{m.name}</span>
-                  <span className={`ov-dot ${m.on ? "ov-dot--on" : ""}`}>
-                    <span className="sr-only">{m.on ? "On" : "Off"}</span>
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
+      <div className={worth.length ? "ov-pair" : "ov-pair ov-pair--one"}>
+        {worth.length ? (
+          <section className="g-card card-col" aria-labelledby="ov-worth">
+            <div className="card-head">
+              <h2 className="card-title" id="ov-worth">
+                Worth turning on <span className="count">{worth.length}</span>
+              </h2>
+            </div>
+            <ul className="ov-worth">
+              {worth.map((w) => (
+                <li key={w.name}>
+                  <Link
+                    className="ov-worth__link"
+                    href={`${base}${w.href}`}
+                    transitionTypes={["nav"]}
+                  >
+                    <span className="ov-worth__name">{w.name}</span>
+                    <span className="ov-worth__why">{w.why}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         <section className="g-card card-col" aria-labelledby="cases-title">
           <div className="card-head">

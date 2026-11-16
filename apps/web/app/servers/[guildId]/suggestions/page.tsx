@@ -14,12 +14,13 @@ import { AutoSaveCard } from "@/components/AutoSave";
 import { ProTag } from "@/components/cards/CardEditor";
 import { EmptyState } from "@/components/EmptyState";
 import { ListHead } from "@/components/ListHead";
-import { HeadSwitch } from "@/components/ModuleHead";
+import { HeadNote, HeadSwitch } from "@/components/ModuleHead";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { SettingsNotice } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { listTextChannels } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
+import { pageStatus } from "@/lib/module-states";
 import { requireGuildAccess } from "@/lib/session";
 import { ago } from "../parley/when";
 import { requestAction } from "../requests";
@@ -44,6 +45,8 @@ export default async function SuggestionsPage({
 }) {
   const { guildId } = await params;
   const { guild } = await requireGuildAccess(guildId);
+  // On but can't work (a missing channel, a missing permission): said in the head.
+  const status = await pageStatus(guild.id, "/suggestions");
   const query = await searchParams;
   const filter = SUGGESTION_STATUSES.find((s) => s === query.status) ?? null;
   const db = await getDb();
@@ -77,6 +80,13 @@ export default async function SuggestionsPage({
           form="settings-form"
           defaultChecked={config.enabled}
         />
+        {status.state === "blocked" ? (
+          <HeadNote
+            reason={status.reason ?? "Something it needs is missing."}
+            href={"#settings"}
+            action={"Pick a channel"}
+          />
+        ) : null}
       </div>
 
       {flash?.ok ? (

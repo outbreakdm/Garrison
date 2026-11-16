@@ -11,7 +11,7 @@ import Link from "next/link";
 import { AutoSaveCard } from "@/components/AutoSave";
 import { EmptyState } from "@/components/EmptyState";
 import { formatTime } from "@/components/format";
-import { HeadStatus } from "@/components/ModuleHead";
+import { HeadNote, HeadStatus } from "@/components/ModuleHead";
 import { ProUpsell } from "@/components/ProUpsell";
 import { RecValue } from "@/components/RecValue";
 import { ChannelSelect, SettingsNotice, Switch } from "@/components/settings";
@@ -77,18 +77,24 @@ export default async function LedgerPage({
               : "Message text isn't kept."}
           </p>
         </div>
-        <HeadStatus
-          on={Boolean(ledgerChannel)}
-          text={
-            ledgerChannel
-              ? `Posting to #${ledgerChannel.name}`
-              : settings.channelId
-                ? "Its channel is gone"
-                : "No log channel yet"
-          }
-          href={ledgerChannel ? undefined : "#settings"}
-          action={settings.channelId ? "Pick another" : "Pick one"}
-        />
+        {settings.channelId && !ledgerChannel ? (
+          <HeadNote
+            reason="Its log channel was deleted, so nothing is posted."
+            href="#settings"
+            action="Pick another"
+          />
+        ) : (
+          <HeadStatus
+            on
+            text={
+              ledgerChannel
+                ? `Kept here and posted to #${ledgerChannel.name}`
+                : "Kept here; not posted to a channel"
+            }
+            href={ledgerChannel ? undefined : "#settings"}
+            action="Post them too"
+          />
+        )}
       </div>
       <SettingsNotice query={q} />
       {userNotFound ? (

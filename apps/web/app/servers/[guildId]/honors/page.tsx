@@ -10,12 +10,13 @@ import {
 import type { Metadata } from "next";
 import { AutoSaveCard } from "@/components/AutoSave";
 import { ProTag } from "@/components/cards/CardEditor";
-import { HeadSwitch } from "@/components/ModuleHead";
+import { HeadNote, HeadSwitch } from "@/components/ModuleHead";
 import { RecValue } from "@/components/RecValue";
 import { CheckList } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { fetchMemberCard, listTextChannels } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
+import { pageStatus } from "@/lib/module-states";
 import { requireGuildAccess } from "@/lib/session";
 import { ago } from "../parley/when";
 import { undoChange } from "../settings/actions";
@@ -26,6 +27,8 @@ export const metadata: Metadata = { title: "Starboard" };
 export default async function StarboardPage({ params }: { params: Promise<{ guildId: string }> }) {
   const { guildId } = await params;
   const { guild } = await requireGuildAccess(guildId);
+  // On but can't work (a missing channel, a missing permission): said in the head.
+  const status = await pageStatus(guild.id, "/honors");
   const db = await getDb();
   const [config, plan, posts, channels, flash] = await Promise.all([
     getStarboard(db, guild.id),
@@ -61,6 +64,13 @@ export default async function StarboardPage({ params }: { params: Promise<{ guil
           form="settings-form"
           defaultChecked={config.enabled}
         />
+        {status.state === "blocked" ? (
+          <HeadNote
+            reason={status.reason ?? "Something it needs is missing."}
+            href={"#settings"}
+            action={"Pick a channel"}
+          />
+        ) : null}
       </div>
 
       {flash?.ok ? (

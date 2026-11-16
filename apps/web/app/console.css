@@ -2916,7 +2916,8 @@ form[data-locked] .seg__opt:has(input:disabled) {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* On: a small green light. Off: an empty ring, quiet enough to read past. */
+/* On: a small green light. Needs you: a caution triangle. Off: an empty ring, quiet enough
+   to read past. Shape and word as well as color (sr-only text names the state). */
 .g-nav__state {
   flex: none;
   width: 7px;
@@ -2924,12 +2925,20 @@ form[data-locked] .seg__opt:has(input:disabled) {
   border: 1.5px solid color-mix(in srgb, var(--text-muted) 45%, transparent);
   border-radius: 50%;
 }
-.g-nav__state[data-on] {
+.g-nav__state[data-state="on"] {
   border-color: var(--go);
   background: var(--go);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--go) 18%, transparent);
 }
-.g-nav__item[aria-current="page"] .g-nav__state:not([data-on]) {
+.g-nav__state[data-state="blocked"] {
+  width: 9px;
+  height: 8px;
+  border: 0;
+  border-radius: 0;
+  background: var(--caution);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.g-nav__item[aria-current="page"] .g-nav__state[data-state="off"] {
   border-color: color-mix(in srgb, var(--primary-ink) 40%, transparent);
 }
 .nav-sheet__item {
@@ -3130,4 +3139,63 @@ form[data-locked] .seg__opt:has(input:disabled) {
 }
 .rec-value__go:hover {
   text-decoration: underline;
+}
+/* On but can't work: a caution triangle and "Needs you", beside the switch. */
+.head-state--blocked {
+  flex-wrap: wrap;
+  padding-right: 14px;
+  border-color: color-mix(in srgb, var(--caution) 45%, var(--line));
+  background: color-mix(in srgb, var(--caution) 7%, var(--surface));
+  color: var(--text-muted);
+}
+.head-state__warn {
+  flex: none;
+  width: 10px;
+  height: 9px;
+  background: var(--caution);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.head-state.head-state--blocked .head-state__word {
+  color: var(--caution);
+}
+.ov-live--late {
+  color: var(--caution);
+  text-decoration: none;
+}
+.ov-live--late .ov-live__dot {
+  background: var(--caution);
+  box-shadow: none;
+  animation: none;
+}
+.ov-pair--one {
+  grid-template-columns: minmax(0, 1fr);
+}
+.ov-worth {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ov-worth > li + li {
+  border-top: 1px solid var(--line);
+}
+.ov-worth__link {
+  display: grid;
+  gap: 2px;
+  padding: 10px 2px;
+  color: var(--text);
+  text-decoration: none;
+}
+.ov-worth__name {
+  font-size: 14px;
+  font-weight: 600;
+}
+.ov-worth__link:hover .ov-worth__name {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.ov-worth__why {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 19px;
 }

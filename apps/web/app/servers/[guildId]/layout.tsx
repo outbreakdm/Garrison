@@ -11,7 +11,7 @@ import { Toaster } from "@/components/Toaster";
 import { Topbar } from "@/components/Topbar";
 import { billingReady } from "@/lib/billing";
 import { getDb } from "@/lib/db";
-import { moduleStates } from "@/lib/module-states";
+import { moduleStates, pageStates } from "@/lib/module-states";
 import { requireGuildAccess, requireSession } from "@/lib/session";
 import { listSharedGuilds } from "@/lib/shared-servers";
 import { currentTheme } from "@/lib/theme";
@@ -45,13 +45,11 @@ export default async function ServerLayout({
     currentTheme(),
     getDb().then((db) => aiTier(db, guildId)),
     // Which modules are running, for the menu's dots. Refreshed after every save.
-    getDb()
-      .then((db) => moduleStates(db, guildId))
-      .catch(() => []),
+    moduleStates(guildId).catch(() => []),
   ]);
-  // A page is on when anything on it is (Moderation: automod or its log channel).
-  const states: Record<string, boolean> = {};
-  for (const m of mods) states[m.href] = (states[m.href] ?? false) || m.on;
+  // Blocked if anything on a page can't work, else on if anything is (Moderation: automod
+  // or its log channel), else off.
+  const states = pageStates(mods);
   return (
     <div className="shell console">
       <aside className="console__side" aria-label="Server">

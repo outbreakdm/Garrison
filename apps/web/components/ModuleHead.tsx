@@ -88,3 +88,33 @@ export function HeadStatus({
     </p>
   );
 }
+
+/**
+ * Beside a module's switch when it's on but can't work: the reason, and where to fix it.
+ * Shape (a caution triangle) and words carry it, not color alone.
+ */
+export function HeadNote({
+  reason,
+  href,
+  action,
+}: {
+  reason: string;
+  href?: string;
+  action?: string;
+}) {
+  return (
+    <p className="head-state head-state--blocked" role="note">
+      <span className="head-state__warn" aria-hidden="true" />
+      <span className="head-state__word">Needs you</span>
+      <span className="head-state__sep" aria-hidden="true">
+        ·
+      </span>
+      <span className="head-state__detail">{reason}</span>
+      {href && action ? (
+        <a className="head-state__go" href={href}>
+          {action}
+        </a>
+      ) : null}
+    </p>
+  );
+}

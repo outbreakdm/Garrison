@@ -42,14 +42,16 @@ const ITEMS: {
   { group: null, id: "steel", href: "/plan", name: "Plan", icon: "plan", sheetOnly: true },
 ];
 
-/** Whether each module is running, by its path ("/ranks"): a switch on, or its channel set. */
-export type ModuleStates = Record<string, boolean>;
+/** Whether each module works, by its path ("/ranks"): on, blocked (on but can't work), off. */
+export type ModuleStates = Record<string, "on" | "blocked" | "off">;
 
-function State({ on }: { on: boolean | undefined }) {
-  if (on === undefined) return null;
+const STATE_WORDS = { on: "On", blocked: "Needs you", off: "Off" } as const;
+
+function State({ state }: { state: "on" | "blocked" | "off" | undefined }) {
+  if (!state) return null;
   return (
-    <span className="g-nav__state" data-on={on ? "" : undefined} title={on ? "On" : "Off"}>
-      <span className="sr-only">{on ? ", on" : ", off"}</span>
+    <span className="g-nav__state" data-state={state} title={STATE_WORDS[state]}>
+      <span className="sr-only">, {STATE_WORDS[state].toLowerCase()}</span>
     </span>
   );
 }
@@ -141,7 +143,7 @@ export function ServerNav({
                 >
                   <NavIcon name={item.icon} />
                   <span className="g-nav__name">{item.name}</span>
-                  <State on={states[item.path]} />
+                  <State state={states[item.path]} />
                 </Link>
               ))}
           </div>
@@ -175,7 +177,7 @@ export function ServerNav({
               >
                 <NavIcon name={item.icon} />
                 <span className="g-nav__name">{item.name}</span>
-                <State on={states[item.path]} />
+                <State state={states[item.path]} />
               </Link>
             ))}
           </div>

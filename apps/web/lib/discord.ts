@@ -302,12 +302,17 @@ export async function botTopPosition(guildId: string): Promise<number | null> {
  * Garrison's server-wide permissions in a server (its roles plus @everyone), or null when
  * Discord can't say. For warnings only: the bot checks again before acting.
  */
+const botMemberReads = new Map<string, Shared<{ roles: string[] }>>();
+
 export async function botPermissions(guildId: string): Promise<bigint | null> {
   try {
     const [me, guild] = await Promise.all([
-      discord<{ roles: string[] }>(`/guilds/${guildId}/members/${env().DISCORD_CLIENT_ID}`, {
-        headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` },
-      }),
+      // Cached 30 s like the guild: the menu checks it on every page.
+      shared(botMemberReads, guildId, () =>
+        discord<{ roles: string[] }>(`/guilds/${guildId}/members/${env().DISCORD_CLIENT_ID}`, {
+          headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` },
+        }),
+      ),
       rawGuild(guildId),
     ]);
     let bits = 0n;

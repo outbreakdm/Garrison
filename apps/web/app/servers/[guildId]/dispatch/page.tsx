@@ -63,6 +63,10 @@ export default async function MessagesPage({
   const messages = readMessages(raw);
   const paused = pausedSchedules(messages, ent);
   const scheduled = messages.filter((m) => m.schedule).length;
+  // What will actually post: a schedule that isn't paused and still has a next send.
+  const nextOf = (m: (typeof messages)[number]) =>
+    m.schedule && !paused.has(m.id) ? nextOccurrence(m.schedule, tz) : null;
+  const upcoming = messages.filter((m) => nextOf(m)).length;
   const limit = ent["messages.scheduled"];
   const full = messages.length >= MESSAGE_LIMITS.saved;
   const editing = typeof query.edit === "string" ? query.edit : null;
@@ -80,7 +84,7 @@ export default async function MessagesPage({
   const REPEAT = { none: "Once", daily: "Daily", weekly: "Weekly" } as const;
   /** Where a message stands, for the filter pills and its badge. */
   const stateOf = (m: (typeof messages)[number]): (typeof SHOWS)[number] =>
-    m.schedule && !paused.has(m.id) ? "scheduled" : last.get(m.id) ? "sent" : "drafts";
+    nextOf(m) ? "scheduled" : last.get(m.id) ? "sent" : "drafts";
   const show = SHOWS.find((k) => k === query.show) ?? "all";
   const base = `/servers/${guild.id}/dispatch`;
 
@@ -97,11 +101,11 @@ export default async function MessagesPage({
           </p>
         </div>
         <HeadStatus
-          on={scheduled > 0}
+          on={upcoming > 0}
           word={null}
           text={
-            scheduled
-              ? `${scheduled} on a schedule`
+            upcoming
+              ? `${upcoming} on a schedule`
               : messages.length
                 ? `${plural(messages.length, "message")} saved, none scheduled`
                 : "No messages yet"
@@ -153,8 +157,13 @@ export default async function MessagesPage({
         {messages
           .filter((m) => show === "all" || stateOf(m) === show)
           .map((m) => {
-            const next = m.schedule && !paused.has(m.id) ? nextOccurrence(m.schedule, tz) : null;
+            const next = nextOf(m);
             const sent = last.get(m.id);
+            // A one-time send whose moment passed without it going out: said, not hidden.
+            const due = m.schedule ? nextOccurrence(m.schedule, tz, new Date(0)) : null;
+            const missed = Boolean(
+              m.schedule && !paused.has(m.id) && !next && due && (!sent || sent < due),
+            );
             const facts = [
               m.schedule
                 ? `${REPEAT[m.schedule.repeat]}${m.channelId ? ` in #${channelName.get(m.channelId) ?? "deleted-channel"}` : ""}`
@@ -182,8 +191,10 @@ export default async function MessagesPage({
                       </span>
                     ))}
                   </span>
-                  <span className={`item-tile__state g-badge${next ? " g-badge--go" : ""}`}>
-                    {next ? "Scheduled" : sent ? "Sent" : "Draft"}
+                  <span
+                    className={`item-tile__state g-badge${next ? " g-badge--go" : missed ? " g-badge--caution" : ""}`}
+                  >
+                    {next ? "Scheduled" : missed ? "Missed" : sent ? "Sent" : "Draft"}
                   </span>
                   <span className="panel__cue" aria-hidden="true" />
                 </summary>

@@ -24,7 +24,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ActionBadge, formatDuration, formatTime, plainMentions } from "@/components/format";
 import { ListField } from "@/components/ListField";
 import { MemberAvatar } from "@/components/MemberAvatar";
-import { HeadSwitch } from "@/components/ModuleHead";
+import { HeadNote, HeadSwitch } from "@/components/ModuleHead";
 import { PresetFill } from "@/components/PresetFill";
 import { RecValue } from "@/components/RecValue";
 import { RequestsPanel } from "@/components/RequestsPanel";
@@ -42,6 +42,7 @@ import { getDb } from "@/lib/db";
 import { listGuildRoles, listTextChannels, searchMembers } from "@/lib/discord";
 import { env } from "@/lib/env";
 import { contentKey, readFlash } from "@/lib/flash";
+import { pageStatus } from "@/lib/module-states";
 import { requireGuildAccess } from "@/lib/session";
 import {
   durationText,
@@ -76,6 +77,8 @@ export default async function WatchPage({
 }) {
   const { guildId } = await params;
   const { guild } = await requireGuildAccess(guildId);
+  // On but can't work (a missing channel, a missing permission): said in the head.
+  const status = await pageStatus(guild.id, "/watch");
   const query = await searchParams;
   const q = cleanQuery(query.q);
   const memberQuery = typeof query.member === "string" ? query.member.trim().slice(0, 32) : "";
@@ -120,6 +123,13 @@ export default async function WatchPage({
           form="automod-form"
           defaultChecked={am.enabled}
         />
+        {status.state === "blocked" ? (
+          <HeadNote
+            reason={status.reason ?? "Something it needs is missing."}
+            href={"#settings"}
+            action={"Pick another"}
+          />
+        ) : null}
       </div>
 
       <RequestsPanel

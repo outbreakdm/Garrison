@@ -10,11 +10,12 @@ import type { Metadata } from "next";
 import { AutoSaveCard } from "@/components/AutoSave";
 import { ProTag } from "@/components/cards/CardEditor";
 import { EmptyState } from "@/components/EmptyState";
-import { HeadSwitch } from "@/components/ModuleHead";
+import { HeadNote, HeadSwitch } from "@/components/ModuleHead";
 import { CheckList, SettingsNotice } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { botPermissions, getServerLayout, memberNames } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
+import { pageStatus } from "@/lib/module-states";
 import { requireGuildAccess } from "@/lib/session";
 import { ago } from "../parley/when";
 import { undoChange } from "../settings/actions";
@@ -35,6 +36,8 @@ export default async function VoiceRoomsPage({
 }) {
   const { guildId } = await params;
   const { guild } = await requireGuildAccess(guildId);
+  // On but can't work (a missing channel, a missing permission): said in the head.
+  const status = await pageStatus(guild.id, "/voice");
   const query = await searchParams;
   const db = await getDb();
   const [config, plan, rooms, layout, perms, flash] = await Promise.all([
@@ -76,6 +79,13 @@ export default async function VoiceRoomsPage({
           form="settings-form"
           defaultChecked={config.enabled}
         />
+        {status.state === "blocked" ? (
+          <HeadNote
+            reason={status.reason ?? "Something it needs is missing."}
+            href={status.reason?.includes("Move Members") ? undefined : "#settings"}
+            action={"Pick one"}
+          />
+        ) : null}
       </div>
 
       {flash?.ok ? (

@@ -12,10 +12,11 @@ import type { Metadata } from "next";
 import { AutoSaveCard } from "@/components/AutoSave";
 import { BackgroundChip } from "@/components/cards/BackgroundChip";
 import { ProTag } from "@/components/cards/CardEditor";
-import { HeadStatus } from "@/components/ModuleHead";
+import { HeadNote, HeadStatus } from "@/components/ModuleHead";
 import { getDb } from "@/lib/db";
 import { botTopPosition, listGuildRoles, listTextChannels } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
+import { pageStatus } from "@/lib/module-states";
 import { isDangerousRole } from "@/lib/permissions";
 import { requireGuildAccess } from "@/lib/session";
 import { undoChange } from "../settings/actions";
@@ -27,6 +28,7 @@ export const metadata: Metadata = { title: "Welcome" };
 export default async function WelcomePage({ params }: { params: Promise<{ guildId: string }> }) {
   const { guildId } = await params;
   const { guild, session } = await requireGuildAccess(guildId);
+  const status = await pageStatus(guild.id, "/herald");
   const db = await getDb();
   const [w, plan, channels, roles, botTop, overview] = await Promise.all([
     getWelcome(db, guild.id),
@@ -80,16 +82,24 @@ export default async function WelcomePage({ params }: { params: Promise<{ guildI
             first roles. Quiet during a raid or lockdown, so raiders get nothing.
           </p>
         </div>
-        <HeadStatus
-          on={w.joinEnabled}
-          text={
-            w.joinEnabled
-              ? `Greeting new members${w.leaveEnabled ? ", seeing them off" : ""}${w.dmEnabled ? ", with a DM" : ""}`
-              : "No welcome message yet"
-          }
-          href={w.joinEnabled ? undefined : "#join"}
-          action="Turn it on"
-        />
+        {status.state === "blocked" ? (
+          <HeadNote
+            reason={status.reason ?? "Something it needs is missing."}
+            href="#join"
+            action="Pick a channel"
+          />
+        ) : (
+          <HeadStatus
+            on={w.joinEnabled}
+            text={
+              w.joinEnabled
+                ? `Greeting new members${w.leaveEnabled ? ", seeing them off" : ""}${w.dmEnabled ? ", with a DM" : ""}`
+                : "No welcome message yet"
+            }
+            href={w.joinEnabled ? undefined : "#join"}
+            action="Turn it on"
+          />
+        )}
       </div>
 
       {flash?.ok ? (
