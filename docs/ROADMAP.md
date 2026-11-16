@@ -1022,3 +1022,7 @@ Decided (2026-11-12, owner):
   the heartbeat; emergency tools first on phones; one folded Pro group per card editor;
   consistent patterns and plain history; layout fixes; landing fixes. 588 tests pass; checked
   on desktop, phone and light theme. Not deployed.
+- 2026-11-16: /impeccable colorize and animate across all pages, and a "Watch it work" section
+  on the landing page with three GIFs recorded from the dashboard (about 200 to 310 KB each,
+  in apps/web/public/media; re-record with apps/web/scripts/record-gifs.mjs). The public site
+  now serves /media and /art itself. 588 tests pass; checked on desktop and phone. Not deployed.

@@ -56,7 +56,9 @@ export function hostRedirect(
   const h = host.toLowerCase();
   if (h === `www.${hosts.site}`) return `https://${hosts.site}${pathname}${search}`;
   if (h === hosts.site) {
-    if (PUBLIC_PATHS.has(pathname) || pathname.startsWith("/_next/")) return null;
+    // The landing page's own pictures and recordings stay here: a redirect to the dashboard
+    // host would also fail the page's img-src.
+    if (PUBLIC_PATHS.has(pathname) || /^\/(_next|media|art)\//.test(pathname)) return null;
     return `https://${hosts.dashboard}${pathname}${search}`;
   }
   if (h === hosts.dashboard && pathname === "/") return `https://${hosts.dashboard}/servers`;

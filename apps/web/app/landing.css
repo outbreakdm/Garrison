@@ -1724,3 +1724,98 @@ button.lp-btn {
     display: none;
   }
 }
+
+/* --- Watch it work: recordings of the real dashboard, one at a time --------------------- */
+.lp-watch .lp-section__head {
+  margin-bottom: 32px;
+}
+.lp-watch__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 24px;
+  padding: 4px;
+  border: 1px solid var(--lp-line);
+  border-radius: 999px;
+  background: var(--lp-surface);
+}
+.lp-watch__tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 999px;
+  color: var(--lp-muted);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    color 0.15s var(--ease-out),
+    background-color 0.15s var(--ease-out);
+}
+.lp-watch__tab:hover {
+  color: var(--lp-text);
+}
+.lp-watch__tab:has(:checked) {
+  background: var(--lp-text);
+  color: var(--lp-bg);
+}
+.lp-watch__tab:has(:focus-visible) {
+  outline: 2px solid var(--lp-accent-text);
+  outline-offset: 2px;
+}
+.lp-watch__radio {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.lp-watch__stage {
+  max-width: 980px;
+  margin: 0 auto;
+}
+/* Only the picked recording shows (browsers without :has show all three, stacked). */
+.lp-watch:has([value="fix"]:checked) .lp-watch__item:not([data-watch="fix"]),
+.lp-watch:has([value="preview"]:checked) .lp-watch__item:not([data-watch="preview"]),
+.lp-watch:has([value="saves"]:checked) .lp-watch__item:not([data-watch="saves"]) {
+  display: none;
+}
+.lp-watch__item {
+  margin: 0;
+  animation: lp-in 0.35s var(--ease-out);
+}
+.lp-watch__win {
+  background: #0a0a0a;
+}
+.lp-watch__img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.lp-watch__cap {
+  max-width: 62ch;
+  margin: 20px auto 0;
+  color: var(--lp-muted);
+  font-size: 16px;
+  text-align: center;
+}
+.lp-watch__cap strong {
+  color: var(--lp-text);
+  font-weight: 600;
+}
+@media (max-width: 600px) {
+  .lp-watch__tabs {
+    border-radius: var(--lp-r);
+  }
+  .lp-watch__tab {
+    flex: 1 1 auto;
+    justify-content: center;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+}

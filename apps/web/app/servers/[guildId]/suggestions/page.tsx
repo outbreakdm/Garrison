@@ -239,7 +239,7 @@ export default async function SuggestionsPage({
                 ))}
               </select>
               <span className="g-help">
-                One members can read but not post in keeps it tidy: Garrison posts the cards.
+                A channel members can read but not post in keeps it tidy: Garrison posts the cards.
               </span>
             </label>
             <label className="switch">

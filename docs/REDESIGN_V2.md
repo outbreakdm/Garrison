@@ -206,3 +206,15 @@ Each step ships on its own, checked on desktop and phone.
    Not changed: Insights' active members on the Overview reads a table the local test data
    leaves empty (the bot fills it in production); "By: Marshal" is a legacy name in the test
    data's cases.
+8. **Colorize, animate, recordings** (owner, 2026-11-16).
+   - *Colorize*: section color as place: menu icons in their section's tint; Overview panels,
+     stats and "worth turning on" rows in the color of the page they lead to (`data-tint`);
+     landing product shots in the color of the page they show. Tint only.
+   - *Animate*: the state ripple (a module's menu light flares once when it changes), the head
+     pill easing, Needs you arriving, the save mark landing, the look fold opening by height.
+   - *Watch it work* on the landing page, after the hero: three GIFs recorded from the
+     dashboard on the test server (fix what needs you, write it and see it in Discord, it saves
+     itself), one at a time behind radio tabs, the last frame as a still for reduced motion.
+     `apps/web/scripts/record-gifs.mjs` re-records them (headless Chrome, sharp), swapping the
+     signed-in name for a placeholder and putting the test data back. The public site serves
+     `/media/` and `/art/` itself instead of sending them to the dashboard host.

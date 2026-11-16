@@ -239,6 +239,12 @@ Panel Raised, hairline edge (strong on hover), 8px corners, 38px tall; focus rin
 ### Navigation (rail)
 Groups follow what an owner sets out to do: Overview, AI assistant, Insights and Settings first, then Safety, Onboarding, Engagement, Community and Gaming. Group names at 11.5px led by their gem; items 34px with Garrison's own 16px line icon, muted, raised on hover, and the module's state at the end. The current page is the white pill, on the phone menu too. The server card on top shows the server's initial in a tinted tile, its name and "Switch server". The plan card at the foot names the plan with one line and a grey button (the rail keeps one white thing), and marks itself on the Plan page.
 
+### Color as place
+The four section colors say where something lives. The menu's icons carry their section's tint (Safety reads blue before you read a word); a panel or tile that belongs to another part of the server than the page it's on takes that part's color on its tile, gem and icon through `data-tint` (the Overview's Security panel and moderation stat in cobalt, raids in volt, charts in steel). Links, focus and selection keep the page's color. Charts and meters draw at a tint (about 40 to 55% of the section color over the panel), never a full fill. The landing's product shots wear the color of the page they show.
+
+### Motion
+One authored moment: the state ripple. Flip a module and the change travels: the head pill eases to its new color, the menu's light flares once in the new state's color (pop and ring, `data-changed`, first paint never flares), the toast says what happened. Feedback around it is small and fast: the save mark's dot lands, a Needs you note arrives, folds open by height. Reduced motion keeps every color and state change and drops the movement.
+
 ### Pro on Free
 In a card editor, every look option (author line, title link, accent, images, footer) folds into one "Your own look" group with a single Requires Pro tag; a card that already uses one opens it. On Pro the fields are open as usual. One tag per place, never one per field.
 

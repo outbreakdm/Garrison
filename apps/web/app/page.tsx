@@ -267,6 +267,57 @@ const DEMO_COMMANDS: [name: string, what: string][] = [
   ["health", "Check Garrison's permissions, role position and settings in this server."],
 ];
 
+/** Recordings of the real dashboard on a test server, for "Watch it work". */
+const WATCH: {
+  id: string;
+  tab: string;
+  path: string;
+  title: string;
+  line: string;
+  gif: string;
+  still: string;
+  width: number;
+  height: number;
+  alt: string;
+}[] = [
+  {
+    id: "fix",
+    tab: "Fix what needs you",
+    path: "Overview",
+    title: "See what needs you, and fix it there.",
+    line: "The Overview lists what's switched on but can't work, and why. One click to the page, one pick, and its light turns green.",
+    gif: "/media/garrison-fix-it.gif",
+    still: "/media/garrison-fix-it.png",
+    width: 960,
+    height: 600,
+    alt: "The Overview lists Suggestions as on but unable to work. The pointer opens it, picks a channel, the warning clears, its light in the menu turns green and a toast offers Undo.",
+  },
+  {
+    id: "preview",
+    tab: "Write it, see it",
+    path: "Welcome",
+    title: "Write it here, see it in Discord.",
+    line: "Every card has its Discord preview beside it, changing as you type, and it saves itself when you pause.",
+    gif: "/media/garrison-live-preview.gif",
+    still: "/media/garrison-live-preview.png",
+    width: 960,
+    height: 574,
+    alt: "Typing a new welcome card title. The Discord preview beside the editor changes with every letter.",
+  },
+  {
+    id: "saves",
+    tab: "It saves itself",
+    path: "Moderation",
+    title: "Pick a level. It saves itself.",
+    line: "Presets fill in the numbers, Garrison's recommendation is one click away, and every change can be undone.",
+    gif: "/media/garrison-saves-itself.gif",
+    still: "/media/garrison-saves-itself.png",
+    width: 900,
+    height: 634,
+    alt: "Picking the Strict spam preset fills in 4 messages in 8 seconds and saves. Use it puts back Garrison's recommended Balanced.",
+  },
+];
+
 /** Where landing links send people for help. */
 const HELP: { title: string; text: string; href: string; link: string }[] = [
   {
@@ -643,6 +694,66 @@ export default async function Home() {
                 foot="Security · lockdown 3f2a9c"
               />
             </DiscordWindow>
+          </div>
+        </section>
+
+        <section className="lp-section lp-watch" id="watch" aria-labelledby="lp-watch">
+          <div className="lp-section__head">
+            <h2 className="lp-h2" id="lp-watch">
+              Watch it work
+            </h2>
+            <p>Recorded in the dashboard as it is today, on a test server.</p>
+          </div>
+          <fieldset className="lp-watch__tabs">
+            <legend className="sr-only">Pick a recording</legend>
+            {WATCH.map((w, i) => (
+              <label className="lp-watch__tab" key={w.id}>
+                <input
+                  className="lp-watch__radio"
+                  type="radio"
+                  name="watch"
+                  value={w.id}
+                  defaultChecked={i === 0}
+                />
+                <span>{w.tab}</span>
+              </label>
+            ))}
+          </fieldset>
+          <div className="lp-watch__stage">
+            {WATCH.map((w) => (
+              <figure className="lp-watch__item" data-watch={w.id} key={w.id}>
+                <div className="lp-win lp-watch__win">
+                  <div className="lp-win__bar" aria-hidden="true">
+                    <span className="lp-win__dots">
+                      <i />
+                      <i />
+                      <i />
+                    </span>
+                    <span className="lp-win__url">
+                      <span className="lp-win__host">dash.garrisonbot.com · </span>
+                      {w.path}
+                    </span>
+                    <span className="lp-win__tag">Test server</span>
+                  </div>
+                  <picture>
+                    {/* Less motion asked for: the end of the recording, still. */}
+                    <source media="(prefers-reduced-motion: reduce)" srcSet={w.still} />
+                    <img
+                      className="lp-watch__img"
+                      src={w.gif}
+                      width={w.width}
+                      height={w.height}
+                      alt={w.alt}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </picture>
+                </div>
+                <figcaption className="lp-watch__cap">
+                  <strong>{w.title}</strong> {w.line}
+                </figcaption>
+              </figure>
+            ))}
           </div>
         </section>
 
