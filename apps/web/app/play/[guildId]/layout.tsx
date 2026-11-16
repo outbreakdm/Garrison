@@ -21,6 +21,7 @@ export default async function MemberLayout({
   const base = `/play/${guild.id}`;
   const tabs = [
     ...(show.you ? [{ href: `${base}/you`, label: "You" }] : []),
+    ...(show.wallet ? [{ href: `${base}/wallet`, label: "Wallet" }] : []),
     { href: base, label: "Groups and raids" },
     ...(show.record ? [{ href: `${base}/record`, label: "Your record" }] : []),
   ];

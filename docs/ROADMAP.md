@@ -12,8 +12,9 @@ then updates **Status** and the **Log** before stopping.
   **deployed** (`7849b5a`, run 43974339633, dashboard and bot; migrations 0065 to 0068 applied
   and recorded, 69 rows). Threads and forum posts and the invite tracker (with partners) are
   built, and the Insights share link, not deployed: **apply migrations `0069_invite_labels` and
-  `0070_insights_shares`** first. The economy is designed (`docs/ECONOMY.md`) and waits on
-  the owner's three picks before it's built.
+  `0070_insights_shares`** first. The economy is built too (`docs/ECONOMY.md`): apply
+  **`0071_economy`** and deploy with **register_commands=true** (six new commands and a new
+  /leaderboard option).
 - **Member pages (2026-11-16):** first build **deployed** with `7849b5a` (`docs/MEMBER_PAGES.md`).
   Next pieces: Roles, Suggestions, Giveaways.
 - **Latest deploy:** `2e2b93f` (run 43918628506, dashboard only): steps 6 to 8 of redesign v2,
@@ -1079,3 +1080,9 @@ Decided (2026-11-12, owner):
   (`insights_shares`, dashboard only). Not deployed.
 - 2026-11-16: Economy designed (`docs/ECONOMY.md`): earning, a shop of roles and staff-handled
   items, wallets on member pages, a ledger, no gambling. Waiting on the owner's picks.
+- 2026-11-16: Economy built (owner's picks: paying with a daily cap, Free 10 / Pro 50 items,
+  "Economy"): a currency with its own name and icon; coins for chatting, /daily with a streak,
+  voice and level-ups (Pro); /pay, /balance, /shop, /buy, /money, /leaderboard by coins; a shop
+  of roles (timed on Pro, refunded if Discord refuses) and staff-handled items (a card with Done
+  and Refund); an Economy page and a member Wallet. Money moves lock the wallet; balances can't
+  go below zero; the bot alone moves money. Migration 0071. Not deployed.

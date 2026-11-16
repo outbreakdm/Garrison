@@ -4,6 +4,7 @@ import {
   cleanRankDetails,
   entitlements,
   getActiveGuild,
+  getEconomy,
   getGuildPlan,
   getLfgPost,
   getOpsEvent,
@@ -72,6 +73,31 @@ export async function playRequest(form: FormData) {
     guild.id,
     { id: session.userId, name: session.username },
     input,
+  );
+  wakeBot();
+  if (!queued.ok) return flashBack(path, { error: "That's a lot at once. Try again in a minute." });
+  return flashBack(path, { ok: "Sent to Garrison. Refresh in a few seconds to see it." });
+}
+
+/**
+ * A member buys from the server's shop. Only with their own coins (the session's user; the
+ * bot checks the item, the price and their balance again), only while the economy is on.
+ */
+export async function buyFromShop(form: FormData) {
+  const guildId = String(form.get("guildId") ?? "");
+  const path = isSnowflake(guildId) ? `/play/${guildId}/wallet` : "/servers";
+  const ok = await memberCheck(guildId, "wallet");
+  if (!ok) return flashBack(path, { error: "The shop isn't open right now." });
+  const { session, guild, db } = ok;
+  const itemId = String(form.get("itemId") ?? "");
+  const config = await getEconomy(db, guild.id);
+  if (!config.shop.some((i) => i.id === itemId))
+    return flashBack(path, { error: "That item isn't in the shop anymore." });
+  const queued = await queueDashboardAction(
+    db,
+    guild.id,
+    { id: session.userId, name: session.username },
+    { kind: "economy_buy", payload: { itemId } },
   );
   wakeBot();
   if (!queued.ok) return flashBack(path, { error: "That's a lot at once. Try again in a minute." });

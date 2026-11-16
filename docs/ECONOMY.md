@@ -1,7 +1,16 @@
 # Economy: a server currency (design)
 
-Request 8 of `docs/COMMUNITY_REQUESTS.md`. Proposed 2026-11-16; waiting on the owner's picks
-(the questions at the end). Garrison's own design: no gambling, nothing that touches real money.
+Request 8 of `docs/COMMUNITY_REQUESTS.md`. Garrison's own design: no gambling, nothing that
+touches real money.
+
+**Owner's picks (2026-11-16):** members can pay each other within a daily cap; Free 10 shop
+items, Pro 50; "Economy" in the menu, each server naming its own currency.
+
+**Status: built** (not deployed): all four steps below. Needs migration `0071_economy` and a
+deploy with **register_commands=true** (new commands: /balance, /daily, /pay, /shop, /buy,
+/money, and /leaderboard's "by" option). Still to check on a test server: earning from chat
+and /daily, /pay and its cap, buying a role (and the refund when Discord refuses), a staff
+item's card with Done and Refund, a timed role taken back, and buying from the Wallet.
 
 ## The idea
 
@@ -76,10 +85,3 @@ dashboard requests.
 3. The Wallet on member pages, buying from the dashboard.
 4. Voice and level-up earning, timed roles, stock and limits.
 
-## Questions for the owner
-
-1. **Members paying each other** (`/pay`)? Recommended: yes, with a daily cap, so it can't be
-   used to farm.
-2. **Plan split:** Free 10 shop items, Pro 50 (the request asked for more than 16), as in the
-   table above?
-3. **Name:** "Economy" in the menu, with each server naming its own currency?
