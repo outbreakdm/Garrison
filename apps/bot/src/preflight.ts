@@ -112,6 +112,8 @@ try {
 if (env) {
   // Newest tables first: if these exist with grants, everything older does too.
   const latest = [
+    // 0064: without it the dashboard can't read sessions (member_guild_ids) at all.
+    "dashboard_access",
     "ai_usage",
     "server_templates",
     "barracks_settings",
