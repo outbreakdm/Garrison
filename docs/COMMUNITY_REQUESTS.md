@@ -1,0 +1,108 @@
+# Community requests
+
+Collected 2026-11-16 from the suggestions forum of another bot's community (the owner's
+screenshots). These are ideas people asked for; how Garrison does each one is Garrison's own
+design. Status: waiting on the owner's order and picks (end of this file).
+
+| # | Request | Garrison today | Size |
+|---|---|---|---|
+| 1 | Server stats: channels whose names show counts (members, staff, channels, roles, bots) | Nothing | S |
+| 2 | Regex moderation, matching Discord's AutoMod regex | Blocked words (plain text) | M |
+| 3 | Verification questions: open text boxes ("What's your in-game name?"), formatted descriptions | A Verify button and a website check | M |
+| 4 | Messages into threads and forum posts (by link or ID), richer embeds | Text channels only | M |
+| 5 | Invite tracker: name, color, description, category and an auto-role per invite, and adding invites made elsewhere (Disboard, socials) | Which invite each member joined with, top inviters in Logs | M |
+| 6 | Partnerships: partner servers and what they bring, across your servers on Agency | Nothing | M |
+| 7 | Share Insights as a link, or embed it in Notion | CSV download | S |
+| 8 | Economy: server currency with a custom name and icon, earning, a shop | Nothing | L |
+
+## 1. Server stats
+
+A **Server stats** panel (on Insights, or its own page under Community): pick counters and
+Garrison keeps a locked voice channel per counter named like "Members: 372".
+
+- Counters: members, humans, bots, online, boosts, channels, roles, members with a role (the
+  owner picks the role, so "Staff: 8" is the Staff role's count).
+- Names are a template per counter with `{count}`, so it reads in the server's own words.
+- Garrison makes the channels in a category (voice channels nobody can join), or uses
+  channels the owner picks. Discord lets a channel be renamed twice in ten minutes, so the
+  bot updates every ten minutes, and only when a number changed.
+
+## 2. Regex moderation
+
+Patterns are run by Discord's own AutoMod, not by Garrison: Discord's engine can't be made
+to hang on a bad pattern, and it's what people asked for by name. Garrison keeps one AutoMod
+rule per server named for Garrison, with up to 10 patterns (Discord's limit, 260 characters
+each), allowed words, and who it skips.
+
+- Panel in Moderation, beside Blocked words: the patterns, a "test it" box that runs them on
+  a sample line in the browser (marked as an approximation of Discord's engine), and what
+  happens after: Discord blocks the message and Garrison records a case and applies the
+  automod action (nothing more, warn, time out), so the escalation ladder counts it.
+- Needs the AutoMod execution gateway intent (not privileged). Manage Server is already
+  granted.
+
+## 3. Verification questions
+
+Up to 5 questions (Discord's modal holds 5), each a short or long answer, with a description
+written with the same Markdown as cards. Pressing Verify opens them in Discord; the website
+verify page asks the same.
+
+- Answers go to a staff channel as a card, and are kept with the member's record for 30 days.
+- Two ways to finish: **instant** (answering is enough: the role is given at once) or
+  **reviewed** (staff press Approve or Deny on the card; Deny can kick).
+- The answers card is only ever posted to the staff channel; nothing members wrote is shown
+  publicly.
+
+## 4. Messages into threads and forums
+
+Where a message posts becomes one of: a channel, a thread (picked from the server's active
+threads, or a pasted link), or a **new forum post** in a forum channel (its title and tags).
+Plus **edit a posted message** by link: Garrison can only edit its own messages, so this is
+for messages Garrison posted. Richer embeds: an author icon, a timestamp, inline fields, and
+more than one embed per message.
+
+## 5. Invite tracker
+
+An **Invites** page under Community:
+
+- Every invite in the server with its uses and who joined with it; each can get a name, a
+  color, a description, a category ("Socials", "Partners", "Ads") and an auto-role given to
+  people who join with it.
+- **Add an invite made elsewhere** (a Disboard bump link, a social bio link) by pasting it:
+  Garrison checks it belongs to this server and tracks it like its own.
+- Joins per invite, and per category, over time, in Insights.
+
+## 6. Partnerships
+
+Built on the invite tracker: a **Partners** category whose invites carry the partner
+server's name, a contact, and a partnership note. A partners view lists each partner with
+the members they brought and how many stayed a week. On Agency, the view spans every server
+the plan covers.
+
+## 7. Share Insights
+
+A manager can turn on a **share link** for Insights: a long, random address that shows a
+read-only copy (no member names, only counts and charts), with the range and tabs. It can be
+embedded in other sites (Notion, a wiki) when the owner allows embedding, and the link can be
+replaced or turned off at any time. Nothing else on the dashboard is reachable from it.
+
+## 8. Economy
+
+A server currency with its own name and icon (an emoji):
+
+- **Earn**: per message (with a cooldown, like XP), a daily claim, time in voice, and grants
+  from staff. **Spend**: a shop of roles (given for good or for a time) and custom items staff
+  hand out by hand.
+- Balances, a leaderboard, and a history of every change; staff give and take with a reason,
+  recorded like a case. Members see their wallet on their member page and with /balance.
+- No gambling games and nothing that touches real money.
+
+## Proposed order
+
+1. Server stats (small, wanted, quick to show).
+2. Regex moderation.
+3. Verification questions.
+4. Messages into threads and forums.
+5. Invite tracker, then 6. Partnerships on top of it.
+7. Share Insights.
+8. Economy (the largest: its own design pass first).
