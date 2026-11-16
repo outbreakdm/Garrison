@@ -84,7 +84,7 @@ export default async function StarboardPage({ params }: { params: Promise<{ guil
         </div>
       ) : null}
 
-      <div className="page-split">
+      <div className={!posts.length ? "page-split page-split--setup" : "page-split"}>
         <div className="page-split__main">
           <section className="g-card queue" aria-labelledby="star-recent">
             <h2 className="card-title" id="star-recent">

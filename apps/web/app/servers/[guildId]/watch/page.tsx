@@ -155,7 +155,9 @@ export default async function WatchPage({
               Appeals <span className="count">{appeals.open.length}</span>
             </h2>
             <span className="appeal-link">
-              <span className="g-help mono">{appealUrl}</span>
+              <a className="appeal-link__open" href={appealUrl} target="_blank" rel="noreferrer">
+                Appeal page
+              </a>
               <CopyButton text={appealUrl} />
             </span>
           </div>

@@ -3297,3 +3297,47 @@ form[data-locked] .seg__opt:has(input:disabled) {
   content: "Never mind";
   font-size: 13px;
 }
+
+/* A list page with nothing in its list yet: the settings take the wide column, the empty
+   list sits beside them as a note of what will show up. */
+.page-split--setup > .page-split__side {
+  order: -1;
+}
+@media (min-width: 1100px) {
+  .page-split--setup {
+    grid-template-columns: minmax(0, 1fr) clamp(300px, 32%, 380px);
+  }
+}
+
+/* Minor: the theme button as an action; the appeal link short; intros give way on phones,
+   where the head's status already says what matters. */
+.theme-btn {
+  gap: 6px;
+}
+.theme-btn__icon {
+  flex: none;
+}
+.appeal-link__open {
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.appeal-link__open:hover {
+  text-decoration: underline;
+}
+@media (max-width: 520px) {
+  .theme-btn__text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+@media (max-width: 720px) {
+  .main .page-head:has(.head-state) > div:first-child > p {
+    display: none;
+  }
+}

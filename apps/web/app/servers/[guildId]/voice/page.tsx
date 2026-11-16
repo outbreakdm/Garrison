@@ -105,7 +105,7 @@ export default async function VoiceRoomsPage({
         </div>
       ) : null}
 
-      <div className="page-split">
+      <div className={!rooms.length ? "page-split page-split--setup" : "page-split"}>
         <div className="page-split__main">
           <section className="g-card table-card" aria-labelledby="open-rooms">
             <div className="table-card__head">

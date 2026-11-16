@@ -168,183 +168,190 @@ export default async function RallyPage({
         </div>
       ) : null}
 
-      <FormPanel
-        id="post-group"
-        title="Post a group"
-        hint="Goes up in Discord as you, with Join buttons."
-        open={query.post === "1"}
-      >
-        <form action={requestAction} className="card-col create-raid">
-          <input type="hidden" name="guildId" value={guild.id} />
-          <input type="hidden" name="page" value="rally" />
-          <input type="hidden" name="kind" value="create_lfg" />
-          <div className="field-row">
-            <label className="g-field">
-              <span>Title</span>
-              <input
-                className="g-input"
-                name="title"
-                maxLength={80}
-                required
-                placeholder="Ranked duos, Gold+"
-              />
-            </label>
-            <label className="g-field">
-              <span>Post in</span>
-              <select className="g-input" name="channelId" required defaultValue="">
-                <option value="" disabled>
-                  Pick a channel
-                </option>
-                {channels.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    #{c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <div className="field-row">
-            {templates.length ? (
+      {/* One way in for each: the list head's button opens its form here. */}
+      {query.post === "1" ? (
+        <FormPanel
+          id="post-group"
+          title="Post a group"
+          hint="Goes up in Discord as you, with Join buttons."
+          open={query.post === "1"}
+        >
+          <form action={requestAction} className="card-col create-raid">
+            <input type="hidden" name="guildId" value={guild.id} />
+            <input type="hidden" name="page" value="rally" />
+            <input type="hidden" name="kind" value="create_lfg" />
+            <div className="field-row">
               <label className="g-field">
-                <span>Template</span>
-                <select className="g-input" name="templateId" defaultValue="">
-                  <option value="">{defaultTemplate ? defaultTemplate.name : "None"}</option>
-                  {templates
-                    .filter((t) => t !== defaultTemplate)
-                    .map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.game ? `${t.name} · ${t.game}` : t.name}
-                      </option>
-                    ))}
+                <span>Title</span>
+                <input
+                  className="g-input"
+                  name="title"
+                  maxLength={80}
+                  required
+                  placeholder="Ranked duos, Gold+"
+                />
+              </label>
+              <label className="g-field">
+                <span>Post in</span>
+                <select className="g-input" name="channelId" required defaultValue="">
+                  <option value="" disabled>
+                    Pick a channel
+                  </option>
+                  {channels.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      #{c.name}
+                    </option>
+                  ))}
                 </select>
               </label>
-            ) : null}
-            <label className="g-field">
-              <span>Starts</span>
-              <select className="g-input" name="starts" defaultValue="now">
-                <option value="now">Now</option>
-                <option value="10m">In 10 minutes</option>
-                <option value="30m">In 30 minutes</option>
-                <option value="1h">In 1 hour</option>
-                <option value="2h">In 2 hours</option>
-                <option value="4h">In 4 hours</option>
-                <option value="8h">In 8 hours</option>
-                <option value="1d">Tomorrow, this time</option>
-              </select>
-            </label>
-          </div>
-          <div className="field-row">
+            </div>
+            <div className="field-row">
+              {templates.length ? (
+                <label className="g-field">
+                  <span>Template</span>
+                  <select className="g-input" name="templateId" defaultValue="">
+                    <option value="">{defaultTemplate ? defaultTemplate.name : "None"}</option>
+                    {templates
+                      .filter((t) => t !== defaultTemplate)
+                      .map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.game ? `${t.name} · ${t.game}` : t.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              ) : null}
+              <label className="g-field">
+                <span>Starts</span>
+                <select className="g-input" name="starts" defaultValue="now">
+                  <option value="now">Now</option>
+                  <option value="10m">In 10 minutes</option>
+                  <option value="30m">In 30 minutes</option>
+                  <option value="1h">In 1 hour</option>
+                  <option value="2h">In 2 hours</option>
+                  <option value="4h">In 4 hours</option>
+                  <option value="8h">In 8 hours</option>
+                  <option value="1d">Tomorrow, this time</option>
+                </select>
+              </label>
+            </div>
+            <div className="field-row">
+              <fieldset className="g-field checklist">
+                <legend className="checklist__legend">Roles and caps</legend>
+                <SlotRows defaultSlots={[]} />
+                <span className="g-help">
+                  Leave the role empty for a plain group, or to use the template's.
+                </span>
+              </fieldset>
+              <label className="g-field">
+                <span>Or just a size</span>
+                <input
+                  className="g-input"
+                  name="size"
+                  type="number"
+                  min={2}
+                  max={40}
+                  placeholder="5"
+                />
+              </label>
+            </div>
+            <div className="field-row">
+              <label className="g-field">
+                <span>Your role</span>
+                <input className="g-input" name="myRole" maxLength={40} placeholder="Tank" />
+                <span className="g-help">
+                  Only when the group has roles. Blank takes the first.
+                </span>
+              </label>
+              <label className="g-field">
+                <span>Note</span>
+                <input className="g-input" name="note" maxLength={120} placeholder="Mic required" />
+              </label>
+            </div>
+            <p className="g-help">
+              Garrison posts the group as you, with Join buttons. You can host one open group at a
+              time.
+            </p>
+            <button type="submit" className="g-btn g-btn--primary">
+              Post group
+            </button>
+          </form>
+        </FormPanel>
+      ) : null}
+      {query.create === "1" ? (
+        <FormPanel
+          id="create-raid"
+          title="Create raid"
+          hint={`A signup card with role caps and a bench, in ${timezone}.`}
+          open={query.create === "1"}
+        >
+          <form action={requestCreateRaid} className="card-col create-raid">
+            <input type="hidden" name="guildId" value={guild.id} />
+            <div className="field-row">
+              <label className="g-field">
+                <span>Title</span>
+                <input
+                  className="g-input"
+                  name="title"
+                  maxLength={80}
+                  required
+                  placeholder="Molten Core"
+                />
+              </label>
+              <label className="g-field">
+                <span>Post in</span>
+                <select className="g-input" name="channelId" required defaultValue="">
+                  <option value="" disabled>
+                    Pick a channel
+                  </option>
+                  {channels.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      #{c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="field-row">
+              <label className="g-field">
+                <span>Date</span>
+                <input className="g-input" name="date" type="date" required />
+              </label>
+              <label className="g-field">
+                <span>Time ({timezone})</span>
+                <input className="g-input" name="time" type="time" required />
+              </label>
+            </div>
             <fieldset className="g-field checklist">
               <legend className="checklist__legend">Roles and caps</legend>
-              <SlotRows defaultSlots={[]} />
-              <span className="g-help">
-                Leave the role empty for a plain group, or to use the template's.
-              </span>
+              <SlotRows
+                required
+                defaultSlots={[
+                  { name: "Tank", count: "2" },
+                  { name: "Healer", count: "4" },
+                  { name: "DPS", count: "14" },
+                ]}
+              />
+              <span className="g-help">Each role and how many of it the raid takes.</span>
             </fieldset>
             <label className="g-field">
-              <span>Or just a size</span>
-              <input
-                className="g-input"
-                name="size"
-                type="number"
-                min={2}
-                max={40}
-                placeholder="5"
-              />
-            </label>
-          </div>
-          <div className="field-row">
-            <label className="g-field">
-              <span>Your role</span>
-              <input className="g-input" name="myRole" maxLength={40} placeholder="Tank" />
-              <span className="g-help">Only when the group has roles. Blank takes the first.</span>
-            </label>
-            <label className="g-field">
               <span>Note</span>
-              <input className="g-input" name="note" maxLength={120} placeholder="Mic required" />
+              <input className="g-input" name="note" maxLength={200} placeholder="Requirements" />
             </label>
-          </div>
-          <p className="g-help">
-            Garrison posts the group as you, with Join buttons. You can host one open group at a
-            time.
-          </p>
-          <button type="submit" className="g-btn g-btn--primary">
-            Post group
-          </button>
-        </form>
-      </FormPanel>
-      <FormPanel
-        id="create-raid"
-        title="Create raid"
-        hint={`A signup card with role caps and a bench, in ${timezone}.`}
-        open={query.create === "1"}
-      >
-        <form action={requestCreateRaid} className="card-col create-raid">
-          <input type="hidden" name="guildId" value={guild.id} />
-          <div className="field-row">
-            <label className="g-field">
-              <span>Title</span>
-              <input
-                className="g-input"
-                name="title"
-                maxLength={80}
-                required
-                placeholder="Molten Core"
-              />
+            <label className="check">
+              <input type="checkbox" name="repeatWeekly" />
+              <span>Post it again every week</span>
             </label>
-            <label className="g-field">
-              <span>Post in</span>
-              <select className="g-input" name="channelId" required defaultValue="">
-                <option value="" disabled>
-                  Pick a channel
-                </option>
-                {channels.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    #{c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <div className="field-row">
-            <label className="g-field">
-              <span>Date</span>
-              <input className="g-input" name="date" type="date" required />
-            </label>
-            <label className="g-field">
-              <span>Time ({timezone})</span>
-              <input className="g-input" name="time" type="time" required />
-            </label>
-          </div>
-          <fieldset className="g-field checklist">
-            <legend className="checklist__legend">Roles and caps</legend>
-            <SlotRows
-              required
-              defaultSlots={[
-                { name: "Tank", count: "2" },
-                { name: "Healer", count: "4" },
-                { name: "DPS", count: "14" },
-              ]}
-            />
-            <span className="g-help">Each role and how many of it the raid takes.</span>
-          </fieldset>
-          <label className="g-field">
-            <span>Note</span>
-            <input className="g-input" name="note" maxLength={200} placeholder="Requirements" />
-          </label>
-          <label className="check">
-            <input type="checkbox" name="repeatWeekly" />
-            <span>Post it again every week</span>
-          </label>
-          <p className="g-help">
-            Garrison posts it as you, with a signup card, in the time zone set in Settings. You must
-            be able to post in that channel yourself.
-          </p>
-          <button type="submit" className="g-btn g-btn--primary">
-            Create raid
-          </button>
-        </form>
-      </FormPanel>
+            <p className="g-help">
+              Garrison posts it as you, with a signup card, in the time zone set in Settings. You
+              must be able to post in that channel yourself.
+            </p>
+            <button type="submit" className="g-btn g-btn--primary">
+              Create raid
+            </button>
+          </form>
+        </FormPanel>
+      ) : null}
       <div className="rally-board">
         <section aria-labelledby="open-groups" className="block">
           <ListHead

@@ -166,6 +166,85 @@ export default async function RanksPage({
               </EmptyState>
             )}
           </section>
+
+          <section className="g-card card-col" id="seasons" aria-labelledby="seasons-title">
+            <div className="card-head">
+              <h2 className="card-title" id="seasons-title">
+                Seasons
+              </h2>
+              <ProTag on={ent["ranks.seasons"]} />
+            </div>
+            <p className="g-help">
+              {seasons[0]
+                ? `Season ${seasons[0].number + 1}, since ${formatTime(seasons[0].endedAt)}.`
+                : "Season 1, since leveling began."}{" "}
+              Ending a season keeps its top 100, then puts everyone back to 0 XP. Reward roles stay.
+              This can't be undone.
+            </p>
+            {ent["ranks.seasons"] ? (
+              <details className="confirm">
+                <summary className="confirm__toggle g-btn g-btn--secondary g-btn--sm">
+                  End this season…
+                </summary>
+                <form action={requestAction} className="card-col">
+                  <input type="hidden" name="guildId" value={guild.id} />
+                  <input type="hidden" name="page" value="ranks" />
+                  <input type="hidden" name="kind" value="season_start" />
+                  <input type="hidden" name="confirm" value="yes" />
+                  <label className="g-field" htmlFor="season-name">
+                    <span>Name for the season that's ending</span>
+                    <input
+                      className="g-input"
+                      id="season-name"
+                      name="name"
+                      maxLength={SEASON_NAME_MAX}
+                      placeholder={`Season ${(seasons[0]?.number ?? 0) + 1}`}
+                    />
+                  </label>
+                  <button type="submit" className="g-btn g-btn--danger g-btn--sm">
+                    Yes, end it and reset everyone's XP
+                  </button>
+                </form>
+              </details>
+            ) : null}
+            {seasons.length ? (
+              <ul className="queue__list">
+                {seasons.map((s) => (
+                  <li key={s.id} className="season-row">
+                    <details>
+                      <summary className="gw-row">
+                        <span className="gw-row__main">
+                          <span className="ticket-row__topic">{s.name}</span>
+                          <span className="ticket-row__who">
+                            {s.startedAt ? `${formatTime(s.startedAt)} to ` : "Until "}
+                            {formatTime(s.endedAt)} · {s.members} members
+                            {s.endedByName ? ` · ended by ${s.endedByName}` : ""}
+                          </span>
+                        </span>
+                        <span className="ticket-row__who">
+                          {s.standings[0]
+                            ? `Top: ${s.standings[0].username || "a member"}`
+                            : "Nobody ranked"}
+                        </span>
+                      </summary>
+                      <ol className="season-board">
+                        {s.standings.slice(0, 10).map((p) => (
+                          <li key={p.userId}>
+                            <span>{p.username || `Member ${p.userId.slice(-4)}`}</span>
+                            <span className="mono muted">
+                              Lv {p.level} · {p.xp.toLocaleString("en-US")} XP
+                            </span>
+                          </li>
+                        ))}
+                      </ol>
+                    </details>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="feed__empty">No finished seasons yet.</p>
+            )}
+          </section>
         </div>
 
         <aside className="page-split__side" aria-label="Settings">
@@ -287,85 +366,6 @@ export default async function RanksPage({
               })}
             </div>
           </AutoSaveCard>
-
-          <section className="g-card card-col" id="seasons" aria-labelledby="seasons-title">
-            <div className="card-head">
-              <h2 className="card-title" id="seasons-title">
-                Seasons
-              </h2>
-              <ProTag on={ent["ranks.seasons"]} />
-            </div>
-            <p className="g-help">
-              {seasons[0]
-                ? `Season ${seasons[0].number + 1}, since ${formatTime(seasons[0].endedAt)}.`
-                : "Season 1, since leveling began."}{" "}
-              Ending a season keeps its top 100, then puts everyone back to 0 XP. Reward roles stay.
-              This can't be undone.
-            </p>
-            {ent["ranks.seasons"] ? (
-              <details className="confirm">
-                <summary className="confirm__toggle g-btn g-btn--secondary g-btn--sm">
-                  End this season…
-                </summary>
-                <form action={requestAction} className="card-col">
-                  <input type="hidden" name="guildId" value={guild.id} />
-                  <input type="hidden" name="page" value="ranks" />
-                  <input type="hidden" name="kind" value="season_start" />
-                  <input type="hidden" name="confirm" value="yes" />
-                  <label className="g-field" htmlFor="season-name">
-                    <span>Name for the season that's ending</span>
-                    <input
-                      className="g-input"
-                      id="season-name"
-                      name="name"
-                      maxLength={SEASON_NAME_MAX}
-                      placeholder={`Season ${(seasons[0]?.number ?? 0) + 1}`}
-                    />
-                  </label>
-                  <button type="submit" className="g-btn g-btn--danger g-btn--sm">
-                    Yes, end it and reset everyone's XP
-                  </button>
-                </form>
-              </details>
-            ) : null}
-            {seasons.length ? (
-              <ul className="queue__list">
-                {seasons.map((s) => (
-                  <li key={s.id} className="season-row">
-                    <details>
-                      <summary className="gw-row">
-                        <span className="gw-row__main">
-                          <span className="ticket-row__topic">{s.name}</span>
-                          <span className="ticket-row__who">
-                            {s.startedAt ? `${formatTime(s.startedAt)} to ` : "Until "}
-                            {formatTime(s.endedAt)} · {s.members} members
-                            {s.endedByName ? ` · ended by ${s.endedByName}` : ""}
-                          </span>
-                        </span>
-                        <span className="ticket-row__who">
-                          {s.standings[0]
-                            ? `Top: ${s.standings[0].username || "a member"}`
-                            : "Nobody ranked"}
-                        </span>
-                      </summary>
-                      <ol className="season-board">
-                        {s.standings.slice(0, 10).map((p) => (
-                          <li key={p.userId}>
-                            <span>{p.username || `Member ${p.userId.slice(-4)}`}</span>
-                            <span className="mono muted">
-                              Lv {p.level} · {p.xp.toLocaleString("en-US")} XP
-                            </span>
-                          </li>
-                        ))}
-                      </ol>
-                    </details>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="feed__empty">No finished seasons yet.</p>
-            )}
-          </section>
         </aside>
       </div>
 

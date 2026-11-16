@@ -101,7 +101,7 @@ export default async function SuggestionsPage({
       <SettingsNotice query={query} />
       <RequestsPanel guildId={guild.id} kinds={["suggestion_status"]} query={query} />
 
-      <div className="page-split">
+      <div className={!list.length ? "page-split page-split--setup" : "page-split"}>
         <div className="page-split__main">
           <ListHead
             filters={[

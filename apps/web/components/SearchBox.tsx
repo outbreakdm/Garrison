@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 /**
@@ -8,6 +9,10 @@ import { useEffect, useRef, useState } from "react";
  */
 export function SearchBox({ guildId, defaultValue }: { guildId: string; defaultValue?: string }) {
   const input = useRef<HTMLInputElement>(null);
+  // On the results page the box keeps the words that found them.
+  const params = useSearchParams();
+  const onResults = usePathname().endsWith("/search");
+  const q = onResults ? (params.get("q") ?? undefined) : defaultValue;
   // The hint names the shortcut for this keyboard: Ctrl K, or ⌘K on a Mac.
   const [hint, setHint] = useState("Ctrl K");
   useEffect(() => {
@@ -39,7 +44,8 @@ export function SearchBox({ guildId, defaultValue }: { guildId: string; defaultV
           maxLength={64}
           autoComplete="off"
           placeholder="Search settings, members, cases"
-          defaultValue={defaultValue}
+          defaultValue={q}
+          key={q ?? ""}
         />
         <span className="searchbox__hint" aria-hidden="true">
           {hint}

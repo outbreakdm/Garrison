@@ -1721,19 +1721,19 @@
   fill: transparent;
 }
 .chart__bar {
-  fill: var(--cobalt);
+  fill: color-mix(in srgb, var(--id, var(--accent)) 80%, var(--surface));
 }
 .chart__bar--down {
-  fill: var(--orchid);
+  fill: color-mix(in srgb, var(--text-muted) 55%, var(--surface));
 }
 .chart__col:hover .chart__hit {
   fill: color-mix(in srgb, var(--text) 6%, transparent);
 }
 .chart__col:hover .chart__bar {
-  fill: var(--cobalt-text);
+  fill: var(--id-text, var(--accent-strong));
 }
 .chart__col:hover .chart__bar--down {
-  fill: var(--orchid-text);
+  fill: var(--text-muted);
 }
 .chart__axis {
   display: flex;

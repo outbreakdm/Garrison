@@ -448,7 +448,7 @@ export default async function OverviewPage({
               {net7 > 0 ? "+" : ""}
               {num(net7)}
             </span>{" "}
-            joined less left, 7 d
+            net, joins minus leaves · 7 d
           </span>
         </div>
         <div className="ov-stat">
@@ -547,7 +547,11 @@ export default async function OverviewPage({
               {topChannels.map((c) => (
                 <li key={c.channelId}>
                   <span className="ov-top__name">
-                    #{names.get(c.channelId) ?? "deleted-channel"}
+                    {names.has(c.channelId) ? (
+                      `#${names.get(c.channelId)}`
+                    ) : (
+                      <span className="muted">A deleted channel</span>
+                    )}
                   </span>
                   <span className="ov-top__n">{num(c.messages)}</span>
                   <meter
