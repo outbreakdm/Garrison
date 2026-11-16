@@ -6,13 +6,16 @@ import {
   createOpsEvent,
   type DashboardAction,
   finishDashboardAction,
+  getAccessGrants,
   getGatehouseSettings,
   getLfgPost,
   getOpsEvent,
   getOpsTimezone,
   getQmBuildByVersion,
   getRoleMenuPost,
+  grantedLevel,
   listSignups,
+  MANAGER_REQUEST_KINDS,
   recordRoleMenuPost,
   saveHealthSnapshot,
   setOpsMessage,
@@ -121,12 +124,27 @@ export function plainOutcome(text: string) {
 /** Requests that only change the requester's own place in a group or raid. */
 const SELF_SERVICE = new Set(["lfg_join", "lfg_leave", "raid_signup", "raid_withdraw"]);
 
-async function requester(guild: Guild, userId: string): Promise<GuildMember | null> {
+/**
+ * May this member still make this request? The owner and anyone with Manage Server may make
+ * any. Someone a manager gave Editor access on the dashboard (by name, or through a role
+ * they have now) may make the rest, never one that acts on members or the server's
+ * structure (MANAGER_REQUEST_KINDS). Re-checked here: the dashboard's word isn't enough.
+ */
+async function requester(
+  ctx: BotContext,
+  guild: Guild,
+  userId: string,
+  kind: string,
+): Promise<GuildMember | null> {
   const member = await guild.members.fetch(userId).catch(() => null);
   if (!member) return null;
-  const allowed =
-    guild.ownerId === member.id || member.permissions.has(PermissionFlagsBits.ManageGuild);
-  return allowed ? member : null;
+  if (guild.ownerId === member.id || member.permissions.has(PermissionFlagsBits.ManageGuild))
+    return member;
+  if (MANAGER_REQUEST_KINDS.has(kind)) return null;
+  const grants = await getAccessGrants(ctx.db, guild.id).catch(() => []);
+  if (!grants.length) return null;
+  const roleIds = [...(member.roles?.cache?.keys() ?? [])];
+  return grantedLevel(grants, member.id, roleIds) === "editor" ? member : null;
 }
 
 async function doCreateRaid(ctx: BotContext, guild: Guild, member: GuildMember, raw: unknown) {
@@ -441,9 +459,14 @@ export async function runDashboardAction(
   // Joining and leaving groups and raids act only on the person asking: any member may.
   const member = SELF_SERVICE.has(action.kind)
     ? await guild.members.fetch(action.requestedById).catch(() => null)
-    : await requester(guild, action.requestedById);
+    : await requester(ctx, guild, action.requestedById, action.kind);
   if (!member && SELF_SERVICE.has(action.kind)) return fail("You're not in that server anymore.");
-  if (!member) return fail("You no longer have Manage Server in this server.");
+  if (!member)
+    return fail(
+      MANAGER_REQUEST_KINDS.has(action.kind)
+        ? "You no longer have Manage Server in this server."
+        : "You no longer have Manage Server or editor access in this server.",
+    );
   switch (action.kind) {
     case "create_raid":
       return doCreateRaid(ctx, guild, member, action.payload);

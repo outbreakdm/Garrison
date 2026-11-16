@@ -16,8 +16,14 @@ import { ChannelType, type Guild } from "discord.js";
  */
 export const QM_CHAT_ROUNDS = 3;
 
+/**
+ * The modules the assistant may read. Who else may use the dashboard (access) is never the
+ * assistant's business, and the bot can't read that table anyway.
+ */
+type ReadableModule = Exclude<SettingsModule, "access">;
+
 /** Where each settings module lives in the dashboard, and what it is, for the model. */
-export const MODULE_GUIDE: Record<SettingsModule, { page: string; about: string }> = {
+export const MODULE_GUIDE: Record<ReadableModule, { page: string; about: string }> = {
   watch: { page: "Moderation", about: "mod log channel, DMs to punished members, appeals" },
   escalation: { page: "Moderation", about: "warning ladder: what happens after N warnings" },
   automod: {
@@ -44,7 +50,9 @@ export const MODULE_GUIDE: Record<SettingsModule, { page: string; about: string 
   barracks: { page: "Game accounts", about: "roles from linked game accounts (ranks, classes)" },
 };
 
-const MODULES = Object.keys(EDITABLE_FIELDS) as SettingsModule[];
+const MODULES = (Object.keys(EDITABLE_FIELDS) as SettingsModule[]).filter(
+  (m): m is ReadableModule => m !== "access",
+);
 
 /** The tools the chat model may call. Fixed, so the prompt prefix stays the same. */
 export const READ_TOOLS: Anthropic.Beta.BetaTool[] = [
@@ -136,9 +144,9 @@ export function settingsReader(db: Db, guild: Guild, allowance: AiAllowance): Re
       }
       if (name === "module_settings") {
         const module = (input as { module?: unknown } | null)?.module;
-        if (typeof module !== "string" || !(module in EDITABLE_FIELDS))
+        if (typeof module !== "string" || !MODULES.includes(module as ReadableModule))
           return { text: `Unknown module. Use one of: ${MODULES.join(", ")}.`, error: true };
-        const m = module as SettingsModule;
+        const m = module as ReadableModule;
         const values = await readSettings(db, guild.id, m);
         return {
           text: cut({

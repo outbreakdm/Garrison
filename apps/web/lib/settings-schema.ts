@@ -210,6 +210,7 @@ export function pick(form: FormData, keys: readonly string[]) {
 
 /** Human labels for history entries. */
 export const FIELD_LABELS: Record<string, string> = {
+  "access.grants": "Dashboard access",
   logChannelId: "Log channel",
   dmMembers: "DM members",
   appealText: "Appeal text",

@@ -140,8 +140,9 @@ scrolling wall of server templates; pricing; FAQ; help.
    - *Server templates*: saved layouts as cards with their counts, "Save this server" as the
      dashed card. A gallery of ready-made templates with categories needs a catalogue of
      templates, which doesn't exist yet.
-   - *Settings access*: a new permission feature, not a redesign; proposed to the owner
-     before building (Viewer and Editor access for people or roles).
+   - *Settings access*: done after the owner's go-ahead. Dashboard access on Settings: a
+     person or a role as Viewer or Editor, with history and undo; enforced in lib/session for
+     every page and action and again in the bot for its requests (SECURITY.md, Dashboard).
 5. **Landing page.**
 
 Each step ships on its own, checked on desktop and phone.

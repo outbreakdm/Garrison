@@ -129,7 +129,7 @@ export default async function PlanPage({
   // Upgrade buttons, only once checkout is set up: monthly first, yearly beside it.
   const buy = (tier: "pro" | "agency") => (
     <>
-      <form action={checkoutAction} className="tier__buy">
+      <form action={checkoutAction} data-need="manager" className="tier__buy">
         <input type="hidden" name="guildId" value={guild.id} />
         <input type="hidden" name="tier" value={tier} />
         <button type="submit" name="interval" value="month" className="g-btn g-btn--primary">
@@ -146,7 +146,7 @@ export default async function PlanPage({
     </>
   );
   const manage = (forAgency: boolean) => (
-    <form action={portalAction}>
+    <form action={portalAction} data-need="manager">
       <input type="hidden" name="guildId" value={guild.id} />
       {forAgency ? <input type="hidden" name="for" value="agency" /> : null}
       <button type="submit" className="g-btn g-btn--secondary">
@@ -165,7 +165,7 @@ export default async function PlanPage({
   // An Agency owner manages seats right here, on the server they're about.
   const seatControl = plan ? (
     mySeat ? (
-      <form action={seatAction}>
+      <form action={seatAction} data-need="manager">
         <input type="hidden" name="guildId" value={guild.id} />
         <input type="hidden" name="op" value="release" />
         <button type="submit" className="g-btn g-btn--secondary">
@@ -180,7 +180,7 @@ export default async function PlanPage({
         <Link href="/account#agency">your account</Link>.
       </p>
     ) : (
-      <form action={seatAction}>
+      <form action={seatAction} data-need="manager">
         <input type="hidden" name="guildId" value={guild.id} />
         <input type="hidden" name="op" value="assign" />
         <input type="hidden" name="bundleId" value={plan.id} />
@@ -288,7 +288,7 @@ export default async function PlanPage({
                 </div>
                 <span className="pack__price">{formatPrice(pack.price)}</span>
                 {selling ? (
-                  <form action={buySuppliesAction}>
+                  <form action={buySuppliesAction} data-need="manager">
                     <input type="hidden" name="guildId" value={guild.id} />
                     <input type="hidden" name="pack" value={key} />
                     <button type="submit" className="g-btn g-btn--secondary">
@@ -382,7 +382,12 @@ export default async function PlanPage({
       </details>
 
       {staff ? (
-        <form action={setCompAction} className="g-card card-col" aria-labelledby="staff">
+        <form
+          action={setCompAction}
+          data-need="manager"
+          className="g-card card-col"
+          aria-labelledby="staff"
+        >
           <input type="hidden" name="guildId" value={guild.id} />
           <h2 className="card-title" id="staff">
             Staff <span className="g-badge g-badge--intel">Only you see this</span>

@@ -154,7 +154,7 @@ export default async function WatchPage({
                     <p className="appeal-row__body">{a.body}</p>
                     <span className="g-help">{ago(a.createdAt)}</span>
                   </div>
-                  <form action={decide} className="card-col">
+                  <form action={decide} className="card-col" data-need="manager">
                     <input type="hidden" name="guildId" value={guild.id} />
                     <input type="hidden" name="appealId" value={a.id} />
                     <label className="g-field" htmlFor={`resp-${a.id}`}>

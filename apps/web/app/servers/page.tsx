@@ -9,6 +9,7 @@ import { Topbar } from "@/components/Topbar";
 import { getDb } from "@/lib/db";
 import { env } from "@/lib/env";
 import { requireSession } from "@/lib/session";
+import { listSharedGuilds } from "@/lib/shared-servers";
 import { currentTheme } from "@/lib/theme";
 
 export const metadata: Metadata = { title: "Servers" };
@@ -53,7 +54,10 @@ export default async function ServersPage() {
   const installed = known.filter((g) => active.has(g.id));
   const available = known.filter((g) => !active.has(g.id));
   const clientId = env().DISCORD_CLIENT_ID;
-  const staff = await isStaff(db, session.userId);
+  const [staff, shared] = await Promise.all([
+    isStaff(db, session.userId),
+    listSharedGuilds(session),
+  ]);
 
   return (
     <>
@@ -62,8 +66,8 @@ export default async function ServersPage() {
         <div className="picker__head">
           <h1>Pick a server</h1>
           <p>
-            Servers where you have Manage Server. Open one to run it from here, or add Garrison to
-            one it isn't guarding yet.
+            Servers where you have Manage Server, and ones someone shared with you. Open one to run
+            it from here, or add Garrison to one it isn't guarding yet.
           </p>
           {staff ? (
             <p>
@@ -114,6 +118,35 @@ export default async function ServersPage() {
             </EmptyState>
           )}
         </section>
+
+        {shared.length ? (
+          <section className="block" aria-labelledby="shared-with-you">
+            <h2 className="block-title" id="shared-with-you">
+              Shared with you <span className="count">{shared.length}</span>
+            </h2>
+            <ul className="server-grid">
+              {shared.map((g) => (
+                <li key={g.id}>
+                  <Link href={`/servers/${g.id}`} className="server-tile" transitionTypes={["nav"]}>
+                    <span className="server-tile__top">
+                      <GuildIcon guild={{ id: g.id, name: g.name, icon: null }} />
+                      <span className="server-tile__id">
+                        <span className="server-tile__name">{g.name}</span>
+                        <span className="server-tile__state">
+                          {g.level === "editor" ? "You can change settings" : "You can view"}
+                        </span>
+                      </span>
+                    </span>
+                    <span className="server-tile__foot">
+                      Open dashboard
+                      <span className="cue" aria-hidden="true" />
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         {available.length ? (
           <section className="block" aria-labelledby="add-garrison">

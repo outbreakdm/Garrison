@@ -4,6 +4,7 @@ import {
   addMemberNote,
   applySettingsChange,
   checkAutomod,
+  type DashboardRole,
   decideAppeal,
   entitlements,
   getAppeal,
@@ -28,8 +29,8 @@ import { checkGuildAccess } from "@/lib/session";
  * form; everything is scoped to that server's ID.
  */
 
-async function access(form: FormData) {
-  const a = await checkGuildAccess(String(form.get("guildId") ?? ""));
+async function access(form: FormData, need: DashboardRole = "editor") {
+  const a = await checkGuildAccess(String(form.get("guildId") ?? ""), need);
   if (!a) redirect("/servers");
   return a;
 }
@@ -69,7 +70,8 @@ export async function removeNote(form: FormData) {
 
 /** Accept or deny an appeal, with a reply the member sees on the appeal page. */
 export async function decide(form: FormData) {
-  const { guild, session } = await access(form);
+  // Accepting can undo a case through the bot: a manager's call.
+  const { guild, session } = await access(form, "manager");
   const back = (o: { ok: string } | { error: string }) =>
     flashBack(`/servers/${guild.id}/watch`, o, "#appeals");
   const id = String(form.get("appealId") ?? "");

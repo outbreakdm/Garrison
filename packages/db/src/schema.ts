@@ -16,6 +16,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { AccessGrant } from "./access";
 import type { AlertFeed } from "./alerts";
 import type { ServerBackup } from "./backups";
 import type { CustomCard } from "./cards";
@@ -427,6 +428,11 @@ export const webSessions = pgTable(
       .$type<{ id: string; name: string; icon: string | null }[]>()
       .notNull()
       .default(sql`'[]'::jsonb`),
+    /**
+     * Every server the user was in at login, for listing servers someone gave them access to
+     * by role. Display only: access is re-checked live, membership included.
+     */
+    memberGuildIds: text("member_guild_ids").array().notNull().default(sql`'{}'::text[]`),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
@@ -460,6 +466,7 @@ export const settingsModule = pgEnum("settings_module", [
   "barracks",
   "voice",
   "suggestions",
+  "access",
 ]);
 
 /** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */
@@ -494,6 +501,28 @@ export const settingsChanges = pgTable(
 ).enableRLS();
 
 export type SettingsChange = typeof settingsChanges.$inferSelect;
+
+/**
+ * Who else may use a server's dashboard, and how (src/access.ts): one list per server,
+ * changed only through applySettingsChange so every grant is in Settings history.
+ */
+export const dashboardAccess = pgTable(
+  "dashboard_access",
+  {
+    guildId: text("guild_id")
+      .primaryKey()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    grants: jsonb("grants").$type<AccessGrant[]>().notNull().default(sql`'[]'::jsonb`),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      "access_grants_list",
+      sql`jsonb_typeof(${t.grants}) = 'array' AND jsonb_array_length(${t.grants}) <= 25`,
+    ),
+    index("dashboard_access_grants").using("gin", t.grants),
+  ],
+).enableRLS();
 export type SettingsModule = (typeof settingsModule.enumValues)[number];
 
 // ---------------------------------------------------------------------------

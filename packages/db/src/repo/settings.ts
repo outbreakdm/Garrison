@@ -4,6 +4,7 @@ import {
   alertSettings,
   automodSettings,
   barracksSettings,
+  dashboardAccess,
   type EscalationRule,
   escalationRules,
   gatehouseSettings,
@@ -62,6 +63,8 @@ export const EDITABLE_FIELDS = {
   roles: ["menus"],
   // Saved messages are checked with checkMessages before they get here.
   messages: ["messages"],
+  // Who else may use the dashboard; checked with checkAccessGrants before it gets here.
+  access: ["grants"],
   // Cards are checked with checkWelcome before they get here.
   welcome: [
     "joinEnabled",
@@ -242,6 +245,7 @@ const TABLES = {
   suggestions: suggestionSettings,
   automod: automodSettings,
   barracks: barracksSettings,
+  access: dashboardAccess,
 } as const;
 
 /** Modules whose settings row is created on first use, by the bot or the dashboard. */
@@ -260,6 +264,7 @@ const LAZY = new Set<SettingsModule>([
   "barracks",
   "voice",
   "suggestions",
+  "access",
 ]);
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -382,6 +387,12 @@ async function writeRow(tx: Tx, module: SettingsModule, guildId: string, values:
         .set(set as Partial<typeof messageSettings.$inferInsert>)
         .where(eq(messageSettings.guildId, guildId));
       return;
+    case "access":
+      await tx
+        .update(dashboardAccess)
+        .set(set as Partial<typeof dashboardAccess.$inferInsert>)
+        .where(eq(dashboardAccess.guildId, guildId));
+      return;
     case "welcome":
       await tx
         .update(welcomeSettings)
@@ -492,7 +503,7 @@ export async function applySettingsChange(db: Db, input: ApplyInput): Promise<Ap
 
 export type UndoResult =
   | { ok: true; change: SettingsChange }
-  | { ok: false; reason: "not_found" | "already_undone" | "conflict" | "is_undo" };
+  | { ok: false; reason: "not_found" | "already_undone" | "conflict" | "is_undo" | "forbidden" };
 
 /**
  * Undo a change, but only if every field still holds the value it set.
@@ -503,6 +514,8 @@ export async function undoSettingsChange(
   guildId: string,
   changeId: string,
   user: { userId: string; username: string },
+  /** Modules this person may not change, so may not undo either (access, for non-managers). */
+  forbid: readonly SettingsModule[] = [],
 ): Promise<UndoResult> {
   return db.transaction(async (tx) => {
     const [original] = await tx
@@ -511,6 +524,7 @@ export async function undoSettingsChange(
       .where(and(eq(settingsChanges.guildId, guildId), eq(settingsChanges.id, changeId)));
     if (!original) return { ok: false, reason: "not_found" };
     if (original.revertsChangeId) return { ok: false, reason: "is_undo" };
+    if (forbid.includes(original.module)) return { ok: false, reason: "forbidden" };
 
     const row = await lockRow(tx, original.module, guildId);
     if (!row) return { ok: false, reason: "not_found" };

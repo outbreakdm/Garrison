@@ -165,14 +165,21 @@ export const fetchMyGuilds = (token: string) =>
 
 // --- Live permission checks, with the bot token ------------------------------
 
-const accessReads = new Map<string, Shared<boolean>>();
+const accessReads = new Map<string, Shared<MemberNow | null>>();
+
+/** What Discord says about a member right now: whether they can manage, and their roles. */
+export interface MemberNow {
+  manage: boolean;
+  roleIds: string[];
+}
 
 /**
- * Can this user manage this server right now? Asked of Discord with the bot
- * token, not taken from the login snapshot, so losing the role locks them out
- * within READ_TTL_MS (30 s). Fails closed on any error.
+ * This user in this server, right now: asked of Discord with the bot token, not taken from
+ * the login snapshot, so losing Manage Server (or a role someone gave access to, or leaving)
+ * locks them out within READ_TTL_MS (30 s). Null when they aren't a member, and on any
+ * error: it fails closed.
  */
-export function canManageGuildNow(guildId: string, userId: string): Promise<boolean> {
+export function memberNow(guildId: string, userId: string): Promise<MemberNow | null> {
   return shared(accessReads, `${guildId}:${userId}`, async () => {
     try {
       const [guild, member] = await Promise.all([
@@ -186,9 +193,10 @@ export function canManageGuildNow(guildId: string, userId: string): Promise<bool
         everyoneRoleId: guild.id,
         roles: guild.roles.map((r) => ({ id: r.id, permissions: r.permissions ?? "0" })),
       };
-      return canManage(memberPermissions(snapshot, userId, member.roles));
+      const roleIds = Array.isArray(member.roles) ? member.roles.map(String) : [];
+      return { manage: canManage(memberPermissions(snapshot, userId, roleIds)), roleIds };
     } catch {
-      return false;
+      return null;
     }
   });
 }

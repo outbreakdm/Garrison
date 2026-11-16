@@ -33,7 +33,7 @@ import { checkGuildAccess } from "@/lib/session";
  */
 export async function setCompAction(form: FormData) {
   const guildId = String(form.get("guildId") ?? "");
-  const access = await checkGuildAccess(guildId);
+  const access = await checkGuildAccess(guildId, "manager");
   if (!access) redirect("/servers");
   const db = await getDb();
   const back = `/servers/${access.guild.id}/plan`;
@@ -51,7 +51,7 @@ export async function setCompAction(form: FormData) {
  */
 export async function seatAction(form: FormData) {
   const guildId = String(form.get("guildId") ?? "");
-  const access = await checkGuildAccess(guildId);
+  const access = await checkGuildAccess(guildId, "manager");
   if (!access) redirect("/servers");
   const back = `/servers/${access.guild.id}/plan`;
   const db = await getDb();
@@ -73,7 +73,7 @@ export async function seatAction(form: FormData) {
  */
 export async function checkoutAction(form: FormData) {
   const guildId = String(form.get("guildId") ?? "");
-  const access = await checkGuildAccess(guildId);
+  const access = await checkGuildAccess(guildId, "manager");
   if (!access) redirect("/servers");
   const back = `/servers/${access.guild.id}/plan`;
   const tier = String(form.get("tier") ?? "") as PaidTier;
@@ -123,7 +123,7 @@ export async function checkoutAction(form: FormData) {
  */
 export async function buySuppliesAction(form: FormData) {
   const guildId = String(form.get("guildId") ?? "");
-  const access = await checkGuildAccess(guildId);
+  const access = await checkGuildAccess(guildId, "manager");
   if (!access) redirect("/servers");
   const back = `/servers/${access.guild.id}/plan`;
   const pack = String(form.get("pack") ?? "") as SupplyPack;
@@ -171,7 +171,7 @@ export async function buySuppliesAction(form: FormData) {
  */
 export async function portalAction(form: FormData) {
   const guildId = String(form.get("guildId") ?? "");
-  const access = await checkGuildAccess(guildId);
+  const access = await checkGuildAccess(guildId, "manager");
   if (!access) redirect("/servers");
   const back = `/servers/${access.guild.id}/plan`;
   if (!billingReady()) redirect(back);

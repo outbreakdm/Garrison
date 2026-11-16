@@ -1,3 +1,4 @@
+export * from "./access";
 export * from "./ai-usage";
 export * from "./alerts";
 export * from "./automod";
@@ -15,6 +16,7 @@ export * from "./qm-settings";
 export * from "./rally";
 export * from "./rank-boosts";
 export * from "./rank-cards";
+export * from "./repo/access";
 export * from "./repo/actions";
 export * from "./repo/ai-usage";
 export * from "./repo/alerts";

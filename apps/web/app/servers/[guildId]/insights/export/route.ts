@@ -9,7 +9,7 @@ const WINDOWS = new Set([7, 30, 90, 365]);
 
 export async function GET(req: Request, { params }: { params: Promise<{ guildId: string }> }) {
   const { guildId } = await params;
-  const access = await checkGuildAccess(guildId);
+  const access = await checkGuildAccess(guildId, "viewer");
   if (!access) return new Response("Not found", { status: 404 });
   const db = await getDb();
   const ent = entitlements(await getGuildPlan(db, access.guild.id));

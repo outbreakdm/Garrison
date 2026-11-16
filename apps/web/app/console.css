@@ -2723,3 +2723,117 @@ a.pro-sheet__go:hover {
 .tpl-card--new .g-btn {
   align-self: flex-start;
 }
+
+/* --- Shared access: a line saying what you can do; the save mark only where you can save -- */
+.access-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 19px;
+}
+.autosave:has(form[data-locked]) .save-mark {
+  display: none;
+}
+form[data-locked] button[disabled] {
+  cursor: not-allowed;
+}
+/* Dashboard access on Settings: who, their level as a two-way switch, Remove; then add. */
+.access-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.access-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.access-row:first-child {
+  border-top: 0;
+}
+.access-row__who {
+  display: inline-flex;
+  flex: 1 1 220px;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-size: 14px;
+}
+.access-row__role {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--id, var(--accent)) 16%, var(--surface-raised));
+  color: var(--id-text, var(--accent-strong));
+  font-weight: 700;
+}
+.seg--inline {
+  display: inline-flex;
+  min-inline-size: auto;
+  margin: 0;
+}
+.seg__button {
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.seg__button:hover {
+  color: var(--text);
+}
+.seg__button[aria-pressed="true"] {
+  background: var(--surface-raised);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  color: var(--text);
+  cursor: default;
+}
+.access-add {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+.access-add__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2) var(--space-3);
+}
+.access-add__row .g-field {
+  flex: 1 1 220px;
+}
+.access-add__buttons {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+/* Locked for this person (shared access): controls rest, visibly. */
+form[data-locked] :is(input, select, textarea):disabled,
+form[data-locked] .switch:has(input:disabled),
+form[data-locked] .pick-card:has(input:disabled),
+form[data-locked] .seg__opt:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.6;
+}

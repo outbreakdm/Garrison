@@ -1,5 +1,6 @@
 import {
   entitlements,
+  getAccessGrants,
   getGuildPlan,
   getLedgerSettings,
   getOpsTimezone,
@@ -17,11 +18,13 @@ import { SettingsNotice } from "@/components/settings";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { formAction } from "@/lib/autosave";
 import { getDb } from "@/lib/db";
-import { botLook, listGuildRoles, listTextChannels } from "@/lib/discord";
+import { botLook, listGuildRoles, listTextChannels, searchMembers } from "@/lib/discord";
+import { readFlash } from "@/lib/flash";
 import { requireGuildAccess } from "@/lib/session";
 import { FIELD_LABELS, ladderText, templatesChangeText } from "@/lib/settings-schema";
 import { currentTheme } from "@/lib/theme";
 import { requestAction } from "../requests";
+import { AccessPanel } from "./AccessPanel";
 import { saveOps, undoChange } from "./actions";
 import { BotProfileForm } from "./BotProfileForm";
 
@@ -87,6 +90,15 @@ function describe(
           })
           .join(", ")
       : "none";
+  if (field === "grants")
+    return Array.isArray(value) && value.length
+      ? value
+          .map(
+            (g: { kind: string; name: string; level: string }) =>
+              `${g.kind === "role" ? "@" : ""}${g.name} (${g.level})`,
+          )
+          .join(", ")
+      : "nobody";
   if (field === "templates")
     return Array.isArray(value) && value.length
       ? value.map((t: { name?: string }) => t.name ?? "?").join(", ")
@@ -123,9 +135,19 @@ export default async function SettingsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { guildId } = await params;
-  const { guild, session } = await requireGuildAccess(guildId);
+  const { guild, session, role } = await requireGuildAccess(guildId);
   const query = await searchParams;
   const db = await getDb();
+  // Managers find people to give access to (a GET search, like Moderation's).
+  const accessQuery =
+    role === "manager" && typeof query.access_q === "string"
+      ? query.access_q.trim().slice(0, 32)
+      : "";
+  const [grants, found, flash] = await Promise.all([
+    getAccessGrants(db, guild.id),
+    accessQuery ? searchMembers(guild.id, accessQuery).catch(() => null) : Promise.resolve([]),
+    readFlash(),
+  ]);
   const [overview, timezone, ranks, ledger, history, channels, roles, theme, plan, look] =
     await Promise.all([
       getOverview(db, guild.id),
@@ -310,6 +332,25 @@ export default async function SettingsPage({
           </div>
         </nav>
       </div>
+
+      {flash?.ok ? (
+        <div className="notice notice--ok" role="status">
+          {flash.ok}
+        </div>
+      ) : null}
+      {flash?.error ? (
+        <div className="notice" role="alert">
+          {flash.error}
+        </div>
+      ) : null}
+      <AccessPanel
+        guildId={guild.id}
+        role={role}
+        grants={grants}
+        roles={roles}
+        query={accessQuery}
+        found={found}
+      />
 
       <RequestsPanel guildId={guild.id} kinds={["bot_profile"]} query={query} />
       <section className="g-card card-col" id="profile" aria-labelledby="profile-title">

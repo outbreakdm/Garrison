@@ -96,6 +96,11 @@ export async function GET(request: Request) {
       username: me.global_name || me.username,
       manageableGuildIds: manageableGuilds.map((g) => g.id),
       manageableGuilds,
+      // Every server they're in, for ones shared with them by role. Display only.
+      memberGuildIds: guilds
+        .map((g) => g.id)
+        .filter((id) => /^\d{17,20}$/.test(id))
+        .slice(0, 200),
       expiresAt: new Date(Date.now() + SESSION_TTL_MS),
     });
 

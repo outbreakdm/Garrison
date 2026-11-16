@@ -200,6 +200,9 @@ A label in muted 13px, the number at 26px semibold in tabular figures, then a li
 ### Page tabs
 For a page with views of one subject (Insights): text tabs on a hairline, the current one underlined in the section color, with the range as pills at the right of the same row. Each tab and range is a link, so a view has its own address.
 
+### Shared access
+Someone a manager gave access sees one line above the page: a Viewer or Editor badge and what they can do. What they can't do stays on the page, disabled and dimmed, with the reason on hover; searches and filters keep working. On Settings, Dashboard access lists each person or role with a Viewer / Editor switch and Remove, then adding a role or finding a person. The server list has "Shared with you", each tile saying what you can do there.
+
 ### Feed
 A list in the side column: one line per item, newest first, a hairline between, the time or count on the right in muted tabular figures. Empty, it says in a sentence what will show up.
 

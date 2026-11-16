@@ -1,4 +1,5 @@
 import {
+  applySettingsChange,
   createLfgPost,
   createQmPlan,
   getGatehouseSettings,
@@ -28,6 +29,9 @@ const ADMIN2 = "980000000000000012";
 const OWNER = "980000000000000013";
 /** Has Manage Server and nothing else. */
 const MANAGER_ONLY = "980000000000000014";
+/** No Manage Server; holds the role a manager gave editor access on the dashboard. */
+const EDITOR = "980000000000000015";
+const EDITORS_ROLE = "980000000000000016";
 
 type Sent = { channel: string; body: Record<string, unknown> };
 const sent: Sent[] = [];
@@ -61,6 +65,11 @@ const members: Record<string, { id: string; permissions: { has: (p?: unknown) =>
     id: MANAGER_ONLY,
     permissions: { has: (p) => p === PermissionFlagsBits.ManageGuild },
   },
+  [EDITOR]: {
+    id: EDITOR,
+    permissions: { has: () => false },
+    roles: { cache: new Collection([[EDITORS_ROLE, {}]]) },
+  } as never,
 };
 const guild = {
   id: G,
@@ -357,5 +366,40 @@ describe("dashboard actions, run by the bot", () => {
     expect(plainOutcome("<@123456789012345678> isn't here; <@&5> and <#6>")).toBe(
       "that member isn't here; a role and a channel",
     );
+  });
+});
+
+// Last: it adds raids of its own, and the tests above read the first upcoming one.
+describe("dashboard actions from someone with editor access", () => {
+  it("runs an editor's requests, never one that acts on members or the server", async () => {
+    await as("garrison_web");
+    const granted = await applySettingsChange(ctx.db, {
+      guildId: G,
+      module: "access",
+      patch: { grants: [{ kind: "role", id: EDITORS_ROLE, level: "editor", name: "Editors" }] },
+      userId: OWNER,
+      username: "owner",
+    });
+    expect(granted).toMatchObject({ ok: true });
+    await as("garrison_bot");
+    expect(await run(EDITOR, raid(CH, "Editor raid"))).toMatchObject({ status: "done" });
+    const locked = await run(EDITOR, {
+      kind: "lockdown_start",
+      payload: { durationMinutes: 0, pauseInvites: false, reason: null },
+    });
+    expect(locked).toMatchObject({
+      status: "failed",
+      message: expect.stringMatching(/Manage Server/),
+    });
+    await as("garrison_web");
+    await applySettingsChange(ctx.db, {
+      guildId: G,
+      module: "access",
+      patch: { grants: [] },
+      userId: OWNER,
+      username: "owner",
+    });
+    await as("garrison_bot");
+    expect(await run(EDITOR, raid(CH, "No longer"))).toMatchObject({ status: "failed" });
   });
 });

@@ -24,6 +24,7 @@ import {
   getTicketConfig,
   isPanelPaused,
   isPaused,
+  MANAGER_REQUEST_KINDS,
   QM_PLAN_TTL_MS,
   type QueueInput,
   queueDashboardAction,
@@ -546,6 +547,10 @@ export async function requestAction(form: FormData) {
   const asked = field(form, "page");
   const page = PAGES.has(asked) || MEMBER_PAGE.test(asked) || TICKET_PAGE.test(asked) ? asked : "";
   const base = `/servers/${guild.id}${page ? `/${page}` : ""}`;
+  // Acting on members or the server's structure through the bot is a manager's call: the bot
+  // holds powers an editor may not have in Discord.
+  if (MANAGER_REQUEST_KINDS.has(field(form, "kind")) && access.role !== "manager")
+    redirect(`${base}?${new URLSearchParams({ error: "manager_only" })}#requests`);
   const built = await build(form, guild.id, session.userId);
   if (!built.ok) redirect(`${base}?${new URLSearchParams({ error: built.error })}#requests`);
   const result = await queueDashboardAction(

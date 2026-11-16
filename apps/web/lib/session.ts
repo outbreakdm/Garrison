@@ -1,11 +1,19 @@
 import "server-only";
-import { getActiveGuild, getWebSession, touchWebSession } from "@garrison/db";
+import {
+  atLeast,
+  type DashboardRole,
+  getAccessGrants,
+  getActiveGuild,
+  getWebSession,
+  grantedLevel,
+  touchWebSession,
+} from "@garrison/db";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { after } from "next/server";
 import { cache } from "react";
 import { getDb } from "./db";
-import { canManageGuildNow } from "./discord";
+import { memberNow } from "./discord";
 import { isProduction } from "./env";
 import { hashToken, isSnowflake } from "./security";
 
@@ -44,12 +52,27 @@ export async function requireSession(next = "/servers") {
 }
 
 /**
- * Can the current session manage this server right now? Checks the session,
- * the ID's shape, that Garrison is in the server, and the user's live
- * permissions there. Returns null on any failure. Server Actions call this
- * directly: they are public POST endpoints, so page checks don't cover them.
+ * What this user may do on this server's dashboard right now: "manager" with Manage Server
+ * (or as owner), else the level a manager gave them or one of their roles (viewer or
+ * editor), else null. Asked of Discord live, membership included; fails closed.
  */
-export const checkGuildAccess = cache(async (guildId: string) => {
+export const dashboardRole = cache(
+  async (guildId: string, userId: string): Promise<DashboardRole | null> => {
+    const member = await memberNow(guildId, userId);
+    if (!member) return null;
+    if (member.manage) return "manager";
+    return grantedLevel(await getAccessGrants(await getDb(), guildId), userId, member.roleIds);
+  },
+);
+
+/**
+ * May the current session do `need` on this server right now? Checks the session, the ID's
+ * shape, that Garrison is in the server, and the user's live role there. Returns null on any
+ * failure. Server Actions call this directly: they are public POST endpoints, so page checks
+ * don't cover them. The default is "editor": a change needs at least an editor, so an action
+ * that forgets to say what it needs is still closed to viewers.
+ */
+export const checkGuildAccess = cache(async (guildId: string, need: DashboardRole = "editor") => {
   if (typeof guildId !== "string" || !isSnowflake(guildId)) return null;
   // Independent reads, so neither waits for the other.
   const [session, guild] = await Promise.all([
@@ -57,17 +80,19 @@ export const checkGuildAccess = cache(async (guildId: string) => {
     getDb().then((db) => getActiveGuild(db, guildId)),
   ]);
   if (!session || !guild) return null;
-  if (!(await canManageGuildNow(guildId, session.userId))) return null;
-  return { session, guild };
+  const role = await dashboardRole(guildId, session.userId);
+  if (!role || !atLeast(role, need)) return null;
+  return { session, guild, role };
 });
 
 /**
- * The gate for every server page. Signed-out users go to login; everything
- * else that fails is a 404, so the dashboard never confirms which servers exist.
+ * The gate for every server page: anyone with access, viewers included. Signed-out users go
+ * to login; everything else that fails is a 404, so the dashboard never confirms which
+ * servers exist.
  */
 export const requireGuildAccess = cache(async (guildId: string) => {
   await requireSession(`/servers/${isSnowflake(guildId) ? guildId : ""}`);
-  const access = await checkGuildAccess(guildId);
+  const access = await checkGuildAccess(guildId, "viewer");
   if (!access) notFound();
   return access;
 });

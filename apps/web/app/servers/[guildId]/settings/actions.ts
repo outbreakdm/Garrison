@@ -251,14 +251,18 @@ export async function saveLadder(form: FormData): Promise<AutoResult> {
 }
 
 export async function undoChange(form: FormData): Promise<AutoResult> {
-  const { session, guild } = await authorize(form);
+  const { session, guild, role } = await authorize(form);
   const changeId = String(form.get("changeId") ?? "");
   if (!/^[0-9a-f-]{36}$/.test(changeId) || !isSnowflake(guild.id))
     return failed(form, guild.id, PLACES.history, "not_found");
-  const result = await undoSettingsChange(await getDb(), guild.id, changeId, {
-    userId: session.userId,
-    username: session.username,
-  });
+  // Who has access is a manager's to change, so a manager's to undo too.
+  const result = await undoSettingsChange(
+    await getDb(),
+    guild.id,
+    changeId,
+    { userId: session.userId, username: session.username },
+    role === "manager" ? [] : ["access"],
+  );
   if (!result.ok) return failed(form, guild.id, PLACES.history, result.reason);
   return saved(form, guild.id, PLACES.history, "undo");
 }

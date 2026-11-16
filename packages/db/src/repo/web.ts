@@ -20,6 +20,8 @@ export interface CreateSessionInput {
   username: string;
   manageableGuildIds: string[];
   manageableGuilds?: { id: string; name: string; icon: string | null }[];
+  /** Every server they were in at login, for servers shared with them by role. */
+  memberGuildIds?: string[];
   expiresAt: Date;
 }
 

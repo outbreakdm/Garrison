@@ -9,6 +9,8 @@ const ERRORS: Record<string, string> = {
   not_found: "That has changed since the page loaded. Refresh and try again.",
   channel: "Pick a text channel from this server.",
   owner_only: "Only the server owner can change anti-nuke.",
+  manager_only:
+    "That acts on members or the server itself, so it needs Manage Server in Discord. Ask someone who has it.",
   owner_only_restore: "Only the server owner can restore a backup.",
   season_pro: "Seasons are part of Garrison Pro. Nothing was queued.",
   template_pro: "Server templates are part of Garrison Pro. Nothing was queued.",

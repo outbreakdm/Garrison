@@ -7,6 +7,11 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
+- **Redesign v2 (2026-11-16):** steps 1 to 4 and Settings access are committed, not deployed.
+  **Before deploying, apply migration `0064_dashboard_access`** in production (the access list,
+  the bot's read grant, `web_sessions.member_guild_ids`): the dashboard and the bot both read
+  it. Sessions from before it list only servers shared by name until their next sign-in. Next:
+  step 5, the landing page.
 - **Now:** Phases 1 and 3 to 11, the depth backlog and the Quartermaster cost controls are
   **deployed** (2026-11-12, run 43331916135). Migrations through `0050_plan_bundles` are applied
   in production and recorded in `drizzle.__drizzle_migrations` (0021 and 0022 had been
@@ -975,3 +980,13 @@ Decided (2026-11-12, owner):
   Discord preview, Insights moderation and safety tabs, a ready-made template gallery.
   Next: Settings access (Viewer / Editor for people or roles), waiting on the owner's
   go-ahead, then step 5 (landing page).
+- 2026-11-16: Settings access built (redesign v2 step 4's last piece). Managers give a person or
+  a role Viewer (every page, changes nothing) or Editor (settings and posting) on Settings;
+  grants are a settings module (`access`, migration 0064) with history and undo, and only a
+  manager can undo one. `checkGuildAccess` takes the level each action needs (editor by
+  default); requests that act on members or the server need a manager on the dashboard and in
+  the bot, which now accepts editors for the rest. Shared servers show under "Shared with
+  you" and in the switcher; viewers and editors see a note and what they can't do disabled.
+  Tests: access rules, the table's grants, undo refusal, the bot running an editor's raid and
+  refusing their lockdown. Checked locally as a manager, a viewer (by role) and an editor (by
+  name), including forged posts. Not deployed.

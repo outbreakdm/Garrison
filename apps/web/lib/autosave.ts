@@ -45,6 +45,7 @@ export const ERRORS: Record<string, string> = {
   already_undone: "That change was already undone.",
   is_undo: "That's an undo. Change the setting again instead.",
   conflict: "Someone changed these settings since. Undo the newer change first.",
+  forbidden: "Only someone with Manage Server can undo a change to who has access.",
 };
 
 /**
