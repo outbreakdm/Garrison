@@ -17,6 +17,7 @@ export const SAVED: Record<string, string> = {
   antiraid: "Saved anti-raid settings.",
   verification: "Saved verification settings.",
   ops: "Saved the raid time zone.",
+  members: "Saved. Members see the pages that are on.",
   ranks: "Saved leveling settings.",
   ledger: "Saved log settings.",
   escalation: "Saved the escalation ladder. It applies from the next warning.",

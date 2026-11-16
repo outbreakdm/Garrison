@@ -56,6 +56,7 @@ const PLACES = {
   ledger: { page: "ledger", panel: "settings" },
   ops: { page: "settings", panel: "server" },
   history: { page: "settings", panel: "history" },
+  members: { page: "settings", panel: "members" },
 } as const satisfies Record<string, Place>;
 
 /**
@@ -261,8 +262,24 @@ export async function undoChange(form: FormData): Promise<AutoResult> {
     guild.id,
     changeId,
     { userId: session.userId, username: session.username },
-    role === "manager" ? [] : ["access"],
+    role === "manager" ? [] : ["access", "members"],
   );
   if (!result.ok) return failed(form, guild.id, PLACES.history, result.reason);
   return saved(form, guild.id, PLACES.history, "undo");
+}
+
+/**
+ * Which member pages show (docs/MEMBER_PAGES.md). A manager's call, like who has access: it
+ * decides what members see about themselves, their own cases included.
+ */
+export async function saveMemberPages(form: FormData): Promise<AutoResult> {
+  const guildId = String(form.get("guildId") ?? "");
+  const access = await checkGuildAccess(guildId, "manager");
+  if (!access) return failed(form, guildId, PLACES.members, "forbidden");
+  return save(
+    "members",
+    form,
+    { showYou: form.get("showYou") === "on", showRecord: form.get("showRecord") === "on" },
+    PLACES.members,
+  );
 }

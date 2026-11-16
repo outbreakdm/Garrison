@@ -7,7 +7,9 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **Member pages (2026-11-16):** proposed in `docs/MEMBER_PAGES.md`, waiting on the owner's picks.
+- **Member pages (2026-11-16):** first build done, not deployed (`docs/MEMBER_PAGES.md`). **Before
+  deploying, apply migration `0065_member_pages`** in production. Next pieces: Roles,
+  Suggestions, Giveaways.
 - **Latest deploy:** `2e2b93f` (run 43918628506, dashboard only): steps 6 to 8 of redesign v2,
   the critique fixes, colorize, animate and the landing GIFs.
 - **Redesign v2 (2026-11-16):** all five steps and Settings access are **deployed** (`3989146`,
@@ -1032,3 +1034,10 @@ Decided (2026-11-12, owner):
 - 2026-11-16: Deployed `2e2b93f` (run 43918628506, dashboard only; no bot change, no migration).
   Live: Watch it work and its GIFs on garrisonbot.com, served from the public site itself;
   /healthz and /status answer. Member pages proposed in docs/MEMBER_PAGES.md.
+- 2026-11-16: Member pages, first build (owner's picks: You and Your record). "Servers you're
+  in" on the server list opens a member's own space in each server (`/play/[guildId]`, tabs):
+  You (level, place, their rank card as /rank draws it with the details it asks for, the
+  leaderboard) and Your record (their own cases, who acted left out, the appeal link), beside
+  Groups and raids. Settings → Member pages (a manager's, with history and undo; migration
+  0065 `member_pages`, dashboard-only grants). Checked as a plain member and as the manager on
+  desktop and phone. Not deployed.

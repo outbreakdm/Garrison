@@ -1,11 +1,25 @@
 "use server";
 
-import { getActiveGuild, getLfgPost, getOpsEvent, queueDashboardAction } from "@garrison/db";
+import {
+  cleanRankDetails,
+  entitlements,
+  getActiveGuild,
+  getGuildPlan,
+  getLfgPost,
+  getOpsEvent,
+  getRanksSettings,
+  memberFields,
+  queueDashboardAction,
+  rankCardForPlan,
+  readRankCard,
+  saveRankDetails,
+} from "@garrison/db";
 import { redirect } from "next/navigation";
 import { wakeBot } from "@/lib/bot";
 import { getDb } from "@/lib/db";
 import { isGuildMember } from "@/lib/discord";
 import { flashBack } from "@/lib/flash";
+import { memberCheck } from "@/lib/member";
 import { isSnowflake } from "@/lib/security";
 import { getSession } from "@/lib/session";
 
@@ -62,4 +76,29 @@ export async function playRequest(form: FormData) {
   wakeBot();
   if (!queued.ok) return flashBack(path, { error: "That's a lot at once. Try again in a minute." });
   return flashBack(path, { ok: "Sent to Garrison. Refresh in a few seconds to see it." });
+}
+
+/**
+ * A member saves the details on their own rank card in this server (what /rankcard does).
+ * Only their own row (the session's user, never an ID from the form), only the fields the
+ * server's card asks for, each cut to the card's limit. Needs the You page on and Leveling on.
+ */
+export async function saveMemberCard(form: FormData) {
+  const guildId = String(form.get("guildId") ?? "");
+  const path = isSnowflake(guildId) ? `/play/${guildId}/you` : "/servers";
+  const ok = await memberCheck(guildId, "you");
+  if (!ok) return flashBack(path, { error: "Your card can't be changed here right now." });
+  const { session, guild, db } = ok;
+  const [settings, plan] = await Promise.all([
+    getRanksSettings(db, guild.id),
+    getGuildPlan(db, guild.id),
+  ]);
+  const fields = memberFields(
+    rankCardForPlan(readRankCard(settings.card), entitlements(plan)).fields,
+  );
+  if (!fields.length)
+    return flashBack(path, { error: "This server's card doesn't ask for details." });
+  const raw = Object.fromEntries(fields.map((f) => [f.id, form.get(`f_${f.id}`) ?? ""]));
+  await saveRankDetails(db, guild.id, session.userId, cleanRankDetails(fields, raw));
+  return flashBack(path, { ok: "Saved. /rank shows it on your card." });
 }

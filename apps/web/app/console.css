@@ -3446,3 +3446,146 @@ form[data-locked] .seg__opt:has(input:disabled) {
     transition-duration: 0s;
   }
 }
+
+/* --- Member space (/play): a member's own pages in a server --------------------------------
+   No rail: a header with the server, text tabs for its pages, then the page. Same panels,
+   same type; nothing here belongs to anyone but the member. */
+.member {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-6) 64px;
+}
+.member__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.member__mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface-raised));
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+.member__title {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.member__server {
+  overflow: hidden;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 24px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.member__sub {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.member__page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.member-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+.member-card__preview {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.member-board,
+.member-record {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.member-board__row,
+.member-record__row {
+  display: grid;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px var(--space-4);
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+}
+.member-board__row {
+  grid-template-columns: 28px minmax(0, 1fr) auto auto;
+}
+.member-board__row.is-me {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  font-weight: 650;
+}
+.member-board__n {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.member-board__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.member-board__lv,
+.member-board__xp {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.member-board__you {
+  padding: 10px var(--space-4) var(--space-4);
+}
+.member-record__row {
+  grid-template-columns: 56px auto minmax(0, 1fr) auto;
+}
+.member-record__why {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+}
+.member-record__row.is-undone .member-record__why {
+  color: var(--text-muted);
+}
+.member-record__when {
+  font-size: 13px;
+}
+@media (max-width: 860px) {
+  .member-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 720px) {
+  .member {
+    padding: var(--space-4) var(--space-4) var(--space-12);
+  }
+  .member-board__row {
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+  }
+  .member-board__lv {
+    display: none;
+  }
+  .member-record__row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .member-record__n {
+    display: none;
+  }
+  .member-record__when {
+    grid-column: 1 / -1;
+  }
+}

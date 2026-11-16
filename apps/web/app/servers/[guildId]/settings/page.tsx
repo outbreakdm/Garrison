@@ -2,6 +2,7 @@ import {
   entitlements,
   getAccessGrants,
   getGuildPlan,
+  getMemberPages,
   getOpsTimezone,
   listSettingsChanges,
   type SettingsChange,
@@ -12,7 +13,7 @@ import Link from "next/link";
 import { AutoSaveCard } from "@/components/AutoSave";
 import { formatTime } from "@/components/format";
 import { RequestsPanel } from "@/components/RequestsPanel";
-import { SettingsNotice } from "@/components/settings";
+import { SettingsNotice, Switch } from "@/components/settings";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { formAction } from "@/lib/autosave";
 import { getDb } from "@/lib/db";
@@ -23,7 +24,7 @@ import { FIELD_LABELS, ladderText, templatesChangeText } from "@/lib/settings-sc
 import { currentTheme } from "@/lib/theme";
 import { requestAction } from "../requests";
 import { AccessPanel } from "./AccessPanel";
-import { saveOps, undoChange } from "./actions";
+import { saveMemberPages, saveOps, undoChange } from "./actions";
 import { BotProfileForm } from "./BotProfileForm";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -160,10 +161,11 @@ export default async function SettingsPage({
     role === "manager" && typeof query.access_q === "string"
       ? query.access_q.trim().slice(0, 32)
       : "";
-  const [grants, found, flash] = await Promise.all([
+  const [grants, found, flash, memberPages] = await Promise.all([
     getAccessGrants(db, guild.id),
     accessQuery ? searchMembers(guild.id, accessQuery).catch(() => null) : Promise.resolve([]),
     readFlash(),
+    getMemberPages(db, guild.id),
   ]);
   const [timezone, history, channels, roles, theme, plan, look] = await Promise.all([
     getOpsTimezone(db, guild.id),
@@ -294,6 +296,35 @@ export default async function SettingsPage({
         query={accessQuery}
         found={found}
       />
+
+      <AutoSaveCard
+        id="members"
+        title="Member pages"
+        action={saveMemberPages}
+        undo={undoChange}
+        guildId={guild.id}
+        stamp={`${memberPages.showYou}-${memberPages.showRecord}`}
+        saveLabel="Save member pages"
+        need="manager"
+      >
+        <p className="g-help">
+          Everyone in the server can sign in and see their own space here: groups and raids, and the
+          pages below that are on. They only ever see and change themselves.{" "}
+          <a href={`/play/${guild.id}/you`}>See it as a member</a>.
+        </p>
+        <Switch
+          name="showYou"
+          defaultChecked={memberPages.showYou}
+          label="You: their level, rank card details and the leaderboard"
+          help="Shows while Leveling is on. Their card details are the same ones /rankcard fills in."
+        />
+        <Switch
+          name="showRecord"
+          defaultChecked={memberPages.showRecord}
+          label="Your record: their own warnings, timeouts, kicks and bans"
+          help="Each member sees only their own cases, never who acted, with your appeal page if it's on."
+        />
+      </AutoSaveCard>
 
       <RequestsPanel guildId={guild.id} kinds={["bot_profile"]} query={query} />
       <section className="g-card card-col" id="profile" aria-labelledby="profile-title">

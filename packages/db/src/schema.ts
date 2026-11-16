@@ -467,6 +467,7 @@ export const settingsModule = pgEnum("settings_module", [
   "voice",
   "suggestions",
   "access",
+  "members",
 ]);
 
 /** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */
@@ -523,6 +524,20 @@ export const dashboardAccess = pgTable(
     index("dashboard_access_grants").using("gin", t.grants),
   ],
 ).enableRLS();
+
+/**
+ * Which member pages a server shows (docs/MEMBER_PAGES.md): a member's own level and rank
+ * card ("You", on by default) and their own cases ("Your record", off until an owner turns it
+ * on). Only the dashboard reads or writes it, through Settings history.
+ */
+export const memberPages = pgTable("member_pages", {
+  guildId: text("guild_id")
+    .primaryKey()
+    .references(() => guilds.id, { onDelete: "cascade" }),
+  showYou: boolean("show_you").notNull().default(true),
+  showRecord: boolean("show_record").notNull().default(false),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
 export type SettingsModule = (typeof settingsModule.enumValues)[number];
 
 // ---------------------------------------------------------------------------

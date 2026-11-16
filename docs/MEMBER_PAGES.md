@@ -1,7 +1,10 @@
 # Member pages: what a member can do on the dashboard
 
-Proposed 2026-11-16 (phase 4 of `docs/DASHBOARD_FIRST.md`). Status: waiting on the owner's
-picks below. Nothing here is built yet except the player page (`/play/[guildId]`).
+Proposed 2026-11-16 (phase 4 of `docs/DASHBOARD_FIRST.md`). Owner's picks (2026-11-16): first
+build **You** and **Your record**; on by default with owner switches (Your record off until
+turned on); members change only their card's details. **Built** (not deployed): Servers you're
+in, the member space's tabs, You, Your record, and Settings → Member pages. Roles, Suggestions
+and Giveaways are still to come.
 
 ## Today
 

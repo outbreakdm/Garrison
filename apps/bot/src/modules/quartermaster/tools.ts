@@ -17,10 +17,10 @@ import { ChannelType, type Guild } from "discord.js";
 export const QM_CHAT_ROUNDS = 3;
 
 /**
- * The modules the assistant may read. Who else may use the dashboard (access) is never the
- * assistant's business, and the bot can't read that table anyway.
+ * The modules the assistant may read. Who else may use the dashboard (access) and which member
+ * pages show (members) are never the assistant's business, and the bot can't read either table.
  */
-type ReadableModule = Exclude<SettingsModule, "access">;
+type ReadableModule = Exclude<SettingsModule, "access" | "members">;
 
 /** Where each settings module lives in the dashboard, and what it is, for the model. */
 export const MODULE_GUIDE: Record<ReadableModule, { page: string; about: string }> = {
@@ -51,7 +51,7 @@ export const MODULE_GUIDE: Record<ReadableModule, { page: string; about: string 
 };
 
 const MODULES = (Object.keys(EDITABLE_FIELDS) as SettingsModule[]).filter(
-  (m): m is ReadableModule => m !== "access",
+  (m): m is ReadableModule => m !== "access" && m !== "members",
 );
 
 /** The tools the chat model may call. Fixed, so the prompt prefix stays the same. */

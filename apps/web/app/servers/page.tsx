@@ -76,11 +76,15 @@ export default async function ServersPage() {
   const installed = known.filter((g) => active.has(g.id));
   const available = known.filter((g) => !active.has(g.id));
   const clientId = env().DISCORD_CLIENT_ID;
-  const [staff, shared, jar] = await Promise.all([
+  const [staff, shared, jar, joined] = await Promise.all([
     isStaff(db, session.userId),
     listSharedGuilds(session),
     cookies(),
+    // Every server with Garrison they're in (Discord's list at sign-in): their own space there.
+    listActiveGuilds(db, session.memberGuildIds),
   ]);
+  const elsewhere = new Set([...known.map((g) => g.id), ...shared.map((g) => g.id)]);
+  const memberOf = joined.filter((g) => !elsewhere.has(g.id));
   // "Build me a…" from the landing page: a server you can change hands it to its AI assistant.
   const idea = unpackPrompt(jar.get(BUILD_COOKIE)?.value);
   const canBuild = installed.length > 0 || shared.some((g) => g.level === "editor");
@@ -92,8 +96,8 @@ export default async function ServersPage() {
         <div className="picker__head">
           <h1>Pick a server</h1>
           <p>
-            Servers where you have Manage Server, and ones someone shared with you. Open one to run
-            it from here, or add Garrison to one it isn't guarding yet.
+            Servers you run, ones someone shared with you, and ones you're in: your level, rank
+            card, groups and raids there. Or add Garrison to one it isn't guarding yet.
           </p>
           {staff ? (
             <p>
@@ -119,56 +123,59 @@ export default async function ServersPage() {
           </div>
         ) : null}
 
-        <section className="block" aria-labelledby="with-garrison">
-          <h2 className="block-title" id="with-garrison">
-            With Garrison <span className="count">{installed.length}</span>
-          </h2>
-          {installed.length ? (
-            <ul className="server-grid">
-              {installed.map((g) => (
-                <li key={g.id}>
-                  {idea ? (
-                    <BuildTile guild={g} state="Garrison is in" />
-                  ) : (
-                    <Link
-                      href={`/servers/${g.id}`}
-                      className="server-tile"
-                      transitionTypes={["nav"]}
-                    >
-                      <span className="server-tile__top">
-                        <GuildIcon guild={g} />
-                        <span className="server-tile__id">
-                          {/* The name flies into the server's Overview title. */}
-                          <ViewTransition
-                            name={`guild-${g.id}`}
-                            share={{ nav: "morph", default: "none" }}
-                            default="none"
-                          >
-                            <span className="server-tile__name">{g.name}</span>
-                          </ViewTransition>
-                          <span className="server-tile__state">Garrison is in</span>
+        {/* Someone who runs no server but is in some skips straight to those. */}
+        {installed.length || !memberOf.length ? (
+          <section className="block" aria-labelledby="with-garrison">
+            <h2 className="block-title" id="with-garrison">
+              With Garrison <span className="count">{installed.length}</span>
+            </h2>
+            {installed.length ? (
+              <ul className="server-grid">
+                {installed.map((g) => (
+                  <li key={g.id}>
+                    {idea ? (
+                      <BuildTile guild={g} state="Garrison is in" />
+                    ) : (
+                      <Link
+                        href={`/servers/${g.id}`}
+                        className="server-tile"
+                        transitionTypes={["nav"]}
+                      >
+                        <span className="server-tile__top">
+                          <GuildIcon guild={g} />
+                          <span className="server-tile__id">
+                            {/* The name flies into the server's Overview title. */}
+                            <ViewTransition
+                              name={`guild-${g.id}`}
+                              share={{ nav: "morph", default: "none" }}
+                              default="none"
+                            >
+                              <span className="server-tile__name">{g.name}</span>
+                            </ViewTransition>
+                            <span className="server-tile__state">Garrison is in</span>
+                          </span>
                         </span>
-                      </span>
-                      <span className="server-tile__foot">
-                        Open dashboard
-                        <span className="cue" aria-hidden="true" />
-                      </span>
-                    </Link>
-                  )}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyState
-              mark="server"
-              title="Garrison isn't in any of your servers yet"
-              headingLevel={3}
-            >
-              Pick one under Add Garrison below. It asks only for the permissions it uses, never
-              Administrator.
-            </EmptyState>
-          )}
-        </section>
+                        <span className="server-tile__foot">
+                          Open dashboard
+                          <span className="cue" aria-hidden="true" />
+                        </span>
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <EmptyState
+                mark="server"
+                title="Garrison isn't in any of your servers yet"
+                headingLevel={3}
+              >
+                Pick one under Add Garrison below. It asks only for the permissions it uses, never
+                Administrator.
+              </EmptyState>
+            )}
+          </section>
+        ) : null}
 
         {shared.length ? (
           <section className="block" aria-labelledby="shared-with-you">
@@ -204,6 +211,33 @@ export default async function ServersPage() {
                       </span>
                     </Link>
                   )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {memberOf.length ? (
+          <section className="block" aria-labelledby="member-of">
+            <h2 className="block-title" id="member-of">
+              Servers you're in <span className="count">{memberOf.length}</span>
+            </h2>
+            <ul className="server-grid">
+              {memberOf.map((g) => (
+                <li key={g.id}>
+                  <Link href={`/play/${g.id}/you`} className="server-tile">
+                    <span className="server-tile__top">
+                      <GuildIcon guild={{ id: g.id, name: g.name, icon: null }} />
+                      <span className="server-tile__id">
+                        <span className="server-tile__name">{g.name}</span>
+                        <span className="server-tile__state">You're a member</span>
+                      </span>
+                    </span>
+                    <span className="server-tile__foot">
+                      Your space
+                      <span className="cue" aria-hidden="true" />
+                    </span>
+                  </Link>
                 </li>
               ))}
             </ul>

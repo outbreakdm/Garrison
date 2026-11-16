@@ -456,6 +456,13 @@
       "when": 1794794050537,
       "tag": "0064_dashboard_access",
       "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1794850429933,
+      "tag": "0065_member_pages",
+      "breakpoints": true
     }
   ]
 }

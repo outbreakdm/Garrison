@@ -9,6 +9,7 @@ import {
   escalationRules,
   gatehouseSettings,
   ledgerSettings,
+  memberPages,
   messageSettings,
   opsSettings,
   rallySettings,
@@ -65,6 +66,8 @@ export const EDITABLE_FIELDS = {
   messages: ["messages"],
   // Who else may use the dashboard; checked with checkAccessGrants before it gets here.
   access: ["grants"],
+  // Which member pages show (docs/MEMBER_PAGES.md).
+  members: ["showYou", "showRecord"],
   // Cards are checked with checkWelcome before they get here.
   welcome: [
     "joinEnabled",
@@ -246,6 +249,7 @@ const TABLES = {
   automod: automodSettings,
   barracks: barracksSettings,
   access: dashboardAccess,
+  members: memberPages,
 } as const;
 
 /** Modules whose settings row is created on first use, by the bot or the dashboard. */
@@ -265,6 +269,7 @@ const LAZY = new Set<SettingsModule>([
   "voice",
   "suggestions",
   "access",
+  "members",
 ]);
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -392,6 +397,12 @@ async function writeRow(tx: Tx, module: SettingsModule, guildId: string, values:
         .update(dashboardAccess)
         .set(set as Partial<typeof dashboardAccess.$inferInsert>)
         .where(eq(dashboardAccess.guildId, guildId));
+      return;
+    case "members":
+      await tx
+        .update(memberPages)
+        .set(set as Partial<typeof memberPages.$inferInsert>)
+        .where(eq(memberPages.guildId, guildId));
       return;
     case "welcome":
       await tx
@@ -566,4 +577,10 @@ export async function listSettingsChanges(db: Db, guildId: string, limit = 20) {
     .where(eq(settingsChanges.guildId, guildId))
     .orderBy(desc(settingsChanges.createdAt))
     .limit(limit);
+}
+
+/** Which member pages this server shows: "You" on and "Your record" off until set. */
+export async function getMemberPages(db: Db, guildId: string) {
+  const [row] = await db.select().from(memberPages).where(eq(memberPages.guildId, guildId));
+  return { showYou: row?.showYou ?? true, showRecord: row?.showRecord ?? false };
 }

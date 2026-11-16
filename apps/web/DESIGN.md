@@ -245,6 +245,9 @@ The four section colors say where something lives. The menu's icons carry their 
 ### Motion
 One authored moment: the state ripple. Flip a module and the change travels: the head pill eases to its new color, the menu's light flares once in the new state's color (pop and ring, `data-changed`, first paint never flares), the toast says what happened. Feedback around it is small and fast: the save mark's dot lands, a Needs you note arrives, folds open by height. Reduced motion keeps every color and state change and drops the movement.
 
+### Member space
+`/play/[guildId]`, for anyone in the server: no rail, a header with the server's initial tile and name ("Your space in this server"), text tabs for its pages (You, Groups and raids, Your record when on), then the page in the same panels. You puts the member's rank card, drawn as /rank draws it, beside the details it asks for and changes as they type; the leaderboard marks their own row. Your record lists their cases with the action badge, reason and length, undone ones marked, and the appeal link. The server list's "Servers you're in" opens it.
+
 ### Pro on Free
 In a card editor, every look option (author line, title link, accent, images, footer) folds into one "Your own look" group with a single Requires Pro tag; a card that already uses one opens it. On Pro the fields are open as usual. One tag per place, never one per field.
 

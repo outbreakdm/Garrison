@@ -65,6 +65,7 @@ export function AutoSaveCard({
   aside,
   footer,
   bare = false,
+  need,
   children,
 }: {
   id: string;
@@ -93,6 +94,8 @@ export function AutoSaveCard({
    * own and no title, just a toolbar with `aside` and the save mark above the fields.
    */
   bare?: boolean;
+  /** Only a manager may change it: the page dims it for anyone else (AccessGuard). */
+  need?: "manager";
   children: ReactNode;
 }) {
   const root = useRef<HTMLElement>(null);
@@ -296,6 +299,7 @@ export function AutoSaveCard({
       <form
         ref={form}
         id={`${id}-form`}
+        data-need={need}
         className="autosave__form"
         aria-label={title}
         action={action as unknown as (f: FormData) => void}
