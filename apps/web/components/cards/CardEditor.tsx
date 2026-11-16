@@ -189,8 +189,157 @@ export function CardEditor({
   const full = card.blocks.length >= CARD_LIMITS.blocks;
   const id = (name: string) => `${idPrefix}-${name}`;
   const mode = footerMode(card.footer);
+  const lookLocked = !plan.embed && !plan.accent && !plan.images && !plan.footer;
+  const usesLook = Boolean(
+    card.author || card.url || card.accent || card.thumbnail || card.image || card.footer !== null,
+  );
+  // Inside the folded group its one tag speaks for every field.
+  const tag = (on: boolean) => (lookLocked ? null : <ProTag on={on} />);
   let textCount = 0;
   let fieldCount = 0;
+
+  // Author line, title link, accent, images and footer: open on Pro, one folded group on Free.
+  const lookGroups = (
+    <>
+      <fieldset className="editor-group">
+        <legend className="g-label">Embed extras</legend>
+        <div className="field-row">
+          <label className="g-field" htmlFor={id("author")}>
+            <span className="field-label">Author line {tag(plan.embed)}</span>
+            <input
+              className="g-input"
+              id={id("author")}
+              placeholder="e.g. Iron Vanguard support"
+              value={card.author ?? ""}
+              maxLength={CARD_LIMITS.author}
+              onChange={(e) => set({ author: e.target.value || null })}
+            />
+            <span className="g-help">Small bold text above the title.</span>
+          </label>
+          <label className="g-field" htmlFor={id("url")}>
+            <span className="field-label">Title link {tag(plan.embed)}</span>
+            <input
+              className="g-input"
+              id={id("url")}
+              type="url"
+              inputMode="url"
+              placeholder="https://…"
+              value={card.url ?? ""}
+              maxLength={CARD_LIMITS.url}
+              onChange={(e) => set({ url: e.target.value.trim() || null })}
+            />
+            <span className="g-help">Clicking the title opens it.</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset className="editor-group">
+        <legend className="g-label">Look</legend>
+        <div className="field-row">
+          <div className="g-field">
+            <label htmlFor={id("accent")} className="field-label">
+              Accent color {tag(plan.accent)}
+            </label>
+            <div className="color-field">
+              <input
+                type="color"
+                className="color-field__swatch"
+                aria-label="Pick the accent color"
+                value={card.accent ?? STANDARD_ACCENT}
+                onChange={(e) =>
+                  set({ accent: e.target.value === STANDARD_ACCENT ? null : e.target.value })
+                }
+              />
+              <HexInput
+                id={id("accent")}
+                value={card.accent ?? STANDARD_ACCENT}
+                onChange={(v) => set({ accent: v === STANDARD_ACCENT ? null : v })}
+              />
+              {card.accent ? (
+                <button
+                  type="button"
+                  className="g-btn g-btn--ghost g-btn--sm"
+                  onClick={() => set({ accent: null })}
+                >
+                  Use volt
+                </button>
+              ) : null}
+            </div>
+          </div>
+          <label className="g-field" htmlFor={id("thumbnail")}>
+            <span className="field-label">Thumbnail {tag(plan.images)}</span>
+            <input
+              className="g-input"
+              id={id("thumbnail")}
+              type="url"
+              inputMode="url"
+              placeholder="https://…"
+              value={card.thumbnail ?? ""}
+              maxLength={CARD_LIMITS.url}
+              onChange={(e) => set({ thumbnail: e.target.value.trim() || null })}
+            />
+          </label>
+        </div>
+        <label className="g-field" htmlFor={id("image")}>
+          <span className="field-label">Banner image {tag(plan.images)}</span>
+          <input
+            className="g-input"
+            id={id("image")}
+            type="url"
+            inputMode="url"
+            placeholder="https://…"
+            value={card.image ?? ""}
+            maxLength={CARD_LIMITS.url}
+            onChange={(e) => set({ image: e.target.value.trim() || null })}
+          />
+          <span className="g-help">
+            Any https image link. Discord shows it under the text; images uploaded to Discord also
+            show in this preview.
+          </span>
+        </label>
+        <fieldset className="g-field footer-field">
+          <legend className="field-label">Footer {tag(plan.footer)}</legend>
+          <div className="segmented" role="radiogroup" aria-label="Footer">
+            {(
+              [
+                ["standard", "Garrison"],
+                ["custom", "Your own"],
+                ["none", "None"],
+              ] as const
+            ).map(([value, label]) => (
+              <label className="segmented__item" key={value}>
+                <input
+                  type="radio"
+                  name={id("footer-mode")}
+                  checked={mode === value}
+                  onChange={() =>
+                    set({
+                      footer:
+                        value === "standard"
+                          ? null
+                          : value === "none"
+                            ? ""
+                            : card.footer || "Your server's name",
+                    })
+                  }
+                />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
+          {mode === "custom" ? (
+            <input
+              className="g-input"
+              aria-label="Footer text"
+              value={card.footer ?? ""}
+              maxLength={CARD_LIMITS.footer}
+              onChange={(e) => set({ footer: e.target.value || "" })}
+            />
+          ) : null}
+        </fieldset>
+      </fieldset>
+    </>
+  );
 
   return (
     <>
@@ -330,153 +479,20 @@ export function CardEditor({
         </p>
       </fieldset>
 
-      <fieldset className="editor-group">
-        <legend className="g-label">Embed extras</legend>
-        <div className="field-row">
-          <label className="g-field" htmlFor={id("author")}>
-            <span className="field-label">
-              Author line <ProTag on={plan.embed} />
+      {lookLocked ? (
+        <details className="editor-group look-fold" open={usesLook}>
+          <summary className="look-fold__summary">
+            <span className="look-fold__title">Your own look</span>
+            <ProTag on={false} />
+            <span className="look-fold__what">
+              Author line, title link, accent color, images and footer
             </span>
-            <input
-              className="g-input"
-              id={id("author")}
-              placeholder="e.g. Iron Vanguard support"
-              value={card.author ?? ""}
-              maxLength={CARD_LIMITS.author}
-              onChange={(e) => set({ author: e.target.value || null })}
-            />
-            <span className="g-help">Small bold text above the title.</span>
-          </label>
-          <label className="g-field" htmlFor={id("url")}>
-            <span className="field-label">
-              Title link <ProTag on={plan.embed} />
-            </span>
-            <input
-              className="g-input"
-              id={id("url")}
-              type="url"
-              inputMode="url"
-              placeholder="https://…"
-              value={card.url ?? ""}
-              maxLength={CARD_LIMITS.url}
-              onChange={(e) => set({ url: e.target.value.trim() || null })}
-            />
-            <span className="g-help">Clicking the title opens it.</span>
-          </label>
-        </div>
-      </fieldset>
-
-      <fieldset className="editor-group">
-        <legend className="g-label">Look</legend>
-        <div className="field-row">
-          <div className="g-field">
-            <label htmlFor={id("accent")} className="field-label">
-              Accent color <ProTag on={plan.accent} />
-            </label>
-            <div className="color-field">
-              <input
-                type="color"
-                className="color-field__swatch"
-                aria-label="Pick the accent color"
-                value={card.accent ?? STANDARD_ACCENT}
-                onChange={(e) =>
-                  set({ accent: e.target.value === STANDARD_ACCENT ? null : e.target.value })
-                }
-              />
-              <HexInput
-                id={id("accent")}
-                value={card.accent ?? STANDARD_ACCENT}
-                onChange={(v) => set({ accent: v === STANDARD_ACCENT ? null : v })}
-              />
-              {card.accent ? (
-                <button
-                  type="button"
-                  className="g-btn g-btn--ghost g-btn--sm"
-                  onClick={() => set({ accent: null })}
-                >
-                  Use volt
-                </button>
-              ) : null}
-            </div>
-          </div>
-          <label className="g-field" htmlFor={id("thumbnail")}>
-            <span className="field-label">
-              Thumbnail <ProTag on={plan.images} />
-            </span>
-            <input
-              className="g-input"
-              id={id("thumbnail")}
-              type="url"
-              inputMode="url"
-              placeholder="https://…"
-              value={card.thumbnail ?? ""}
-              maxLength={CARD_LIMITS.url}
-              onChange={(e) => set({ thumbnail: e.target.value.trim() || null })}
-            />
-          </label>
-        </div>
-        <label className="g-field" htmlFor={id("image")}>
-          <span className="field-label">
-            Banner image <ProTag on={plan.images} />
-          </span>
-          <input
-            className="g-input"
-            id={id("image")}
-            type="url"
-            inputMode="url"
-            placeholder="https://…"
-            value={card.image ?? ""}
-            maxLength={CARD_LIMITS.url}
-            onChange={(e) => set({ image: e.target.value.trim() || null })}
-          />
-          <span className="g-help">
-            Any https image link. Discord shows it under the text; images uploaded to Discord also
-            show in this preview.
-          </span>
-        </label>
-        <fieldset className="g-field footer-field">
-          <legend className="field-label">
-            Footer <ProTag on={plan.footer} />
-          </legend>
-          <div className="segmented" role="radiogroup" aria-label="Footer">
-            {(
-              [
-                ["standard", "Garrison"],
-                ["custom", "Your own"],
-                ["none", "None"],
-              ] as const
-            ).map(([value, label]) => (
-              <label className="segmented__item" key={value}>
-                <input
-                  type="radio"
-                  name={id("footer-mode")}
-                  checked={mode === value}
-                  onChange={() =>
-                    set({
-                      footer:
-                        value === "standard"
-                          ? null
-                          : value === "none"
-                            ? ""
-                            : card.footer || "Your server's name",
-                    })
-                  }
-                />
-                <span>{label}</span>
-              </label>
-            ))}
-          </div>
-          {mode === "custom" ? (
-            <input
-              className="g-input"
-              aria-label="Footer text"
-              value={card.footer ?? ""}
-              maxLength={CARD_LIMITS.footer}
-              onChange={(e) => set({ footer: e.target.value || "" })}
-            />
-          ) : null}
-        </fieldset>
-      </fieldset>
+          </summary>
+          <div className="look-fold__body">{lookGroups}</div>
+        </details>
+      ) : (
+        lookGroups
+      )}
     </>
   );
 }

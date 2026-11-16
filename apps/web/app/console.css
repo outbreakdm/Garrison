@@ -3210,3 +3210,56 @@ form[data-locked] .seg__opt:has(input:disabled) {
 .ov-lock {
   align-self: flex-start;
 }
+
+/* --- Pro on Free: one folded group per card editor, one tag ------------------------------ */
+.look-fold {
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+.look-fold__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  list-style: none;
+}
+.look-fold__summary::-webkit-details-marker {
+  display: none;
+}
+.look-fold__summary::after {
+  content: "";
+  order: 2;
+  width: 7px;
+  height: 7px;
+  margin-left: auto;
+  border-right: 1.5px solid var(--text-muted);
+  border-bottom: 1.5px solid var(--text-muted);
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 0.18s var(--ease-out);
+}
+.look-fold[open] > .look-fold__summary::after {
+  transform: rotate(-135deg) translateY(-2px);
+}
+.look-fold__title {
+  font-size: 13.5px;
+  font-weight: 650;
+}
+.look-fold__what {
+  order: 3;
+  flex-basis: 100%;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 18px;
+}
+.look-fold__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: 4px 12px 12px;
+}
+.plan-foot--here {
+  border-color: var(--line-strong);
+}
