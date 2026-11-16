@@ -20,6 +20,8 @@ import { hashToken, isSnowflake } from "./security";
 /** __Host- cookies must be Secure, Path=/ and have no Domain: they can't be set or read by subdomains. */
 export const SESSION_COOKIE = isProduction() ? "__Host-garrison_session" : "garrison_session";
 export const OAUTH_COOKIE = isProduction() ? "__Host-garrison_oauth" : "garrison_oauth";
+/** "Build me a…" from the landing page, held while its writer signs in and picks a server. */
+export const BUILD_COOKIE = isProduction() ? "__Host-garrison_build" : "garrison_build";
 export const SESSION_TTL_MS = 7 * 86_400_000;
 
 export const cookieOptions = (maxAgeSeconds: number) => ({

@@ -108,6 +108,9 @@
     box-shadow 0.25s var(--ease-out),
     transform 0.12s var(--ease-out);
 }
+button.lp-btn {
+  cursor: pointer;
+}
 .lp-btn:active {
   transform: translateY(1px);
 }
@@ -119,7 +122,8 @@
     0 0 0 1px rgb(0 0 0 / 0.05) inset,
     0 8px 24px -10px rgb(212 255 58 / 0.55);
 }
-.lp a.lp-btn--primary:hover {
+.lp a.lp-btn--primary:hover,
+.lp button.lp-btn--primary:hover {
   background: #e2ff70;
   color: var(--lp-accent-ink);
   box-shadow:
@@ -299,8 +303,117 @@
   box-shadow: 0 0 0 3px rgb(43 217 159 / 0.2);
 }
 
+/* "Build me a…": the hero's prompt box. It reads as one field; the frame shows focus. */
+.lp-build {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: min(680px, 100%);
+  padding: 16px 14px 12px 20px;
+  border: 1px solid var(--lp-line-strong);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--lp-surface) 90%, transparent);
+  box-shadow: var(--lp-shadow);
+  text-align: left;
+  transition:
+    border-color 0.18s var(--ease-out),
+    box-shadow 0.25s var(--ease-out);
+}
+.lp-build:focus-within {
+  border-color: color-mix(in srgb, var(--lp-accent-text) 55%, var(--lp-line-strong));
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--lp-accent) 14%, transparent),
+    var(--lp-shadow);
+}
+.lp-build__label {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.lp-build__input {
+  width: 100%;
+  min-height: 54px;
+  max-height: 160px;
+  padding: 0 6px 0 0;
+  border: 0;
+  background: none;
+  color: var(--lp-text);
+  font:
+    400 17px / 1.55 var(--lp-sans),
+    sans-serif;
+  field-sizing: content;
+  resize: none;
+}
+.lp-build__input::placeholder {
+  color: var(--lp-faint);
+}
+.lp .lp-build__input:focus-visible {
+  outline: none;
+}
+.lp-build__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.lp-build__hint {
+  color: var(--lp-faint);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.lp-build__go {
+  flex: none;
+}
+.lp-ideas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 10px;
+  margin-top: 16px;
+}
+.lp-ideas__label {
+  color: var(--lp-faint);
+  font-size: 13px;
+}
+.lp-ideas__list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lp-idea {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--lp-line-strong);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--lp-surface) 70%, transparent);
+  color: var(--lp-muted);
+  font-size: 13.5px;
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    color 0.15s var(--ease-out),
+    border-color 0.15s var(--ease-out),
+    background-color 0.15s var(--ease-out);
+}
+.lp a.lp-idea:hover {
+  border-color: var(--lp-faint);
+  background: var(--lp-surface-2);
+  color: var(--lp-text);
+}
+.lp-hero__actions {
+  margin-top: 28px;
+}
+
 /* The stage: the dashboard does the work, Discord shows the result. */
 .lp-stage {
+  scroll-margin-top: 88px;
   position: relative;
   max-width: var(--lp-max);
   margin: 26px auto 0;
@@ -608,49 +721,6 @@
   font-size: 18px;
 }
 
-/* Three steps */
-.lp-steps .lp-h2 {
-  text-align: center;
-}
-.lp-steps__list {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 40px;
-  margin: 56px 0 0;
-  padding: 0;
-  list-style: none;
-}
-.lp-steps__list li {
-  position: relative;
-  padding-top: 28px;
-  border-top: 1px solid var(--lp-line-strong);
-}
-.lp-steps__n {
-  position: absolute;
-  top: -15px;
-  left: 0;
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: var(--lp-text);
-  color: var(--lp-bg);
-  font:
-    500 13px / 1 var(--lp-mono),
-    monospace;
-}
-.lp-steps__list h3 {
-  margin: 0 0 8px;
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-.lp-steps__list p {
-  margin: 0;
-  color: var(--lp-muted);
-}
-
 /* Feature rows: copy and a real product shot, alternating sides. */
 .lp-feature {
   display: grid;
@@ -776,6 +846,217 @@
   color: var(--lp-muted);
   font-size: 14px;
   line-height: 1.5;
+}
+
+/* Insights shot: the dashboard's own stat tiles, three across. */
+.lp-stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* "Run it from Discord": Discord's command picker over the message box. */
+.lp-slash {
+  display: grid;
+}
+.lp-slash__picker {
+  margin: 14px 14px 0;
+  overflow: hidden;
+  border: 1px solid var(--dc-line);
+  border-radius: 8px;
+  background: var(--dc-embed);
+}
+.lp-slash__head {
+  padding: 10px 14px 6px;
+  color: var(--dc-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.lp-slash__list {
+  margin: 0;
+  padding: 0 6px 6px;
+  list-style: none;
+}
+.lp-slash__row {
+  display: grid;
+  gap: 1px;
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+.lp-slash__row.is-on {
+  background: color-mix(in srgb, var(--dc-text) 9%, transparent);
+}
+.lp-slash__name {
+  font-size: 15px;
+  font-weight: 600;
+}
+.lp-slash__what {
+  color: var(--dc-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.lp-slash__input {
+  display: flex;
+  align-items: center;
+  margin: 12px 14px 14px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--dc-text) 7%, var(--dc-bg));
+  font-size: 15px;
+}
+.lp-slash__caret {
+  width: 2px;
+  height: 18px;
+  margin-left: 1px;
+  background: var(--dc-text);
+  animation: lp-blink 1.1s steps(1) infinite;
+}
+@keyframes lp-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Ideas: a slow wall of starting points, each one a link into the AI assistant. */
+.lp-wall {
+  max-width: none;
+  padding-right: 0;
+  padding-left: 0;
+}
+.lp-wall .lp-section__head {
+  padding: 0 24px;
+}
+.lp-wall__view {
+  overflow: hidden;
+  padding: 6px 0 12px;
+  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+}
+.lp-wall__track {
+  display: flex;
+  gap: 16px;
+  width: max-content;
+  animation: lp-wall 70s linear infinite;
+}
+.lp-wall__track:hover,
+.lp-wall__track:focus-within {
+  animation-play-state: paused;
+}
+@keyframes lp-wall {
+  to {
+    transform: translateX(calc(-50% - 8px));
+  }
+}
+.lp-wall__row {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lp-wall__row > li {
+  display: flex;
+}
+.lp-wall__card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 280px;
+  padding: 20px;
+  border: 1px solid var(--lp-line-strong);
+  border-radius: var(--lp-r);
+  background: var(--lp-surface);
+  text-decoration: none;
+  transition:
+    border-color 0.18s var(--ease-out),
+    transform 0.18s var(--ease-out);
+}
+.lp a.lp-wall__card:hover {
+  border-color: var(--lp-faint);
+  transform: translateY(-2px);
+}
+.lp-wall__name {
+  font-family: var(--lp-display), var(--lp-sans), sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.lp-wall__prompt {
+  color: var(--lp-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.lp-wall__tree {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--lp-surface-2);
+  color: var(--lp-muted);
+  font:
+    400 13px / 1.4 var(--lp-mono),
+    monospace;
+}
+.lp-wall__chan {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.lp-wall__hash {
+  flex: none;
+  width: 13px;
+  color: var(--lp-faint);
+  text-align: center;
+}
+.lp-wall__go {
+  margin-top: auto;
+  color: var(--lp-accent-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Help: three ways to an answer, quickest first. */
+.lp-help .lp-h2 {
+  margin-bottom: 40px;
+  text-align: center;
+}
+.lp-help__list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lp-help__card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 28px;
+  border: 1px solid var(--lp-line-strong);
+  border-radius: var(--lp-r-lg);
+  background: var(--lp-surface);
+}
+.lp-help__card h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+.lp-help__card p {
+  margin: 0;
+  color: var(--lp-muted);
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.lp-help__card a {
+  margin-top: auto;
+  padding-top: 6px;
+  color: var(--lp-accent-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+.lp-help__card a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 
 /* Security */
@@ -1235,6 +1516,24 @@
   .lp-cursor {
     display: none;
   }
+  .lp-slash__caret {
+    animation: none;
+  }
+  .lp-wall__view {
+    mask-image: none;
+  }
+  .lp-wall__track {
+    width: auto;
+    animation: none;
+  }
+  .lp-wall__row {
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 0 24px;
+  }
+  .lp-wall__row[aria-hidden] {
+    display: none;
+  }
 }
 /* The stage art is painted for the dark theme only. */
 [data-theme="light"] .lp-hero__art,
@@ -1278,13 +1577,14 @@
   .lp-feature--flip .lp-feature__copy {
     order: 0;
   }
-  .lp-steps__list {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 40px;
-  }
   .lp-catalog__group {
     grid-template-columns: minmax(0, 1fr);
     gap: 16px;
+  }
+  .lp-help__list {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 560px;
+    margin: 0 auto;
   }
   .lp-catalog__list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1312,6 +1612,28 @@
   .lp-lede {
     font-size: 17px;
   }
+  .lp-build {
+    padding: 14px 12px 12px 16px;
+  }
+  .lp-build__foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .lp-build__go {
+    height: 44px;
+  }
+  .lp-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lp-stats .stat-tile:nth-child(n + 3) {
+    display: none;
+  }
+  .lp-wall__card {
+    width: 248px;
+  }
+  .lp-help__card {
+    padding: 24px 20px;
+  }
   .lp-actions {
     flex-direction: column;
     align-self: stretch;
@@ -1328,6 +1650,14 @@
   }
   .lp-section__head {
     margin-bottom: 40px;
+  }
+  /* The wall runs edge to edge; only its heading keeps the gutter. */
+  .lp-wall {
+    padding-right: 0;
+    padding-left: 0;
+  }
+  .lp-wall .lp-section__head {
+    padding: 0 16px;
   }
   .lp-feature {
     padding: 40px 0;

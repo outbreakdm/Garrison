@@ -1,14 +1,16 @@
 import { inviteUrl } from "@garrison/brand";
 import { isStaff, listActiveGuilds } from "@garrison/db";
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { ViewTransition } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { InviteDialog } from "@/components/InviteDialog";
 import { Topbar } from "@/components/Topbar";
+import { unpackPrompt } from "@/lib/build-prompt";
 import { getDb } from "@/lib/db";
 import { env } from "@/lib/env";
-import { requireSession } from "@/lib/session";
+import { BUILD_COOKIE, requireSession } from "@/lib/session";
 import { listSharedGuilds } from "@/lib/shared-servers";
 import { currentTheme } from "@/lib/theme";
 
@@ -42,6 +44,26 @@ function GuildIcon({ guild }: { guild: ListedGuild }) {
   );
 }
 
+/** A server tile that takes the landing page's "Build me a…" to that server's AI assistant. */
+function BuildTile({ guild, state }: { guild: ListedGuild; state: string }) {
+  return (
+    // A route that redirects, not a page: a plain link.
+    <a href={`/build?to=${guild.id}`} className="server-tile server-tile--build">
+      <span className="server-tile__top">
+        <GuildIcon guild={guild} />
+        <span className="server-tile__id">
+          <span className="server-tile__name">{guild.name}</span>
+          <span className="server-tile__state">{state}</span>
+        </span>
+      </span>
+      <span className="server-tile__foot">
+        Build it here
+        <span className="cue" aria-hidden="true" />
+      </span>
+    </a>
+  );
+}
+
 export default async function ServersPage() {
   const session = await requireSession("/servers");
   const db = await getDb();
@@ -54,10 +76,14 @@ export default async function ServersPage() {
   const installed = known.filter((g) => active.has(g.id));
   const available = known.filter((g) => !active.has(g.id));
   const clientId = env().DISCORD_CLIENT_ID;
-  const [staff, shared] = await Promise.all([
+  const [staff, shared, jar] = await Promise.all([
     isStaff(db, session.userId),
     listSharedGuilds(session),
+    cookies(),
   ]);
+  // "Build me a…" from the landing page: a server you can change hands it to its AI assistant.
+  const idea = unpackPrompt(jar.get(BUILD_COOKIE)?.value);
+  const canBuild = installed.length > 0 || shared.some((g) => g.level === "editor");
 
   return (
     <>
@@ -76,6 +102,23 @@ export default async function ServersPage() {
           ) : null}
         </div>
 
+        {idea ? (
+          <div className="build-note" role="status">
+            <span className="build-note__mark" aria-hidden="true" />
+            <p className="build-note__text">
+              <strong>
+                {canBuild
+                  ? "Pick a server to build it in"
+                  : "Add Garrison to a server, then build it there"}
+              </strong>
+              <span className="build-note__idea">“{idea}”</span>
+            </p>
+            <a className="g-btn g-btn--ghost g-btn--sm" href="/build?clear=1">
+              Never mind
+            </a>
+          </div>
+        ) : null}
+
         <section className="block" aria-labelledby="with-garrison">
           <h2 className="block-title" id="with-garrison">
             With Garrison <span className="count">{installed.length}</span>
@@ -84,26 +127,34 @@ export default async function ServersPage() {
             <ul className="server-grid">
               {installed.map((g) => (
                 <li key={g.id}>
-                  <Link href={`/servers/${g.id}`} className="server-tile" transitionTypes={["nav"]}>
-                    <span className="server-tile__top">
-                      <GuildIcon guild={g} />
-                      <span className="server-tile__id">
-                        {/* The name flies into the server's Overview title. */}
-                        <ViewTransition
-                          name={`guild-${g.id}`}
-                          share={{ nav: "morph", default: "none" }}
-                          default="none"
-                        >
-                          <span className="server-tile__name">{g.name}</span>
-                        </ViewTransition>
-                        <span className="server-tile__state">Garrison is in</span>
+                  {idea ? (
+                    <BuildTile guild={g} state="Garrison is in" />
+                  ) : (
+                    <Link
+                      href={`/servers/${g.id}`}
+                      className="server-tile"
+                      transitionTypes={["nav"]}
+                    >
+                      <span className="server-tile__top">
+                        <GuildIcon guild={g} />
+                        <span className="server-tile__id">
+                          {/* The name flies into the server's Overview title. */}
+                          <ViewTransition
+                            name={`guild-${g.id}`}
+                            share={{ nav: "morph", default: "none" }}
+                            default="none"
+                          >
+                            <span className="server-tile__name">{g.name}</span>
+                          </ViewTransition>
+                          <span className="server-tile__state">Garrison is in</span>
+                        </span>
                       </span>
-                    </span>
-                    <span className="server-tile__foot">
-                      Open dashboard
-                      <span className="cue" aria-hidden="true" />
-                    </span>
-                  </Link>
+                      <span className="server-tile__foot">
+                        Open dashboard
+                        <span className="cue" aria-hidden="true" />
+                      </span>
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
@@ -127,21 +178,32 @@ export default async function ServersPage() {
             <ul className="server-grid">
               {shared.map((g) => (
                 <li key={g.id}>
-                  <Link href={`/servers/${g.id}`} className="server-tile" transitionTypes={["nav"]}>
-                    <span className="server-tile__top">
-                      <GuildIcon guild={{ id: g.id, name: g.name, icon: null }} />
-                      <span className="server-tile__id">
-                        <span className="server-tile__name">{g.name}</span>
-                        <span className="server-tile__state">
-                          {g.level === "editor" ? "You can change settings" : "You can view"}
+                  {idea && g.level === "editor" ? (
+                    <BuildTile
+                      guild={{ id: g.id, name: g.name, icon: null }}
+                      state="You can change settings"
+                    />
+                  ) : (
+                    <Link
+                      href={`/servers/${g.id}`}
+                      className="server-tile"
+                      transitionTypes={["nav"]}
+                    >
+                      <span className="server-tile__top">
+                        <GuildIcon guild={{ id: g.id, name: g.name, icon: null }} />
+                        <span className="server-tile__id">
+                          <span className="server-tile__name">{g.name}</span>
+                          <span className="server-tile__state">
+                            {g.level === "editor" ? "You can change settings" : "You can view"}
+                          </span>
                         </span>
                       </span>
-                    </span>
-                    <span className="server-tile__foot">
-                      Open dashboard
-                      <span className="cue" aria-hidden="true" />
-                    </span>
-                  </Link>
+                      <span className="server-tile__foot">
+                        Open dashboard
+                        <span className="cue" aria-hidden="true" />
+                      </span>
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>

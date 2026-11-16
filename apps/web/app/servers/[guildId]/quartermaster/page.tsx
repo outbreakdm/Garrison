@@ -27,6 +27,7 @@ import { PlanDetails } from "@/components/PlanDetails";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { ScrollToEnd } from "@/components/ScrollToEnd";
 import { ServerPreview } from "@/components/ServerPreview";
+import { cleanPrompt } from "@/lib/build-prompt";
 import { getDb } from "@/lib/db";
 import { getServerLayout, guildOwnerId } from "@/lib/discord";
 import { readFlash } from "@/lib/flash";
@@ -105,6 +106,8 @@ export default async function QuartermasterPage({
   ]);
   // The Features tab opens on its own after a save there.
   const tab = query.tab === "modules" ? "modules" : "channels";
+  // "Build me a…" from the landing page lands here written in, for you to send.
+  const prefill = cleanPrompt(query.prompt).slice(0, REQUEST_MAX);
   const featureChannels = {
     text: layout
       ? [...layout.loose, ...layout.categories.flatMap((c) => c.channels)]
@@ -359,6 +362,7 @@ export default async function QuartermasterPage({
                 rows={2}
                 maxLength={REQUEST_MAX}
                 required
+                defaultValue={prefill || undefined}
                 placeholder={
                   messages.length
                     ? "Answer, or ask for changes"

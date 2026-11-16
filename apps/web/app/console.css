@@ -2837,3 +2837,55 @@ form[data-locked] .seg__opt:has(input:disabled) {
   cursor: not-allowed;
   opacity: 0.6;
 }
+
+/* --- "Build me a…" on the server list: the landing page's idea, waiting for a server --- */
+.build-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-4);
+  align-items: center;
+  margin-top: calc(-1 * var(--space-6));
+  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-6);
+  border: 1px solid color-mix(in srgb, var(--accent-strong) 40%, var(--line));
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+}
+/* A plus on the accent: something is about to be built. */
+.build-note__mark {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(var(--accent-strong) 0 0) center / 14px 2px no-repeat,
+    linear-gradient(var(--accent-strong) 0 0) center / 2px 14px no-repeat,
+    color-mix(in srgb, var(--accent) 16%, var(--surface-raised));
+}
+.build-note__text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+}
+.build-note__text strong {
+  font-size: 15px;
+}
+.build-note__idea {
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+.server-tile--build {
+  border-color: color-mix(in srgb, var(--accent-strong) 35%, var(--line));
+}
+@media (max-width: 720px) {
+  .build-note {
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: 0;
+    padding: var(--space-4);
+  }
+  .build-note__mark {
+    display: none;
+  }
+  .build-note .g-btn {
+    justify-self: start;
+  }
+}

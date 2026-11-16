@@ -6,9 +6,12 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Art } from "@/components/Art";
+import { BuildBox } from "@/components/BuildBox";
+import { Sparkline } from "@/components/insights/Sparkline";
 import { Logo } from "@/components/Logo";
 import { ServerPreview } from "@/components/ServerPreview";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { BUILD_IDEAS } from "@/lib/build-prompt";
 import { siteUrl } from "@/lib/hosts";
 import { LEGAL } from "@/lib/legal";
 import { publicMetrics } from "@/lib/public-metrics";
@@ -229,6 +232,63 @@ const DEMO_PREVIEW: Preview = {
   added: { categories: 1, channels: 3, roles: 1 },
 };
 
+/** The Insights shot: an example server's month, as the page's own stat tiles draw it. */
+const DEMO_STATS: { label: string; value: string; delta: number; sub: string; trend: number[] }[] =
+  [
+    {
+      label: "Messages",
+      value: "48,210",
+      delta: 18,
+      sub: "in 30 days",
+      trend: [1210, 1340, 1290, 1480, 1420, 1610, 1580, 1720, 1690, 1850, 1810, 1960],
+    },
+    {
+      label: "Active members",
+      value: "1,284",
+      delta: 9,
+      sub: "sent a message or talked",
+      trend: [980, 1010, 1040, 1020, 1090, 1110, 1150, 1140, 1190, 1220, 1250, 1284],
+    },
+    {
+      label: "Joined, net",
+      value: "+212",
+      delta: -4,
+      sub: "joins minus leaves",
+      trend: [22, 19, 25, 17, 21, 18, 16, 20, 15, 17, 14, 16],
+    },
+  ];
+
+/** The Discord shot: real commands, as Discord's picker lists them after a "/". */
+const DEMO_COMMANDS: [name: string, what: string][] = [
+  ["lockdown", "Stop members posting, and pause invites, while you deal with a raid."],
+  ["warn", "Warn a member. Warnings count toward escalation rules."],
+  ["lfg", "Find a group: post an LFG card people can join."],
+  ["raid", "Schedule raids and events with role signups and a bench."],
+  ["health", "Check Garrison's permissions, role position and settings in this server."],
+];
+
+/** Where landing links send people for help. */
+const HELP: { title: string; text: string; href: string; link: string }[] = [
+  {
+    title: "Start with /health",
+    text: "Run it in your server: Garrison checks its own permissions, role position and settings, and says what to fix. The FAQ covers the rest.",
+    href: "#faq",
+    link: "Read the FAQ",
+  },
+  {
+    title: "Is it just me?",
+    text: "The status page shows how fast Garrison answers right now, and its uptime over the last day.",
+    href: "/status",
+    link: "Open the status page",
+  },
+  {
+    title: "Write to a person",
+    text: `Billing, a bug, or something Garrison did that it shouldn't have: email ${LEGAL.contact} and a person answers.`,
+    href: `mailto:${LEGAL.contact}`,
+    link: "Email support",
+  },
+];
+
 /** A browser-ish frame around a real dashboard component, labeled as an example. */
 function AppWindow({
   path,
@@ -365,7 +425,9 @@ export default async function Home() {
   const signedIn = Boolean((await cookies()).get(SESSION_COOKIE));
   // On garrisonbot.com the dashboard lives at dash.garrisonbot.com; locally it's this host.
   const appUrl = process.env.APP_URL;
-  const dashboard = `${siteUrl(appUrl) && appUrl ? appUrl : ""}/servers`;
+  const app = siteUrl(appUrl) && appUrl ? appUrl : "";
+  const dashboard = `${app}/servers`;
+  const ideaHref = (prompt: string) => `${app}/build?idea=${encodeURIComponent(prompt)}`;
   const clientId = process.env.DISCORD_CLIENT_ID;
   const invite = clientId && /^\d+$/.test(clientId) ? inviteUrl(clientId) : null;
   const [metrics, theme] = await Promise.all([publicMetrics(), currentTheme()]);
@@ -394,10 +456,10 @@ export default async function Home() {
           </Link>
           <nav className="lp-nav__links" aria-label="Site">
             <a href="#features">Features</a>
-            <a href="#security">Security</a>
+            <a href="#ideas">Ideas</a>
             <a href="#pricing">Pricing</a>
             <a href="#faq">FAQ</a>
-            <a href="/status">Status</a>
+            <a href="#help">Help</a>
           </nav>
           <span className="lp-nav__spacer" />
           <ThemeToggle back="/" theme={theme} />
@@ -428,16 +490,45 @@ export default async function Home() {
             ) : null}
             <h1 id="lp-title">Run your Discord server from one dashboard.</h1>
             <p className="lp-lede">
-              Moderation, anti-raid, logs, tickets, role menus, LFG and raids, and an AI server
-              builder. You run it from the web; Garrison does the work in Discord and checks again
-              before every change.
+              Moderation, anti-raid, logs, tickets, LFG and raids, and an AI assistant that builds
+              your channels and roles. Start by telling it what your server is for.
             </p>
-            {actions}
+            <BuildBox action={`${app}/build`} signedIn={signedIn} />
+            <div className="lp-ideas">
+              <span className="lp-ideas__label">Or start from</span>
+              <ul className="lp-ideas__list">
+                {BUILD_IDEAS.slice(0, 4).map((idea) => (
+                  <li key={idea.name}>
+                    <a className="lp-idea" href={ideaHref(idea.prompt)}>
+                      {idea.name}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="lp-actions lp-hero__actions">
+              <Link className="lp-btn lp-btn--ghost" href={dashboard}>
+                {openLabel}
+              </Link>
+              <a className="lp-btn lp-btn--ghost" href="#demo">
+                See it in action
+                <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+                  <path
+                    d="M8 3v10M4 9l4 4 4-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </a>
+            </div>
             <p className="lp-assure">Every module free to start · Never asks for Administrator</p>
           </div>
 
           {/* The focal moment: lock the server from the dashboard, and the message lands in Discord. */}
-          <div className="lp-stage">
+          <div className="lp-stage" id="demo">
             <AppWindow path="Security" className="lp-stage__app">
               <div className="lp-app">
                 <div className="lp-app__head">
@@ -541,109 +632,114 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="lp-section lp-steps" aria-labelledby="lp-steps">
-          <h2 className="lp-h2" id="lp-steps">
-            Three steps from invite to running
-          </h2>
-          <ol className="lp-steps__list">
-            <li>
-              <span className="lp-steps__n">1</span>
-              <h3>Add Garrison</h3>
-              <p>
-                Pick a server. Garrison asks only for the permissions it uses, never Administrator.
-              </p>
-            </li>
-            <li>
-              <span className="lp-steps__n">2</span>
-              <h3>Open the dashboard</h3>
-              <p>
-                Sign in with Discord to see every server you manage, and what needs you in each.
-              </p>
-            </li>
-            <li>
-              <span className="lp-steps__n">3</span>
-              <h3>Run it from there</h3>
-              <p>
-                Lock the server, post a raid, warn a member or build channels. Garrison does it in
-                Discord, usually within seconds, and every change can be undone.
-              </p>
-            </li>
-          </ol>
-        </section>
-
         <section className="lp-section" id="features" aria-labelledby="lp-features">
           <div className="lp-section__head">
             <h2 className="lp-h2" id="lp-features">
-              Everything a server needs, in one place
+              One bot instead of five
             </h2>
             <p>
-              {moduleCount} modules share one dashboard: no second bot for logs, no spreadsheet for
-              raids, no settings commands to remember.
+              {moduleCount} modules share one dashboard: no second bot for logs, no stats bot, no
+              spreadsheet for raids, no settings commands to remember.
             </p>
           </div>
 
           <Feature
-            id="overview"
-            icon="lp-icon-overview"
-            title="Open a server and see what needs you"
+            id="ai-builder"
+            icon="lp-icon-quartermaster"
+            title="Describe the channels you want. Review. Build. Undo."
             visual={
-              <AppWindow path="Overview">
+              <AppWindow path="AI assistant" className="lp-win--qm">
                 <div className="lp-app lp-app--stack">
-                  <section className="g-card attention" aria-label="Needs attention">
-                    <div className="attention__head">
-                      <h3 className="card-title">
-                        Needs attention <span className="count">2</span>
-                      </h3>
-                    </div>
-                    <ul className="attention__list">
-                      <li>
-                        <span className="attention__item">
-                          <span className="attention__text">
-                            <strong>AI assistant plan v4 is waiting</strong>
-                            <span>Nothing changes in Discord until someone builds it.</span>
+                  <p className="lp-qm-ask">
+                    “A Valorant section with ranked and casual LFG, a voice room, and a Gold+ role
+                    that's the only one who can see ranked.”
+                  </p>
+                  <ServerPreview name="Example server" preview={DEMO_PREVIEW} planned />
+                </div>
+              </AppWindow>
+            }
+          >
+            <p>
+              The AI assistant turns a sentence into a plan and shows your server with the changes
+              before anything happens. It only adds channels and roles, new roles get no
+              permissions, and any build can be undone, even after a partial failure.
+            </p>
+          </Feature>
+
+          <Feature
+            id="insights"
+            icon="lp-icon-overview"
+            title="Know what your server is doing"
+            flip
+            visual={
+              <AppWindow path="Insights">
+                <div className="lp-app lp-app--stack">
+                  <div className="stat-tiles lp-stats">
+                    {DEMO_STATS.map((t) => (
+                      <div className="g-card stat-tile" key={t.label}>
+                        <span className="stat-tile__label">{t.label}</span>
+                        <span className="stat-tile__value">{t.value}</span>
+                        <span className="stat-tile__foot">
+                          <span
+                            className={`stat-tile__delta ${t.delta > 0 ? "tone-go" : "tone-caution"}`}
+                          >
+                            {t.delta > 0 ? "▲" : "▼"} {Math.abs(t.delta)}%
                           </span>
-                          <span className="attention__go">
-                            Review plan
-                            <span className="cue" aria-hidden="true" />
-                          </span>
+                          <span className="g-help">{t.sub}</span>
                         </span>
-                      </li>
-                      <li>
-                        <span className="attention__item">
-                          <span className="attention__text">
-                            <strong>Molten Core is 3 short</strong>
-                            <span>Thu, 8:00 PM · 1 Tank, 2 Healer</span>
-                          </span>
-                          <span className="attention__go">
-                            Groups and raids
-                            <span className="cue" aria-hidden="true" />
-                          </span>
-                        </span>
-                      </li>
-                    </ul>
-                  </section>
-                  <div className="g-card readout readout--3 lp-hide-sm">
-                    <div className="readout__cell">
-                      <span className="g-label">Active members · 7 d</span>
-                      <span className="readout__value">1,284</span>
-                    </div>
-                    <div className="readout__cell">
-                      <span className="g-label">Messages today</span>
-                      <span className="readout__value">3,912</span>
-                    </div>
-                    <div className="readout__cell">
-                      <span className="g-label">Mod actions · 24 h</span>
-                      <span className="readout__value">7</span>
-                    </div>
+                        <Sparkline
+                          values={t.trend}
+                          label={`${t.label} over the month: ${t.delta > 0 ? "up" : "down"} ${Math.abs(t.delta)}%`}
+                        />
+                      </div>
+                    ))}
                   </div>
                 </div>
               </AppWindow>
             }
           >
             <p>
-              Lockdowns, quarantined members, raids short of players, plans waiting for review and
-              failed requests come first, each linked to the page that fixes it. Below them: who was
-              active, how busy it was, and how much moderation the day needed.
+              Messages, active members, joins against leaves and who stayed a week, each with its
+              trend over the range you pick. See which channels are alive and when people show up,
+              without adding a stats bot.
+            </p>
+          </Feature>
+
+          <Feature
+            id="from-discord"
+            icon="lp-icon-commands"
+            title="Run it from Discord too"
+            visual={
+              <figure
+                className="lp-dc lp-slash"
+                aria-label="Example: Garrison's commands in Discord"
+              >
+                <div className="lp-dc__bar" aria-hidden="true">
+                  <span className="lp-dc__hash">#</span>
+                  staff-room
+                </div>
+                <div className="lp-slash__picker">
+                  <div className="lp-slash__head">Garrison</div>
+                  <ul className="lp-slash__list">
+                    {DEMO_COMMANDS.map(([name, what], i) => (
+                      <li key={name} className={i === 0 ? "lp-slash__row is-on" : "lp-slash__row"}>
+                        <span className="lp-slash__name">/{name}</span>
+                        <span className="lp-slash__what">{what}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="lp-slash__input" aria-hidden="true">
+                  <span className="lp-slash__typed">/</span>
+                  <span className="lp-slash__caret" />
+                </div>
+              </figure>
+            }
+          >
+            <p>
+              Lock the server, warn a member, post a group or schedule a raid with a slash command.
+              Discord's own permissions decide who sees each one, Garrison checks them again before
+              acting, and /health says what to fix when something's off.
             </p>
           </Feature>
 
@@ -695,37 +791,9 @@ export default async function Home() {
           </Feature>
 
           <Feature
-            id="anti-raid"
-            icon="lp-icon-gatehouse"
-            title="A raid gets locked down before it spreads"
-            visual={
-              <DiscordWindow channel="alerts">
-                <Embed
-                  tone="alert"
-                  title="Server locked: raid detected"
-                  lines={[
-                    "Raid detected: 14 joins in 30 s.",
-                    "Posting is off in 23 channels.",
-                    "Invites are paused.",
-                    "Lifts in 15 minutes, or run /lockdown end.",
-                  ]}
-                  foot="Security · lockdown 8c1e07"
-                />
-              </DiscordWindow>
-            }
-          >
-            <p>
-              Anti-raid watches the join rate, locks the server, pauses invites and lifts itself. A
-              lockdown restores every channel exactly as it was. Anti-nuke quarantines anyone who
-              starts deleting channels or banning in bulk, and only the owner can switch it off.
-            </p>
-          </Feature>
-
-          <Feature
             id="groups"
             icon="lp-icon-rally"
             title="From LFG post to full squad"
-            flip
             visual={
               <AppWindow path="Groups and raids">
                 <div className="lp-app lp-app--stack">
@@ -784,29 +852,6 @@ export default async function Home() {
             </p>
           </Feature>
 
-          <Feature
-            id="ai-builder"
-            icon="lp-icon-quartermaster"
-            title="Describe the channels you want. Review. Build. Undo."
-            visual={
-              <AppWindow path="AI assistant" className="lp-win--qm">
-                <div className="lp-app lp-app--stack">
-                  <p className="lp-qm-ask">
-                    “A Valorant section with ranked and casual LFG, a voice room, and a Gold+ role
-                    that's the only one who can see ranked.”
-                  </p>
-                  <ServerPreview name="Example server" preview={DEMO_PREVIEW} planned />
-                </div>
-              </AppWindow>
-            }
-          >
-            <p>
-              The AI assistant turns a sentence into a plan and shows your server with the changes
-              before anything happens. It only adds channels and roles, new roles get no
-              permissions, and any build can be undone, even after a partial failure.
-            </p>
-          </Feature>
-
           <div className="lp-catalog" id="modules">
             <div className="lp-catalog__head">
               <h3>All {MODULE_COUNT} modules</h3>
@@ -831,6 +876,74 @@ export default async function Home() {
                 </ul>
               </section>
             ))}
+          </div>
+        </section>
+
+        <section className="lp-section lp-wall" id="ideas" aria-labelledby="lp-ideas">
+          <div className="lp-section__head">
+            <h2 className="lp-h2" id="lp-ideas">
+              Start from an idea
+            </h2>
+            <p>
+              Pick one and the AI assistant takes it from there: it plans the channels and roles,
+              shows your server with the changes, and builds only what you approve.
+            </p>
+          </div>
+          {/* Two copies side by side, so the scroll loops without a seam; the second is hidden from
+              screen readers and the keyboard. It pauses under the pointer and for focus, and
+              stands still as a wrapped grid with reduced motion. */}
+          <div className="lp-wall__view">
+            <div className="lp-wall__track">
+              {[0, 1].map((copy) => (
+                <ul className="lp-wall__row" key={copy} aria-hidden={copy === 1 ? true : undefined}>
+                  {BUILD_IDEAS.map((idea) => (
+                    <li key={idea.name}>
+                      <a
+                        className="lp-wall__card"
+                        href={ideaHref(idea.prompt)}
+                        tabIndex={copy === 1 ? -1 : undefined}
+                      >
+                        <span className="lp-wall__name">{idea.name}</span>
+                        <span className="lp-wall__prompt">{idea.prompt}</span>
+                        <span className="lp-wall__tree">
+                          {idea.channels.map((c) => (
+                            <span key={c} className="lp-wall__chan">
+                              {/^[a-z0-9-]+$/.test(c) ? (
+                                <span className="lp-wall__hash" aria-hidden="true">
+                                  #
+                                </span>
+                              ) : (
+                                <svg
+                                  className="lp-wall__hash"
+                                  viewBox="0 0 16 16"
+                                  width="13"
+                                  height="13"
+                                  aria-hidden="true"
+                                >
+                                  <path d="M2 6h3l4-3v10l-4-3H2z" fill="currentColor" />
+                                  <path
+                                    d="M11.5 5.5a3.5 3.5 0 0 1 0 5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.5"
+                                    strokeLinecap="round"
+                                  />
+                                </svg>
+                              )}
+                              {c}
+                            </span>
+                          ))}
+                        </span>
+                        <span className="lp-wall__go">
+                          Build this
+                          <span aria-hidden="true"> →</span>
+                        </span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -917,6 +1030,21 @@ export default async function Home() {
           </div>
         </section>
 
+        <section className="lp-section lp-help" id="help" aria-labelledby="lp-help">
+          <h2 className="lp-h2" id="lp-help">
+            Need a hand?
+          </h2>
+          <ul className="lp-help__list">
+            {HELP.map((h) => (
+              <li key={h.title} className="lp-help__card">
+                <h3>{h.title}</h3>
+                <p>{h.text}</p>
+                <a href={h.href}>{h.link}</a>
+              </li>
+            ))}
+          </ul>
+        </section>
+
         <section className="lp-cta" aria-labelledby="lp-cta">
           <Art slot="lp-cta" className="lp-cta__art" decorative />
           <div className="lp-cta__copy">
@@ -942,6 +1070,7 @@ export default async function Home() {
             <a href="#features">Features</a>
             <a href="#security">Security</a>
             <a href="#pricing">Pricing</a>
+            <a href="#help">Help</a>
             <a href="/status">Status</a>
             <Link href={dashboard}>Dashboard</Link>
             <a href="/terms">Terms</a>

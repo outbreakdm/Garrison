@@ -7,11 +7,14 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **Redesign v2 (2026-11-16):** steps 1 to 4 and Settings access are committed, not deployed.
+- **Redesign v2 (2026-11-16):** all five steps and Settings access are committed, not deployed.
   **Before deploying, apply migration `0064_dashboard_access`** in production (the access list,
   the bot's read grant, `web_sessions.member_guild_ids`): the dashboard and the bot both read
-  it. Sessions from before it list only servers shared by name until their next sign-in. Next:
-  step 5, the landing page.
+  it. Sessions from before it list only servers shared by name until their next sign-in.
+  After deploying, try the landing page's "Build me a…" box signed out on garrisonbot.com: it
+  crosses to the dashboard host, which the site's `form-action` now allows. Left over from the
+  redesign (docs/REDESIGN_V2.md): editing on the Discord preview, Insights moderation and
+  safety tabs, a ready-made template gallery.
 - **Now:** Phases 1 and 3 to 11, the depth backlog and the Quartermaster cost controls are
   **deployed** (2026-11-12, run 43331916135). Migrations through `0050_plan_bundles` are applied
   in production and recorded in `drizzle.__drizzle_migrations` (0021 and 0022 had been
@@ -990,3 +993,12 @@ Decided (2026-11-12, owner):
   Tests: access rules, the table's grants, undo refusal, the bot running an editor's raid and
   refusing their lockdown. Checked locally as a manager, a viewer (by role) and an editor (by
   name), including forged posts. Not deployed.
+- 2026-11-16: Redesign v2, step 5 (landing page) done. The hero leads with a "Build me a…"
+  box and idea chips; `/build` holds the text in a 30-minute cookie through sign-in, the server
+  list asks which server to build it in, and the AI assistant opens with it written in, not
+  sent. "One bot instead of five" puts the AI assistant first, then Insights (stat tiles with
+  sparklines) and Run it from Discord (the command picker, real commands); Overview, Anti-raid
+  and the three steps are gone. A scrolling wall of eight ideas, each a link into the same
+  hand-off, and a help row (/health, status, support email) after the FAQ. Tests for the
+  prompt cleaning and the cookie packing. Checked locally on desktop, phone and light theme,
+  signed in and with direct requests signed out. Not deployed.

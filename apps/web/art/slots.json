@@ -18,9 +18,20 @@
       "width": 1024,
       "height": 1024,
       "icon": true,
-      "use": "Landing page, beside 'Open a server and see what needs you' (transparent).",
+      "use": "Landing page, beside 'Know what your server is doing' (Insights) (transparent).",
       "alt": "A glass dashboard tablet with a lime notification dot.",
       "prompt": "A thick smoked-glass dashboard tablet with rounded corners, tilted toward the viewer. On its face, three soft horizontal bars: the top one glows volt-lime, the other two are dim frosted white. A small round lime notification dot sits on its top right corner.",
+      "styleOverride": "Premium 3D product render for a modern software launch page: clean high-end CGI with the polish of a flagship app's marketing art, soft studio lighting, smooth satin graphite and thick smoked-glass materials with rounded, generously bevelled edges, subtle inner glow, crisp reflections, no grunge or wear. Palette: deep ink #07080c, graphite #161a23 and #2a2f3a, smoked glass with cool gray highlights. Exactly one small volt-lime #d4ff3a light per piece, as emitted light or a lit inset, never as paint and never as ambient light. A soft indigo #6f6cf8 rim light from behind and to the left; any ambient glow or floor light is indigo or cool blue. Calm, confident and friendly: shapes simple enough to read at 48 pixels, nothing military.",
+      "negative": "text, letters, numbers, words, logo, watermark, signature, UI screenshot, interface, people, faces, hands, characters, mascot, weapons, guns, swords, military, camouflage, concrete, grunge, rust, dirt, scratches, clutter, busy background, orange, red, pink, purple haze, rainbow, neon sign, cyberpunk city, cartoon outlines, flat vector, pixel art, low poly, lens flare, chromatic aberration, oversaturated, blurry"
+    },
+    {
+      "name": "lp-icon-commands",
+      "width": 1024,
+      "height": 1024,
+      "icon": true,
+      "use": "Landing page, beside 'Run it from Discord too' (transparent).",
+      "alt": "A glass chat bubble with a lime slash on it.",
+      "prompt": "A thick smoked-glass chat bubble with rounded corners and a short tail at its lower left, tilted toward the viewer. On its face, one bold forward slash glows volt-lime, with a dim frosted-white bar after it like text waiting to be typed.",
       "styleOverride": "Premium 3D product render for a modern software launch page: clean high-end CGI with the polish of a flagship app's marketing art, soft studio lighting, smooth satin graphite and thick smoked-glass materials with rounded, generously bevelled edges, subtle inner glow, crisp reflections, no grunge or wear. Palette: deep ink #07080c, graphite #161a23 and #2a2f3a, smoked glass with cool gray highlights. Exactly one small volt-lime #d4ff3a light per piece, as emitted light or a lit inset, never as paint and never as ambient light. A soft indigo #6f6cf8 rim light from behind and to the left; any ambient glow or floor light is indigo or cool blue. Calm, confident and friendly: shapes simple enough to read at 48 pixels, nothing military.",
       "negative": "text, letters, numbers, words, logo, watermark, signature, UI screenshot, interface, people, faces, hands, characters, mascot, weapons, guns, swords, military, camouflage, concrete, grunge, rust, dirt, scratches, clutter, busy background, orange, red, pink, purple haze, rainbow, neon sign, cyberpunk city, cartoon outlines, flat vector, pixel art, low poly, lens flare, chromatic aberration, oversaturated, blurry"
     },

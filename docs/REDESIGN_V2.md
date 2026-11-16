@@ -143,6 +143,25 @@ scrolling wall of server templates; pricing; FAQ; help.
    - *Settings access*: done after the owner's go-ahead. Dashboard access on Settings: a
      person or a role as Viewer or Editor, with history and undo; enforced in lib/session for
      every page and action and again in the bot for its requests (SECURITY.md, Dashboard).
-5. **Landing page.**
+5. **Landing page**: done 2026-11-16.
+   - *Hero*: the headline, then a "Build me a…" box (`components/BuildBox.tsx`, a GET form;
+     Enter sends) with four idea chips, then Open the dashboard and See it in action (which
+     scrolls to the lockdown demo, now just under the hero). The box goes to `/build`, which
+     holds the text in a 30-minute cookie through sign-in (sign-in carries only a bare path),
+     shows it on the server list ("Pick a server to build it in"), and hands it to the chosen
+     server's AI assistant, written in and not sent (`?prompt=`). Viewers can't build, so
+     only servers you run or edit offer "Build it here".
+   - *One bot instead of five*: the AI assistant first, then Insights (the dashboard's own
+     stat tiles and sparklines) and Run it from Discord (Discord's command picker, real
+     commands and their descriptions), then Moderation and Groups; the module list after.
+     The Overview and Anti-raid rows and the three steps are gone (the hero demo covers
+     anti-raid; the box's hint says what happens next).
+   - *Start from an idea*: eight starting points (`lib/build-prompt.ts`) scroll past as cards
+     with a few of their channels, each a link into the same hand-off. It pauses under the
+     pointer and for focus, and is a still, wrapped grid with reduced motion. These are
+     prompts, not templates: a gallery of ready-made templates is still to come.
+   - *Help*: /health, the status page, and the support address, after the FAQ.
+   Not done: a typing placeholder in the box (Peak's), new art for the Insights and
+   commands icons (slots added, no files yet, like the other landing icons).
 
 Each step ships on its own, checked on desktop and phone.
