@@ -118,17 +118,13 @@ button.lp-btn {
 .lp-btn--primary {
   background: var(--lp-accent);
   color: var(--lp-accent-ink);
-  box-shadow:
-    0 0 0 1px rgb(0 0 0 / 0.05) inset,
-    0 8px 24px -10px rgb(212 255 58 / 0.55);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.05) inset;
 }
 .lp a.lp-btn--primary:hover,
 .lp button.lp-btn--primary:hover {
   background: #e2ff70;
   color: var(--lp-accent-ink);
-  box-shadow:
-    0 0 0 1px rgb(0 0 0 / 0.05) inset,
-    0 10px 30px -8px rgb(212 255 58 / 0.7);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.08) inset;
 }
 .lp-btn--ghost {
   border-color: var(--lp-line-strong);
@@ -650,7 +646,7 @@ button.lp-btn {
   border-radius: 4px;
   background: #5865f2;
   color: #fff;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
 }
@@ -748,6 +744,7 @@ button.lp-btn {
   letter-spacing: -0.02em;
 }
 .lp-feature__copy p {
+  max-width: 62ch;
   margin: 0;
   color: var(--lp-muted);
   font-size: 17px;
@@ -894,6 +891,9 @@ button.lp-btn {
   color: var(--dc-muted);
   font-size: 13px;
   line-height: 1.4;
+}
+.lp-slash__row.is-on .lp-slash__what {
+  color: color-mix(in srgb, var(--dc-text) 70%, var(--dc-muted));
 }
 .lp-slash__input {
   display: flex;
@@ -1126,12 +1126,9 @@ button.lp-btn {
   border: 1px solid var(--lp-line-strong);
   border-radius: var(--lp-r-lg);
   background: var(--lp-surface);
-  box-shadow: var(--lp-shadow);
 }
 .lp-tier--pro {
-  border-color: rgb(111 108 248 / 0.55);
-  background:
-    radial-gradient(90% 60% at 50% 0%, var(--lp-glow-a), transparent 75%), var(--lp-surface);
+  border-color: color-mix(in srgb, var(--lp-text) 45%, transparent);
   transform: translateY(-8px);
 }
 .lp-tier__flag {
@@ -1207,11 +1204,11 @@ button.lp-btn {
   transform: rotate(-45deg);
 }
 .lp-tier__cta {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
   margin: auto 0 0;
   padding-top: 18px;
-  color: var(--lp-faint);
-  font-size: 13px;
-  font-weight: 600;
 }
 .lp-price__foot {
   max-width: 640px;
@@ -1307,9 +1304,7 @@ button.lp-btn {
   overflow: hidden;
   border: 1px solid var(--lp-line-strong);
   border-radius: 28px;
-  background:
-    radial-gradient(60% 80% at 50% 100%, var(--lp-glow-a), transparent 70%),
-    radial-gradient(40% 50% at 50% 100%, var(--lp-glow-b), transparent 70%), var(--lp-surface);
+  background: var(--lp-surface);
   text-align: center;
 }
 .lp-cta__art {
@@ -1708,5 +1703,24 @@ button.lp-btn {
   .lp-cta {
     margin: 88px 16px 0;
     padding: 64px 20px;
+  }
+}
+
+/* The prompt box's own button: white, so the hero's volt Add to Discord stays the one primary. */
+.lp-btn--light {
+  background: var(--lp-text);
+  color: var(--lp-bg);
+}
+.lp button.lp-btn--light:hover {
+  background: color-mix(in srgb, var(--lp-text) 86%, var(--lp-bg));
+}
+.lp-tier__note {
+  color: var(--lp-faint);
+  font-size: 13px;
+}
+/* Phones: the hero already offers Add to Discord, so the bar doesn't repeat it. */
+@media (max-width: 600px) {
+  .lp-nav .lp-btn--primary {
+    display: none;
   }
 }

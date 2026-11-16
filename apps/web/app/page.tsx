@@ -490,8 +490,9 @@ export default async function Home() {
             ) : null}
             <h1 id="lp-title">Run your Discord server from one dashboard.</h1>
             <p className="lp-lede">
-              Moderation, anti-raid, logs, tickets, LFG and raids, and an AI assistant that builds
-              your channels and roles. Start by telling it what your server is for.
+              Moderation, anti-raid, logs, tickets, group finding and raid signups, and an AI
+              assistant that builds your channels and roles. Start by telling it what your server is
+              for.
             </p>
             <BuildBox action={`${app}/build`} signedIn={signedIn} />
             <div className="lp-ideas">
@@ -507,9 +508,15 @@ export default async function Home() {
               </ul>
             </div>
             <div className="lp-actions lp-hero__actions">
-              <Link className="lp-btn lp-btn--ghost" href={dashboard}>
-                {openLabel}
-              </Link>
+              {invite ? (
+                <a className="lp-btn lp-btn--primary" href={invite}>
+                  Add to Discord
+                </a>
+              ) : (
+                <Link className="lp-btn lp-btn--ghost" href={dashboard}>
+                  {openLabel}
+                </Link>
+              )}
               <a className="lp-btn lp-btn--ghost" href="#demo">
                 See it in action
                 <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
@@ -1003,9 +1010,22 @@ export default async function Home() {
                       <li key={h}>{h}</li>
                     ))}
                   </ul>
-                  <p className="lp-tier__cta">
-                    {paid ? "Upgrade from any server's Plan page" : "What every server gets"}
-                  </p>
+                  <div className="lp-tier__cta">
+                    {paid ? (
+                      <>
+                        <Link className="lp-btn lp-btn--ghost lp-btn--sm" href={dashboard}>
+                          Pick a server to upgrade
+                        </Link>
+                        <span className="lp-tier__note">From that server's Plan page.</span>
+                      </>
+                    ) : invite ? (
+                      <a className="lp-btn lp-btn--ghost lp-btn--sm" href={invite}>
+                        Add to Discord, free
+                      </a>
+                    ) : (
+                      <span className="lp-tier__note">What every server gets</span>
+                    )}
+                  </div>
                 </li>
               );
             })}

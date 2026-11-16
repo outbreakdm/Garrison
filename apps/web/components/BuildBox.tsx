@@ -35,7 +35,7 @@ export function BuildBox({ action, signedIn }: { action: string; signedIn: boole
             ? "Pick a server next. Nothing changes until you approve the plan."
             : "Sign in with Discord next. Nothing changes until you approve the plan."}
         </span>
-        <button type="submit" className="lp-btn lp-btn--primary lp-btn--sm lp-build__go">
+        <button type="submit" className="lp-btn lp-btn--light lp-btn--sm lp-build__go">
           Build it
           <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
             <path
