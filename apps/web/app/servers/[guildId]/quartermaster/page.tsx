@@ -643,13 +643,16 @@ export default async function QuartermasterPage({
           </details>
         ) : null}
 
-        <section className="g-card card-col" id="templates" aria-labelledby="templates-title">
-          <div className="queue__head">
-            <h2 className="card-title" id="templates-title">
-              Server templates <ProTag on={ent["qm.templates"]} />
+        <section className="card-col" id="templates" aria-labelledby="templates-title">
+          <div className="list-head">
+            <h2 className="list-head__title" id="templates-title">
+              Server templates
             </h2>
-            <span className="g-help">
-              {templates.length} of {TEMPLATES_PER_USER}
+            <span className="list-head__end">
+              <span className="list-head__count">
+                {templates.length} of {TEMPLATES_PER_USER} saved
+              </span>
+              <ProTag on={ent["qm.templates"]} />
             </span>
           </div>
           <p className="g-help">
@@ -667,78 +670,96 @@ export default async function QuartermasterPage({
               {flash.error}
             </div>
           ) : null}
-          {ent["qm.templates"] ? (
-            <form action={requestAction} className="row-between">
-              <input type="hidden" name="guildId" value={guild.id} />
-              <input type="hidden" name="page" value="quartermaster" />
-              <input type="hidden" name="kind" value="template_save" />
-              <input
-                className="g-input"
-                name="name"
-                maxLength={TEMPLATE_NAME_MAX}
-                placeholder={guild.name}
-                aria-label="Template name"
-              />
-              <button
-                type="submit"
-                className="g-btn g-btn--secondary"
-                disabled={templates.length >= TEMPLATES_PER_USER}
-              >
-                Save this server as a template
-              </button>
-            </form>
-          ) : null}
-          {templates.length ? (
-            <ul className="queue__list">
-              {templates.map((t) => (
-                <li key={t.id} className="gw-row">
-                  <span className="gw-row__main">
-                    <span className="ticket-row__topic">{t.name}</span>
-                    <span className="ticket-row__who">
-                      From {t.sourceGuildName || "a server"} · {t.roleCount} roles ·{" "}
-                      {t.channelCount} channels · {formatTime(t.createdAt)}
-                    </span>
+          <ul className="tpl-grid">
+            {templates.map((t) => (
+              <li key={t.id} className="g-card tpl-card">
+                <span className="tpl-card__mark" aria-hidden="true" />
+                <span className="tpl-card__name">{t.name}</span>
+                <span className="tpl-card__from">
+                  From {t.sourceGuildName || "a server"} · {formatTime(t.createdAt)}
+                </span>
+                <span className="tpl-card__counts">
+                  <span className="g-badge">{t.roleCount} roles</span>
+                  <span className="g-badge">{t.channelCount} channels</span>
+                  {t.sourceGuildId === guild.id ? (
+                    <span className="g-badge g-badge--go">This server</span>
+                  ) : null}
+                </span>
+                <span className="tpl-card__actions">
+                  {isOwner && ent["qm.templates"] && t.sourceGuildId !== guild.id ? (
+                    <details className="confirm">
+                      <summary className="confirm__toggle g-btn g-btn--secondary g-btn--sm">
+                        Apply here…
+                      </summary>
+                      <form action={requestAction} className="card-col">
+                        <input type="hidden" name="guildId" value={guild.id} />
+                        <input type="hidden" name="page" value="quartermaster" />
+                        <input type="hidden" name="kind" value="template_apply" />
+                        <input type="hidden" name="templateId" value={t.id} />
+                        <p className="g-help">
+                          Creates the roles, categories and channels from “{t.name}” that this
+                          server doesn't have yet.
+                        </p>
+                        <button type="submit" className="g-btn g-btn--primary g-btn--sm">
+                          Yes, apply it
+                        </button>
+                      </form>
+                    </details>
+                  ) : null}
+                  <form action={removeTemplate}>
+                    <input type="hidden" name="guildId" value={guild.id} />
+                    <input type="hidden" name="templateId" value={t.id} />
+                    <button type="submit" className="g-btn g-btn--ghost g-btn--sm">
+                      Delete
+                    </button>
+                  </form>
+                </span>
+              </li>
+            ))}
+            <li className="tpl-card tpl-card--new">
+              {ent["qm.templates"] ? (
+                <form action={requestAction} className="card-col">
+                  <input type="hidden" name="guildId" value={guild.id} />
+                  <input type="hidden" name="page" value="quartermaster" />
+                  <input type="hidden" name="kind" value="template_save" />
+                  <span className="tpl-card__name">Save this server</span>
+                  <span className="tpl-card__from">
+                    Its roles, categories, channels and permissions, as they are now.
                   </span>
-                  <span />
-                  <span className="gw-row__actions">
-                    {isOwner && ent["qm.templates"] && t.sourceGuildId !== guild.id ? (
-                      <details className="confirm">
-                        <summary className="confirm__toggle g-btn g-btn--secondary g-btn--sm">
-                          Apply here…
-                        </summary>
-                        <form action={requestAction} className="card-col">
-                          <input type="hidden" name="guildId" value={guild.id} />
-                          <input type="hidden" name="page" value="quartermaster" />
-                          <input type="hidden" name="kind" value="template_apply" />
-                          <input type="hidden" name="templateId" value={t.id} />
-                          <p className="g-help">
-                            Creates the roles, categories and channels from “{t.name}” that this
-                            server doesn't have yet.
-                          </p>
-                          <button type="submit" className="g-btn g-btn--primary g-btn--sm">
-                            Yes, apply it
-                          </button>
-                        </form>
-                      </details>
-                    ) : null}
-                    <form action={removeTemplate}>
-                      <input type="hidden" name="guildId" value={guild.id} />
-                      <input type="hidden" name="templateId" value={t.id} />
-                      <button type="submit" className="g-btn g-btn--ghost g-btn--sm">
-                        Delete
-                      </button>
-                    </form>
+                  <input
+                    className="g-input"
+                    name="name"
+                    maxLength={TEMPLATE_NAME_MAX}
+                    placeholder={guild.name}
+                    aria-label="Template name"
+                  />
+                  <button
+                    type="submit"
+                    className="g-btn g-btn--primary g-btn--sm"
+                    disabled={templates.length >= TEMPLATES_PER_USER}
+                  >
+                    {templates.length >= TEMPLATES_PER_USER
+                      ? `${TEMPLATES_PER_USER} of ${TEMPLATES_PER_USER} saved`
+                      : "Save as a template"}
+                  </button>
+                </form>
+              ) : (
+                <>
+                  <span className="tpl-card__name">Save this server</span>
+                  <span className="tpl-card__from">
+                    On Pro: save a server's layout and copy it into another server you own.
                   </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="queue__empty muted">
-              {ent["qm.templates"]
-                ? "No templates yet. Save one here, then apply it in another server you own."
-                : "On Pro: save a server's layout and copy it into another server you own."}
-            </p>
-          )}
+                  <a
+                    className="g-btn g-btn--secondary g-btn--sm"
+                    href={`/servers/${guild.id}/plan#plans`}
+                    data-pro="Server templates: save a server's layout and copy it into another server you own."
+                  >
+                    See what Pro adds
+                  </a>
+                </>
+              )}
+            </li>
+          </ul>
           {templates.length && !isOwner ? (
             <p className="g-help">Only the server owner can apply a template here.</p>
           ) : null}

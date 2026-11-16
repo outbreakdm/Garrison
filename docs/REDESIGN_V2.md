@@ -124,7 +124,24 @@ scrolling wall of server templates; pricing; FAQ; help.
      below; level rewards keep Save (a row needs its level and its role together).
    Also: Settings history no longer records a "change" when a card is re-saved with empty
    fields its stored copy didn't have (a null key counts as missing, `repo/settings.ts`).
-4. **The rest**: lists, Messages builder, Insights tabs, Settings access, templates gallery.
+4. **The rest**: done 2026-11-16, except Settings access (below).
+   - *List pages*: Suggestions, Starboard and Voice rooms put the list in the main column and
+     their settings in a self-saving panel beside it (switch in its header); Stream alerts
+     gets the list head over tiles; Groups and raids gives each board a list head with its own
+     create; Game accounts lists the roster under a list head, stat roles open with Save.
+   - *Messages*: the tile library under a list head (All, Scheduled, Sent, Drafts); an open
+     message saves itself (the frameless `bare` panel) with a toolbar: Post now in a channel,
+     Remove, the save mark. Post now rests while a save is pending (`data-pending`). Not done:
+     editing the text right on the Discord preview (it reshapes the card editor six pages
+     share, so it's a piece of its own).
+   - *Insights*: Overview, Activity and Members tabs beside the range pills; stat tiles with
+     the change against the range's first half and a 12-point sparkline. Peak's Moderation
+     and Safety tabs need queries Garrison doesn't run yet.
+   - *Server templates*: saved layouts as cards with their counts, "Save this server" as the
+     dashed card. A gallery of ready-made templates with categories needs a catalogue of
+     templates, which doesn't exist yet.
+   - *Settings access*: a new permission feature, not a redesign; proposed to the owner
+     before building (Viewer and Editor access for people or roles).
 5. **Landing page.**
 
 Each step ships on its own, checked on desktop and phone.

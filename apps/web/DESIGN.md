@@ -194,6 +194,12 @@ Card editors (welcome, leave, DM, rank card) save themselves too: their fields a
 ### Sensitivity presets
 Where a setting is a pair of numbers (spam, what counts as a raid, when anti-nuke steps in), level cards stand for them, with Custom last: Relaxed, Balanced (marked as the default in its line), Strict. Picking a card fills the numbers, which stay on the page underneath; typing your own lights the card they match, or Custom. Four cards go two by two on a phone.
 
+### Stat tile
+A label in muted 13px, the number at 26px semibold in tabular figures, then a line: the change against the range's first half (▲ in go, ▼ in caution, as a whole percent) and a sentence of context. Where the range has a series, a 12-point sparkline under it: a 2px muted line, the latest point in the page's section color. The tile's words carry the meaning; the sparkline is only the shape.
+
+### Page tabs
+For a page with views of one subject (Insights): text tabs on a hairline, the current one underlined in the section color, with the range as pills at the right of the same row. Each tab and range is a link, so a view has its own address.
+
 ### Feed
 A list in the side column: one line per item, newest first, a hairline between, the time or count on the right in muted tabular figures. Empty, it says in a sentence what will show up.
 

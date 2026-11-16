@@ -966,3 +966,12 @@ Decided (2026-11-12, owner):
   key as missing, so re-saving an older card isn't a change (new test). Checked locally on
   desktop and phone. Not deployed. Next: step 4 (the other list pages, Messages builder,
   Insights tabs, Settings access, templates gallery).
+- 2026-11-16: Redesign v2, step 4 (the rest) done except Settings access. List pages
+  (Suggestions, Starboard, Voice rooms beside self-saving settings; Stream alerts tiles; a
+  list head per raid board; Game accounts roster), Messages (library with filters, an editor
+  that saves itself with a Post now toolbar), Insights (tabs, range pills, stat tiles with
+  sparklines; fixed the download line printing its own code), server templates as cards.
+  Checked locally on desktop and phone. Not deployed. Left for later: editing on the
+  Discord preview, Insights moderation and safety tabs, a ready-made template gallery.
+  Next: Settings access (Viewer / Editor for people or roles), waiting on the owner's
+  go-ahead, then step 5 (landing page).

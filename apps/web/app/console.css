@@ -2662,3 +2662,64 @@ a.pro-sheet__go:hover {
   stroke: var(--surface);
   stroke-width: 2;
 }
+
+/* --- Server templates: saved layouts as cards, saving this server as the dashed one ------ */
+.tpl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tpl-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.tpl-card__mark {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 4px;
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(var(--line-strong) 0 0) 8px 9px / 16px 2px no-repeat,
+    linear-gradient(var(--line-strong) 0 0) 8px 15px / 12px 2px no-repeat,
+    linear-gradient(var(--line-strong) 0 0) 8px 21px / 14px 2px no-repeat,
+    color-mix(in srgb, var(--id, var(--accent)) 14%, var(--surface-raised));
+}
+.tpl-card__name {
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 21px;
+  overflow-wrap: anywhere;
+}
+.tpl-card__from {
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 18px;
+}
+.tpl-card__counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+.tpl-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-3);
+}
+.tpl-card--new {
+  padding: var(--space-4);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-lg);
+}
+.tpl-card--new .g-btn {
+  align-self: flex-start;
+}
