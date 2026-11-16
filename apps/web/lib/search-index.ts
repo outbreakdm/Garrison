@@ -68,6 +68,12 @@ export const SEARCH_INDEX: SearchEntry[] = [
     "voice room join to create temp temporary channel vc private room lobby",
   ),
   page(
+    "/economy",
+    "Economy",
+    null,
+    "economy currency coins money points shop store buy balance daily pay wallet bank unbelievaboat leaderboard",
+  ),
+  page(
     "/invites",
     "Invites",
     null,

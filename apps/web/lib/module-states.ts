@@ -176,6 +176,12 @@ const MODULES: { name: string; href: string; module: SettingsModule; check: Chec
     },
   },
   {
+    name: "Economy",
+    href: "/economy",
+    module: "economy",
+    check: (v) => ({ state: v.enabled === true ? "on" : "off" }),
+  },
+  {
     name: "Server stats",
     href: "/stats",
     module: "stats",

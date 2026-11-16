@@ -33,6 +33,7 @@ const ITEMS: {
   { group: null, id: "orchid", href: "/spoils", name: "Giveaways", icon: "giveaways" },
   { group: null, id: "orchid", href: "/honors", name: "Starboard", icon: "starboard" },
   { group: null, id: "orchid", href: "/suggestions", name: "Suggestions", icon: "suggestions" },
+  { group: null, id: "orchid", href: "/economy", name: "Economy", icon: "economy" },
   { group: "Community", id: "orchid", href: "/parley", name: "Tickets", icon: "tickets" },
   { group: null, id: "orchid", href: "/dispatch", name: "Messages", icon: "messages" },
   { group: null, id: "orchid", href: "/beacon", name: "Stream alerts", icon: "alerts" },

@@ -5,6 +5,7 @@ import {
   checkGiveaway,
   checkProfileRequest,
   countRunningGiveaways,
+  ECONOMY_LIMITS,
   entitlements,
   findSendByDiscordId,
   getAlertFeeds,
@@ -15,6 +16,7 @@ import {
   getLfgPost,
   getMessages,
   getOpsEvent,
+  getPurchase,
   getQmBuild,
   getQmBuildByVersion,
   getQuarantine,
@@ -27,6 +29,7 @@ import {
   isPanelPaused,
   isPaused,
   MANAGER_REQUEST_KINDS,
+  parseAmount,
   parseDiscordLink,
   QM_PLAN_TTL_MS,
   type QueueInput,
@@ -71,6 +74,7 @@ const PAGES = new Set([
   "beacon",
   "ranks",
   "suggestions",
+  "economy",
 ]);
 /** A member's page under Watch is the one page with an ID in its path. */
 const MEMBER_PAGE = /^watch\/member\/\d{17,20}$/;
@@ -269,6 +273,23 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       const g = uuid.safeParse(id).success ? await getGiveaway(db, guildId, id) : null;
       if (!g) return { ok: false, error: "not_found" };
       return { ok: true, input: { kind, payload: { giveawayId: g.id, op } } };
+    }
+    case "economy_adjust": {
+      const userId = field(form, "userId");
+      const amount = parseAmount(field(form, "amount"));
+      const reason = field(form, "reason").slice(0, ECONOMY_LIMITS.reason);
+      if (!SNOWFLAKE.test(userId) || !amount || !reason) return { ok: false, error: "invalid" };
+      const sign = field(form, "op") === "take" ? -1 : 1;
+      return { ok: true, input: { kind, payload: { userId, amount: sign * amount, reason } } };
+    }
+    case "economy_purchase": {
+      const id = field(form, "id");
+      const p = uuid.safeParse(id).success ? await getPurchase(db, guildId, id) : null;
+      if (p?.status !== "waiting") return { ok: false, error: "not_found" };
+      return {
+        ok: true,
+        input: { kind, payload: { id: p.id, done: field(form, "op") === "done" } },
+      };
     }
     case "verify_decide": {
       const id = field(form, "id");

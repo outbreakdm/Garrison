@@ -44,6 +44,7 @@ const KINDS = [
   "anti_nuke",
   "backup_create",
   "backup_restore",
+  "verify_decide",
 ];
 
 function Row({ label, value }: { label: string; value: string }) {

@@ -117,6 +117,19 @@ function describe(
       ? value.map((id) => channels.get(String(id)) ?? "a deleted channel").join(", ")
       : "none";
   if (field === "categoryId") return value ? "a category" : "none";
+  if (field === "currency")
+    return value && typeof value === "object"
+      ? `${(value as { icon?: string }).icon ?? ""} ${(value as { name?: string }).name ?? ""}`.trim()
+      : "the standard coins";
+  if (field === "earn") return value ? "set" : "the standard rates";
+  if (field === "shop")
+    return Array.isArray(value) && value.length
+      ? value.map((i: { name?: string }) => `“${i.name ?? "?"}”`).join(", ")
+      : "empty";
+  if (field === "noEarnChannelIds")
+    return Array.isArray(value) && value.length
+      ? value.map((id) => `#${channels.get(String(id)) ?? "deleted-channel"}`).join(", ")
+      : "none";
   if (field === "labels")
     return Array.isArray(value) && value.length
       ? value.map((l: { name?: string }) => `“${l.name ?? "?"}”`).join(", ")
