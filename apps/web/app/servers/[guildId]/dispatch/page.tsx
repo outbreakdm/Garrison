@@ -12,18 +12,30 @@ import {
   SCHEDULED_HARD_MAX,
 } from "@garrison/db";
 import type { Metadata } from "next";
+import { ListHead } from "@/components/ListHead";
 import { PlansLink } from "@/components/ProUpsell";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { FormPanel } from "@/components/settings";
+import { formAction } from "@/lib/autosave";
 import { getDb } from "@/lib/db";
 import { listGuildRoles, listTextChannels } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
+import { undoChange } from "../settings/actions";
 import { addMessage, removeMessage, saveMessage } from "./actions";
 import { MessageEditor } from "./MessageEditor";
 
 export const metadata: Metadata = { title: "Messages" };
+
+/** The list filters (?show=), in pill order. */
+const SHOWS = ["all", "scheduled", "sent", "drafts"] as const;
+const SHOW_LABELS: Record<(typeof SHOWS)[number], string> = {
+  all: "All",
+  scheduled: "Scheduled",
+  sent: "Sent",
+  drafts: "Drafts",
+};
 
 export default async function MessagesPage({
   params,
@@ -63,6 +75,11 @@ export default async function MessagesPage({
       minute: "2-digit",
     }).format(d);
   const REPEAT = { none: "Once", daily: "Daily", weekly: "Weekly" } as const;
+  /** Where a message stands, for the filter pills and its badge. */
+  const stateOf = (m: (typeof messages)[number]): (typeof SHOWS)[number] =>
+    m.schedule && !paused.has(m.id) ? "scheduled" : last.get(m.id) ? "sent" : "drafts";
+  const show = SHOWS.find((k) => k === query.show) ?? "all";
+  const base = `/servers/${guild.id}/dispatch`;
 
   const flash = await readFlash();
 
@@ -76,9 +93,6 @@ export default async function MessagesPage({
             Garrison posts them as itself, in the server's time zone.
           </p>
         </div>
-        <span className="mono">
-          {plan === "pro" ? "Pro" : "Free"} · {scheduled} of {limit} scheduled
-        </span>
       </div>
 
       {flash?.ok ? (
@@ -103,59 +117,81 @@ export default async function MessagesPage({
 
       <RequestsPanel guildId={guild.id} kinds={["post_message"]} query={query} />
 
+      <ListHead
+        filters={SHOWS.map((k) => ({
+          key: k,
+          label: SHOW_LABELS[k],
+          n: k === "all" ? messages.length : messages.filter((m) => stateOf(m) === k).length,
+          href: k === "all" ? base : `${base}?show=${k}`,
+        }))}
+        current={show}
+        count={`${scheduled} of ${limit} scheduled`}
+        create={{
+          label: "New message",
+          href: `${base}?edit=new#new`,
+          disabled: full ? `${MESSAGE_LIMITS.saved} messages saved: remove one first.` : undefined,
+        }}
+      />
+
       <div className="item-grid">
-        {messages.map((m) => {
-          const next = m.schedule && !paused.has(m.id) ? nextOccurrence(m.schedule, tz) : null;
-          const sent = last.get(m.id);
-          const facts = [
-            m.schedule
-              ? `${REPEAT[m.schedule.repeat]}${m.channelId ? ` in #${channelName.get(m.channelId) ?? "deleted-channel"}` : ""}`
-              : "Not scheduled",
-            next ? `Next ${when(next)}` : null,
-            sent ? `Last sent ${when(sent)}` : "Never sent",
-          ].filter((f): f is string => Boolean(f));
-          return (
-            <details
-              className="g-card panel item-tile"
-              id={m.id}
-              key={`${m.id}-${contentKey(m)}`}
-              open={editing === m.id}
-            >
-              <summary className="panel__summary">
-                <span className="item-tile__mark" aria-hidden="true" />
-                <span className="panel__title panel__title--lg">{m.name}</span>
-                {paused.has(m.id) ? <span className="g-badge g-badge--caution">Paused</span> : null}
-                <span className="panel__facts">
-                  {facts.map((f) => (
-                    <span className="fact" key={f}>
-                      {f}
-                    </span>
-                  ))}
-                </span>
-                <span className={`item-tile__state g-badge${next ? " g-badge--go" : ""}`}>
-                  {next ? "Scheduled" : sent ? "Sent" : "Draft"}
-                </span>
-                <span className="panel__cue" aria-hidden="true" />
-              </summary>
-              <div className="panel__body">
-                <MessageEditor
-                  guildId={guild.id}
-                  saved={m}
-                  ent={ent}
-                  channels={channels}
-                  roleNames={roleNames}
-                  tz={tz}
-                  nextSend={next ? when(next) : null}
-                  paused={paused.has(m.id)}
-                  planHref={`/servers/${guild.id}/plan`}
-                  saveAction={saveMessage}
-                  removeAction={removeMessage}
-                  requestAction={requestAction}
-                />
-              </div>
-            </details>
-          );
-        })}
+        {messages
+          .filter((m) => show === "all" || stateOf(m) === show)
+          .map((m) => {
+            const next = m.schedule && !paused.has(m.id) ? nextOccurrence(m.schedule, tz) : null;
+            const sent = last.get(m.id);
+            const facts = [
+              m.schedule
+                ? `${REPEAT[m.schedule.repeat]}${m.channelId ? ` in #${channelName.get(m.channelId) ?? "deleted-channel"}` : ""}`
+                : "Not scheduled",
+              next ? `Next ${when(next)}` : null,
+              sent ? `Last sent ${when(sent)}` : "Never sent",
+            ].filter((f): f is string => Boolean(f));
+            return (
+              <details
+                className="g-card panel item-tile"
+                id={m.id}
+                key={m.id}
+                open={editing === m.id}
+              >
+                <summary className="panel__summary">
+                  <span className="item-tile__mark" aria-hidden="true" />
+                  <span className="panel__title panel__title--lg">{m.name}</span>
+                  {paused.has(m.id) ? (
+                    <span className="g-badge g-badge--caution">Paused</span>
+                  ) : null}
+                  <span className="panel__facts">
+                    {facts.map((f) => (
+                      <span className="fact" key={f}>
+                        {f}
+                      </span>
+                    ))}
+                  </span>
+                  <span className={`item-tile__state g-badge${next ? " g-badge--go" : ""}`}>
+                    {next ? "Scheduled" : sent ? "Sent" : "Draft"}
+                  </span>
+                  <span className="panel__cue" aria-hidden="true" />
+                </summary>
+                <div className="panel__body">
+                  <MessageEditor
+                    guildId={guild.id}
+                    saved={m}
+                    ent={ent}
+                    channels={channels}
+                    roleNames={roleNames}
+                    tz={tz}
+                    nextSend={next ? when(next) : null}
+                    paused={paused.has(m.id)}
+                    planHref={`/servers/${guild.id}/plan`}
+                    saveAction={saveMessage}
+                    undoAction={undoChange}
+                    removeAction={formAction(removeMessage)}
+                    requestAction={requestAction}
+                    stamp={contentKey(m)}
+                  />
+                </div>
+              </details>
+            );
+          })}
         <FormPanel
           className="item-tile item-tile--new"
           id="new"
@@ -167,7 +203,7 @@ export default async function MessagesPage({
           }
           open={messages.length === 0 || editing === "new"}
         >
-          <form action={addMessage} className="card-col">
+          <form action={formAction(addMessage)} className="card-col">
             <input type="hidden" name="guildId" value={guild.id} />
             <div className="preset-grid" role="radiogroup" aria-label="Start from">
               {Object.entries(MESSAGE_PRESETS).map(([key, p], i) => (

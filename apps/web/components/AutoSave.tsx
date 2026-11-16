@@ -64,6 +64,7 @@ export function AutoSaveCard({
   fields,
   aside,
   footer,
+  bare = false,
   children,
 }: {
   id: string;
@@ -87,6 +88,11 @@ export function AutoSaveCard({
   aside?: ReactNode;
   /** Below the form, inside the panel: anything with forms of its own (post, restore). */
   footer?: ReactNode;
+  /**
+   * Inside something that's already a card (a tile that opened to edit): no card of its
+   * own and no title, just a toolbar with `aside` and the save mark above the fields.
+   */
+  bare?: boolean;
   children: ReactNode;
 }) {
   const root = useRef<HTMLElement>(null);
@@ -192,20 +198,40 @@ export function AutoSaveCard({
       // saves now, and typing keeps its own pause.
       if (ifIdle && timer.current) return;
       if (timer.current) clearTimeout(timer.current);
+      el.dataset.pending = "";
       timer.current = setTimeout(() => {
         timer.current = null;
         // Mid-typing ("3" on the way to "30"): a value the field itself rejects waits for
         // the field to be left, then the server says what's wrong.
-        if (typing && form.current && !form.current.checkValidity()) return;
-        void saveRef.current();
+        if (typing && form.current && !form.current.checkValidity()) {
+          delete el.dataset.pending;
+          return;
+        }
+        void saveRef.current().finally(() => {
+          if (!timer.current && !busy.current) delete el.dataset.pending;
+        });
       }, ms);
     };
+    // Only this panel's own form counts: a field inside it, or one joined by form="<id>-form"
+    // (a header switch). Another form in the panel (Post now's channel) isn't a change.
+    const mine = (t: EventTarget | null) => {
+      if (
+        t instanceof HTMLInputElement ||
+        t instanceof HTMLSelectElement ||
+        t instanceof HTMLTextAreaElement
+      )
+        return t.form === form.current;
+      return t instanceof Element && Boolean(form.current?.contains(t));
+    };
     const onInput = (e: Event) => {
+      if (!mine(e.target)) return;
       const ms = typingDelay(e.target);
       if (ms !== null) schedule(ms, true);
     };
     // A typed field commits on blur or Enter; everything else commits as it changes.
-    const onChange = () => schedule(0);
+    const onChange = (e: Event) => {
+      if (mine(e.target)) schedule(0);
+    };
     const onSignal = (e: Event) => {
       const delay = (e as CustomEvent<{ delay?: number }>).detail?.delay ?? 600;
       schedule(delay, false, true);
@@ -236,18 +262,34 @@ export function AutoSaveCard({
   // The header bar sits outside the form: React puts the action's hidden inputs first
   // inside a form, and the bar must be the panel's first child.
   return (
-    <section ref={root} id={id} className="g-card autosave" data-live={live ? "" : undefined}>
-      <div className="card-head">
-        <h2 className="card-title">{title}</h2>
-        <span className="autosave__head">
-          {live ? <SaveMark mark={mark} /> : null}
+    <section
+      ref={root}
+      id={id}
+      className={bare ? "autosave autosave--bare" : "g-card autosave"}
+      data-live={live ? "" : undefined}
+    >
+      {bare ? (
+        <div className="autosave__bar">
           {aside ? (
             <span className="autosave__aside" key={epoch}>
               {aside}
             </span>
           ) : null}
-        </span>
-      </div>
+          {live ? <SaveMark mark={mark} /> : null}
+        </div>
+      ) : (
+        <div className="card-head">
+          <h2 className="card-title">{title}</h2>
+          <span className="autosave__head">
+            {live ? <SaveMark mark={mark} /> : null}
+            {aside ? (
+              <span className="autosave__aside" key={epoch}>
+                {aside}
+              </span>
+            ) : null}
+          </span>
+        </div>
+      )}
       <form
         ref={form}
         id={`${id}-form`}

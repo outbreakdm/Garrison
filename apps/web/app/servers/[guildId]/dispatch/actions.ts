@@ -13,9 +13,10 @@ import {
   type SavedMessage,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
+import type { AutoResult } from "@/lib/autosave";
 import { getDb } from "@/lib/db";
 import { listTextChannels } from "@/lib/discord";
-import { flashBack } from "@/lib/flash";
+import { answer, type Outcome } from "@/lib/outcome";
 import { checkGuildAccess } from "@/lib/session";
 
 /**
@@ -24,8 +25,9 @@ import { checkGuildAccess } from "@/lib/session";
  * list with the same checker the bot reads it with.
  */
 
-const back = (guildId: string, outcome: { ok: string } | { error: string }, open = "") =>
-  flashBack(`/servers/${guildId}/dispatch`, outcome, `${open ? `?edit=${open}#${open}` : ""}`);
+/** A message panel saves itself (an answer); a plain post goes back with the tile open. */
+const back = (form: FormData, guildId: string, outcome: Outcome, open = "") =>
+  answer(form, `/servers/${guildId}/dispatch`, outcome, open ? `?edit=${open}#${open}` : "");
 
 async function load(form: FormData) {
   const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
@@ -35,14 +37,14 @@ async function load(form: FormData) {
     getMessages(db, access.guild.id),
     getGuildPlan(db, access.guild.id),
   ]);
-  return { ...access, ent: entitlements(plan), messages: readMessages(raw) };
+  return { ...access, form, ent: entitlements(plan), messages: readMessages(raw) };
 }
 
 type Ctx = Awaited<ReturnType<typeof load>>;
 
-async function save(ctx: Ctx, next: unknown[], ok: string, open = "") {
+async function save(ctx: Ctx, next: unknown[], ok: string, open = ""): Promise<AutoResult> {
   const checked = checkMessages(next, ctx.ent, ctx.messages);
-  if (!checked.ok) return back(ctx.guild.id, { error: checked.error }, open);
+  if (!checked.ok) return back(ctx.form, ctx.guild.id, { error: checked.error }, open);
   const result = await applySettingsChange(await getDb(), {
     guildId: ctx.guild.id,
     module: "messages",
@@ -52,19 +54,20 @@ async function save(ctx: Ctx, next: unknown[], ok: string, open = "") {
   });
   if (!result.ok)
     return back(
+      ctx.form,
       ctx.guild.id,
-      { error: result.reason === "unchanged" ? "Nothing changed." : "Try again in a minute." },
+      result.reason === "unchanged" ? "unchanged" : { error: "Try again in a minute." },
       open,
     );
-  return back(ctx.guild.id, { ok }, open);
+  return back(ctx.form, ctx.guild.id, { ok, changeId: result.change.id }, open);
 }
 
 const crypto01 = () => randomInt(0, 1_000_000) / 1_000_000;
 
-export async function addMessage(form: FormData) {
+export async function addMessage(form: FormData): Promise<AutoResult> {
   const ctx = await load(form);
   const preset = MESSAGE_PRESETS[String(form.get("preset") ?? "")];
-  if (!preset) return back(ctx.guild.id, { error: "Pick a starting point." });
+  if (!preset) return back(form, ctx.guild.id, { error: "Pick a starting point." });
   const name = String(form.get("name") ?? "").trim() || preset.name;
   const m: SavedMessage = {
     id: newId(crypto01),
@@ -82,21 +85,21 @@ export async function addMessage(form: FormData) {
   );
 }
 
-export async function saveMessage(form: FormData) {
+export async function saveMessage(form: FormData): Promise<AutoResult> {
   const ctx = await load(form);
   let m: SavedMessage;
   try {
     m = JSON.parse(String(form.get("message") ?? "")) as SavedMessage;
   } catch {
-    return back(ctx.guild.id, { error: "That form wasn't valid. Refresh and try again." });
+    return back(form, ctx.guild.id, { error: "That form wasn't valid. Refresh and try again." });
   }
   const id = typeof m?.id === "string" ? m.id : "";
   if (!ctx.messages.some((x) => x.id === id))
-    return back(ctx.guild.id, { error: "That message was removed. Refresh and try again." });
+    return back(form, ctx.guild.id, { error: "That message was removed. Refresh and try again." });
   if (m.channelId) {
     const channels = await listTextChannels(ctx.guild.id).catch(() => []);
     if (!channels.some((c) => c.id === m.channelId))
-      return back(ctx.guild.id, { error: "Pick a text channel from this server." }, id);
+      return back(form, ctx.guild.id, { error: "Pick a text channel from this server." }, id);
   }
   const name = typeof m.name === "string" ? m.name.trim() : "the message";
   return save(
@@ -107,11 +110,11 @@ export async function saveMessage(form: FormData) {
   );
 }
 
-export async function removeMessage(form: FormData) {
+export async function removeMessage(form: FormData): Promise<AutoResult> {
   const ctx = await load(form);
   const id = String(form.get("messageId") ?? "");
   const gone = ctx.messages.find((m) => m.id === id);
-  if (!gone) return back(ctx.guild.id, { error: "That message was already removed." });
+  if (!gone) return back(form, ctx.guild.id, { error: "That message was already removed." });
   return save(
     ctx,
     ctx.messages.filter((m) => m.id !== id),

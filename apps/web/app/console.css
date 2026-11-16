@@ -2529,3 +2529,46 @@ a.pro-sheet__go:hover {
   font-weight: 650;
   line-height: 22px;
 }
+/* A panel that saves itself inside a tile: a toolbar (Post now, the save mark) over the
+   fields, no card of its own. */
+.autosave__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+.autosave__bar > .autosave__aside {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.autosave--bare > .autosave__form > .autosave__body {
+  padding-top: 0;
+}
+/* A message's toolbar: Post now in a channel, and Remove. Post now rests while a save is
+   on its way, since Discord gets the saved message. */
+.post-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+}
+.post-bar__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.post-bar__form .g-input {
+  width: auto;
+  max-width: 220px;
+}
+.autosave[data-pending] .post-bar__send {
+  opacity: 0.55;
+  pointer-events: none;
+}
