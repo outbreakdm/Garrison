@@ -44,6 +44,8 @@ const str = (v: unknown) => (typeof v === "string" && v ? v : null);
 
 /** Move Members (or Administrator): needed to move someone into the room they made. */
 const MOVE_MEMBERS = 1n << 24n;
+/** Manage Channels: server stats make and rename their channels. */
+const MANAGE_CHANNELS = 1n << 4n;
 const ADMINISTRATOR = 1n << 3n;
 
 /** A saved channel that's been deleted. Unknown (Discord silent) never counts as gone. */
@@ -170,6 +172,21 @@ const MODULES: { name: string; href: string; module: SettingsModule; check: Chec
         return { state: "blocked", reason: "On, but no “New room” channel is picked." };
       if (f.perms !== null && (f.perms & (MOVE_MEMBERS | ADMINISTRATOR)) === 0n)
         return { state: "blocked", reason: "Garrison can't move members: it needs Move Members." };
+      return { state: "on" };
+    },
+  },
+  {
+    name: "Server stats",
+    href: "/stats",
+    module: "stats",
+    check: (v, f) => {
+      if (v.enabled !== true) return { state: "off" };
+      if (!has(v.counters)) return { state: "blocked", reason: "On, but there are no counters." };
+      if (f.perms !== null && (f.perms & (MANAGE_CHANNELS | ADMINISTRATOR)) === 0n)
+        return {
+          state: "blocked",
+          reason: "Garrison can't make channels: it needs Manage Channels.",
+        };
       return { state: "on" };
     },
   },

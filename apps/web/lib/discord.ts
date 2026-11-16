@@ -74,6 +74,7 @@ interface RawGuild {
   /** With `with_counts`: members, and members online right now (approximate). */
   approximate_member_count?: number;
   approximate_presence_count?: number;
+  premium_subscription_count?: number;
   roles: {
     id: string;
     name: string;
@@ -243,14 +244,15 @@ export async function listGuildEmojis(guildId: string): Promise<ServerEmoji[]> {
 }
 
 /** The server's owner, asked of Discord (cached 30 s). Anti-nuke controls are theirs alone. */
-/** How many members the server has, and how many are online now; Discord's approximations. */
+/** How many members the server has, how many are online now (Discord's approximations), and its boosts. */
 export async function guildCounts(
   guildId: string,
-): Promise<{ members: number | null; online: number | null }> {
+): Promise<{ members: number | null; online: number | null; boosts: number | null }> {
   const g = await rawGuild(guildId);
   return {
     members: g.approximate_member_count ?? null,
     online: g.approximate_presence_count ?? null,
+    boosts: g.premium_subscription_count ?? null,
   };
 }
 

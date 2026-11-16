@@ -27,6 +27,7 @@ import type { RallyTemplate, RallyWording } from "./rally";
 import type { RankBoost } from "./rank-boosts";
 import type { RankCardStyle } from "./rank-cards";
 import type { RoleMenu } from "./role-menus";
+import type { StatCounter } from "./server-stats";
 import type { StatRole } from "./stat-roles";
 import type { TicketPanel } from "./tickets";
 
@@ -468,6 +469,7 @@ export const settingsModule = pgEnum("settings_module", [
   "suggestions",
   "access",
   "members",
+  "stats",
 ]);
 
 /** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */
@@ -2163,6 +2165,54 @@ export const voiceRooms = pgTable(
 ).enableRLS();
 
 export type VoiceRoom = typeof voiceRooms.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Server stats (channels whose names show a count)
+// ---------------------------------------------------------------------------
+
+/** A server's stat counters, one row, edited on the dashboard with history and undo. */
+export const statsSettings = pgTable(
+  "stats_settings",
+  {
+    guildId: text("guild_id")
+      .primaryKey()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    enabled: boolean("enabled").notNull().default(false),
+    counters: jsonb("counters").$type<StatCounter[]>().notNull().default(sql`'[]'::jsonb`),
+    categoryId: text("category_id"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      "stats_counters_list",
+      sql`jsonb_typeof(${t.counters}) = 'array' AND jsonb_array_length(${t.counters}) <= 10`,
+    ),
+  ],
+).enableRLS();
+
+/**
+ * The channel each counter shows in, and what it last said: the bot's own record, so it
+ * renames the same channel, knows which ones it made (and may delete), and the dashboard
+ * can show the names as they are in Discord. Key "_category" is the category it made.
+ */
+export const statChannels = pgTable(
+  "stat_channels",
+  {
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    counterKey: text("counter_key").notNull(),
+    channelId: text("channel_id").notNull(),
+    /** Garrison made it, so Garrison removes it when the counter goes. */
+    made: boolean("made").notNull().default(true),
+    name: text("name").notNull().default(""),
+    count: integer("count"),
+    renamedAt: timestamp("renamed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.guildId, t.counterKey] })],
+).enableRLS();
+
+export type StatChannel = typeof statChannels.$inferSelect;
 
 // ---------------------------------------------------------------------------
 // Suggestions

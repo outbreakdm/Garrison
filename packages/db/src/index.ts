@@ -43,6 +43,7 @@ export * from "./repo/role-menus";
 export * from "./repo/search";
 export * from "./repo/settings";
 export * from "./repo/starboard";
+export * from "./repo/stats";
 export * from "./repo/suggestions";
 export * from "./repo/templates";
 export * from "./repo/tickets";
@@ -108,6 +109,7 @@ export type {
   SettingsModule,
   StarboardPost,
   StartGiveawayPayload,
+  StatChannel,
   Suggestion,
   SupplyGrant,
   Ticket,
@@ -121,6 +123,7 @@ export type {
   WebSession,
 } from "./schema";
 export * as schema from "./schema";
+export * from "./server-stats";
 export * from "./server-templates";
 export * from "./starboard";
 export * from "./stat-roles";

@@ -154,6 +154,7 @@ type Module =
   | "barracks"
   | "qm"
   | "voice"
+  | "stats"
   | "suggestions"
   | "insights";
 
@@ -420,6 +421,12 @@ export const FEATURES = {
     about: "Your own voice room names, with the owner's name in them",
     free: false,
     pro: true,
+  },
+  "stats.counters": {
+    module: "stats",
+    about: "Server stats counters (channels that show a live count)",
+    free: 3,
+    pro: 10,
   },
   "rally.notifyRole": {
     module: "rally",

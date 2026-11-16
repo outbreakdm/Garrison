@@ -7,6 +7,9 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
+- **Community requests (2026-11-16):** `docs/COMMUNITY_REQUESTS.md`, built in the owner's
+  order. Server stats is built, not deployed: **apply migration `0066_server_stats`** (after
+  0065) before deploying. Next: regex moderation through Discord's AutoMod.
 - **Member pages (2026-11-16):** first build done, not deployed (`docs/MEMBER_PAGES.md`). **Before
   deploying, apply migration `0065_member_pages`** in production. Next pieces: Roles,
   Suggestions, Giveaways.
@@ -1041,3 +1044,10 @@ Decided (2026-11-12, owner):
   Groups and raids. Settings → Member pages (a manager's, with history and undo; migration
   0065 `member_pages`, dashboard-only grants). Checked as a plain member and as the manager on
   desktop and phone. Not deployed.
+- 2026-11-16: Community requests planned (`docs/COMMUNITY_REQUESTS.md`), owner picked the
+  order. Server stats built: a page under Community with counters (members, people, bots, a
+  role's members, boosts, channels, roles), names with {count} and {role}, Garrison's own
+  channels or ones the owner picks, and a Discord channel-list preview; the bot keeps the
+  numbers current within Discord's rename limit and removes the channels it made. Migration
+  0066 (`stats_settings` edited by the dashboard, `stat_channels` kept by the bot). Free 3,
+  Pro 10 counters. Not deployed.

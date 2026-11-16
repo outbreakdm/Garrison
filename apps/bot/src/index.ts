@@ -35,6 +35,7 @@ import { sweepRally } from "./modules/rally/service.js";
 import { handleMessage } from "./modules/ranks/service.js";
 import { sweepVoiceXp } from "./modules/ranks/voice.js";
 import { onStarReaction } from "./modules/starboard/service.js";
+import { sweepServerStats } from "./modules/stats/service.js";
 import { onDirectMessage } from "./modules/tickets/modmail.js";
 import {
   loadOpenTickets,
@@ -148,6 +149,8 @@ client.once(Events.ClientReady, async (ready) => {
       logger.error("Voice rooms sweep failed", { error }),
     );
     await sweepStatRoles(ctx, ready).catch((error) => logger.error("Stat roles failed", { error }));
+    // Runs on its own: a rename Discord makes wait mustn't hold up the other sweeps.
+    sweepServerStats(ctx, ready);
     await sweepMessages(ctx, ready).catch((error) =>
       logger.error("Scheduled messages failed", { error }),
     );

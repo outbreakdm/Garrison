@@ -21,6 +21,7 @@ import {
   type SettingsModule,
   settingsChanges,
   starboardSettings,
+  statsSettings,
   suggestionSettings,
   ticketSettings,
   voiceSettings,
@@ -107,6 +108,8 @@ export const EDITABLE_FIELDS = {
   suggestions: ["enabled", "channelId", "anonymous"],
   // Checked with checkVoiceRooms before it gets here.
   voice: ["enabled", "creatorChannelIds", "nameTemplate", "userLimit", "categoryId"],
+  // Checked with checkServerStats before it gets here.
+  stats: ["enabled", "counters", "categoryId"],
   // Checked with checkStarboard before it gets here.
   starboard: [
     "enabled",
@@ -250,6 +253,7 @@ const TABLES = {
   barracks: barracksSettings,
   access: dashboardAccess,
   members: memberPages,
+  stats: statsSettings,
 } as const;
 
 /** Modules whose settings row is created on first use, by the bot or the dashboard. */
@@ -270,6 +274,7 @@ const LAZY = new Set<SettingsModule>([
   "suggestions",
   "access",
   "members",
+  "stats",
 ]);
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -433,6 +438,12 @@ async function writeRow(tx: Tx, module: SettingsModule, guildId: string, values:
         .update(voiceSettings)
         .set(set as Partial<typeof voiceSettings.$inferInsert>)
         .where(eq(voiceSettings.guildId, guildId));
+      return;
+    case "stats":
+      await tx
+        .update(statsSettings)
+        .set(set as Partial<typeof statsSettings.$inferInsert>)
+        .where(eq(statsSettings.guildId, guildId));
       return;
     case "starboard":
       await tx

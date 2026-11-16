@@ -63,6 +63,12 @@ export const SEARCH_INDEX: SearchEntry[] = [
     "voice room join to create temp temporary channel vc private room lobby",
   ),
   page(
+    "/stats",
+    "Server stats",
+    null,
+    "server stats counter count member count members bots boosts roles channels staff statistics locked channel",
+  ),
+  page(
     "/barracks",
     "Game accounts",
     null,

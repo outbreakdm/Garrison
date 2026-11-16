@@ -112,6 +112,9 @@ try {
 if (env) {
   // Newest tables first: if these exist with grants, everything older does too.
   const latest = [
+    // 0066: server stats.
+    "stats_settings",
+    "stat_channels",
     // 0064: without it the dashboard can't read sessions (member_guild_ids) at all.
     "dashboard_access",
     "ai_usage",
@@ -142,8 +145,9 @@ if (env) {
   await checkDb("Database (bot)", env.DATABASE_URL, "garrison_bot", latest);
   if (process.env.WEB_DATABASE_URL)
     // The dashboard also reads tables the bot never touches: staff (0022), ticket notes
-    // (0026), appeals (0038) and Agency plans (0050).
+    // (0026), appeals (0038), Agency plans (0050) and member pages (0065).
     await checkDb("Database (dashboard)", process.env.WEB_DATABASE_URL, "garrison_web", [
+      "member_pages",
       "platform_staff",
       "plan_bundles",
       "ticket_notes",

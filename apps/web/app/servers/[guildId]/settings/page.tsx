@@ -6,7 +6,9 @@ import {
   getOpsTimezone,
   listSettingsChanges,
   type SettingsChange,
+  STAT_KINDS,
   STAT_SOURCES,
+  type StatKind,
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -104,6 +106,14 @@ function describe(
       ? value.map((id) => channels.get(String(id)) ?? "a deleted channel").join(", ")
       : "none";
   if (field === "categoryId") return value ? "a category" : "none";
+  if (field === "counters")
+    return Array.isArray(value) && value.length
+      ? value
+          .map((c: { kind: string; template?: string }) =>
+            c.template ? `“${c.template}”` : (STAT_KINDS[c.kind as StatKind]?.label ?? c.kind),
+          )
+          .join(", ")
+      : "none";
   if (field === "templates")
     return Array.isArray(value) && value.length
       ? value.map((t: { name?: string }) => t.name ?? "?").join(", ")

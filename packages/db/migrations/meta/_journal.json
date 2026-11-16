@@ -463,6 +463,13 @@
       "when": 1794850429933,
       "tag": "0065_member_pages",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1794852895547,
+      "tag": "0066_server_stats",
+      "breakpoints": true
     }
   ]
 }

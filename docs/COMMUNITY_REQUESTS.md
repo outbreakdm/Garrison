@@ -2,7 +2,13 @@
 
 Collected 2026-11-16 from the suggestions forum of another bot's community (the owner's
 screenshots). These are ideas people asked for; how Garrison does each one is Garrison's own
-design. Status: waiting on the owner's order and picks (end of this file).
+design.
+
+**Owner's picks (2026-11-16):** the proposed order; regex runs in Discord's own AutoMod; a
+shared Insights link can be embedded in other sites when the owner switches that on.
+
+**Status:** 1. Server stats **built** (not deployed: needs migration `0066_server_stats`).
+Next: 2. Regex moderation.
 
 | # | Request | Garrison today | Size |
 |---|---|---|---|
@@ -15,10 +21,16 @@ design. Status: waiting on the owner's order and picks (end of this file).
 | 7 | Share Insights as a link, or embed it in Notion | CSV download | S |
 | 8 | Economy: server currency with a custom name and icon, earning, a shop | Nothing | L |
 
-## 1. Server stats
+## 1. Server stats (built)
 
-A **Server stats** panel (on Insights, or its own page under Community): pick counters and
-Garrison keeps a locked voice channel per counter named like "Members: 372".
+A **Server stats** page under Community: pick counters and Garrison keeps a voice channel
+nobody can join per counter, named like "Members: 372", with a live preview of the channel
+list beside the counters. Free runs three counters, Pro ten; counters past the limit pause
+on Free. The bot fetches the member list once (then join and leave events keep it current)
+for People, Bots and role counts, and renames in its own loop so a rename Discord makes wait
+never holds up the other sweeps. Still to check on a test server: the channels appear, a
+count updates within ten minutes, removing a counter deletes its channel, off removes the
+category.
 
 - Counters: members, humans, bots, online, boosts, channels, roles, members with a role (the
   owner picks the role, so "Staff: 8" is the Staff role's count).

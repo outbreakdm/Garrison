@@ -36,6 +36,7 @@ const ITEMS: {
   { group: "Community", id: "orchid", href: "/parley", name: "Tickets", icon: "tickets" },
   { group: null, id: "orchid", href: "/dispatch", name: "Messages", icon: "messages" },
   { group: null, id: "orchid", href: "/beacon", name: "Stream alerts", icon: "alerts" },
+  { group: null, id: "orchid", href: "/stats", name: "Server stats", icon: "stats" },
   { group: "Gaming", id: "volt", href: "/rally", name: "Groups and raids", icon: "groups" },
   { group: null, id: "volt", href: "/voice", name: "Voice rooms", icon: "voice" },
   { group: null, id: "volt", href: "/barracks", name: "Game accounts", icon: "accounts" },
