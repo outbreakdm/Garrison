@@ -2572,3 +2572,93 @@ a.pro-sheet__go:hover {
   opacity: 0.55;
   pointer-events: none;
 }
+
+/* --- Insights: tabs and the range in one row, stat tiles with a trend --------------------- */
+.ins-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.ins-tabs {
+  display: flex;
+  gap: var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+.ins-tab {
+  margin-bottom: -1px;
+  padding: 6px 2px 9px;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.ins-tab:hover {
+  color: var(--text);
+}
+.ins-tab[aria-current="page"] {
+  border-bottom-color: var(--id-text, var(--accent-strong));
+  color: var(--text);
+}
+.list-pill--locked {
+  gap: 6px;
+  opacity: 0.85;
+}
+.stat-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.stat-tile__label {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.stat-tile__value {
+  font-size: 26px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 32px;
+}
+.stat-tile__value .unit {
+  margin-left: 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+.stat-tile__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+}
+.stat-tile__delta {
+  font-size: 12.5px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.spark {
+  display: block;
+  width: 100%;
+  max-width: 160px;
+  height: 32px;
+  margin-top: 6px;
+  overflow: visible;
+}
+.spark__line {
+  stroke: color-mix(in srgb, var(--text-muted) 70%, transparent);
+}
+.spark__now {
+  fill: var(--id-text, var(--accent-strong));
+  stroke: var(--surface);
+  stroke-width: 2;
+}
