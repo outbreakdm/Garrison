@@ -7,7 +7,9 @@ import {
   type SettingsModule,
   undoSettingsChange,
 } from "@garrison/db";
+import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
+import { type AutoResult, ERRORS, isAuto, SAVED } from "@/lib/autosave";
 import { getDb } from "@/lib/db";
 import { listGuildRoles, listTextChannels } from "@/lib/discord";
 import { env } from "@/lib/env";
@@ -56,13 +58,33 @@ const PLACES = {
   history: { page: "settings", panel: "history" },
 } as const satisfies Record<string, Place>;
 
-const saved = (guildId: string, place: Place, what: string) =>
+/**
+ * The outcome. A plain post goes back to the page with it in the URL; a form that saves
+ * itself (`_auto=1`) gets it as a value, with the page's data refreshed in the same reply.
+ */
+function saved(
+  form: FormData,
+  guildId: string,
+  place: Place,
+  what: string,
+  changeId: string | null = null,
+): AutoResult {
+  if (isAuto(form)) {
+    refresh();
+    return { status: "saved", message: SAVED[what] ?? "Saved.", changeId };
+  }
   redirect(`/servers/${guildId}/${place.page}?${new URLSearchParams({ saved: what })}`);
+}
 
-const failed = (guildId: string, place: Place, error: string) =>
+function failed(form: FormData, guildId: string, place: Place, error: string): AutoResult {
+  if (isAuto(form))
+    return error === "unchanged"
+      ? { status: "unchanged" }
+      : { status: "error", message: ERRORS[error] ?? "That didn't save. Try again." };
   redirect(
     `/servers/${guildId}/${place.page}?${new URLSearchParams({ error, edit: place.panel })}#${place.panel}`,
   );
+}
 
 async function authorize(form: FormData) {
   const guildId = String(form.get("guildId") ?? "");
@@ -88,7 +110,7 @@ async function save(
   patch: Record<string, unknown>,
   place: Place,
   what: string = module,
-) {
+): Promise<AutoResult> {
   const { session, guild } = await authorize(form);
   const result = await applySettingsChange(await getDb(), {
     guildId: guild.id,
@@ -97,29 +119,29 @@ async function save(
     userId: session.userId,
     username: session.username,
   });
-  if (!result.ok) failed(guild.id, place, result.reason);
-  saved(guild.id, place, what);
+  if (!result.ok) return failed(form, guild.id, place, result.reason);
+  return saved(form, guild.id, place, what, result.change.id);
 }
 
-export async function saveWatch(form: FormData) {
+export async function saveWatch(form: FormData): Promise<AutoResult> {
   const { guild } = await authorize(form);
   const parsed = watchForm.safeParse(
     pick(form, ["logChannelId", "dmMembers", "appealText", "appealsEnabled"]),
   );
-  if (!parsed.success) failed(guild.id, PLACES.watch, "range");
+  if (!parsed.success) return failed(form, guild.id, PLACES.watch, "range");
   else if (!(await channelBelongs(guild.id, parsed.data.logChannelId)))
-    failed(guild.id, PLACES.watch, "bad_channel");
+    return failed(form, guild.id, PLACES.watch, "bad_channel");
   else {
     // With appeals on and no appeal text of their own, the DMs point at the appeal page.
     const data = { ...parsed.data };
     if (data.appealsEnabled && !data.appealText)
       data.appealText = `Appeal here: ${env().APP_URL}/appeal/${guild.id}`;
-    await save("watch", form, data, PLACES.watch);
+    return save("watch", form, data, PLACES.watch);
   }
 }
 
 /** Anti-raid thresholds, the alert channel and the staff roles that keep talking in a lockdown. */
-export async function saveAntiRaid(form: FormData) {
+export async function saveAntiRaid(form: FormData): Promise<AutoResult> {
   const { guild } = await authorize(form);
   const parsed = antiRaidForm.safeParse(
     pick(form, [
@@ -133,109 +155,110 @@ export async function saveAntiRaid(form: FormData) {
     ]),
   );
   const staffRoleIds = parseStaffRoles(form);
-  if (!parsed.success || !staffRoleIds) failed(guild.id, PLACES.antiRaid, "range");
+  if (!parsed.success || !staffRoleIds) return failed(form, guild.id, PLACES.antiRaid, "range");
   else if (!(await channelBelongs(guild.id, parsed.data.alertChannelId)))
-    failed(guild.id, PLACES.antiRaid, "bad_channel");
+    return failed(form, guild.id, PLACES.antiRaid, "bad_channel");
   else {
     const roles = await listGuildRoles(guild.id).catch(() => null);
     const known = new Set((roles ?? []).map((r) => r.id));
     if (!roles || !staffRoleIds.every((id) => known.has(id)))
-      failed(guild.id, PLACES.antiRaid, "role");
+      return failed(form, guild.id, PLACES.antiRaid, "role");
     else
-      await save("gatehouse", form, { ...parsed.data, staffRoleIds }, PLACES.antiRaid, "antiraid");
+      return save("gatehouse", form, { ...parsed.data, staffRoleIds }, PLACES.antiRaid, "antiraid");
   }
 }
 
 /** Weekly backups (Pro). A server back on Free can still turn them off. */
-export async function saveBackupWeekly(form: FormData) {
+export async function saveBackupWeekly(form: FormData): Promise<AutoResult> {
   const { guild } = await authorize(form);
   const on = form.get("backupWeekly") === "on";
   if (on && !entitlements(await getGuildPlan(await getDb(), guild.id))["backups.weekly"])
-    failed(guild.id, PLACES.backups, "pro");
-  else await save("gatehouse", form, { backupWeekly: on }, PLACES.backups);
+    return failed(form, guild.id, PLACES.backups, "pro");
+  else return save("gatehouse", form, { backupWeekly: on }, PLACES.backups);
 }
 
-export async function saveVerification(form: FormData) {
+export async function saveVerification(form: FormData): Promise<AutoResult> {
   const { guild } = await authorize(form);
   const parsed = verificationForm.safeParse(
     pick(form, ["verifyRoleId", "verifyMinAccountAgeDays", "verifyWeb"]),
   );
-  if (!parsed.success) failed(guild.id, PLACES.verification, "range");
+  if (!parsed.success) return failed(form, guild.id, PLACES.verification, "range");
   else {
     const roles = await listGuildRoles(guild.id).catch(() => null);
     const byId = new Map((roles ?? []).map((r) => [r.id, r]));
     const verify = parsed.data.verifyRoleId ? byId.get(parsed.data.verifyRoleId) : null;
-    if (!roles || verify === undefined) failed(guild.id, PLACES.verification, "role");
+    if (!roles || verify === undefined) return failed(form, guild.id, PLACES.verification, "role");
     // Anyone can press Verify, so the role it gives must carry no admin or moderation powers.
     else if (verify && (verify.managed || isDangerousRole(verify.permissions)))
-      failed(guild.id, PLACES.verification, "dangerous_role");
-    else await save("gatehouse", form, parsed.data, PLACES.verification, "verification");
+      return failed(form, guild.id, PLACES.verification, "dangerous_role");
+    else return save("gatehouse", form, parsed.data, PLACES.verification, "verification");
   }
 }
 
 /** Level rewards are edited on the Ranks page and saved like any other setting. */
-export async function saveRewards(form: FormData) {
+export async function saveRewards(form: FormData): Promise<AutoResult> {
   const { guild } = await authorize(form);
   const parsed = parseRewards(form);
-  if (!parsed.ok) failed(guild.id, PLACES.rewards, `reward_${parsed.error}`);
+  if (!parsed.ok) return failed(form, guild.id, PLACES.rewards, `reward_${parsed.error}`);
   else {
     const roles = await listGuildRoles(guild.id).catch(() => null);
     const byId = new Map((roles ?? []).map((r) => [r.id, r]));
     const rows = parsed.value.map((r) => byId.get(r.roleId));
-    if (!roles || rows.some((r) => !r)) failed(guild.id, PLACES.rewards, "reward_role");
+    if (!roles || rows.some((r) => !r))
+      return failed(form, guild.id, PLACES.rewards, "reward_role");
     // Chatting must never earn moderation or admin powers.
     else if (rows.some((r) => r && (r.managed || isDangerousRole(r.permissions))))
-      failed(guild.id, PLACES.rewards, "reward_dangerous");
-    else await save("rewards", form, { rewards: parsed.value }, PLACES.rewards);
+      return failed(form, guild.id, PLACES.rewards, "reward_dangerous");
+    else return save("rewards", form, { rewards: parsed.value }, PLACES.rewards);
   }
 }
 
-export async function saveOps(form: FormData) {
+export async function saveOps(form: FormData): Promise<AutoResult> {
   const { guild } = await authorize(form);
   const parsed = opsForm.safeParse(pick(form, ["timezone"]));
-  if (!parsed.success) failed(guild.id, PLACES.ops, "timezone");
-  else await save("ops", form, parsed.data, PLACES.ops);
+  if (!parsed.success) return failed(form, guild.id, PLACES.ops, "timezone");
+  else return save("ops", form, parsed.data, PLACES.ops);
 }
 
-export async function saveRanks(form: FormData) {
+export async function saveRanks(form: FormData): Promise<AutoResult> {
   const { guild } = await authorize(form);
   const parsed = ranksForm.safeParse(
     pick(form, ["enabled", "voiceXp", "announce", "announceChannelId"]),
   );
-  if (!parsed.success) failed(guild.id, PLACES.ranks, "range");
+  if (!parsed.success) return failed(form, guild.id, PLACES.ranks, "range");
   else if (!(await channelBelongs(guild.id, parsed.data.announceChannelId)))
-    failed(guild.id, PLACES.ranks, "bad_channel");
-  else await save("ranks", form, parsed.data, PLACES.ranks);
+    return failed(form, guild.id, PLACES.ranks, "bad_channel");
+  else return save("ranks", form, parsed.data, PLACES.ranks);
 }
 
-export async function saveLedger(form: FormData) {
+export async function saveLedger(form: FormData): Promise<AutoResult> {
   const { guild } = await authorize(form);
   const parsed = ledgerForm.safeParse(
     pick(form, ["channelId", "retentionDays", "keepMessageText"]),
   );
-  if (!parsed.success) failed(guild.id, PLACES.ledger, "range");
+  if (!parsed.success) return failed(form, guild.id, PLACES.ledger, "range");
   else if (!(await channelBelongs(guild.id, parsed.data.channelId)))
-    failed(guild.id, PLACES.ledger, "bad_channel");
-  else await save("ledger", form, parsed.data, PLACES.ledger);
+    return failed(form, guild.id, PLACES.ledger, "bad_channel");
+  else return save("ledger", form, parsed.data, PLACES.ledger);
 }
 
 /** The escalation ladder is edited on the Watch page, and saved like any other setting. */
-export async function saveLadder(form: FormData) {
+export async function saveLadder(form: FormData): Promise<AutoResult> {
   const { guild } = await authorize(form);
   const parsed = parseLadder(form);
-  if (!parsed.success) failed(guild.id, PLACES.ladder, "ladder");
-  else await save("escalation", form, { rules: parsed.data }, PLACES.ladder);
+  if (!parsed.success) return failed(form, guild.id, PLACES.ladder, "ladder");
+  else return save("escalation", form, { rules: parsed.data }, PLACES.ladder);
 }
 
-export async function undoChange(form: FormData) {
+export async function undoChange(form: FormData): Promise<AutoResult> {
   const { session, guild } = await authorize(form);
   const changeId = String(form.get("changeId") ?? "");
   if (!/^[0-9a-f-]{36}$/.test(changeId) || !isSnowflake(guild.id))
-    failed(guild.id, PLACES.history, "not_found");
+    return failed(form, guild.id, PLACES.history, "not_found");
   const result = await undoSettingsChange(await getDb(), guild.id, changeId, {
     userId: session.userId,
     username: session.username,
   });
-  if (!result.ok) failed(guild.id, PLACES.history, result.reason);
-  saved(guild.id, PLACES.history, "undo");
+  if (!result.ok) return failed(form, guild.id, PLACES.history, result.reason);
+  return saved(form, guild.id, PLACES.history, "undo");
 }

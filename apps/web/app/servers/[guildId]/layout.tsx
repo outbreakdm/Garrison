@@ -1,14 +1,18 @@
-import { aiTier, listActiveGuilds } from "@garrison/db";
+import { aiTier, formatPrice, listActiveGuilds, PRICING } from "@garrison/db";
 import type { ReactNode } from "react";
 import { Logo } from "@/components/Logo";
 import { PageTransition } from "@/components/PageTransition";
 import { PlanFoot } from "@/components/PlanFoot";
+import { ProSheet } from "@/components/ProSheet";
 import { ServerNav } from "@/components/ServerNav";
 import { ServerSwitcher } from "@/components/ServerSwitcher";
+import { Toaster } from "@/components/Toaster";
 import { Topbar } from "@/components/Topbar";
+import { billingReady } from "@/lib/billing";
 import { getDb } from "@/lib/db";
 import { requireGuildAccess, requireSession } from "@/lib/session";
 import { currentTheme } from "@/lib/theme";
+import { checkoutAction } from "./plan/actions";
 
 /**
  * A server's console: a full-height rail (the logo, this server and a switch to others,
@@ -57,6 +61,15 @@ export default async function ServerLayout({
           <PageTransition>{children}</PageTransition>
         </main>
       </div>
+      <Toaster />
+      {tier === "free" ? (
+        <ProSheet
+          guildId={guild.id}
+          price={formatPrice(PRICING.pro.monthly)}
+          highlights={PRICING.pro.highlights}
+          checkout={billingReady() ? checkoutAction : null}
+        />
+      ) : null}
     </div>
   );
 }

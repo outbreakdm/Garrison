@@ -8,6 +8,7 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import { ProTag } from "@/components/cards/CardEditor";
+import { PresetCards } from "@/components/choices";
 import { DurationBar, untilText } from "@/components/DurationBar";
 import { formatTime } from "@/components/format";
 import { ListField } from "@/components/ListField";
@@ -21,6 +22,7 @@ import {
   SettingsPanel,
   Switch,
 } from "@/components/settings";
+import { formAction } from "@/lib/autosave";
 import { getDb } from "@/lib/db";
 import { guildOwnerId, listGuildRoles, listTextChannels } from "@/lib/discord";
 import { isDangerousRole } from "@/lib/permissions";
@@ -209,7 +211,7 @@ export default async function GatehousePage({
           >
             {/* Keyed by last update, so the form re-mounts with the stored values after a save. */}
             <form
-              action={saveAntiRaid}
+              action={formAction(saveAntiRaid)}
               className="card-col"
               key={`raid-${g?.updatedAt.getTime() ?? 0}`}
             >
@@ -245,18 +247,27 @@ export default async function GatehousePage({
                   />
                 </label>
               </div>
-              <label className="g-field" htmlFor="raidResponse">
-                <span>On a raid</span>
-                <select
-                  className="g-input"
-                  id="raidResponse"
-                  name="raidResponse"
-                  defaultValue={g?.raidResponse ?? "lockdown"}
-                >
-                  <option value="lockdown">Lock the server and pause invites</option>
-                  <option value="alert">Alert only</option>
-                </select>
-              </label>
+              <PresetCards
+                name="raidResponse"
+                label="On a raid"
+                value={g?.raidResponse ?? "lockdown"}
+                options={[
+                  {
+                    value: "lockdown",
+                    label: "Lock down",
+                    does: "Lock the server and pause invites",
+                    about:
+                      "New members can't talk until it unlocks. Right for almost every server.",
+                    isDefault: true,
+                  },
+                  {
+                    value: "alert",
+                    label: "Alert only",
+                    does: "Post an alert, change nothing",
+                    about: "Staff decide what to do. For servers that would rather never lock.",
+                  },
+                ]}
+              />
               <div className="field-row">
                 <label className="g-field" htmlFor="autoUnlockMinutes">
                   <span>Auto-unlock (min)</span>
@@ -316,7 +327,7 @@ export default async function GatehousePage({
             ]}
           >
             <form
-              action={saveVerification}
+              action={formAction(saveVerification)}
               className="card-col"
               key={`verify-${g?.updatedAt.getTime() ?? 0}`}
             >
@@ -566,7 +577,7 @@ export default async function GatehousePage({
         ) : (
           <p className="queue__empty muted">No backups yet. Take one now, before you need it.</p>
         )}
-        <form action={saveBackupWeekly} className="settings-form">
+        <form action={formAction(saveBackupWeekly)} className="settings-form">
           <input type="hidden" name="guildId" value={guild.id} />
           <label className="switch">
             <input

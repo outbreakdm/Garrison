@@ -938,3 +938,12 @@ Decided (2026-11-12, owner):
   changes (neutral greys, open panels that save themselves, a Pro sheet, preset and level
   cards, one list template, quiet page heads), a page-by-page map and an order. Waiting on the
   owner's decisions (font, autosave, where to start).
+- 2026-11-16: Redesign v2, step 1 (system) done. Owner's picks: keep Archivo, autosave with
+  Undo, build in order. Neutral greys, 12/8 corners, quieter page titles (`d293aaa`). Then a
+  second read-only look at Peak and the rest of the system, each tried on one page: panels
+  that save themselves with a save mark and an Undo toast (Logs), the Pro sheet that every foil
+  tag and "See what Pro adds" opens (straight to Checkout), segmented rows, level cards and
+  preset cards (Moderation, Security), and one list head with filter pills, a count and the
+  dashed new tile (Giveaways). Settings actions now return their outcome to a self-saving form
+  and still redirect a plain post. Checked locally on desktop, phone and light theme. Not
+  deployed. Next: step 2, the safety pages (Moderation, Security, Logs) in the new shape.

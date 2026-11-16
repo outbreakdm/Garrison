@@ -15,6 +15,7 @@ import { formatTime } from "@/components/format";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { SettingsNotice } from "@/components/settings";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { formAction } from "@/lib/autosave";
 import { getDb } from "@/lib/db";
 import { botLook, listGuildRoles, listTextChannels } from "@/lib/discord";
 import { requireGuildAccess } from "@/lib/session";
@@ -164,7 +165,12 @@ export default async function SettingsPage({
         <div className="card-col">
           {/* Keyed by the stored value: after a save or undo the form re-mounts with it,
               instead of keeping stale browser state that a later save would re-apply. */}
-          <form action={saveOps} id="server" className="g-card card-col" key={`ops-${timezone}`}>
+          <form
+            action={formAction(saveOps)}
+            id="server"
+            className="g-card card-col"
+            key={`ops-${timezone}`}
+          >
             <input type="hidden" name="guildId" value={guild.id} />
             <h2 className="card-title">Server</h2>
             <label className="g-field" htmlFor="timezone">
@@ -367,7 +373,7 @@ export default async function SettingsPage({
                   </td>
                   <td>
                     {!h.revertsChangeId && !undone.has(h.id) ? (
-                      <form action={undoChange}>
+                      <form action={formAction(undoChange)}>
                         <input type="hidden" name="guildId" value={guild.id} />
                         <input type="hidden" name="changeId" value={h.id} />
                         <button type="submit" className="g-btn g-btn--ghost">

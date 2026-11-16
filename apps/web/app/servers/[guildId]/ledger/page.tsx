@@ -8,22 +8,16 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AutoSaveCard } from "@/components/AutoSave";
 import { EmptyState } from "@/components/EmptyState";
 import { formatTime } from "@/components/format";
 import { ProUpsell } from "@/components/ProUpsell";
-import {
-  ChannelSelect,
-  FormFoot,
-  isEditing,
-  SettingsNotice,
-  SettingsPanel,
-  Switch,
-} from "@/components/settings";
+import { ChannelSelect, SettingsNotice, Switch } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { listTextChannels, memberNames, searchMembers } from "@/lib/discord";
 import { isSnowflake } from "@/lib/security";
 import { requireGuildAccess } from "@/lib/session";
-import { saveLedger } from "../settings/actions";
+import { saveLedger, undoChange } from "../settings/actions";
 
 export const metadata: Metadata = { title: "Logs" };
 
@@ -89,58 +83,52 @@ export default async function LedgerPage({
         </div>
       ) : null}
 
-      <SettingsPanel
+      <AutoSaveCard
+        id="settings"
         title="Log settings"
-        open={isEditing(q, "settings")}
-        facts={[
-          {
-            label: "Channel",
-            value: ledgerChannel
-              ? `#${ledgerChannel.name}`
-              : settings.channelId
-                ? "Deleted"
-                : "Dashboard only",
-          },
-          { label: "Kept for", value: `${settings.retentionDays} days` },
-          { label: "Message text", value: settings.keepMessageText ? "Kept" : "Not kept" },
-        ]}
+        action={saveLedger}
+        undo={undoChange}
+        guildId={guild.id}
+        stamp={settings.updatedAt.getTime()}
+        saveLabel="Save log settings"
+        aside={
+          settings.channelId && !ledgerChannel ? (
+            <span className="g-badge g-badge--caution">Log channel deleted</span>
+          ) : null
+        }
       >
-        <form action={saveLedger} className="settings-form" key={settings.updatedAt.getTime()}>
-          <input type="hidden" name="guildId" value={guild.id} />
-          <div className="settings-grid">
-            <label className="g-field" htmlFor="channelId">
-              <span>Log channel</span>
-              <ChannelSelect
-                name="channelId"
-                value={settings.channelId}
-                channels={channels}
-                none="Dashboard only"
-              />
-              <span className="g-help">Each event also gets a line here.</span>
-            </label>
-            <label className="g-field" htmlFor="retentionDays">
-              <span>Keep events for (days)</span>
-              <input
-                className="g-input"
-                id="retentionDays"
-                name="retentionDays"
-                type="number"
-                min={7}
-                max={365}
-                defaultValue={settings.retentionDays}
-              />
-              <span className="g-help">7 to 365. Older events are removed automatically.</span>
-            </label>
-          </div>
-          <Switch
-            name="keepMessageText"
-            defaultChecked={settings.keepMessageText}
-            label="Keep the text of deleted and edited messages"
-            help="Lets moderators see what was removed or changed. Garrison only has the text of messages it saw since its last restart, and the text goes with the event when it expires."
-          />
-          <FormFoot label="Save log settings" guildId={guild.id} />
-        </form>
-      </SettingsPanel>
+        <div className="settings-grid">
+          <label className="g-field" htmlFor="channelId">
+            <span>Log channel</span>
+            <ChannelSelect
+              name="channelId"
+              value={settings.channelId}
+              channels={channels}
+              none="Dashboard only"
+            />
+            <span className="g-help">Each event also gets a line here.</span>
+          </label>
+          <label className="g-field" htmlFor="retentionDays">
+            <span>Keep events for (days)</span>
+            <input
+              className="g-input"
+              id="retentionDays"
+              name="retentionDays"
+              type="number"
+              min={7}
+              max={365}
+              defaultValue={settings.retentionDays}
+            />
+            <span className="g-help">7 to 365. Older events are removed automatically.</span>
+          </label>
+        </div>
+        <Switch
+          name="keepMessageText"
+          defaultChecked={settings.keepMessageText}
+          label="Keep the text of deleted and edited messages"
+          help="Lets moderators see what was removed or changed. Garrison only has the text of messages it saw since its last restart, and the text goes with the event when it expires."
+        />
+      </AutoSaveCard>
 
       <form className="g-card filter-row" method="get">
         <label className="g-field" htmlFor="user">

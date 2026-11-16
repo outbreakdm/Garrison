@@ -74,8 +74,26 @@ scrolling wall of server templates; pricing; FAQ; help.
 
 ## Order
 
-1. **System**: greys, corners, page head (done 2026-11-16), the Pro sheet, autosave with toast and undo, preset /
-   level / segmented controls, the list template. *Large.*
+1. **System**: done 2026-11-16. Greys, corners, page head; then, after a second read-only look
+   at Peak (Bot Profile's sheet, Security's presets, Auto Moderation's levels and actions,
+   Giveaways' list), the rest, each built once and tried on one page:
+   - *Autosave* (`components/AutoSave.tsx`, `lib/autosave.ts`): an open panel that saves as
+     you change it, through the page's own action (same checks, same Settings history). The
+     header bar reads Auto-saved / Saving… / Saved / Not saved; a toast (`Toaster.tsx`) offers
+     Undo. Typing waits 0.8 s and skips values the field itself rejects until it's left.
+     Before scripts load it's the old form with a Save button. On **Logs**.
+   - *Pro sheet* (`ProSheet.tsx`): one per server on Free, opened by every foil tag and every
+     "See what Pro adds" link, with that spot's sentence; the button goes straight to Stripe
+     Checkout for Pro monthly. Garrison's shield in foil, not Peak's art.
+   - *Choices* (`choices.tsx`): `Segmented` (Moderation: after removing a message),
+     `LevelCards` (Moderation: AI strictness), `PresetCards` (Security: on a raid). Radios
+     underneath; the picked card takes the page's section color.
+   - *List head* (`ListHead.tsx`): filter pills with counts (`?show=`), "N of M running",
+     the white Create, the new-item form as the dashed tile last. On **Giveaways**.
+   Step 2 notes: settings actions return their outcome to a self-saving form
+   (`settings/actions.ts`); `watch/actions.ts` (automod) still redirects and needs the same
+   change before automod can save itself. `ListField` adds and removes rows without a change
+   event, so it must dispatch one before it sits in a self-saving panel.
 2. **Safety pages**: Moderation, Security, Logs. *Large.*
 3. **Community pages**: Welcome, Role menus, Tickets, Leveling. *Large.*
 4. **The rest**: lists, Messages builder, Insights tabs, Settings access, templates gallery.

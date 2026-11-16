@@ -10,6 +10,7 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import { ProTag } from "@/components/cards/CardEditor";
+import { ListHead } from "@/components/ListHead";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { FormPanel } from "@/components/settings";
 import { getDb } from "@/lib/db";
@@ -19,6 +20,15 @@ import { ago } from "../parley/when";
 import { requestAction } from "../requests";
 
 export const metadata: Metadata = { title: "Giveaways" };
+
+/** The list filters (?show=), in pill order. */
+const SHOWS = ["all", "running", "ended", "cancelled"] as const;
+const SHOW_LABELS: Record<(typeof SHOWS)[number], string> = {
+  all: "All",
+  running: "Running",
+  ended: "Drawn",
+  cancelled: "Canceled",
+};
 
 /** "in 3 h", for a time still ahead. */
 function until(date: Date, now = Date.now()) {
@@ -62,6 +72,8 @@ export default async function GiveawaysPage({
   );
   const channelName = new Map(channels.map((c) => [c.id, c.name]));
   const pro = ent["giveaways.rules"];
+  const show = SHOWS.find((k) => k === query.show) ?? "all";
+  const shown = show === "all" ? list : list.filter((g) => g.status === show);
 
   const act = (id: string, op: "end" | "reroll" | "cancel", label: string, ghost = false) => (
     <form action={requestAction}>
@@ -89,9 +101,6 @@ export default async function GiveawaysPage({
             and announces them.
           </p>
         </div>
-        <span className="mono">
-          {plan === "pro" ? "Pro" : "Free"} · {running.length} of {limit} running
-        </span>
       </div>
 
       <RequestsPanel
@@ -100,8 +109,83 @@ export default async function GiveawaysPage({
         query={query}
       />
 
+      <ListHead
+        filters={SHOWS.map((k) => ({
+          key: k,
+          label: SHOW_LABELS[k],
+          n: k === "all" ? list.length : list.filter((g) => g.status === k).length,
+          href:
+            k === "all" ? `/servers/${guild.id}/spoils` : `/servers/${guild.id}/spoils?show=${k}`,
+        }))}
+        current={show}
+        count={`${running.length} of ${limit} running`}
+        create={{
+          label: "New giveaway",
+          href: `/servers/${guild.id}/spoils?edit=new#new`,
+          disabled: full
+            ? `${limit} of ${limit} running. End one first${plan === "pro" ? "" : `, or Pro runs ${RUNNING_HARD_MAX}`}.`
+            : undefined,
+        }}
+      />
+
+      {shown.length ? (
+        <section className="g-card queue" aria-labelledby="gw-title">
+          <h2 className="card-title" id="gw-title">
+            {show === "all" ? "Recent giveaways" : SHOW_LABELS[show]}
+            <span className="count">{shown.length}</span>
+          </h2>
+          <ul className="queue__list">
+            {shown.map((g) => {
+              const entries = counts.get(g.id) ?? 0;
+              const winners = g.winnerIds.map((id) => `@${names.get(id) ?? "member"}`).join(", ");
+              return (
+                <li key={g.id} className="gw-row">
+                  <span className="gw-row__main">
+                    <span className="ticket-row__topic">{g.prize}</span>
+                    <span className="ticket-row__who">
+                      #{channelName.get(g.channelId) ?? "deleted-channel"} · {entries}{" "}
+                      {entries === 1 ? "entry" : "entries"} · {g.winners}{" "}
+                      {g.winners === 1 ? "winner" : "winners"}
+                      {g.status === "ended"
+                        ? ` · won by ${winners || "nobody"}`
+                        : g.status === "cancelled"
+                          ? " · canceled"
+                          : ""}
+                      {g.repeat && g.status === "running" ? " · runs again when drawn" : ""}
+                    </span>
+                  </span>
+                  <span
+                    className={`g-badge ${g.status === "running" ? "g-badge--go" : g.status === "cancelled" ? "g-badge--caution" : "g-badge--off"}`}
+                  >
+                    {g.status === "running"
+                      ? `Draws ${until(g.endsAt)}`
+                      : g.status === "ended"
+                        ? `Drawn ${ago(g.endedAt ?? g.endsAt)}`
+                        : "Canceled"}
+                  </span>
+                  <span className="gw-row__actions">
+                    {g.status === "running" ? (
+                      <>
+                        {act(g.id, "end", "Draw now")}
+                        {act(g.id, "cancel", "Cancel", true)}
+                      </>
+                    ) : g.status === "ended" &&
+                      entries > new Set([...g.drawnIds, ...g.winnerIds]).size ? (
+                      act(g.id, "reroll", "Draw again")
+                    ) : null}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : list.length ? (
+        <p className="g-help">No {SHOW_LABELS[show].toLowerCase()} giveaways right now.</p>
+      ) : null}
+
       <FormPanel
         id="new"
+        className="item-tile item-tile--new"
         title="New giveaway"
         hint={
           full
@@ -277,58 +361,6 @@ export default async function GiveawaysPage({
           </div>
         </form>
       </FormPanel>
-
-      {list.length ? (
-        <section className="g-card queue" aria-labelledby="gw-title">
-          <h2 className="card-title" id="gw-title">
-            Recent giveaways
-          </h2>
-          <ul className="queue__list">
-            {list.map((g) => {
-              const entries = counts.get(g.id) ?? 0;
-              const winners = g.winnerIds.map((id) => `@${names.get(id) ?? "member"}`).join(", ");
-              return (
-                <li key={g.id} className="gw-row">
-                  <span className="gw-row__main">
-                    <span className="ticket-row__topic">{g.prize}</span>
-                    <span className="ticket-row__who">
-                      #{channelName.get(g.channelId) ?? "deleted-channel"} · {entries}{" "}
-                      {entries === 1 ? "entry" : "entries"} · {g.winners}{" "}
-                      {g.winners === 1 ? "winner" : "winners"}
-                      {g.status === "ended"
-                        ? ` · won by ${winners || "nobody"}`
-                        : g.status === "cancelled"
-                          ? " · canceled"
-                          : ""}
-                      {g.repeat && g.status === "running" ? " · runs again when drawn" : ""}
-                    </span>
-                  </span>
-                  <span
-                    className={`g-badge ${g.status === "running" ? "g-badge--go" : g.status === "cancelled" ? "g-badge--caution" : "g-badge--off"}`}
-                  >
-                    {g.status === "running"
-                      ? `Draws ${until(g.endsAt)}`
-                      : g.status === "ended"
-                        ? `Drawn ${ago(g.endedAt ?? g.endsAt)}`
-                        : "Canceled"}
-                  </span>
-                  <span className="gw-row__actions">
-                    {g.status === "running" ? (
-                      <>
-                        {act(g.id, "end", "Draw now")}
-                        {act(g.id, "cancel", "Cancel", true)}
-                      </>
-                    ) : g.status === "ended" &&
-                      entries > new Set([...g.drawnIds, ...g.winnerIds]).size ? (
-                      act(g.id, "reroll", "Draw again")
-                    ) : null}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ) : null}
     </>
   );
 }

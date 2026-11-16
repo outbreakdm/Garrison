@@ -28,6 +28,7 @@ import {
   SettingsPanel,
   Switch,
 } from "@/components/settings";
+import { formAction } from "@/lib/autosave";
 import { getDb } from "@/lib/db";
 import { getServerLayout, listGuildRoles, listTextChannels } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
@@ -147,7 +148,11 @@ export default async function RanksPage({
           },
         ]}
       >
-        <form action={saveRanks} className="settings-form" key={settings.updatedAt.getTime()}>
+        <form
+          action={formAction(saveRanks)}
+          className="settings-form"
+          key={settings.updatedAt.getTime()}
+        >
           <input type="hidden" name="guildId" value={guild.id} />
           <div className="settings-grid">
             <Switch
@@ -443,7 +448,7 @@ export default async function RanksPage({
           )}
         </section>
         <form
-          action={saveRewards}
+          action={formAction(saveRewards)}
           id="rewards"
           className="g-card card-col"
           key={JSON.stringify(rewards)}

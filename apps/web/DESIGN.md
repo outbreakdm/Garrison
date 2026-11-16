@@ -183,11 +183,23 @@ Panels 12px, controls 8px, chips and badges 6px, pills and switches fully round.
 ### Header bar (signature)
 The first line of a panel: 52px tall, full width over a 1px hairline, 10px by 16px padding. Leads with the section gem in a tinted tile, then the title (15px, 650), a count pill (Panel Raised, 12px), and the switch, link or button on the right. Applied automatically to any panel whose first child is its title or title row; table panels and collapsible settings rows use the same tile.
 
-### Settings row
-A collapsible panel (`details.panel`): gear in a tinted tile, title, current values as facts, "Change" on the right. Open, it gains a strong edge and its body below a hairline.
+### Settings panel that saves itself (redesign v2)
+Settings are open on the page, never folded behind "Change". `AutoSaveCard` is a panel whose header bar ends in the save mark: a ring and "Auto-saved", a spinning ring and "Saving…", a go dot and "Saved", an alert dot and "Not saved". Switches, picks and selects save at once; typing waits 0.8 s. Each save goes through the page's own action and lands in Settings history; a toast says what was saved and offers Undo. Before scripts load it shows a Save button instead. The older folded row (`details.panel`, facts and "Change") remains on pages not yet moved over.
+
+### Toast
+One at a time, centered at the foot of the screen: a small gem (go or alert), one sentence, a white Undo when there's something to take back, and a close. 6 s (9 s for errors), held open while hovered or focused.
+
+### Pro sheet
+Every foil "Requires Pro" tag and every "See what Pro adds" link opens the same sheet over the page, dimmed to 78% and blurred 3px: Garrison's shield drawn in foil over a faint grid, "Part of Garrison Pro", the sentence from the spot that opened it, one white button straight to Checkout, then what else Pro adds as a checklist and a line of fine print. 20px corners, the only floating thing with a lift shadow besides menus.
+
+### Choices
+A pick among a few is shown, never typed or selected. **Segmented row**: a recessed track, options sharing its width, the picked one raised with a strong edge (not white: the One White Rule holds). **Level cards**: a scale, weakest first, always one row; signal bars fill one step per card. **Preset cards**: a name (with a "Default" chip on Garrison's own setting), what it does in a few words, who it's for in a sentence. Picked cards take the page's section color on their edge and a filled ring top right. All are radios underneath.
+
+### List head
+Every list page opens with it: filter pills in a track (each with its count, the current one raised), then on the right the count against the plan ("1 of 2 running") and the white Create. The form for a new item is the dashed tile at the end of the list. On phones the pills share the full width.
 
 ### Buttons
-- **Shape:** 9px corners, 36px tall, 13.5px semibold, never wrapping.
+- **Shape:** 8px corners, 36px tall, 13.5px semibold, never wrapping.
 - **Primary:** Signal White with black text. Hover darkens toward the floor.
 - **Secondary:** Panel Raised with a hairline; hover strengthens the edge.
 - **Ghost:** muted text, raised background on hover. **Danger:** alert text and edge.
@@ -196,7 +208,7 @@ A collapsible panel (`details.panel`): gear in a tinted tile, title, current val
 38 by 22px. Off: Panel Raised slot, muted knob. On: white track, black knob, 180ms ease-out.
 
 ### Inputs
-Panel Raised, hairline edge (strong on hover), 9px corners, 38px tall; focus ring 2px in the section color.
+Panel Raised, hairline edge (strong on hover), 8px corners, 38px tall; focus ring 2px in the section color.
 
 ### Navigation (rail)
 Group names at 11.5px led by their gem; items 34px, muted, raised on hover; the current page is the white pill with its gem still in it. The server card on top shows the server's initial in a tinted tile, its name and "Switch server". The plan card at the foot names the plan with one line and a button.
@@ -217,6 +229,8 @@ Garrison speaks in plain text beside its gem mark; your messages are raised bubb
 - **Do** show state with shape and word as well as color (badges: dot on, ring waiting, triangle alert, dash off).
 - **Do** put a live preview beside anything that posts to Discord.
 - **Do** keep one white control per panel.
+- **Do** let settings save themselves, with Undo in the toast; never add a Save button to a panel that can save itself.
+- **Do** show a pick among two to four as segmented, level or preset cards, not a select.
 
 ### Don't:
 - **Don't** fill buttons, panels or page areas with a section color; tint only.

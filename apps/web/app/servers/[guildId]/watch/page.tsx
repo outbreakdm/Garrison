@@ -18,6 +18,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CopyButton } from "@/components/CopyButton";
 import { ProTag } from "@/components/cards/CardEditor";
+import { LevelCards, Segmented } from "@/components/choices";
 import { EmptyState } from "@/components/EmptyState";
 import { ActionBadge, formatDuration, formatTime, plainMentions } from "@/components/format";
 import { ListField } from "@/components/ListField";
@@ -33,6 +34,7 @@ import {
   SettingsPanel,
   Switch,
 } from "@/components/settings";
+import { formAction } from "@/lib/autosave";
 import { getDb } from "@/lib/db";
 import { listGuildRoles, listTextChannels, searchMembers } from "@/lib/discord";
 import { env } from "@/lib/env";
@@ -438,20 +440,18 @@ export default async function WatchPage({
                   />
                 </label>
               </div>
+              <Segmented
+                name="action"
+                label="After removing the message"
+                value={am.action}
+                options={[
+                  { value: "delete", label: "Nothing more" },
+                  { value: "warn", label: "Warn" },
+                  { value: "timeout", label: "Time out" },
+                ]}
+                help="A warning counts toward the escalation ladder."
+              />
               <div className="field-row">
-                <label className="g-field" htmlFor="automodAction">
-                  <span>After removing the message</span>
-                  <select
-                    className="g-input"
-                    id="automodAction"
-                    name="action"
-                    defaultValue={am.action}
-                  >
-                    <option value="delete">Nothing more</option>
-                    <option value="warn">Warn (counts toward the ladder)</option>
-                    <option value="timeout">Time out</option>
-                  </select>
-                </label>
                 <label className="g-field" htmlFor="timeoutMinutes">
                   <span>Timeout (minutes)</span>
                   <input
@@ -504,19 +504,16 @@ export default async function WatchPage({
                 </label>
               ))}
             </div>
-            <label className="g-field" htmlFor="aiStrictness">
-              <span>How strict</span>
-              <select
-                className="g-input"
-                id="aiStrictness"
-                name="aiStrictness"
-                defaultValue={am.aiStrictness}
-              >
-                <option value="low">Only clear cases</option>
-                <option value="medium">Balanced</option>
-                <option value="high">Strict (more false alarms)</option>
-              </select>
-            </label>
+            <LevelCards
+              name="aiStrictness"
+              label="How strict"
+              value={am.aiStrictness}
+              options={[
+                { value: "low", label: "Relaxed", line: "Only clear cases" },
+                { value: "medium", label: "Balanced", line: "Garrison's default" },
+                { value: "high", label: "Strict", line: "Catches more, more false alarms" },
+              ]}
+            />
           </fieldset>
           <FormFoot label="Save automod" guildId={guild.id} />
         </form>
@@ -535,7 +532,11 @@ export default async function WatchPage({
           { label: "Appeals page", value: appealsOn ? "On" : "Off" },
         ]}
       >
-        <form action={saveWatch} className="settings-form" key={w?.updatedAt.getTime() ?? 0}>
+        <form
+          action={formAction(saveWatch)}
+          className="settings-form"
+          key={w?.updatedAt.getTime() ?? 0}
+        >
           <input type="hidden" name="guildId" value={guild.id} />
           <div className="settings-grid">
             <div className="card-col">
@@ -739,7 +740,7 @@ export default async function WatchPage({
         open={isEditing(query, "edit-ladder")}
       >
         <form
-          action={saveLadder}
+          action={formAction(saveLadder)}
           className="card-col"
           key={rules
             .map((r) => `${r.warnCount}:${r.windowMinutes}:${r.action}:${r.durationSeconds}`)

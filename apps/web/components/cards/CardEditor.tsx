@@ -35,9 +35,10 @@ const footerMode = (f: string | null): FooterMode =>
  * Marks something this server's plan doesn't include. Shown only when it's locked,
  * and always in words: a Garrison Pro subscription for this server is required.
  */
+/** The foil "Requires Pro" tag. A click opens the Pro sheet (components/ProSheet). */
 export function ProTag({ on }: { on: boolean }) {
   return on ? null : (
-    <span className="pro-tag" title="Needs a Garrison Pro subscription for this server">
+    <span className="pro-tag" title="Needs a Garrison Pro subscription for this server" data-pro="">
       <LockIcon />
       Requires Pro
     </span>
