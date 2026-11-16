@@ -44,6 +44,7 @@ export * from "./repo/ranks";
 export * from "./repo/role-menus";
 export * from "./repo/search";
 export * from "./repo/settings";
+export * from "./repo/shares";
 export * from "./repo/starboard";
 export * from "./repo/stats";
 export * from "./repo/suggestions";
@@ -72,6 +73,7 @@ export type {
   GiveawayActionPayload,
   Guild,
   HealthSnapshot,
+  InsightsShare,
   LedgerEvent,
   LedgerSettings,
   LfgMember,

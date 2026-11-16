@@ -8,8 +8,9 @@ design.
 shared Insights link can be embedded in other sites when the owner switches that on.
 
 **Status:** 1 to 3 **deployed** (2026-11-16, `7849b5a`, run 43974339633; migrations 0065 to 0068
-applied). 4. Threads and forum posts and 5–6. the invite tracker with partners **built**, not
-deployed (the tracker needs migration `0069_invite_labels`). Next: 7. Share Insights.
+applied). 4. Threads and forum posts, 5–6. the invite tracker with partners and 7. the Insights
+share link **built**, not deployed (need migrations `0069_invite_labels` and
+`0070_insights_shares`). Next: 8. Economy.
 
 | # | Request | Garrison today | Size |
 |---|---|---|---|
@@ -128,7 +129,14 @@ server's name, a contact, and a partnership note. A partners view lists each par
 the members they brought and how many stayed a week. On Agency, the view spans every server
 the plan covers.
 
-## 7. Share Insights
+## 7. Share Insights (built)
+
+Built: **Share these insights** on Insights (managers only) makes a long random link to a
+read-only page (`/share/insights/<token>`, no sign-in, not indexed) with the same tabs and
+ranges, minus inviter names and anything leading into the dashboard. **Allow embedding** lets
+other sites frame it: such pages send `frame-ancestors https:` and no `X-Frame-Options`, and
+the page itself refuses to draw in a frame (Sec-Fetch-Dest) unless embedding is on. **New
+link** replaces it (the old address stops at once); **Stop sharing** ends it.
 
 A manager can turn on a **share link** for Insights: a long, random address that shows a
 read-only copy (no member names, only counts and charts), with the range and tabs. It can be

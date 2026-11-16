@@ -39,7 +39,11 @@ export function proxy(request: NextRequest) {
     ...(request.nextUrl.pathname.startsWith("/verify/")
       ? ["frame-src https://challenges.cloudflare.com"]
       : []),
-    "frame-ancestors 'none'",
+    // A shared Insights page may sit in another site's frame (Notion, a wiki) when its
+    // manager allows it: the page itself refuses frames otherwise (Sec-Fetch-Dest).
+    request.nextUrl.pathname.startsWith("/share/insights/")
+      ? "frame-ancestors https:"
+      : "frame-ancestors 'none'",
     ...(isDev ? [] : ["upgrade-insecure-requests"]),
   ].join("; ");
 

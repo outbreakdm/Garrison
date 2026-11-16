@@ -153,6 +153,7 @@ if (env) {
     // The dashboard also reads tables the bot never touches: staff (0022), ticket notes
     // (0026), appeals (0038), Agency plans (0050) and member pages (0065).
     await checkDb("Database (dashboard)", process.env.WEB_DATABASE_URL, "garrison_web", [
+      "insights_shares",
       "member_pages",
       "platform_staff",
       "plan_bundles",

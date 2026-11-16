@@ -11,7 +11,8 @@ then updates **Status** and the **Log** before stopping.
   order. Server stats, regex moderation, verification questions and the member pages are
   **deployed** (`7849b5a`, run 43974339633, dashboard and bot; migrations 0065 to 0068 applied
   and recorded, 69 rows). Threads and forum posts and the invite tracker (with partners) are
-  built, not deployed: **apply migration `0069_invite_labels`** first. Next: share Insights.
+  built, and the Insights share link, not deployed: **apply migrations `0069_invite_labels` and
+  `0070_insights_shares`** first. Next: the economy.
 - **Member pages (2026-11-16):** first build **deployed** with `7849b5a` (`docs/MEMBER_PAGES.md`).
   Next pieces: Roles, Suggestions, Giveaways.
 - **Latest deploy:** `2e2b93f` (run 43918628506, dashboard only): steps 6 to 8 of redesign v2,
@@ -1071,3 +1072,7 @@ Decided (2026-11-12, owner):
   invite and category, labels with color, description, category and a join role, tracking a
   pasted invite) and Partners (partner server, contact and deal per invite). Migration 0069
   (`invite_settings`, settings module `invites`). Not deployed.
+- 2026-11-16: Shared Insights built: a manager-made read-only link (counts and charts, no
+  names), optional embedding in other sites, replace or stop at any time. Insights' body moved
+  into `components/insights/InsightsView.tsx` for both pages. Migration 0070
+  (`insights_shares`, dashboard only). Not deployed.

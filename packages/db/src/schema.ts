@@ -2244,6 +2244,27 @@ export const automodRules = pgTable("automod_rules", {
 export type AutomodRule = typeof automodRules.$inferSelect;
 
 // ---------------------------------------------------------------------------
+// Shared Insights (a read-only link to a server's counts and charts)
+// ---------------------------------------------------------------------------
+
+/**
+ * A server's Insights share link: one per server, made, replaced or stopped by a manager.
+ * The token is kept so managers can copy the link again; it opens counts and charts only.
+ */
+export const insightsShares = pgTable("insights_shares", {
+  guildId: text("guild_id")
+    .primaryKey()
+    .references(() => guilds.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(),
+  /** Other sites (Notion, a wiki) may show it in a frame. */
+  embed: boolean("embed").notNull().default(false),
+  createdBy: text("created_by").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
+
+export type InsightsShare = typeof insightsShares.$inferSelect;
+
+// ---------------------------------------------------------------------------
 // Invite tracker (labels on a server's invites)
 // ---------------------------------------------------------------------------
 
