@@ -231,7 +231,7 @@ export default async function WatchPage({
         </section>
       ) : null}
 
-      <div className="page-split">
+      <div className="page-split page-split--tools-first">
         <div className="page-split__main">
           <AutoSaveCard
             id="automod"

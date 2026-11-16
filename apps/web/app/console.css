@@ -3199,3 +3199,14 @@ form[data-locked] .seg__opt:has(input:disabled) {
   font-size: 13px;
   line-height: 19px;
 }
+
+/* Security and Moderation: on phones and tablets the tools for right now (Lockdown, Moderate
+   a member) come before the settings, which are set once and rarely touched mid-raid. */
+@media (max-width: 1099px) {
+  .page-split--tools-first > .page-split__side {
+    order: -1;
+  }
+}
+.ov-lock {
+  align-self: flex-start;
+}

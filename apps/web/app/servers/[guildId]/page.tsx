@@ -713,6 +713,13 @@ export default async function OverviewPage({
               </span>
             </div>
           </div>
+          <Link
+            className={`g-btn g-btn--sm ${o.activeLockdown ? "g-btn--secondary" : "g-btn--danger"} ov-lock`}
+            href={`${base}/gatehouse#lockdown`}
+            transitionTypes={["nav"]}
+          >
+            {o.activeLockdown ? "Lift the lockdown…" : "Lock the server…"}
+          </Link>
         </section>
 
         <section className="g-card card-col" aria-labelledby="groups-title">

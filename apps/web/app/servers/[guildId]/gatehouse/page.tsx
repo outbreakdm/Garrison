@@ -108,7 +108,7 @@ export default async function GatehousePage({
       <RequestsPanel guildId={guild.id} kinds={KINDS} query={query} />
       <SettingsNotice query={query} />
 
-      <div className="page-split">
+      <div className="page-split page-split--tools-first">
         <div className="page-split__main">
           <AutoSaveCard
             id="anti-raid"
@@ -459,6 +459,7 @@ export default async function GatehousePage({
         <aside className="page-split__side" aria-label="Right now">
           <section
             className={`g-card card-col gate-lockdown ${l ? "gate-lockdown--on" : ""}`}
+            id="lockdown"
             aria-labelledby="lockdown-title"
           >
             <div className="card-head">

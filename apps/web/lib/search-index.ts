@@ -100,6 +100,18 @@ export const SEARCH_INDEX: SearchEntry[] = [
     "Groups and raids",
     "lfg wording game presets roles buttons customize",
   ),
+  {
+    title: "Lockdown",
+    where: "Security",
+    path: "/gatehouse#lockdown",
+    keywords: "lock lockdown lift unlock raid emergency freeze mute everyone",
+  },
+  {
+    title: "Moderate a member",
+    where: "Moderation",
+    path: "/watch#moderate",
+    keywords: "ban kick timeout mute warn member user punish",
+  },
   setting("watch", "Moderation", "Log channel", "mod log cases channel"),
   setting("watch", "Moderation", "DM members when moderated", "direct message notify"),
   setting("watch", "Moderation", "How to appeal", "appeal text ban"),
