@@ -187,7 +187,13 @@ The first line of a panel: 52px tall, full width over a 1px hairline, 10px by 16
 ### Settings panel that saves itself (redesign v2)
 Settings are open on the page, never folded behind "Change". `AutoSaveCard` is a panel whose header bar ends in the save mark: a ring and "Auto-saved", a spinning ring and "Saving…", a go dot and "Saved", an alert dot and "Not saved". Switches, picks and selects save at once; typing waits 0.8 s. Each save goes through the page's own action and lands in Settings history; a toast says what was saved and offers Undo. Before scripts load it shows a Save button instead. The older folded row (`details.panel`, facts and "Change") remains on pages not yet moved over.
 
-A panel's own on/off (Automod, AI moderation, Anti-raid) is a switch at the far right of its header bar, after the save mark. When one action's settings are split over several panels (automod's five), each panel sends only its own fields.
+A panel's own on/off (AI moderation, Backups) is a switch at the far right of its header bar, after the save mark. A module's main on/off is in the page head instead (below). When one action's settings are split over several panels (automod's five), each panel sends only its own fields.
+
+### Module state (page head and menu)
+Every module page says at its top right whether it runs, always in the same place. Six have the module's own switch there (Automod, Anti-raid, Leveling, Starboard, Suggestions, Voice rooms): a pill with the name, "On" in go or "Off", and the switch, which joins its panel's form and saves with Undo. The others show a status pill: a dot, On or Off, what's set up, and the first thing to do as a link ("Pick one"). A module that's switched on but can't work (no channel, a deleted channel, a missing permission) adds a caution pill: a triangle, "Needs you", the reason, and where to fix it. The menu shows the same three states after each module: a go dot (on), a caution triangle (needs you), an empty ring (off), with the word for screen readers. The Overview's Needs attention lists every module that needs you. One source decides all of it (`lib/module-states.ts`), so a green never lies.
+
+### Recommended
+Garrison's own setting for a new server is marked as advice, never as state: a "Recommended" tag in muted text on the card, a small star on the segment, and a line under the choice or number: a muted check and "Recommended setting", or "Recommended: Balanced. Use it", where Use it is a button that puts it back and saves. Switches Garrison recommends on carry the tag only while off.
 
 Card editors (welcome, leave, DM, rank card) save themselves too: their fields are React state, so the editor tells its panel about each change (`useSaveSignal`), and a save that can't go through yet (no channel picked, a Pro field on Free) is held, with the reason under the fields and "Not saved yet" in the caution color in the header. Undo resets the editor; ordinary saves never re-create it, so focus stays where you're typing. Builders that publish to Discord (role menus, ticket panels, messages) and multi-row editors whose rows are only valid once complete (the escalation ladder, level rewards) keep an explicit Save.
 
@@ -213,7 +219,7 @@ One at a time, centered at the foot of the screen: a small gem (go or alert), on
 Every foil "Requires Pro" tag and every "See what Pro adds" link opens the same sheet over the page, dimmed to 78% and blurred 3px: Garrison's shield drawn in foil over a faint grid, "Part of Garrison Pro", the sentence from the spot that opened it, one white button straight to Checkout, then what else Pro adds as a checklist and a line of fine print. 20px corners, the only floating thing with a lift shadow besides menus.
 
 ### Choices
-A pick among a few is shown, never typed or selected. **Segmented row**: a recessed track, options sharing its width, the picked one raised with a strong edge (not white: the One White Rule holds). **Level cards**: a scale, weakest first, always one row; signal bars fill one step per card. **Preset cards**: a name (with a "Default" chip on Garrison's own setting), what it does in a few words, who it's for in a sentence. Picked cards take the page's section color on their edge and a filled ring top right. All are radios underneath.
+A pick among a few is shown, never typed or selected. **Segmented row**: a recessed track, options sharing its width, the picked one raised with a strong edge (not white: the One White Rule holds). **Level cards**: a scale, weakest first, always one row; signal bars fill one step per card. **Preset cards**: a name (with a "Recommended" tag on Garrison's own setting), what it does in a few words, who it's for in a sentence. Picked cards take the page's section color on their edge and a filled ring top right. All are radios underneath.
 
 ### List head
 Every list page opens with it: filter pills in a track (each with its count, the current one raised), then on the right the count against the plan ("1 of 2 running") and the white Create. The form for a new item is the dashed tile at the end of the list. On phones the pills share the full width.
@@ -231,7 +237,13 @@ Every list page opens with it: filter pills in a track (each with its count, the
 Panel Raised, hairline edge (strong on hover), 8px corners, 38px tall; focus ring 2px in the section color.
 
 ### Navigation (rail)
-Group names at 11.5px led by their gem; items 34px, muted, raised on hover; the current page is the white pill with its gem still in it. The server card on top shows the server's initial in a tinted tile, its name and "Switch server". The plan card at the foot names the plan with one line and a button.
+Groups follow what an owner sets out to do: Overview, AI assistant, Insights and Settings first, then Safety, Onboarding, Engagement, Community and Gaming. Group names at 11.5px led by their gem; items 34px with Garrison's own 16px line icon, muted, raised on hover, and the module's state at the end. The current page is the white pill, on the phone menu too. The server card on top shows the server's initial in a tinted tile, its name and "Switch server". The plan card at the foot names the plan with one line and a grey button (the rail keeps one white thing), and marks itself on the Plan page.
+
+### Pro on Free
+In a card editor, every look option (author line, title link, accent, images, footer) folds into one "Your own look" group with a single Requires Pro tag; a card that already uses one opens it. On Pro the fields are open as usual. One tag per place, never one per field.
+
+### Confirm before what can't be undone
+Draw now, Cancel a giveaway, Remove a message, Cancel a raid and Lock the server each open an inline "Yes, …" step under their toggle, which then reads "Never mind".
 
 ### Tabs
 A segmented row of 13px semibold labels; the selected tab is the white pill. Built from radios, so they work before scripts load.

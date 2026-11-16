@@ -1016,3 +1016,9 @@ Decided (2026-11-12, owner):
   module's own switch (six pages, saving with Undo) or what's set up and the first thing to
   do (nine pages). Garrison's recommended choices and numbers are marked, with "Use it" to
   go back to them. Checked on desktop, phone and light theme; 588 tests pass. Not deployed.
+- 2026-11-16: /impeccable critique across all pages (dashboard 26/40, landing 23/32; snapshot
+  in apps/web/.impeccable/critique) and every finding applied, in six commits: true module
+  state (on, needs you, off) shared by the menu, page heads and Needs attention, with Live from
+  the heartbeat; emergency tools first on phones; one folded Pro group per card editor;
+  consistent patterns and plain history; layout fixes; landing fixes. 588 tests pass; checked
+  on desktop, phone and light theme. Not deployed.

@@ -1136,11 +1136,11 @@ a.g-btn--primary:hover {
 }
 .ov-top__bar::-webkit-meter-optimum-value {
   border-radius: 999px;
-  background: var(--id-text, var(--accent-strong));
+  background: color-mix(in srgb, var(--id, var(--accent)) 55%, var(--surface));
 }
 .ov-top__bar::-moz-meter-bar {
   border-radius: 999px;
-  background: var(--id-text, var(--accent-strong));
+  background: color-mix(in srgb, var(--id, var(--accent)) 55%, var(--surface));
 }
 .ov-empty {
   margin: 0;
@@ -2091,6 +2091,12 @@ a.pro-sheet__go:hover {
     background-color 0.15s ease,
     color 0.15s ease;
 }
+/* Segments in the narrow side column stay on one line each. */
+.page-split__side .seg__label {
+  padding-inline: 4px;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
 .seg__opt:hover .seg__label {
   color: var(--text);
 }
@@ -2947,8 +2953,8 @@ form[data-locked] .seg__opt:has(input:disabled) {
 
 /* --- The page head says whether the module runs: a switch, or what's set up ---------- */
 .page-head > div:first-child {
-  flex: 1 1 360px;
-  min-width: 0;
+  flex: 1 1 420px;
+  min-width: min(420px, 100%);
 }
 .head-state {
   display: inline-flex;

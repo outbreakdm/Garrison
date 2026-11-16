@@ -1721,7 +1721,7 @@
   fill: transparent;
 }
 .chart__bar {
-  fill: color-mix(in srgb, var(--id, var(--accent)) 80%, var(--surface));
+  fill: color-mix(in srgb, var(--id, var(--accent)) 42%, var(--surface));
 }
 .chart__bar--down {
   fill: color-mix(in srgb, var(--text-muted) 55%, var(--surface));

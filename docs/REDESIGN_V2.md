@@ -182,3 +182,27 @@ Each step ships on its own, checked on desktop and phone.
      starboard at 3), with the same "Use it". Recommended is always Garrison's setting for a
      new server, never a new policy.
    Checked on desktop, phone (the phone menu wraps long names) and light theme. Not deployed.
+7. **Critique fixes** (owner, 2026-11-16: "run /impeccable critique across all pages, then apply
+   it"). The critique scored the dashboard 26/40 and the landing 23/32; all of it applied:
+   - *True status*: modules are on, needs you (with the reason) or off, from one source, in the
+     menu, the page heads and Needs attention. Live comes from the bot's heartbeat. Expired
+     plans and raids that already started no longer wait; stuck requests do. A one-time
+     message that never went out says Missed.
+   - *Phones*: Lockdown and Moderate a member come first on Security and Moderation; the
+     Overview can lock the server; search finds both.
+   - *Pro on Free*: one folded "Your own look" group per card editor (Welcome went from 23
+     tags to 8); the plan card's button is grey.
+   - *Consistency*: Settings history in plain words; the time zone saves itself; Settings
+     lists only the three settings inside other pages; Recommended is advice (muted, a star),
+     not the green of "on"; Use it is a button; Draw now, Cancel and Remove confirm, with
+     Never mind; the Welcome group is Onboarding, so its chip doesn't repeat the title.
+   - *Layout*: Overview's 15-row module list became "Worth turning on"; Seasons sit under the
+     leaderboard; Starboard, Suggestions and Voice rooms put settings first while their list
+     is empty; Groups and raids has one way to create each thing.
+   - *Details*: charts in the page's own color at a tint; plain Overview wording; a short
+     appeal link; the theme button with an icon; search keeps its words.
+   - *Landing*: Add to Discord leads the hero; no coloured glows or spotlights; a reading
+     measure; readable slash-command text; a button on every plan.
+   Not changed: Insights' active members on the Overview reads a table the local test data
+   leaves empty (the bot fills it in production); "By: Marshal" is a legacy name in the test
+   data's cases.
