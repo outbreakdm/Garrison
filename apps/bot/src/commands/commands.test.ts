@@ -26,6 +26,12 @@ describe("command definitions", () => {
       "lockdown",
       "verify",
       "security",
+      "balance",
+      "daily",
+      "pay",
+      "shop",
+      "buy",
+      "money",
       "health",
       "lfg",
       "raid",
@@ -57,6 +63,12 @@ describe("command definitions", () => {
       "ticket",
       "rankcard",
       "suggest",
+      // The economy: members check, claim, pay and buy; /money is staff only.
+      "balance",
+      "daily",
+      "pay",
+      "shop",
+      "buy",
     ]);
     for (const { data } of commands) {
       expect(data.contexts).toEqual([0]);

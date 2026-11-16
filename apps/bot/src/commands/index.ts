@@ -1,4 +1,5 @@
 import { link, roster, unlink } from "../modules/barracks/commands.js";
+import { economyCommands, purchaseButtons } from "../modules/economy/commands.js";
 import { gatehouseButtons, gatehouseCommands } from "../modules/gatehouse/commands/index.js";
 import { questionModals } from "../modules/gatehouse/questions.js";
 import { giveaway } from "../modules/giveaways/commands.js";
@@ -18,6 +19,7 @@ import type { ButtonHandler, Command, ModalHandler, SelectHandler } from "./type
 export const commands: Command[] = [
   ...watchCommands,
   ...gatehouseCommands,
+  ...economyCommands,
   health,
   lfg,
   raid,
@@ -37,6 +39,7 @@ export const commands: Command[] = [
 export const buttons: ButtonHandler[] = [
   ...watchButtons,
   ...gatehouseButtons,
+  purchaseButtons,
   rallyButtons,
   opsButtons,
   qmButtons,

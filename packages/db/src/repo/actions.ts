@@ -67,6 +67,9 @@ export type QueueInput =
   | { kind: "test_alert"; payload: TestAlertPayload }
   | { kind: "web_verify"; payload: { answers?: Record<string, string> } }
   | { kind: "verify_decide"; payload: { id: string; approve: boolean } }
+  | { kind: "economy_adjust"; payload: { userId: string; amount: number; reason: string } }
+  | { kind: "economy_buy"; payload: { itemId: string } }
+  | { kind: "economy_purchase"; payload: { id: string; done: boolean } }
   | { kind: "backup_create"; payload: Record<string, never> }
   | { kind: "backup_restore"; payload: { backupId: string } }
   | { kind: "season_start"; payload: { name: string } }

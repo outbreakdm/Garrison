@@ -13,6 +13,7 @@ import { refreshOsrs } from "./modules/barracks/refresh.js";
 import { sweepStatRoles } from "./modules/barracks/stat-roles.js";
 import { processDashboardActions } from "./modules/dashboard/actions.js";
 import { sweepMessages } from "./modules/dispatch/service.js";
+import { onEconomyMessage, sweepEconomy } from "./modules/economy/service.js";
 import { handleAuditLogEntry } from "./modules/gatehouse/anti-nuke.js";
 import { sweepWeeklyBackups } from "./modules/gatehouse/backup.js";
 import { maybePruneAnswers } from "./modules/gatehouse/questions.js";
@@ -156,6 +157,7 @@ client.once(Events.ClientReady, async (ready) => {
     // Runs on its own: a rename Discord makes wait mustn't hold up the other sweeps.
     sweepServerStats(ctx, ready);
     sweepPatterns(ctx, ready);
+    sweepEconomy(ctx, ready);
     await sweepMessages(ctx, ready).catch((error) =>
       logger.error("Scheduled messages failed", { error }),
     );
@@ -237,6 +239,9 @@ client.on(Events.MessageCreate, (message) => {
     onDirectMessage(ctx, client, message).catch((error) =>
       logger.error("Modmail failed", { error }),
     );
+  onEconomyMessage(ctx, message).catch((error) =>
+    logger.warn("Economy failed", { guildId: message.guildId, error }),
+  );
   onAutomodMessage(ctx, message, automodKeys).catch((error) =>
     logger.warn("Automod failed", { guildId: message.guildId, error }),
   );

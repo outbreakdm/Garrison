@@ -13,6 +13,7 @@ import {
 import type { Guild, GuildBasedChannel, GuildMember, Message } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
+import { onEconomyLevel } from "../economy/service.js";
 import { earnedRewards, rewardProblem, XP_COOLDOWN_MS, XP_MAX, XP_MIN } from "./rules.js";
 
 const SETTINGS_TTL_MS = 60_000;
@@ -150,6 +151,9 @@ export async function handleMessage(ctx: BotContext, message: Message) {
     XP_COOLDOWN_MS,
   );
   if (!result.awarded || !result.leveledUpTo) return;
+  void onEconomyLevel(ctx, message.guildId, message.author.id, result.leveledUpTo).catch(
+    (error: unknown) => ctx.logger.warn("Level coins failed", { guildId: message.guildId, error }),
+  );
   await celebrateLevel(
     ctx,
     message.guild,

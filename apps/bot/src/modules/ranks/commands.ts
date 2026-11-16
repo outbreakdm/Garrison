@@ -34,6 +34,8 @@ import { cardReply } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { safeText } from "../../lib/text.js";
 import { plainLink } from "../barracks/format.js";
+import { moneyBoard } from "../economy/commands.js";
+import { OFF as ECONOMY_OFF } from "../economy/service.js";
 import { rankCardPng } from "./render.js";
 import { progressBar, rewardProblem, rewardProblemText } from "./rules.js";
 import { cachedRanksSettings, invalidateRanksSettings } from "./service.js";
@@ -222,10 +224,38 @@ export const rankcardModals: ModalHandler = {
 };
 
 export const leaderboard: Command = {
-  data: guildCommand("leaderboard", "Show the server's top 10 by XP.", null).toJSON(),
+  data: guildCommand("leaderboard", "Show the server's top 10 by XP, or by coins.", null)
+    .addStringOption((o) =>
+      o
+        .setName("by")
+        .setDescription("What to rank by")
+        .setRequired(false)
+        .addChoices({ name: "XP", value: "xp" }, { name: "Coins", value: "money" }),
+    )
+    .toJSON(),
   async execute(interaction, ctx) {
     if (rateLimited(interaction.user.id)) {
       await interaction.reply({ content: "One rank lookup every 10 s.", ...ephemeral });
+      return;
+    }
+    if (interaction.options.getString("by") === "money") {
+      const board = await moneyBoard(ctx, interaction.guild.id);
+      if (!board) {
+        await interaction.reply({ content: ECONOMY_OFF, ...ephemeral });
+        return;
+      }
+      await interaction.reply(
+        cardReply(
+          {
+            title: "Leaderboard",
+            lead: `Most ${board.config.currency.name}`,
+            blocks: [{ text: board.lines.join("\n") || "Nobody has any yet." }],
+            module: "treasury",
+            ref: "top 10",
+          },
+          { ephemeral: false },
+        ),
+      );
       return;
     }
     if (!(await cachedRanksSettings(ctx, interaction.guild.id)).enabled) {

@@ -113,4 +113,7 @@ export const MANAGER_REQUEST_KINDS: ReadonlySet<string> = new Set([
   "season_start",
   // Approving verification answers gives a role.
   "verify_decide",
+  // Money: giving, taking and deciding on purchases.
+  "economy_adjust",
+  "economy_purchase",
 ]);

@@ -29,6 +29,7 @@ import { cardMessage } from "../../lib/card.js";
 import { safeText } from "../../lib/text.js";
 import { doTestAlert } from "../alerts/service.js";
 import { postMessageNow } from "../dispatch/service.js";
+import { buy, decidePurchase, staffAdjust } from "../economy/service.js";
 import { restoreQuarantine } from "../gatehouse/anti-nuke.js";
 import { doBackupCreate, doBackupRestore } from "../gatehouse/backup.js";
 import { verifyPanel } from "../gatehouse/embeds.js";
@@ -87,6 +88,16 @@ const webAnswers = z.object({
   answers: z.record(z.string().max(20), z.string().max(1000)).optional(),
 });
 const verifyDecision = z.object({ id: uuid, approve: z.boolean() });
+const economyAdjust = z.object({
+  userId: snowflake,
+  amount: z
+    .number()
+    .int()
+    .refine((n) => n !== 0 && Math.abs(n) <= 1_000_000),
+  reason: z.string().trim().min(1).max(200),
+});
+const economyBuy = z.object({ itemId: z.string().regex(/^[a-z0-9]{6,16}$/) });
+const economyPurchase = z.object({ id: uuid, done: z.boolean() });
 const createRaid = z.object({
   channelId: snowflake,
   title: z.string().trim().min(1).max(80),
@@ -127,7 +138,14 @@ export function plainOutcome(text: string) {
 }
 
 /** Requests that only change the requester's own place in a group or raid. */
-const SELF_SERVICE = new Set(["lfg_join", "lfg_leave", "raid_signup", "raid_withdraw"]);
+const SELF_SERVICE = new Set([
+  "lfg_join",
+  "lfg_leave",
+  "raid_signup",
+  "raid_withdraw",
+  // Buying from the shop on the member page: only the buyer's own coins.
+  "economy_buy",
+]);
 
 /**
  * May this member still make this request? The owner and anyone with Manage Server may make
@@ -516,6 +534,24 @@ export async function runDashboardAction(
       return doUndoBuild(ctx, guild, member, action.payload);
     case "run_health":
       return doRunHealth(ctx, guild);
+    case "economy_adjust": {
+      const p = economyAdjust.safeParse(action.payload);
+      if (!p.success) return fail("That change wasn't valid.");
+      return staffAdjust(ctx, guild, p.data, { id: member.id, name: member.user.username });
+    }
+    case "economy_buy": {
+      const p = economyBuy.safeParse(action.payload);
+      if (!p.success) return fail("That item wasn't valid.");
+      return buy(ctx, guild, member, p.data.itemId);
+    }
+    case "economy_purchase": {
+      const p = economyPurchase.safeParse(action.payload);
+      if (!p.success) return fail("That decision wasn't valid.");
+      return decidePurchase(ctx, guild, p.data.id, p.data.done, {
+        id: member.id,
+        name: member.user.username,
+      });
+    }
     case "verify_decide":
       return doVerifyDecide(ctx, guild, member, action.payload);
     case "post_verify_panel":

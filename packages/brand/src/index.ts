@@ -88,6 +88,7 @@ export const modules = {
   honors: { name: "Honors", plain: "Starboard" },
   forum: { name: "Forum", plain: "Suggestions" },
   quartermaster: { name: "Quartermaster", plain: "AI assistant" },
+  treasury: { name: "Treasury", plain: "Economy" },
 } as const;
 
 export type ModuleKey = keyof typeof modules;

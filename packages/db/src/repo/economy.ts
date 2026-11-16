@@ -448,3 +448,13 @@ export async function markPurchaseExpired(db: Db, id: string) {
 export async function pruneEconomyLedger(db: Db, before: Date) {
   await db.delete(economyLedger).where(lt(economyLedger.at, before));
 }
+
+/** Servers with the economy on, and their earning rules, for the minute sweep. */
+export async function listEnabledEconomies(db: Db, guildIds: string[]) {
+  if (!guildIds.length) return [];
+  const rows = await db
+    .select({ guildId: economySettings.guildId, earn: economySettings.earn })
+    .from(economySettings)
+    .where(and(eq(economySettings.enabled, true), inArray(economySettings.guildId, guildIds)));
+  return rows.map((r) => ({ guildId: r.guildId, earn: readEconomy({ earn: r.earn }).earn }));
+}
