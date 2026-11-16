@@ -22,6 +22,7 @@ import { AutoSaveCard } from "@/components/AutoSave";
 import { ProTag } from "@/components/cards/CardEditor";
 import { Segmented } from "@/components/choices";
 import { ListHead } from "@/components/ListHead";
+import { HeadStatus } from "@/components/ModuleHead";
 import { PlansLink, ProUpsell } from "@/components/ProUpsell";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { CheckList, FormPanel, Switch } from "@/components/settings";
@@ -110,6 +111,16 @@ export default async function TicketsPage({
             the transcript, and the queue here shows who's waiting on whom.
           </p>
         </div>
+        <HeadStatus
+          on={config.panels.length > 0}
+          text={
+            config.panels.length
+              ? `${plural(config.panels.length, "ticket panel")}`
+              : "No ticket panel yet"
+          }
+          href={config.panels.length ? undefined : "#new"}
+          action="Make one"
+        />
       </div>
 
       {flash?.ok ? (
@@ -338,12 +349,14 @@ export default async function TicketsPage({
               options={Array.from({ length: TICKET_LIMITS.maxOpen }, (_, i) => ({
                 value: String(i + 1),
                 label: String(i + 1),
+                recommended: i === 0,
               }))}
             />
             <Switch
               name="pingStaff"
               defaultChecked={config.pingStaff}
               label="Ping the staff roles when a ticket opens"
+              recommended
               help="The only ping a ticket makes besides the member's own."
             />
             <Switch

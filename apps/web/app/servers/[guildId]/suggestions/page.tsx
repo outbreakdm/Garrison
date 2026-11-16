@@ -14,8 +14,9 @@ import { AutoSaveCard } from "@/components/AutoSave";
 import { ProTag } from "@/components/cards/CardEditor";
 import { EmptyState } from "@/components/EmptyState";
 import { ListHead } from "@/components/ListHead";
+import { HeadSwitch } from "@/components/ModuleHead";
 import { RequestsPanel } from "@/components/RequestsPanel";
-import { HeaderSwitch, SettingsNotice } from "@/components/settings";
+import { SettingsNotice } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { listTextChannels } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
@@ -69,6 +70,13 @@ export default async function SuggestionsPage({
             note the card shows.
           </p>
         </div>
+        <HeadSwitch
+          key={contentKey(config)}
+          label="Suggestions"
+          name="enabled"
+          form="settings-form"
+          defaultChecked={config.enabled}
+        />
       </div>
 
       {flash?.ok ? (
@@ -203,14 +211,6 @@ export default async function SuggestionsPage({
             guildId={guild.id}
             stamp={contentKey(config)}
             saveLabel="Save suggestions"
-            aside={
-              <HeaderSwitch
-                name="enabled"
-                form="settings-form"
-                defaultChecked={config.enabled}
-                label="Suggestions on"
-              />
-            }
           >
             <p className="g-help">Off stops /suggest; cards already posted keep their votes.</p>
             <label className="g-field" htmlFor="channelId">

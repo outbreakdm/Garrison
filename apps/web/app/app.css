@@ -3860,8 +3860,11 @@ form[data-pending] [aria-busy="true"]::after {
 .shell:has(.g-nav__item[aria-current="page"][data-section="Gaming"]) .page-head h1::after {
   content: "Gaming" / "";
 }
-.shell:has(.g-nav__item[aria-current="page"][data-section="Server"]) .page-head h1::after {
-  content: "Server" / "";
+.shell:has(.g-nav__item[aria-current="page"][data-section="Welcome"]) .page-head h1::after {
+  content: "Welcome" / "";
+}
+.shell:has(.g-nav__item[aria-current="page"][data-section="Engagement"]) .page-head h1::after {
+  content: "Engagement" / "";
 }
 /* Settings gear plates take the page's color. */
 .panel__icon {

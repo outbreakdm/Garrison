@@ -12,6 +12,7 @@ import {
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ListHead } from "@/components/ListHead";
+import { HeadStatus } from "@/components/ModuleHead";
 import { PlansLink } from "@/components/ProUpsell";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { FormPanel } from "@/components/settings";
@@ -94,6 +95,18 @@ export default async function RoleMenusPage({
             saved.
           </p>
         </div>
+        <HeadStatus
+          on={postedIds.size > 0}
+          text={
+            postedIds.size
+              ? `${postedIds.size} of ${plural(menus.length, "menu")} posted`
+              : menus.length
+                ? "None posted yet"
+                : "No menus yet"
+          }
+          href={postedIds.size ? undefined : menus.length ? "?show=unposted" : "#new"}
+          action={menus.length ? "Post one" : "Make one"}
+        />
       </div>
 
       {flash?.ok ? (

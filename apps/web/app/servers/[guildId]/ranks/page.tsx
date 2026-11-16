@@ -19,8 +19,9 @@ import { Segmented } from "@/components/choices";
 import { EmptyState } from "@/components/EmptyState";
 import { formatTime } from "@/components/format";
 import { MemberAvatar } from "@/components/MemberAvatar";
+import { HeadSwitch } from "@/components/ModuleHead";
 import { RequestsPanel } from "@/components/RequestsPanel";
-import { ChannelSelect, HeaderSwitch, SettingsNotice, Switch } from "@/components/settings";
+import { ChannelSelect, SettingsNotice, Switch } from "@/components/settings";
 import { formAction } from "@/lib/autosave";
 import { getDb } from "@/lib/db";
 import { getServerLayout, listGuildRoles, listTextChannels } from "@/lib/discord";
@@ -88,6 +89,13 @@ export default async function RanksPage({
             Garrison counts who posted and when, never what they wrote.
           </p>
         </div>
+        <HeadSwitch
+          key={settings.updatedAt.getTime()}
+          label="Leveling"
+          name="enabled"
+          form="settings-form"
+          defaultChecked={settings.enabled}
+        />
       </div>
       <SettingsNotice query={query} />
       <RequestsPanel guildId={guild.id} kinds={["season_start"]} query={query} />
@@ -169,14 +177,6 @@ export default async function RanksPage({
             guildId={guild.id}
             stamp={settings.updatedAt.getTime()}
             saveLabel="Save leveling settings"
-            aside={
-              <HeaderSwitch
-                name="enabled"
-                form="settings-form"
-                defaultChecked={settings.enabled}
-                label="Give XP for messages"
-              />
-            }
           >
             <p className="g-help">
               XP for chatting, once a minute at most. Off keeps everyone's XP; nobody earns more.
@@ -192,7 +192,7 @@ export default async function RanksPage({
               label="Level-up messages"
               value={settings.announce}
               options={[
-                { value: "same_channel", label: "Same channel" },
+                { value: "same_channel", label: "Same channel", recommended: true },
                 { value: "channel", label: "One channel" },
                 { value: "off", label: "Off" },
               ]}

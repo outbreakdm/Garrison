@@ -12,6 +12,7 @@ import {
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ListHead } from "@/components/ListHead";
+import { HeadStatus } from "@/components/ModuleHead";
 import { PlansLink } from "@/components/ProUpsell";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { FormPanel } from "@/components/settings";
@@ -87,6 +88,12 @@ export default async function AlertsPage({
             pings the role you pick. Each stream and video is announced once.
           </p>
         </div>
+        <HeadStatus
+          on={feeds.length > 0}
+          text={feeds.length ? `Watching ${plural(feeds.length, "channel")}` : "No channels yet"}
+          href={feeds.length ? undefined : "#new"}
+          action="Add one"
+        />
       </div>
 
       {flash?.ok ? (

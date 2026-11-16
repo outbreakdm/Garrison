@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { GameMark, linkDetail, providerLabel } from "@/components/GameMark";
 import { ListHead } from "@/components/ListHead";
 import { MemberAvatar } from "@/components/MemberAvatar";
+import { HeadStatus } from "@/components/ModuleHead";
 import { formAction } from "@/lib/autosave";
 import { getDb } from "@/lib/db";
 import { listGuildRoles } from "@/lib/discord";
@@ -20,6 +21,8 @@ import { readFlash } from "@/lib/flash";
 import { isDangerousRole } from "@/lib/permissions";
 import { requireGuildAccess } from "@/lib/session";
 import { saveStatRoles } from "./actions";
+
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 export const metadata: Metadata = { title: "Game accounts" };
 
@@ -49,6 +52,12 @@ export default async function BarracksPage({ params }: { params: Promise<{ guild
             through Discord or Battle.net; claimed ones weren't.
           </p>
         </div>
+        <HeadStatus
+          on={rules.length > 0}
+          text={`${plural(accounts, "account")} shared · ${rules.length ? plural(rules.length, "stat role") : "no stat roles yet"}`}
+          href={rules.length ? undefined : "#stat-roles"}
+          action="Add one"
+        />
       </div>
       {flash?.ok ? (
         <div className="notice notice--ok" role="status">

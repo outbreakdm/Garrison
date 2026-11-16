@@ -13,6 +13,7 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import { ListHead } from "@/components/ListHead";
+import { HeadStatus } from "@/components/ModuleHead";
 import { PlansLink } from "@/components/ProUpsell";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { FormPanel } from "@/components/settings";
@@ -25,6 +26,8 @@ import { requestAction } from "../requests";
 import { undoChange } from "../settings/actions";
 import { addMessage, removeMessage, saveMessage } from "./actions";
 import { MessageEditor } from "./MessageEditor";
+
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 export const metadata: Metadata = { title: "Messages" };
 
@@ -93,6 +96,19 @@ export default async function MessagesPage({
             Garrison posts them as itself, in the server's time zone.
           </p>
         </div>
+        <HeadStatus
+          on={scheduled > 0}
+          word={null}
+          text={
+            scheduled
+              ? `${scheduled} on a schedule`
+              : messages.length
+                ? `${plural(messages.length, "message")} saved, none scheduled`
+                : "No messages yet"
+          }
+          href={messages.length ? undefined : "#new"}
+          action="Write one"
+        />
       </div>
 
       {flash?.ok ? (

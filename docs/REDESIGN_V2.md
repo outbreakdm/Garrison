@@ -165,3 +165,17 @@ scrolling wall of server templates; pricing; FAQ; help.
    commands icons (slots added, no files yet, like the other landing icons).
 
 Each step ships on its own, checked on desktop and phone.
+6. **Menu and page clarity** (owner, 2026-11-16: "restructure the sidebar and ensure tools
+   inside each page are clear, easy to toggle on and off, and know what is good to change").
+   - *Menu*: Garrison's own line icons; Overview, AI assistant, Insights and Settings first;
+     then Safety, Welcome, Engagement, Community and Gaming; Plan only in the rail's foot card
+     (and the phone menu). Each module shows a green dot when it's on, an empty ring when off.
+   - *Page head*: every module page says whether it runs, top right. Six have the module's
+     own switch there (Automod, Anti-raid, Leveling, Starboard, Suggestions, Voice rooms),
+     saving through its panel with Undo; nine show a status with the first thing to do
+     (Logs, Welcome, Role menus, Tickets, Giveaways, Stream alerts, Messages, Groups and
+     raids, Game accounts). Role menus count as on only once one is posted.
+   - *Recommended*: choices mark Garrison's recommended option, with "Recommended setting"
+     under it or "Recommended: X. Use it"; a few switches carry a Recommended tag while off.
+   Not done yet: checked on phone and in light theme; recommended marks on the remaining
+   pages; deploy.

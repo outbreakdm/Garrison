@@ -13,15 +13,10 @@ import { PresetCards } from "@/components/choices";
 import { DurationBar, untilText } from "@/components/DurationBar";
 import { formatTime } from "@/components/format";
 import { ListField } from "@/components/ListField";
+import { HeadSwitch } from "@/components/ModuleHead";
 import { PresetFill } from "@/components/PresetFill";
 import { RequestsPanel } from "@/components/RequestsPanel";
-import {
-  ChannelSelect,
-  CheckList,
-  HeaderSwitch,
-  SettingsNotice,
-  Switch,
-} from "@/components/settings";
+import { ChannelSelect, CheckList, SettingsNotice, Switch } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { guildOwnerId, listGuildRoles, listTextChannels } from "@/lib/discord";
 import { isDangerousRole } from "@/lib/permissions";
@@ -100,6 +95,13 @@ export default async function GatehousePage({
           <h1>Security</h1>
           <p>Lock the server, verify newcomers, and watch for raids and rogue admins.</p>
         </div>
+        <HeadSwitch
+          key={stamp}
+          label="Anti-raid"
+          name="antiRaidEnabled"
+          form="anti-raid-form"
+          defaultChecked={g?.antiRaidEnabled ?? true}
+        />
       </div>
 
       <RequestsPanel guildId={guild.id} kinds={KINDS} query={query} />
@@ -115,14 +117,6 @@ export default async function GatehousePage({
             guildId={guild.id}
             stamp={stamp}
             saveLabel="Save anti-raid"
-            aside={
-              <HeaderSwitch
-                name="antiRaidEnabled"
-                form="anti-raid-form"
-                defaultChecked={g?.antiRaidEnabled ?? true}
-                label="Watch for raids"
-              />
-            }
           >
             <p className="g-help">
               Watches how fast people join. Too many too fast is a raid, and Garrison answers it the
@@ -145,8 +139,9 @@ export default async function GatehousePage({
                 {
                   value: "balanced",
                   label: "Balanced",
-                  line: "10 in 30 s, the default",
+                  line: "10 joins in 30 s",
                   fills: { raidJoinCount: 10, raidWindowSeconds: 30 },
+                  recommended: true,
                 },
                 {
                   value: "strict",
@@ -192,7 +187,7 @@ export default async function GatehousePage({
                   label: "Lock down",
                   does: "Lock the server and pause invites",
                   about: "New members can't talk until it unlocks. Right for almost every server.",
-                  isDefault: true,
+                  recommended: true,
                 },
                 {
                   value: "alert",
@@ -354,6 +349,7 @@ export default async function GatehousePage({
                   name="enabled"
                   defaultChecked={g?.antiNukeEnabled ?? true}
                   label="Strip a rogue admin's roles when they mass-delete or mass-ban"
+                  recommended
                   help="They're quarantined until you or a trusted user restores them."
                 />
                 <PresetFill
@@ -373,8 +369,9 @@ export default async function GatehousePage({
                     {
                       value: "balanced",
                       label: "Balanced",
-                      line: "3 or 5, the default",
+                      line: "3 deletions or 5 bans a minute",
                       fills: { deleteThreshold: 3, banThreshold: 5 },
+                      recommended: true,
                     },
                     {
                       value: "strict",

@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { choiceId, RecLine, RecTag } from "./choices";
 
 /**
  * Level cards that stand for numbers: "Balanced" is 6 messages in 8 seconds. Picking a card
@@ -14,6 +15,8 @@ export interface FillOption {
   label: string;
   line: string;
   fills: Record<string, number>;
+  /** Garrison's recommendation, and its numbers for a new server. */
+  recommended?: boolean;
 }
 
 export function PresetFill({
@@ -83,9 +86,11 @@ export function PresetFill({
             <input
               className="pick-card__input"
               type="radio"
+              id={choiceId(name, o.value)}
               name={name}
               value={o.value}
               checked={picked === o.value}
+              data-rec={"recommended" in o && o.recommended ? "" : undefined}
               onChange={() => pick(o.value)}
             />
             <span className="pick-card__bars" aria-hidden="true">
@@ -96,12 +101,16 @@ export function PresetFill({
                 />
               ))}
             </span>
-            <span className="pick-card__name">{o.label}</span>
+            <span className="pick-card__name">
+              {o.label}
+              {"recommended" in o && o.recommended ? <RecTag /> : null}
+            </span>
             <span className="pick-card__line">{o.line}</span>
           </label>
         ))}
       </div>
       {help ? <span className="g-help">{help}</span> : null}
+      <RecLine name={name} options={options} />
     </fieldset>
   );
 }

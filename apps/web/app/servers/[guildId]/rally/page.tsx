@@ -24,6 +24,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { formatTime } from "@/components/format";
 import { SlotRows } from "@/components/ListField";
 import { ListHead } from "@/components/ListHead";
+import { HeadStatus } from "@/components/ModuleHead";
 import { OpsCalendar } from "@/components/OpsCalendar";
 import { FormPanel } from "@/components/settings";
 import { getDb } from "@/lib/db";
@@ -40,6 +41,8 @@ import {
   saveAttendance,
   setCalendarFeed,
 } from "./actions";
+
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 const QUEUED: Record<string, string> = {
   create_raid: "Queued. Garrison posts the raid in a few seconds.",
@@ -133,6 +136,22 @@ export default async function RallyPage({
             without Manage Server join on the <a href={`/play/${guild.id}`}>player page</a>.
           </p>
         </div>
+        <HeadStatus
+          on={posts.length + raids.length > 0}
+          word={null}
+          text={
+            posts.length + raids.length
+              ? [
+                  posts.length ? plural(posts.length, "open group") : "",
+                  raids.length ? `${plural(raids.length, "raid")} coming up` : "",
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
+              : "Nothing open"
+          }
+          href={posts.length + raids.length ? undefined : "#post-group"}
+          action="Post a group"
+        />
         <a className="g-btn g-btn--secondary" href={`/servers/${guild.id}/rally/templates`}>
           LFG templates
         </a>

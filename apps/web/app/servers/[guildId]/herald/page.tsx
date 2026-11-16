@@ -12,6 +12,7 @@ import type { Metadata } from "next";
 import { AutoSaveCard } from "@/components/AutoSave";
 import { BackgroundChip } from "@/components/cards/BackgroundChip";
 import { ProTag } from "@/components/cards/CardEditor";
+import { HeadStatus } from "@/components/ModuleHead";
 import { getDb } from "@/lib/db";
 import { botTopPosition, listGuildRoles, listTextChannels } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
@@ -79,6 +80,16 @@ export default async function WelcomePage({ params }: { params: Promise<{ guildI
             first roles. Quiet during a raid or lockdown, so raiders get nothing.
           </p>
         </div>
+        <HeadStatus
+          on={w.joinEnabled}
+          text={
+            w.joinEnabled
+              ? `Greeting new members${w.leaveEnabled ? ", seeing them off" : ""}${w.dmEnabled ? ", with a DM" : ""}`
+              : "No welcome message yet"
+          }
+          href={w.joinEnabled ? undefined : "#join"}
+          action="Turn it on"
+        />
       </div>
 
       {flash?.ok ? (

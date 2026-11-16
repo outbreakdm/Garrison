@@ -2889,3 +2889,206 @@ form[data-locked] .seg__opt:has(input:disabled) {
     justify-self: start;
   }
 }
+
+/* --- The menu, v2: icons, finer groups, and whether each module is on ------------------- */
+.console__side .g-nav__section + .g-nav__section {
+  margin-top: 2px;
+}
+.console__side .g-nav__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+}
+.g-nav__icon {
+  flex: none;
+  color: var(--text-muted);
+  transition: color 0.15s var(--ease-out);
+}
+.g-nav__item:hover .g-nav__icon,
+.g-nav__item[aria-current="page"] .g-nav__icon {
+  color: inherit;
+}
+.g-nav__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* On: a small green light. Off: an empty ring, quiet enough to read past. */
+.g-nav__state {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border: 1.5px solid color-mix(in srgb, var(--text-muted) 45%, transparent);
+  border-radius: 50%;
+}
+.g-nav__state[data-on] {
+  border-color: var(--go);
+  background: var(--go);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--go) 18%, transparent);
+}
+.g-nav__item[aria-current="page"] .g-nav__state:not([data-on]) {
+  border-color: color-mix(in srgb, var(--primary-ink) 40%, transparent);
+}
+.nav-sheet__item {
+  gap: 10px;
+}
+
+/* --- The page head says whether the module runs: a switch, or what's set up ---------- */
+.page-head > div:first-child {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+.head-state {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  align-self: center;
+  margin: 0;
+  padding: 6px 8px 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 13px;
+  line-height: 18px;
+}
+.head-state--switch {
+  cursor: pointer;
+}
+.head-state--switch:hover {
+  border-color: var(--line-strong);
+}
+.head-state--switch:has(input:checked) {
+  border-color: color-mix(in srgb, var(--accent-strong) 45%, var(--line));
+}
+.head-state__text {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.head-state__label {
+  color: var(--text);
+  font-weight: 650;
+}
+.head-state__word {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+/* The word follows the switch as it flips, before the save comes back. */
+.head-state__on,
+.head-state--switch:has(input:checked) .head-state__off {
+  display: none;
+}
+.head-state--switch:has(input:checked) .head-state__on {
+  display: inline;
+  color: var(--go);
+}
+.head-state--status {
+  padding-right: 14px;
+  color: var(--text-muted);
+}
+.head-state__dot {
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid color-mix(in srgb, var(--text-muted) 55%, transparent);
+  border-radius: 50%;
+}
+.head-state--status[data-on] .head-state__dot {
+  border-color: var(--go);
+  background: var(--go);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--go) 18%, transparent);
+}
+.head-state--status[data-on] .head-state__word {
+  color: var(--go);
+}
+.head-state__sep {
+  color: var(--text-muted);
+}
+.head-state__detail {
+  color: var(--text);
+}
+.head-state__go {
+  margin-left: 2px;
+  color: var(--accent-strong);
+  font-weight: 600;
+  text-decoration: none;
+}
+.head-state__go:hover {
+  text-decoration: underline;
+}
+@media (max-width: 720px) {
+  .head-state {
+    align-self: flex-start;
+  }
+  .head-state--status {
+    flex-wrap: wrap;
+    border-radius: var(--radius-md);
+  }
+}
+
+/* --- Recommended: Garrison's own setting, marked, with a way back to it --------------- */
+.choice__rec {
+  display: block;
+  font-size: 12.5px;
+  line-height: 18px;
+}
+.choice__rec-is {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+}
+.choice__rec-is::before {
+  content: "";
+  width: 9px;
+  height: 5px;
+  border-bottom: 1.5px solid var(--go);
+  border-left: 1.5px solid var(--go);
+  transform: rotate(-45deg) translateY(-2px);
+}
+.choice__rec-use {
+  color: var(--text-muted);
+}
+.choice__rec-go {
+  color: var(--accent-strong);
+  font-weight: 600;
+  cursor: pointer;
+}
+.choice__rec-go:hover {
+  text-decoration: underline;
+}
+/* Which half shows follows the radios, so it changes the moment you pick. */
+.choice:has([data-rec]:checked) .choice__rec-use,
+.choice:not(:has([data-rec]:checked)) .choice__rec-is {
+  display: none;
+}
+/* The recommended segment carries a small dot. */
+.seg__opt:has(.seg__input[data-rec]) .seg__label::after {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: var(--go);
+  vertical-align: 2px;
+}
+.rec-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 0 6px;
+  border: 1px solid color-mix(in srgb, var(--go) 45%, var(--line));
+  border-radius: var(--radius-sm);
+  color: var(--go);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  vertical-align: 1px;
+}
+/* Once it's on, the tag has said its piece. */
+.switch:has(input[data-rec]:checked) .rec-tag {
+  display: none;
+}

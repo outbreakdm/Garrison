@@ -10,7 +10,8 @@ import type { Metadata } from "next";
 import { AutoSaveCard } from "@/components/AutoSave";
 import { ProTag } from "@/components/cards/CardEditor";
 import { EmptyState } from "@/components/EmptyState";
-import { CheckList, HeaderSwitch, SettingsNotice } from "@/components/settings";
+import { HeadSwitch } from "@/components/ModuleHead";
+import { CheckList, SettingsNotice } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { botPermissions, getServerLayout, memberNames } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
@@ -68,6 +69,13 @@ export default async function VoiceRoomsPage({
             passes on when the owner leaves and is deleted once empty.
           </p>
         </div>
+        <HeadSwitch
+          key={contentKey(config)}
+          label="Voice rooms"
+          name="enabled"
+          form="settings-form"
+          defaultChecked={config.enabled}
+        />
       </div>
 
       {flash?.ok ? (
@@ -122,14 +130,6 @@ export default async function VoiceRoomsPage({
             guildId={guild.id}
             stamp={contentKey(config)}
             saveLabel="Save voice rooms"
-            aside={
-              <HeaderSwitch
-                name="enabled"
-                form="settings-form"
-                defaultChecked={config.enabled}
-                label="Voice rooms on"
-              />
-            }
           >
             <p className="g-help">Off leaves rooms already open until they empty.</p>
             <div className="card-col">

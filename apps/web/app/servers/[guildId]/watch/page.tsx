@@ -24,6 +24,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ActionBadge, formatDuration, formatTime, plainMentions } from "@/components/format";
 import { ListField } from "@/components/ListField";
 import { MemberAvatar } from "@/components/MemberAvatar";
+import { HeadSwitch } from "@/components/ModuleHead";
 import { PresetFill } from "@/components/PresetFill";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import {
@@ -111,6 +112,13 @@ export default async function WatchPage({
           <h1>Moderation</h1>
           <p>Automod, the members you act on, every case and the escalation ladder.</p>
         </div>
+        <HeadSwitch
+          key={amStamp}
+          label="Automod"
+          name="enabled"
+          form="automod-form"
+          defaultChecked={am.enabled}
+        />
       </div>
 
       <RequestsPanel
@@ -230,14 +238,6 @@ export default async function WatchPage({
               "action",
               "timeoutMinutes",
             ]}
-            aside={
-              <HeaderSwitch
-                name="enabled"
-                form="automod-form"
-                defaultChecked={am.enabled}
-                label="Automod on"
-              />
-            }
           >
             <p className="g-help">
               Removes spam, mass mentions and blocked words as they're posted. Staff with Manage
@@ -257,8 +257,9 @@ export default async function WatchPage({
                 {
                   value: "balanced",
                   label: "Balanced",
-                  line: "6 in 8 s, the default",
+                  line: "6 messages in 8 s",
                   fills: { spamCount: 6, spamSeconds: 8 },
+                  recommended: true,
                 },
                 {
                   value: "strict",
@@ -312,7 +313,7 @@ export default async function WatchPage({
               label="After removing the message"
               value={am.action}
               options={[
-                { value: "delete", label: "Nothing more" },
+                { value: "delete", label: "Nothing more", recommended: true },
                 { value: "warn", label: "Warn" },
                 { value: "timeout", label: "Time out" },
               ]}
@@ -346,6 +347,7 @@ export default async function WatchPage({
               name="scamLinks"
               defaultChecked={am.scamLinks}
               label="Block scam and phishing links"
+              recommended
               help="Fake Nitro, Steam gifts and look-alike login pages. Removes the message and times the sender out for an hour, since it's usually a hacked account. Works even with Automod off."
             />
             <Switch
@@ -430,7 +432,12 @@ export default async function WatchPage({
                 value={am.aiStrictness}
                 options={[
                   { value: "low", label: "Relaxed", line: "Only clear cases" },
-                  { value: "medium", label: "Balanced", line: "Garrison's default" },
+                  {
+                    value: "medium",
+                    label: "Balanced",
+                    line: "Clear and likely cases",
+                    recommended: true,
+                  },
                   { value: "high", label: "Strict", line: "Catches more, more false alarms" },
                 ]}
               />
@@ -652,6 +659,7 @@ export default async function WatchPage({
               name="dmMembers"
               defaultChecked={w?.dmMembers ?? true}
               label="DM members when they're moderated"
+              recommended
               help="They get the action, the reason and how to appeal."
             />
             <Switch

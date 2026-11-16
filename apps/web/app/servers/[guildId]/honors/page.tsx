@@ -10,7 +10,8 @@ import {
 import type { Metadata } from "next";
 import { AutoSaveCard } from "@/components/AutoSave";
 import { ProTag } from "@/components/cards/CardEditor";
-import { CheckList, HeaderSwitch } from "@/components/settings";
+import { HeadSwitch } from "@/components/ModuleHead";
+import { CheckList } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { fetchMemberCard, listTextChannels } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
@@ -52,6 +53,13 @@ export default async function StarboardPage({ params }: { params: Promise<{ guil
             own, with a link back. Only the message's IDs and its count are kept.
           </p>
         </div>
+        <HeadSwitch
+          key={contentKey(config)}
+          label="Starboard"
+          name="enabled"
+          form="settings-form"
+          defaultChecked={config.enabled}
+        />
       </div>
 
       {flash?.ok ? (
@@ -116,14 +124,6 @@ export default async function StarboardPage({ params }: { params: Promise<{ guil
             guildId={guild.id}
             stamp={contentKey(config)}
             saveLabel="Save starboard"
-            aside={
-              <HeaderSwitch
-                name="enabled"
-                form="settings-form"
-                defaultChecked={config.enabled}
-                label="Starboard on"
-              />
-            }
           >
             <div className="card-col">
               <label className="g-field" htmlFor="channelId">

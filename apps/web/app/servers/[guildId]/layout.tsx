@@ -11,6 +11,7 @@ import { Toaster } from "@/components/Toaster";
 import { Topbar } from "@/components/Topbar";
 import { billingReady } from "@/lib/billing";
 import { getDb } from "@/lib/db";
+import { moduleStates } from "@/lib/module-states";
 import { requireGuildAccess, requireSession } from "@/lib/session";
 import { listSharedGuilds } from "@/lib/shared-servers";
 import { currentTheme } from "@/lib/theme";
@@ -31,7 +32,7 @@ export default async function ServerLayout({
   const { guildId } = await params;
   // Pages check access too: layouts don't re-run on every navigation.
   // The switcher's server list needs only the session, so it loads beside the access check.
-  const [{ session, guild, role }, guilds, theme, tier] = await Promise.all([
+  const [{ session, guild, role }, guilds, theme, tier, mods] = await Promise.all([
     requireGuildAccess(guildId),
     // The switcher lists your servers and ones shared with you (each confirmed live).
     requireSession(`/servers/${guildId}`).then(async (s) => {
@@ -43,7 +44,14 @@ export default async function ServerLayout({
     }),
     currentTheme(),
     getDb().then((db) => aiTier(db, guildId)),
+    // Which modules are running, for the menu's dots. Refreshed after every save.
+    getDb()
+      .then((db) => moduleStates(db, guildId))
+      .catch(() => []),
   ]);
+  // A page is on when anything on it is (Moderation: automod or its log channel).
+  const states: Record<string, boolean> = {};
+  for (const m of mods) states[m.href] = (states[m.href] ?? false) || m.on;
   return (
     <div className="shell console">
       <aside className="console__side" aria-label="Server">
@@ -51,7 +59,7 @@ export default async function ServerLayout({
           <Logo />
         </a>
         <ServerSwitcher guild={guild} guilds={guilds} variant="card" />
-        <ServerNav guildId={guild.id} variant="rail" />
+        <ServerNav guildId={guild.id} variant="rail" states={states} />
         <PlanFoot guildId={guild.id} tier={tier} />
       </aside>
       <div className="console__body">
@@ -63,7 +71,7 @@ export default async function ServerLayout({
           guilds={guilds}
           railed
         />
-        <ServerNav guildId={guild.id} variant="sheet" />
+        <ServerNav guildId={guild.id} variant="sheet" states={states} />
         <main id="content" className="main">
           {role === "manager" ? null : <AccessNote role={role} />}
           <PageTransition>{children}</PageTransition>

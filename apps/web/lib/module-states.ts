@@ -1,5 +1,5 @@
 import "server-only";
-import { type Db, readSettings, type SettingsModule } from "@garrison/db";
+import { type Db, listRoleMenuPosts, readSettings, type SettingsModule } from "@garrison/db";
 
 const has = (v: unknown) => (Array.isArray(v) ? v.length > 0 : Boolean(v));
 
@@ -24,7 +24,8 @@ const MODULES: {
   { name: "Verification", href: "/gatehouse", module: "gatehouse", on: (v) => has(v.verifyRoleId) },
   { name: "Logs", href: "/ledger", module: "ledger", on: (v) => has(v.channelId) },
   { name: "Welcome", href: "/herald", module: "welcome", on: (v) => v.joinEnabled === true },
-  { name: "Role menus", href: "/insignia", module: "roles", on: (v) => has(v.menus) },
+  // A menu works once it's posted in Discord; posts are read below, not from settings.
+  { name: "Role menus", href: "/insignia", module: "roles", on: () => false },
   { name: "Tickets", href: "/parley", module: "tickets", on: (v) => has(v.panels) },
   { name: "Leveling", href: "/ranks", module: "ranks", on: (v) => v.enabled === true },
   { name: "Starboard", href: "/honors", module: "starboard", on: (v) => v.enabled === true },
@@ -42,13 +43,18 @@ const MODULES: {
 
 export async function moduleStates(db: Db, guildId: string) {
   const wanted = [...new Set(MODULES.map((m) => m.module))];
-  const values = new Map(
-    await Promise.all(
+  const [entries, posted] = await Promise.all([
+    Promise.all(
       wanted.map(async (m) => [m, await readSettings(db, guildId, m).catch(() => null)] as const),
     ),
-  );
+    listRoleMenuPosts(db, guildId)
+      .then((posts) => posts.length > 0)
+      .catch(() => false),
+  ]);
+  const values = new Map(entries);
   return MODULES.map((m) => {
     const v = values.get(m.module);
-    return { name: m.name, href: m.href, on: v ? m.on(v) : false };
+    const on = m.href === "/insignia" ? posted : v ? m.on(v) : false;
+    return { name: m.name, href: m.href, on };
   });
 }

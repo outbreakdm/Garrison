@@ -11,6 +11,7 @@ import {
 import type { Metadata } from "next";
 import { ProTag } from "@/components/cards/CardEditor";
 import { ListHead } from "@/components/ListHead";
+import { HeadStatus } from "@/components/ModuleHead";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { FormPanel } from "@/components/settings";
 import { getDb } from "@/lib/db";
@@ -101,6 +102,13 @@ export default async function GiveawaysPage({
             and announces them.
           </p>
         </div>
+        <HeadStatus
+          on={running.length > 0}
+          word={null}
+          text={running.length ? `${running.length} running` : "None running"}
+          href={running.length ? undefined : "#new"}
+          action="Start one"
+        />
       </div>
 
       <RequestsPanel

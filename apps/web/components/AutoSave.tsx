@@ -189,7 +189,8 @@ export function AutoSaveCard({
   const saveRef = useRef(save);
   saveRef.current = save;
 
-  // Listens on the whole panel, so a switch in the header bar (form="<id>-form") counts.
+  // Hears this panel's form wherever its fields are: inside it, in its header bar, or in the
+  // page head (form="<id>-form").
   useEffect(() => {
     const el = root.current;
     if (!el) return;
@@ -240,14 +241,16 @@ export function AutoSaveCard({
     const onLeave = (e: BeforeUnloadEvent) => {
       if (timer.current || busy.current) e.preventDefault();
     };
-    el.addEventListener("input", onInput);
-    el.addEventListener("change", onChange);
+    // On the document: a field joined by form="<id>-form" can sit anywhere on the page (the
+    // module's switch in the page head); `mine` keeps out every other form's fields.
+    document.addEventListener("input", onInput);
+    document.addEventListener("change", onChange);
     el.addEventListener(SIGNAL, onSignal);
     window.addEventListener("beforeunload", onLeave);
     setLive(true);
     return () => {
-      el.removeEventListener("input", onInput);
-      el.removeEventListener("change", onChange);
+      document.removeEventListener("input", onInput);
+      document.removeEventListener("change", onChange);
       el.removeEventListener(SIGNAL, onSignal);
       window.removeEventListener("beforeunload", onLeave);
       if (timer.current) {

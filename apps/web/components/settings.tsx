@@ -175,17 +175,28 @@ export function Switch({
   defaultChecked,
   label,
   help,
+  recommended,
 }: {
   name: string;
   defaultChecked: boolean;
   label: string;
   help?: string;
+  /** Garrison recommends this on: a tag says so while it's off. */
+  recommended?: boolean;
 }) {
   return (
     <label className="switch">
-      <input type="checkbox" name={name} defaultChecked={defaultChecked} />
+      <input
+        type="checkbox"
+        name={name}
+        defaultChecked={defaultChecked}
+        data-rec={recommended ? "" : undefined}
+      />
       <span className="switch__text">
-        <span>{label}</span>
+        <span>
+          {label}
+          {recommended ? <span className="rec-tag">Recommended</span> : null}
+        </span>
         {help ? <span className="g-help">{help}</span> : null}
       </span>
     </label>
