@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavIcon, type NavIconName } from "./NavIcon";
 
 /**
@@ -47,10 +47,24 @@ export type ModuleStates = Record<string, "on" | "blocked" | "off">;
 
 const STATE_WORDS = { on: "On", blocked: "Needs you", off: "Off" } as const;
 
-function State({ state }: { state: "on" | "blocked" | "off" | undefined }) {
+function State({
+  state,
+  changed,
+}: {
+  state: "on" | "blocked" | "off" | undefined;
+  /** It just changed (a switch flipped, a channel picked): the light flares once. */
+  changed?: boolean;
+}) {
   if (!state) return null;
   return (
-    <span className="g-nav__state" data-state={state} title={STATE_WORDS[state]}>
+    <span
+      // A new key on a change re-plays the flare; first paint never flares.
+      key={changed ? `${state}-now` : state}
+      className="g-nav__state"
+      data-state={state}
+      data-changed={changed ? "" : undefined}
+      title={STATE_WORDS[state]}
+    >
       <span className="sr-only">, {STATE_WORDS[state].toLowerCase()}</span>
     </span>
   );
@@ -67,6 +81,18 @@ export function ServerNav({
   states?: ModuleStates;
 }) {
   const pathname = usePathname();
+  // What changed since the last render (a save refreshes the layout): those lights flare.
+  const seen = useRef<ModuleStates | null>(null);
+  const [changed, setChanged] = useState<ReadonlySet<string>>(new Set());
+  const stateKey = JSON.stringify(states);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: stateKey stands for states
+  useEffect(() => {
+    const before = seen.current;
+    seen.current = states;
+    if (!before) return;
+    const moved = Object.keys(states).filter((k) => before[k] !== states[k]);
+    if (moved.length) setChanged(new Set(moved));
+  }, [stateKey]);
   const base = `/servers/${guildId}`;
   const sheet = useRef<HTMLDetailsElement>(null);
   const rail = useRef<HTMLElement>(null);
@@ -143,7 +169,7 @@ export function ServerNav({
                 >
                   <NavIcon name={item.icon} />
                   <span className="g-nav__name">{item.name}</span>
-                  <State state={states[item.path]} />
+                  <State state={states[item.path]} changed={changed.has(item.path)} />
                 </Link>
               ))}
           </div>
@@ -177,7 +203,7 @@ export function ServerNav({
               >
                 <NavIcon name={item.icon} />
                 <span className="g-nav__name">{item.name}</span>
-                <State state={states[item.path]} />
+                <State state={states[item.path]} changed={changed.has(item.path)} />
               </Link>
             ))}
           </div>

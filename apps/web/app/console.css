@@ -3052,6 +3052,7 @@ form[data-locked] .seg__opt:has(input:disabled) {
   line-height: 18px;
 }
 .choice__rec-is {
+  animation: fade-in 0.18s var(--ease-out);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -3066,6 +3067,7 @@ form[data-locked] .seg__opt:has(input:disabled) {
   transform: rotate(-45deg) translateY(-2px);
 }
 .choice__rec-use {
+  animation: fade-in 0.18s var(--ease-out);
   color: var(--text-muted);
 }
 .choice__rec-go {
@@ -3130,6 +3132,7 @@ form[data-locked] .seg__opt:has(input:disabled) {
   }
 }
 .rec-value {
+  animation: fade-in 0.18s var(--ease-out);
   display: block;
   color: var(--text-muted);
   font-size: 12.5px;
@@ -3394,4 +3397,52 @@ form[data-locked] .seg__opt:has(input:disabled) {
   border-radius: 2px;
   background: var(--id-text, var(--accent-strong));
   transform: rotate(45deg);
+}
+
+/* --- Motion (animate, 2026-11-16) ----------------------------------------------------------
+   The focal moment is a state ripple: flip a module, and the change travels. The head pill
+   eases to its new color, the menu's light flares once in the new state's color, the toast
+   says what happened. Everything else is feedback: the save mark lands, a "Needs you" note
+   arrives, a folded group opens by height. Reduced motion keeps every color and state change
+   and drops the movement. */
+.g-nav__state[data-changed] {
+  --tone: var(--text-muted);
+  animation:
+    pop-in 0.32s var(--ease-snap),
+    ping 0.9s var(--ease-out) 0.1s;
+}
+.g-nav__state[data-changed][data-state="on"] {
+  --tone: var(--go);
+}
+.g-nav__state[data-changed][data-state="blocked"] {
+  --tone: var(--caution);
+}
+.head-state {
+  transition:
+    border-color 0.2s var(--ease-out),
+    background-color 0.2s var(--ease-out);
+}
+.head-state--blocked {
+  animation: notice-in 0.28s var(--ease-out);
+}
+.save-mark--saved .save-mark__icon {
+  animation: pop-in 0.26s var(--ease-snap);
+}
+.look-fold::details-content {
+  block-size: 0;
+  overflow-y: clip;
+  transition:
+    block-size 0.32s var(--ease-out),
+    content-visibility 0.32s allow-discrete;
+}
+.look-fold[open]::details-content {
+  block-size: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .g-nav__state[data-changed] {
+    animation: fade-in 0.2s linear;
+  }
+  .look-fold::details-content {
+    transition-duration: 0s;
+  }
 }
