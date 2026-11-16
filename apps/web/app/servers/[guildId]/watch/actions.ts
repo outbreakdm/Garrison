@@ -14,7 +14,9 @@ import {
   queueDashboardAction,
   removeMemberNote,
 } from "@garrison/db";
+import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
+import { type AutoResult, isAuto, ownedFields } from "@/lib/autosave";
 import { wakeBot } from "@/lib/bot";
 import { getDb } from "@/lib/db";
 import { listGuildRoles, listTextChannels } from "@/lib/discord";
@@ -109,41 +111,66 @@ export async function decide(form: FormData) {
   });
 }
 
-/** Automod rules. Roles and channels must be this server's; the plan is checked like the bot does. */
-export async function saveAutomod(form: FormData) {
+/**
+ * Automod rules. Roles and channels must be this server's; the plan is checked like the bot
+ * does. The Moderation page splits automod over several panels that save themselves, each
+ * sending only its own fields (`_fields`); every other field keeps its stored value.
+ */
+export async function saveAutomod(form: FormData): Promise<AutoResult> {
   const { guild, session } = await access(form);
-  const back = (o: { ok: string } | { error: string }) =>
-    flashBack(`/servers/${guild.id}/watch`, o, "?edit=automod#automod");
+  const auto = isAuto(form);
+  const back = (
+    o: { ok: string; changeId?: string } | { error: string } | "unchanged",
+  ): Promise<AutoResult> | AutoResult => {
+    if (auto) {
+      if (o === "unchanged") return { status: "unchanged" };
+      if ("error" in o) return { status: "error", message: o.error };
+      refresh();
+      return { status: "saved", message: o.ok, changeId: o.changeId ?? null };
+    }
+    return flashBack(
+      `/servers/${guild.id}/watch`,
+      o === "unchanged" ? { error: "Nothing changed." } : "error" in o ? o : { ok: o.ok },
+      "#automod",
+    );
+  };
   const db = await getDb();
+  const own = ownedFields(form);
+  const take = (k: string) => !own || own.has(k);
   const [before, plan, roles, channels] = await Promise.all([
     getAutomod(db, guild.id),
     getGuildPlan(db, guild.id),
-    listGuildRoles(guild.id).catch(() => null),
-    listTextChannels(guild.id).catch(() => null),
+    take("exemptRoleIds") ? listGuildRoles(guild.id).catch(() => null) : [],
+    take("exemptChannelIds") ? listTextChannels(guild.id).catch(() => null) : [],
   ]);
   if (!roles || !channels) return back({ error: "Discord didn't answer. Try again." });
+  const on = (k: keyof typeof before) => (take(k) ? form.get(k) === "on" : before[k]);
+  const num = (k: keyof typeof before) => (take(k) ? Number(form.get(k)) : before[k]);
+  const all = (k: keyof typeof before) => (take(k) ? form.getAll(k).map(String) : before[k]);
   const raw = {
-    enabled: form.get("enabled") === "on",
-    scamLinks: form.get("scamLinks") === "on",
-    invites: form.get("invites") === "on",
-    mentionLimit: Number(form.get("mentionLimit")),
-    spamCount: Number(form.get("spamCount")),
-    spamSeconds: Number(form.get("spamSeconds")),
+    enabled: on("enabled"),
+    scamLinks: on("scamLinks"),
+    invites: on("invites"),
+    mentionLimit: num("mentionLimit"),
+    spamCount: num("spamCount"),
+    spamSeconds: num("spamSeconds"),
     // One box per word; an older one-per-line value still splits the same way.
-    words: form.getAll("words").map(String),
-    action: String(form.get("action") ?? ""),
-    timeoutMinutes: Number(form.get("timeoutMinutes")),
-    exemptRoleIds: form.getAll("exemptRoleIds").map(String),
-    exemptChannelIds: form.getAll("exemptChannelIds").map(String),
-    aiEnabled: form.get("aiEnabled") === "on",
-    aiCategories: form.getAll("aiCategories").map(String),
-    aiStrictness: String(form.get("aiStrictness") ?? "medium"),
+    words: all("words"),
+    action: take("action") ? String(form.get("action") ?? "") : before.action,
+    timeoutMinutes: num("timeoutMinutes"),
+    exemptRoleIds: all("exemptRoleIds") as string[],
+    exemptChannelIds: all("exemptChannelIds") as string[],
+    aiEnabled: on("aiEnabled"),
+    aiCategories: all("aiCategories"),
+    aiStrictness: take("aiStrictness")
+      ? String(form.get("aiStrictness") ?? "medium")
+      : before.aiStrictness,
   };
   const roleIds = new Set(roles.map((r) => r.id));
   const channelIds = new Set(channels.map((c) => c.id));
   if (
-    !raw.exemptRoleIds.every((id) => roleIds.has(id)) ||
-    !raw.exemptChannelIds.every((id) => channelIds.has(id))
+    (take("exemptRoleIds") && !raw.exemptRoleIds.every((id) => roleIds.has(id))) ||
+    (take("exemptChannelIds") && !raw.exemptChannelIds.every((id) => channelIds.has(id)))
   )
     return back({ error: "Pick roles and channels from this server's lists." });
   const checked = checkAutomod(raw, entitlements(plan), before);
@@ -156,8 +183,17 @@ export async function saveAutomod(form: FormData) {
     username: session.username,
   });
   if (!result.ok)
-    return back({
-      error: result.reason === "unchanged" ? "Nothing changed." : "Try again in a minute.",
-    });
-  return back({ ok: checked.value.enabled ? "Saved. Automod is on." : "Saved. Automod is off." });
+    return result.reason === "unchanged"
+      ? back("unchanged")
+      : back({ error: "Try again in a minute." });
+  const ok = own?.has("words")
+    ? "Saved the blocked words."
+    : own?.has("aiEnabled")
+      ? "Saved AI moderation."
+      : own?.has("exemptRoleIds")
+        ? "Saved who automod skips."
+        : checked.value.enabled
+          ? "Saved. Automod is on."
+          : "Saved. Automod is off.";
+  return back({ ok, changeId: result.change.id });
 }

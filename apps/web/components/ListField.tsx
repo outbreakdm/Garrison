@@ -48,6 +48,10 @@ export function ListRows({
     setFocusAt(null);
   }, [focusAt]);
 
+  const root = useRef<HTMLDivElement>(null);
+  // Removing a row changes what the form holds without an input event: say so, so a panel
+  // that saves itself (components/AutoSave) saves it.
+  const changed = () => root.current?.dispatchEvent(new Event("change", { bubbles: true }));
   const set = (i: number, value: string) => onChange(rows.map((r, j) => (j === i ? value : r)));
   const add = (at = rows.length) => {
     if (rows.length >= max) return;
@@ -58,6 +62,7 @@ export function ListRows({
     const next = rows.filter((_, j) => j !== i);
     onChange(next);
     setFocusAt(Math.max(0, i - 1));
+    changed();
   };
   const onKey = (i: number) => (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -73,7 +78,7 @@ export function ListRows({
   const Noun = noun.charAt(0).toUpperCase() + noun.slice(1);
 
   return (
-    <div className="list-rows">
+    <div className="list-rows" ref={root}>
       <ol className="list-rows__list">
         {rows.map((value, i) => (
           // Rows have no stable id of their own; position is the identity while typing.
@@ -94,6 +99,8 @@ export function ListRows({
               inputMode={inputMode}
               disabled={disabled}
               aria-label={`${Noun} ${i + 1}`}
+              // Saved when a word is finished (left, or Enter), never half-typed.
+              data-commit=""
               onChange={(e) => set(i, e.target.value)}
               onKeyDown={onKey(i)}
               onBlur={(e) => {
@@ -108,7 +115,13 @@ export function ListRows({
                 className="list-rows__remove"
                 aria-label={`Remove ${noun} ${i + 1}`}
                 disabled={disabled}
-                onClick={() => (rows.length > 1 ? remove(i) : onChange([]))}
+                onClick={() => {
+                  if (rows.length > 1) remove(i);
+                  else {
+                    onChange([]);
+                    changed();
+                  }
+                }}
               >
                 <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
                   <path

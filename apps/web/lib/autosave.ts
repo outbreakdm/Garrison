@@ -53,3 +53,12 @@ export const ERRORS: Record<string, string> = {
  */
 export const formAction = (action: (form: FormData) => Promise<AutoResult>) =>
   action as unknown as (form: FormData) => Promise<void>;
+
+/**
+ * The fields a self-saving panel owns (its `_fields`), when one action's settings are split
+ * over several panels. Null: the form holds every field, as a plain full form does.
+ */
+export function ownedFields(form: FormData): Set<string> | null {
+  const v = form.get("_fields");
+  return typeof v === "string" && v ? new Set(v.split(",")) : null;
+}

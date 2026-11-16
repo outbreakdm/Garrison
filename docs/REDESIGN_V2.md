@@ -94,7 +94,21 @@ scrolling wall of server templates; pricing; FAQ; help.
    (`settings/actions.ts`); `watch/actions.ts` (automod) still redirects and needs the same
    change before automod can save itself. `ListField` adds and removes rows without a change
    event, so it must dispatch one before it sits in a self-saving panel.
-2. **Safety pages**: Moderation, Security, Logs. *Large.*
+2. **Safety pages**: done 2026-11-16. The page shape (`.page-split`: main column of open
+   panels, side column for tools and live lists; tables full width below).
+   - *Moderation*: automod as five self-saving panels (Automod with its switch in the header,
+     spam presets, mentions and what happens after; Links; Blocked words; AI moderation; Who
+     automod skips), each sending only its fields (`_fields`, merged in `saveAutomod`). Side:
+     Moderate a member, Caught by automod (a feed of automod's latest cases), Cases and
+     appeals (self-saving). Cases table and ladder below.
+   - *Security*: Anti-raid (switch in the header, "a raid is" presets, the response as preset
+     cards) and Verification (with the Verify button under it) save themselves; anti-nuke
+     stays owner-only with an explicit Save (it's a request the bot re-checks) but gains the
+     same presets. Side: Lockdown, Quarantined, Backups (weekly switch saves itself).
+   - *Logs*: settings beside Top inviters and the download; filters move into the events
+     table's header.
+   Not done here: the escalation ladder keeps its Edit form and Save (a half-built step
+   would fail every check while you type), and spam/raid presets are Garrison's own numbers.
 3. **Community pages**: Welcome, Role menus, Tickets, Leveling. *Large.*
 4. **The rest**: lists, Messages builder, Insights tabs, Settings access, templates gallery.
 5. **Landing page.**

@@ -7,13 +7,22 @@ import { toast } from "./Toaster";
 type Action = (form: FormData) => Promise<AutoResult>;
 type Mark = "idle" | "saving" | "saved" | "error";
 
-/** Typing waits this long after the last key; switches, picks and selects save at once. */
-const TYPING_MS = 800;
+/**
+ * Switches, picks and selects save at once. Typing waits for a pause: short for a number,
+ * longer for words, so a sentence isn't saved (and put in Settings history) word by word.
+ * A field marked data-commit (a blocked word) saves only when it's left or Enter is pressed.
+ */
+const NUMBER_MS = 800;
+const WORDS_MS = 1500;
 const SAVED_MS = 2200;
 
 const NOT_TYPED = new Set(["checkbox", "radio", "hidden", "submit", "button", "file", "range"]);
-const typed = (el: EventTarget | null) =>
-  el instanceof HTMLTextAreaElement || (el instanceof HTMLInputElement && !NOT_TYPED.has(el.type));
+function typingDelay(el: EventTarget | null): number | null {
+  if (!(el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement)) return null;
+  if (el instanceof HTMLInputElement && NOT_TYPED.has(el.type)) return null;
+  if (el.dataset.commit !== undefined) return null;
+  return el instanceof HTMLInputElement && el.type === "number" ? NUMBER_MS : WORDS_MS;
+}
 
 /**
  * A settings panel that saves itself: open on the page, no Save button. Each change is
@@ -29,7 +38,9 @@ export function AutoSaveCard({
   guildId,
   stamp,
   saveLabel,
+  fields,
   aside,
+  footer,
   children,
 }: {
   id: string;
@@ -38,20 +49,31 @@ export function AutoSaveCard({
   undo: Action;
   guildId: string;
   /** When the settings last changed (ms). After an Undo, a new stamp resets the fields. */
-  stamp: number;
+  stamp: number | string;
   /** The Save button's words, for before scripts load. */
   saveLabel: string;
-  /** Anything else for the right of the header bar, before the save mark. */
+  /**
+   * The fields this panel owns, when its action's settings are split over several panels:
+   * the action keeps every other field as it is. Left out, the form holds all of them.
+   */
+  fields?: string[];
+  /**
+   * The right of the header bar, after the save mark: a count, a tag, or the panel's own
+   * switch. A field here joins the form with form="<id>-form".
+   */
   aside?: ReactNode;
+  /** Below the form, inside the panel: anything with forms of its own (post, restore). */
+  footer?: ReactNode;
   children: ReactNode;
 }) {
+  const root = useRef<HTMLElement>(null);
   const form = useRef<HTMLFormElement>(null);
   const [live, setLive] = useState(false);
   const [mark, setMark] = useState<Mark>("idle");
   // Fields are uncontrolled. Undo changes them on the server; remount them once the page
   // arrives with the undone values (a new stamp), never while someone is typing.
   const [epoch, setEpoch] = useState(0);
-  const [resetFrom, setResetFrom] = useState<number | null>(null);
+  const [resetFrom, setResetFrom] = useState<number | string | null>(null);
   if (resetFrom !== null && stamp !== resetFrom) {
     setResetFrom(null);
     setEpoch(epoch + 1);
@@ -133,8 +155,9 @@ export function AutoSaveCard({
   const saveRef = useRef(save);
   saveRef.current = save;
 
+  // Listens on the whole panel, so a switch in the header bar (form="<id>-form") counts.
   useEffect(() => {
-    const el = form.current;
+    const el = root.current;
     if (!el) return;
     const schedule = (ms: number, typing = false) => {
       if (timer.current) clearTimeout(timer.current);
@@ -142,12 +165,13 @@ export function AutoSaveCard({
         timer.current = null;
         // Mid-typing ("3" on the way to "30"): a value the field itself rejects waits for
         // the field to be left, then the server says what's wrong.
-        if (typing && !el.checkValidity()) return;
+        if (typing && form.current && !form.current.checkValidity()) return;
         void saveRef.current();
       }, ms);
     };
     const onInput = (e: Event) => {
-      if (typed(e.target)) schedule(TYPING_MS, true);
+      const ms = typingDelay(e.target);
+      if (ms !== null) schedule(ms, true);
     };
     // A typed field commits on blur or Enter; everything else commits as it changes.
     const onChange = () => schedule(0);
@@ -175,16 +199,21 @@ export function AutoSaveCard({
   // The header bar sits outside the form: React puts the action's hidden inputs first
   // inside a form, and the bar must be the panel's first child.
   return (
-    <section id={id} className="g-card autosave" data-live={live ? "" : undefined}>
+    <section ref={root} id={id} className="g-card autosave" data-live={live ? "" : undefined}>
       <div className="card-head">
         <h2 className="card-title">{title}</h2>
         <span className="autosave__head">
-          {aside}
           {live ? <SaveMark mark={mark} /> : null}
+          {aside ? (
+            <span className="autosave__aside" key={epoch}>
+              {aside}
+            </span>
+          ) : null}
         </span>
       </div>
       <form
         ref={form}
+        id={`${id}-form`}
         className="autosave__form"
         aria-label={title}
         action={action as unknown as (f: FormData) => void}
@@ -198,6 +227,7 @@ export function AutoSaveCard({
         }}
       >
         <input type="hidden" name="guildId" value={guildId} />
+        {fields ? <input type="hidden" name="_fields" value={fields.join(",")} /> : null}
         <div className="autosave__body" key={epoch}>
           {children}
         </div>
@@ -211,6 +241,7 @@ export function AutoSaveCard({
           </span>
         </div>
       </form>
+      {footer}
     </section>
   );
 }

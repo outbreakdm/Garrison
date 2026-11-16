@@ -164,6 +164,7 @@ The current page's color reaches its icon tiles, gems, the server card's initial
 
 - **Shell:** a 256px rail beside the page from 721px up; the rail is sticky, full height and scrolls on its own. The top bar (60px) holds search, theme and account. The page is centered at up to 1280px with 24px top and 32px side padding.
 - **Phones (720px and under):** no rail. The top bar keeps the logo and server switcher; the page menu is a pinned bar that opens a scrollable sheet of sections, two pages a row.
+- **Page shape (redesign v2):** settings pages split into a wide main column of open panels and a side column (300 to 360px, from 1100px up) for tools and live lists: Moderate a member and what automod caught, the lockdown, quarantine and backups, top inviters and downloads. Below 1100px the side column follows the main one. Wide tables (cases, events) run full width under the split.
 - **Panels stack with 16 to 24px gaps.** Saved items (role menus, messages) sit in a grid of tiles, minimum 260px wide, with a dashed "new" tile last; an opened tile spans the row.
 - **Editors:** fields and a 320 to 460px preview side by side above 1100px; below that the preview comes first.
 - **AI assistant:** chat beside a 340 to 400px plan panel above 1100px; the chat fills the screen height and scrolls inside.
@@ -185,6 +186,14 @@ The first line of a panel: 52px tall, full width over a 1px hairline, 10px by 16
 
 ### Settings panel that saves itself (redesign v2)
 Settings are open on the page, never folded behind "Change". `AutoSaveCard` is a panel whose header bar ends in the save mark: a ring and "Auto-saved", a spinning ring and "Saving…", a go dot and "Saved", an alert dot and "Not saved". Switches, picks and selects save at once; typing waits 0.8 s. Each save goes through the page's own action and lands in Settings history; a toast says what was saved and offers Undo. Before scripts load it shows a Save button instead. The older folded row (`details.panel`, facts and "Change") remains on pages not yet moved over.
+
+A panel's own on/off (Automod, AI moderation, Anti-raid) is a switch at the far right of its header bar, after the save mark. When one action's settings are split over several panels (automod's five), each panel sends only its own fields.
+
+### Sensitivity presets
+Where a setting is a pair of numbers (spam, what counts as a raid, when anti-nuke steps in), level cards stand for them, with Custom last: Relaxed, Balanced (marked as the default in its line), Strict. Picking a card fills the numbers, which stay on the page underneath; typing your own lights the card they match, or Custom. Four cards go two by two on a phone.
+
+### Feed
+A list in the side column: one line per item, newest first, a hairline between, the time or count on the right in muted tabular figures. Empty, it says in a sentence what will show up.
 
 ### Toast
 One at a time, centered at the foot of the screen: a small gem (go or alert), one sentence, a white Undo when there's something to take back, and a close. 6 s (9 s for errors), held open while hovered or focused.

@@ -83,124 +83,148 @@ export default async function LedgerPage({
         </div>
       ) : null}
 
-      <AutoSaveCard
-        id="settings"
-        title="Log settings"
-        action={saveLedger}
-        undo={undoChange}
-        guildId={guild.id}
-        stamp={settings.updatedAt.getTime()}
-        saveLabel="Save log settings"
-        aside={
-          settings.channelId && !ledgerChannel ? (
-            <span className="g-badge g-badge--caution">Log channel deleted</span>
-          ) : null
-        }
-      >
-        <div className="settings-grid">
-          <label className="g-field" htmlFor="channelId">
-            <span>Log channel</span>
-            <ChannelSelect
-              name="channelId"
-              value={settings.channelId}
-              channels={channels}
-              none="Dashboard only"
-            />
-            <span className="g-help">Each event also gets a line here.</span>
-          </label>
-          <label className="g-field" htmlFor="retentionDays">
-            <span>Keep events for (days)</span>
-            <input
-              className="g-input"
-              id="retentionDays"
-              name="retentionDays"
-              type="number"
-              min={7}
-              max={365}
-              defaultValue={settings.retentionDays}
-            />
-            <span className="g-help">7 to 365. Older events are removed automatically.</span>
-          </label>
-        </div>
-        <Switch
-          name="keepMessageText"
-          defaultChecked={settings.keepMessageText}
-          label="Keep the text of deleted and edited messages"
-          help="Lets moderators see what was removed or changed. Garrison only has the text of messages it saw since its last restart, and the text goes with the event when it expires."
-        />
-      </AutoSaveCard>
-
-      <form className="g-card filter-row" method="get">
-        <label className="g-field" htmlFor="user">
-          <span>Member</span>
-          <input
-            className="g-input"
-            id="user"
-            name="user"
-            type="search"
-            defaultValue={userQuery}
-            placeholder="Name or user ID"
-            maxLength={32}
-          />
-        </label>
-        <label className="g-field" htmlFor="type">
-          <span>Event</span>
-          <select className="g-input" id="type" name="type" defaultValue={type ?? ""}>
-            <option value="">All events</option>
-            {Object.entries(ledgerTypeLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button type="submit" className="g-btn g-btn--secondary">
-          Filter
-        </button>
-        {user || type ? (
-          <Link className="g-btn g-btn--ghost" href={`/servers/${guild.id}/ledger`}>
-            Clear
-          </Link>
-        ) : null}
-      </form>
-
-      {inviters.length ? (
-        <section className="g-card card-col" aria-labelledby="inviters-title">
-          <h2 className="card-title" id="inviters-title">
-            Top inviters, last 30 days
-          </h2>
-          <p className="chip-row">
-            {inviters.map((i) => (
-              <Link
-                className="g-badge"
-                key={i.inviterId}
-                href={`/servers/${guild.id}/ledger?user=${i.inviterId}`}
-              >
-                {i.inviterName ?? i.inviterId} · {i.joins}
-              </Link>
-            ))}
-          </p>
-        </section>
-      ) : null}
-
-      {canExport ? (
-        <div className="row-between">
-          <span className="g-help">Download what this filter shows, up to 20,000 events.</span>
-          <a
-            className="g-btn g-btn--secondary"
-            href={`/servers/${guild.id}/ledger/export${exportQuery.size ? `?${exportQuery}` : ""}`}
-            download
+      <div className="page-split">
+        <div className="page-split__main">
+          <AutoSaveCard
+            id="settings"
+            title="Log settings"
+            action={saveLedger}
+            undo={undoChange}
+            guildId={guild.id}
+            stamp={settings.updatedAt.getTime()}
+            saveLabel="Save log settings"
+            aside={
+              settings.channelId && !ledgerChannel ? (
+                <span className="g-badge g-badge--caution">Log channel deleted</span>
+              ) : null
+            }
           >
-            Download CSV
-          </a>
+            <div className="settings-grid">
+              <label className="g-field" htmlFor="channelId">
+                <span>Log channel</span>
+                <ChannelSelect
+                  name="channelId"
+                  value={settings.channelId}
+                  channels={channels}
+                  none="Dashboard only"
+                />
+                <span className="g-help">Each event also gets a line here.</span>
+              </label>
+              <label className="g-field" htmlFor="retentionDays">
+                <span>Keep events for (days)</span>
+                <input
+                  className="g-input"
+                  id="retentionDays"
+                  name="retentionDays"
+                  type="number"
+                  min={7}
+                  max={365}
+                  defaultValue={settings.retentionDays}
+                />
+                <span className="g-help">7 to 365. Older events are removed automatically.</span>
+              </label>
+            </div>
+            <Switch
+              name="keepMessageText"
+              defaultChecked={settings.keepMessageText}
+              label="Keep the text of deleted and edited messages"
+              help="Lets moderators see what was removed or changed. Garrison only has the text of messages it saw since its last restart, and the text goes with the event when it expires."
+            />
+          </AutoSaveCard>
         </div>
-      ) : (
-        <ProUpsell guildId={guild.id}>
-          Download the log as a spreadsheet, for whatever this filter shows.
-        </ProUpsell>
-      )}
+        <aside className="page-split__side" aria-label="Invites and downloads">
+          <section className="g-card card-col" aria-labelledby="inviters-title">
+            <h2 className="card-title" id="inviters-title">
+              Top inviters <span className="count">30 days</span>
+            </h2>
+            {inviters.length ? (
+              <ul className="feed">
+                {inviters.map((i) => (
+                  <li className="feed__item feed__item--pair" key={i.inviterId}>
+                    <Link
+                      className="feed__what"
+                      href={`/servers/${guild.id}/ledger?user=${i.inviterId}`}
+                    >
+                      {i.inviterName ?? i.inviterId}
+                    </Link>
+                    <span className="feed__when">
+                      {i.joins} {i.joins === 1 ? "join" : "joins"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="feed__empty">Nobody's invite brought anyone in the last 30 days.</p>
+            )}
+          </section>
+          {canExport ? (
+            <section className="g-card card-col" aria-labelledby="export-title">
+              <h2 className="card-title" id="export-title">
+                Download
+              </h2>
+              <p className="g-help">
+                What the table shows, with its filters, up to 20,000 events, as a spreadsheet.
+              </p>
+              <a
+                className="g-btn g-btn--secondary"
+                href={`/servers/${guild.id}/ledger/export${exportQuery.size ? `?${exportQuery}` : ""}`}
+                download
+              >
+                Download CSV
+              </a>
+            </section>
+          ) : (
+            <ProUpsell guildId={guild.id}>
+              Download the log as a spreadsheet, for whatever the table's filters show.
+            </ProUpsell>
+          )}
+        </aside>
+      </div>
 
       <div className="g-card table-card">
+        <div className="table-card__head row-between">
+          <h2 className="card-title">{user || type ? "Matching events" : "Events"}</h2>
+          <search>
+            <form className="log-filter" method="get">
+              <label className="sr-only" htmlFor="user">
+                Member
+              </label>
+              <input
+                className="g-input g-input--sm"
+                id="user"
+                name="user"
+                type="search"
+                defaultValue={userQuery}
+                placeholder="Member name or ID"
+                maxLength={32}
+              />
+              <label className="sr-only" htmlFor="type">
+                Event
+              </label>
+              <select
+                className="g-input g-input--sm"
+                id="type"
+                name="type"
+                defaultValue={type ?? ""}
+              >
+                <option value="">All events</option>
+                {Object.entries(ledgerTypeLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <button type="submit" className="g-btn g-btn--secondary g-btn--sm">
+                Filter
+              </button>
+              {user || type ? (
+                <Link className="g-btn g-btn--ghost g-btn--sm" href={`/servers/${guild.id}/ledger`}>
+                  Clear
+                </Link>
+              ) : null}
+            </form>
+          </search>
+        </div>
         <div className="table-wrap">
           <table className="g-table">
             <thead>

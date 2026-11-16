@@ -193,6 +193,38 @@ export function Switch({
 }
 
 /**
+ * A panel's own on/off, at the right of its header bar (an AutoSaveCard `aside`). It sits
+ * outside the panel's form, so it joins it by `form` ("<panel id>-form").
+ */
+export function HeaderSwitch({
+  name,
+  form,
+  defaultChecked,
+  label,
+  disabled,
+}: {
+  name: string;
+  form: string;
+  defaultChecked: boolean;
+  /** What on means, for screen readers: "Automod on". */
+  label: string;
+  disabled?: boolean;
+}) {
+  return (
+    <label className="switch head-switch" title={label}>
+      <input
+        type="checkbox"
+        name={name}
+        form={form}
+        defaultChecked={defaultChecked}
+        disabled={disabled}
+        aria-label={label}
+      />
+    </label>
+  );
+}
+
+/**
  * Pick several (roles, channels) with plain checkboxes, never Ctrl-click. Each ticked box
  * posts the same name, so the server reads it exactly like a multiple select.
  */

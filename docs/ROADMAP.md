@@ -947,3 +947,13 @@ Decided (2026-11-12, owner):
   dashed new tile (Giveaways). Settings actions now return their outcome to a self-saving form
   and still redirect a plain post. Checked locally on desktop, phone and light theme. Not
   deployed. Next: step 2, the safety pages (Moderation, Security, Logs) in the new shape.
+- 2026-11-16: Redesign v2, step 2 (safety pages) done. One page shape: a main column of open
+  panels beside a side column for tools and live lists. Moderation: automod split into five
+  self-saving panels (its on switch in the header bar, spam presets Relaxed/Balanced/Strict/
+  Custom that fill the numbers, links, blocked words saved per word, AI, exemptions), with
+  Moderate a member, what automod caught and the case settings beside them. Security:
+  anti-raid and verification save themselves, with raid and anti-nuke presets; lockdown,
+  quarantine and backups in the side column. Logs: settings beside top inviters and the
+  download, filters in the table head. `saveAutomod` returns its outcome to a self-saving
+  panel and keeps the fields a panel doesn't send. Checked locally on desktop, phone and
+  light theme. Not deployed. Next: step 3, the community pages.
