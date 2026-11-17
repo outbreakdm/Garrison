@@ -7,6 +7,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Art } from "@/components/Art";
 import { BuildBox } from "@/components/BuildBox";
+import { DemoClip } from "@/components/DemoClip";
 import { Sparkline } from "@/components/insights/Sparkline";
 import { Logo } from "@/components/Logo";
 import { ServerPreview } from "@/components/ServerPreview";
@@ -267,17 +268,18 @@ const DEMO_COMMANDS: [name: string, what: string][] = [
   ["health", "Check Garrison's permissions, role position and settings in this server."],
 ];
 
-/** Recordings of the real dashboard on a test server, for "Watch it work". */
+/**
+ * Recordings of the real dashboard on a test server, for "Watch it work": 1080p MP4s with
+ * the pointer and camera drawn from a timeline, and a poster of where each one ends.
+ */
 const WATCH: {
   id: string;
   tab: string;
   path: string;
   title: string;
   line: string;
-  gif: string;
-  still: string;
-  width: number;
-  height: number;
+  video: string;
+  poster: string;
   alt: string;
 }[] = [
   {
@@ -286,23 +288,19 @@ const WATCH: {
     path: "Overview",
     title: "See what needs you, and fix it there.",
     line: "The Overview lists what's switched on but can't work, and why. One click to the page, one pick, and its light turns green.",
-    gif: "/media/garrison-fix-it.gif",
-    still: "/media/garrison-fix-it.png",
-    width: 960,
-    height: 600,
-    alt: "The Overview lists Suggestions as on but unable to work. The pointer opens it, picks a channel, the warning clears, its light in the menu turns green and a toast offers Undo.",
+    video: "/media/garrison-fix-it.mp4",
+    poster: "/media/garrison-fix-it.webp",
+    alt: "The Overview lists Suggestions as on but unable to work. The pointer opens it with Fix it, picks a channel, the warning clears, its light in the menu turns green and a toast offers Undo.",
   },
   {
     id: "preview",
     tab: "Write it, see it",
     path: "Welcome",
     title: "Write it here, see it in Discord.",
-    line: "Every card has its Discord preview beside it, changing as you type, and it saves itself when you pause.",
-    gif: "/media/garrison-live-preview.gif",
-    still: "/media/garrison-live-preview.png",
-    width: 960,
-    height: 574,
-    alt: "Typing a new welcome card title. The Discord preview beside the editor changes with every letter.",
+    line: "Every card has its Discord preview beside it, changing as you type. Type @ to add the member's name or the server's, and it saves itself when you pause.",
+    video: "/media/garrison-live-preview.mp4",
+    poster: "/media/garrison-live-preview.webp",
+    alt: "Typing a new welcome card title, then @ and Name to add the member's name. The Discord preview beside the editor changes with every letter, and the card saves itself.",
   },
   {
     id: "saves",
@@ -310,10 +308,8 @@ const WATCH: {
     path: "Moderation",
     title: "Pick a level. It saves itself.",
     line: "Presets fill in the numbers, Garrison's recommendation is one click away, and every change can be undone.",
-    gif: "/media/garrison-saves-itself.gif",
-    still: "/media/garrison-saves-itself.png",
-    width: 900,
-    height: 634,
+    video: "/media/garrison-saves-itself.mp4",
+    poster: "/media/garrison-saves-itself.webp",
     alt: "Picking the Strict spam preset fills in 4 messages in 8 seconds and saves. Use it puts back Garrison's recommended Balanced.",
   },
 ];
@@ -704,24 +700,20 @@ export default async function Home() {
             </h2>
             <p>Recorded in the dashboard as it is today, on a test server.</p>
           </div>
-          <fieldset className="lp-watch__tabs">
-            <legend className="sr-only">Pick a recording</legend>
+          <div className="lp-watch__list">
             {WATCH.map((w, i) => (
-              <label className="lp-watch__tab" key={w.id}>
-                <input
-                  className="lp-watch__radio"
-                  type="radio"
-                  name="watch"
-                  value={w.id}
-                  defaultChecked={i === 0}
-                />
-                <span>{w.tab}</span>
-              </label>
-            ))}
-          </fieldset>
-          <div className="lp-watch__stage">
-            {WATCH.map((w) => (
-              <figure className="lp-watch__item" data-watch={w.id} key={w.id}>
+              <article
+                className={`lp-watch__row${i % 2 ? " lp-watch__row--flip" : ""}`}
+                id={`watch-${w.id}`}
+                key={w.id}
+              >
+                <div className="lp-watch__copy">
+                  <span className="lp-watch__step">
+                    <span aria-hidden="true">{String(i + 1).padStart(2, "0")}</span> {w.tab}
+                  </span>
+                  <h3>{w.title}</h3>
+                  <p className="lp-watch__line">{w.line}</p>
+                </div>
                 <div className="lp-win lp-watch__win">
                   <div className="lp-win__bar" aria-hidden="true">
                     <span className="lp-win__dots">
@@ -735,24 +727,16 @@ export default async function Home() {
                     </span>
                     <span className="lp-win__tag">Test server</span>
                   </div>
-                  <picture>
-                    {/* Less motion asked for: the end of the recording, still. */}
-                    <source media="(prefers-reduced-motion: reduce)" srcSet={w.still} />
-                    <img
-                      className="lp-watch__img"
-                      src={w.gif}
-                      width={w.width}
-                      height={w.height}
-                      alt={w.alt}
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  </picture>
+                  <DemoClip
+                    src={w.video}
+                    poster={w.poster}
+                    width={1920}
+                    height={1080}
+                    label={w.title}
+                    description={w.alt}
+                  />
                 </div>
-                <figcaption className="lp-watch__cap">
-                  <strong>{w.title}</strong> {w.line}
-                </figcaption>
-              </figure>
+              </article>
             ))}
           </div>
         </section>

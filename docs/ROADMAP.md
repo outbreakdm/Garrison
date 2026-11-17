@@ -7,6 +7,11 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
+- **Landing recordings (2026-11-17), built, not deployed:** the three "Watch it work" GIFs are
+  now 1080p60 MP4 clips (about 2 MB each) in rows beside their text, loading near the screen
+  and playing only in view, with a pause button and a still for less motion. The pointer and
+  camera are drawn from a timeline after recording, so nothing skips. The recorder lives in
+  the session scratchpad (`film/`): `film.mjs <scene>` then `render.mjs <scene> <name>`.
 - **Follow-ups (2026-11-17), deployed** (`eba3caf`, run 44022932381; migration 0072 applied
   and recorded, 73 rows; bot back at 05:19:44 UTC): Server Stats lists every counter as an
   option to tick; an "@" picker in template boxes (stats names, welcome card, messages, voice
@@ -1108,3 +1113,9 @@ Decided (2026-11-12, owner):
   the role hierarchy and permission overwrites. Migration 0072 (local only). Not deployed.
 - 2026-11-17: Deployed `eba3caf` (everything, no command changes) with migration 0072, applied
   and recorded first (73 rows). The new bot started at 05:19:44 UTC and is beating.
+- 2026-11-17: Landing recordings redone. The GIFs' pointer jumped because each screenshot took
+  longer than the 90 ms between them. New clips come from a 60 fps screencast at 2x; the pointer,
+  its click ring and the camera (push in on the action, pull back to show the result) are drawn
+  per frame from a timeline, then encoded with x264. Shown the way PeakBot does it, in our own
+  style: a row per clip, video beside the copy, alternating sides, lazy and play-in-view. Not
+  deployed.

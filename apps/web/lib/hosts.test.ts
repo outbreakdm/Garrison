@@ -10,7 +10,7 @@ describe("hostRedirect", () => {
     for (const page of ["/terms", "/privacy", "/refunds"])
       expect(hostRedirect("garrisonbot.com", page, "", APP)).toBeNull();
     expect(hostRedirect("garrisonbot.com", "/_next/static/x.js", "", APP)).toBeNull();
-    expect(hostRedirect("garrisonbot.com", "/media/garrison-fix-it.gif", "", APP)).toBeNull();
+    expect(hostRedirect("garrisonbot.com", "/media/garrison-fix-it.mp4", "", APP)).toBeNull();
     expect(hostRedirect("garrisonbot.com", "/art/hero.webp", "", APP)).toBeNull();
   });
   it("sends dashboard paths from the public site to the dashboard", () => {

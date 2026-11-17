@@ -1725,97 +1725,111 @@ button.lp-btn {
   }
 }
 
-/* --- Watch it work: recordings of the real dashboard, one at a time --------------------- */
+/* --- Watch it work: short recordings of the real dashboard, each beside what it shows ----- */
 .lp-watch .lp-section__head {
-  margin-bottom: 32px;
+  margin-bottom: 8px;
 }
-.lp-watch__tabs {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px;
-  width: fit-content;
-  max-width: 100%;
-  margin: 0 auto 24px;
-  padding: 4px;
-  border: 1px solid var(--lp-line);
-  border-radius: 999px;
-  background: var(--lp-surface);
-}
-.lp-watch__tab {
-  position: relative;
-  display: inline-flex;
+.lp-watch__row {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+  gap: 64px;
   align-items: center;
-  min-height: 38px;
-  padding: 0 16px;
-  border-radius: 999px;
+  padding: 48px 0;
+  scroll-margin-top: 64px;
+}
+/* Every other row puts the recording first, so the eye zigzags down the page. */
+.lp-watch__row--flip {
+  grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
+}
+.lp-watch__row--flip .lp-watch__copy {
+  order: 2;
+}
+.lp-watch__step {
+  display: inline-flex;
+  gap: 10px;
+  align-items: baseline;
+  margin-bottom: 14px;
   color: var(--lp-muted);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    color 0.15s var(--ease-out),
-    background-color 0.15s var(--ease-out);
+  font: 600 13px / 1.4 var(--lp-mono);
 }
-.lp-watch__tab:hover {
-  color: var(--lp-text);
+.lp-watch__step span {
+  color: var(--lp-accent-text);
 }
-.lp-watch__tab:has(:checked) {
-  background: var(--lp-text);
-  color: var(--lp-bg);
+.lp-watch__copy h3 {
+  margin: 0 0 14px;
+  font-size: clamp(24px, 2.3vw, 30px);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
 }
-.lp-watch__tab:has(:focus-visible) {
-  outline: 2px solid var(--lp-accent-text);
-  outline-offset: 2px;
-}
-.lp-watch__radio {
-  position: absolute;
-  inset: 0;
+.lp-watch__line {
+  max-width: 46ch;
   margin: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-.lp-watch__stage {
-  max-width: 980px;
-  margin: 0 auto;
-}
-/* Only the picked recording shows (browsers without :has show all three, stacked). */
-.lp-watch:has([value="fix"]:checked) .lp-watch__item:not([data-watch="fix"]),
-.lp-watch:has([value="preview"]:checked) .lp-watch__item:not([data-watch="preview"]),
-.lp-watch:has([value="saves"]:checked) .lp-watch__item:not([data-watch="saves"]) {
-  display: none;
-}
-.lp-watch__item {
-  margin: 0;
-  animation: lp-in 0.35s var(--ease-out);
+  color: var(--lp-muted);
+  font-size: 17px;
 }
 .lp-watch__win {
   background: #0a0a0a;
 }
-.lp-watch__img {
+@media (max-width: 900px) {
+  .lp-watch__row,
+  .lp-watch__row--flip {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+    padding: 32px 0;
+  }
+  .lp-watch__row--flip .lp-watch__copy {
+    order: 0;
+  }
+}
+
+/* A recording: 16:9, its poster until it plays, and a quiet pause button. */
+.demo-clip {
+  position: relative;
+}
+.demo-clip__video {
   display: block;
   width: 100%;
   height: auto;
+  aspect-ratio: 16 / 9;
+  background: #0a0a0a;
+  object-fit: cover;
 }
-.lp-watch__cap {
-  max-width: 62ch;
-  margin: 20px auto 0;
-  color: var(--lp-muted);
-  font-size: 16px;
-  text-align: center;
+.demo-clip__toggle {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 0.16);
+  border-radius: 999px;
+  background: rgb(10 10 10 / 0.72);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  backdrop-filter: blur(6px);
+  transition:
+    opacity 0.2s var(--ease-out),
+    background-color 0.15s var(--ease-out);
 }
-.lp-watch__cap strong {
-  color: var(--lp-text);
-  font-weight: 600;
+/* Shown on hover and focus, whenever it's stopped, and always on touch screens. */
+.demo-clip:hover .demo-clip__toggle,
+.demo-clip:not(.is-playing) .demo-clip__toggle,
+.demo-clip__toggle:focus-visible {
+  opacity: 1;
 }
-@media (max-width: 600px) {
-  .lp-watch__tabs {
-    border-radius: var(--lp-r);
-  }
-  .lp-watch__tab {
-    flex: 1 1 auto;
-    justify-content: center;
-    padding: 0 12px;
-    font-size: 13px;
+.demo-clip__toggle:hover {
+  background: rgb(10 10 10 / 0.92);
+}
+.demo-clip__toggle:focus-visible {
+  outline: 2px solid var(--lp-accent-text);
+  outline-offset: 2px;
+}
+@media (hover: none) {
+  .demo-clip__toggle {
+    opacity: 1;
   }
 }
