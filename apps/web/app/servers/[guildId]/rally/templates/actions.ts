@@ -24,7 +24,7 @@ import { checkGuildAccess } from "@/lib/session";
  */
 
 const back = (guildId: string, outcome: { ok: string } | { error: string }, anchor = "") =>
-  flashBack(`/servers/${guildId}/rally/templates`, outcome, `${anchor ? `#${anchor}` : ""}`);
+  flashBack(`/servers/${guildId}/rally`, outcome, `?tab=templates${anchor ? `#${anchor}` : ""}`);
 
 async function load(form: FormData) {
   const access = await checkGuildAccess(String(form.get("guildId") ?? ""));

@@ -3670,3 +3670,182 @@ form[data-locked] .seg__opt:has(input:disabled) {
 .page-head > .head-state--blocked .head-state__sep {
   display: none;
 }
+
+/* --- Layout, phase B (2026-11-17): page tabs and the page templates ------------------------- */
+[data-tab-panel][hidden] {
+  /* biome-ignore lint/complexity/noImportantStyles: a hidden tab stays hidden whatever layout class it carries */
+  display: none !important;
+}
+[data-tab-panel] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+/* The tabs sit on the head's bottom hairline: the head gives up its own. */
+.page-head:has(+ .page-tabs),
+.page-head:has(+ * + .page-tabs) {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.page-tabs {
+  display: flex;
+  gap: var(--space-6);
+  margin-top: calc(var(--space-2) * -1);
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+  scrollbar-width: none;
+}
+.page-tabs::-webkit-scrollbar {
+  display: none;
+}
+.page-tab {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: -1px;
+  padding: 8px 2px 11px;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    color 0.15s var(--ease-out),
+    border-color 0.15s var(--ease-out);
+}
+.page-tab:hover {
+  color: var(--text);
+}
+.page-tab[aria-current="page"] {
+  border-bottom-color: var(--id-text, var(--accent-strong));
+  color: var(--text);
+}
+.page-tab:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.page-tab__count {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  line-height: 18px;
+  text-align: center;
+}
+.page-tab__warn {
+  width: 10px;
+  height: 9px;
+  background: var(--caution);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+/* Activity with no side column: the live list alone, full width. */
+.activity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Setup: one column of panels; "On this page" beside it from 1280px. */
+.setup {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+.setup__panels {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.setup__index {
+  display: none;
+}
+@media (min-width: 1280px) {
+  .setup:not(.setup--plain) {
+    grid-template-columns: minmax(0, 1fr) 200px;
+  }
+  .setup__index {
+    position: sticky;
+    top: 84px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+.setup__index-title {
+  margin: 0 0 6px 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.setup__index-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: 13px;
+  text-decoration: none;
+}
+.setup__index-item:hover {
+  background: var(--surface-raised);
+  color: var(--text);
+}
+.setup__index-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--text-muted);
+  border-radius: 50%;
+}
+.setup__index-item[data-mark="saved"] .setup__index-dot {
+  border-color: var(--go);
+  background: var(--go);
+}
+.setup__index-item[data-mark="saving"] .setup__index-dot {
+  border-color: var(--text);
+}
+.setup__index-item[data-mark="error"] .setup__index-dot,
+.setup__index-item[data-mark="held"] .setup__index-dot {
+  border-color: var(--caution);
+  background: var(--caution);
+}
+
+/* Compact: a small module on one row, settings beside the live list. */
+.compact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+.compact__settings,
+.compact__live {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+@media (min-width: 1100px) {
+  .compact {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  }
+}
+@media (max-width: 1099px) {
+  .compact--live-first .compact__live {
+    order: -1;
+  }
+}
+/* Nothing waiting: the appeals panel follows the cases instead of leading the page. */
+.page-split__main > .queue--quiet {
+  order: 1;
+}

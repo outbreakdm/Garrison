@@ -7,11 +7,21 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **Layout proposal (2026-11-17), waiting on the owner:** `docs/LAYOUT_PROPOSAL.md`, from an
-  `/impeccable layout` pass over all 30 pages at 1440 and 390 px. One meaning per column, page tabs
-  for pages with several jobs, three page templates plus Compact, a menu that fits the screen, a
-  shorter phone head, fields sized to content, an Overview grid; four phases. Five decisions at the
-  end of the doc.
+- **Layout (2026-11-17), being built, not deployed:** `docs/LAYOUT_PROPOSAL.md`, every
+  recommendation accepted. Phase A (`b5a5996`) and phase B are committed; C and D are next.
+  - A: the menu scrolls on its own (server card and plan card stay put), Needs you is one strip
+    under the page head, fields sized to what they hold, repeating rows show one spare with Add.
+  - B: page tabs (`components/PageTabs.tsx`) on Moderation, Security, Settings, Welcome,
+    Leveling, Tickets, Groups and raids (LFG templates is its Templates tab; the old address
+    redirects), Economy, Logs and Game accounts. Every tab is on the page and only shown or
+    hidden, so a module's head switch and its form keep working; `?tab=` is the address, and a
+    `#section` link opens its tab. Templates in `components/PageLayouts.tsx`: Activity, Setup
+    (with "On this page" and save dots from 1280px), Compact. Your account left Settings (it's
+    in the top bar).
+  - C: Starboard, Suggestions, Voice, Server stats and Invites on Compact; library editors full
+    page; old page-split variants deleted; long intros cut to a sentence.
+  - D: the Overview's four bands, the phone head, the regrouped menu with Settings and Plan at
+    its foot, four breakpoints, DESIGN.md's Layout section.
 - **Landing clips (2026-11-17), deployed** (`174c9f3`, run 44096284680, dashboard): "Watch it work" shows three 1080p60
   clips (about 2.8 MB each) made in HyperFrames: the dashboard rebuilt with its real labels on a
   lime-lit stage, a 3D settle, a turning rim light and sheen, a drawn pointer, and steps a screen
@@ -1134,3 +1144,10 @@ Decided (2026-11-12, owner):
 - 2026-11-17: Layout audit of every dashboard page (desktop and phone captures, DOM structure,
   measurements, the impeccable layout scan, which was clean) and a proposal in
   `docs/LAYOUT_PROPOSAL.md`. Nothing built yet.
+- 2026-11-17: Layout phase A (`b5a5996`): the menu scrolls inside the rail, Needs you is one
+  strip, fields are sized to content, Leveling's and Game accounts' rows show one spare with Add.
+- 2026-11-17: Layout phase B: page tabs on the ten pages with several jobs, and the Activity and
+  Setup templates. Moderation's Cases tab is 946px tall at 1440 (3,637 before). LFG templates
+  became a tab of Groups and raids; Settings lost Your account and "Inside other pages". Checked
+  every tab at 1440 and 390 (no sideways scroll) and in Chrome: switching in place, Back, a
+  #section link opening its tab, the old templates address. 101 web tests pass.

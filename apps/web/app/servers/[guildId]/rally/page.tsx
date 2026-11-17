@@ -26,6 +26,7 @@ import { SlotRows } from "@/components/ListField";
 import { ListHead } from "@/components/ListHead";
 import { HeadStatus } from "@/components/ModuleHead";
 import { OpsCalendar } from "@/components/OpsCalendar";
+import { PageTabs, TabPanel } from "@/components/PageTabs";
 import { FormPanel } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { listTextChannels } from "@/lib/discord";
@@ -41,6 +42,7 @@ import {
   saveAttendance,
   setCalendarFeed,
 } from "./actions";
+import { TemplatesTab } from "./templates/TemplatesTab";
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
@@ -71,6 +73,9 @@ const ATTENDANCE: Record<string, string> = {
 };
 
 export const metadata: Metadata = { title: "Groups and raids" };
+
+/** Groups and raids' tabs: open groups first, then raids, the calendar and the templates. */
+const GROUP_TABS = ["groups", "raids", "calendar", "templates"] as const;
 
 export default async function RallyPage({
   params,
@@ -152,10 +157,16 @@ export default async function RallyPage({
           href={posts.length + raids.length ? undefined : "#post-group"}
           action="Post a group"
         />
-        <a className="g-btn g-btn--secondary" href={`/servers/${guild.id}/rally/templates`}>
-          LFG templates
-        </a>
       </div>
+      <PageTabs
+        label="Groups and raids"
+        tabs={[
+          { id: "groups", label: "Groups", count: posts.length },
+          { id: "raids", label: "Raids", count: raids.length },
+          { id: "calendar", label: "Calendar" },
+          { id: "templates", label: "Templates" },
+        ]}
+      />
       {working ? <AutoRefresh /> : null}
       {queued || attendanceNote ? (
         <div className="notice notice--ok" role="status">
@@ -168,191 +179,123 @@ export default async function RallyPage({
         </div>
       ) : null}
 
-      {/* One way in for each: the list head's button opens its form here. */}
-      {query.post === "1" ? (
-        <FormPanel
-          id="post-group"
-          title="Post a group"
-          hint="Goes up in Discord as you, with Join buttons."
-          open={query.post === "1"}
-        >
-          <form action={requestAction} className="card-col create-raid">
-            <input type="hidden" name="guildId" value={guild.id} />
-            <input type="hidden" name="page" value="rally" />
-            <input type="hidden" name="kind" value="create_lfg" />
-            <div className="field-row">
-              <label className="g-field">
-                <span>Title</span>
-                <input
-                  className="g-input"
-                  name="title"
-                  maxLength={80}
-                  required
-                  placeholder="Ranked duos, Gold+"
-                />
-              </label>
-              <label className="g-field">
-                <span>Post in</span>
-                <select className="g-input" name="channelId" required defaultValue="">
-                  <option value="" disabled>
-                    Pick a channel
-                  </option>
-                  {channels.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      #{c.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <div className="field-row">
-              {templates.length ? (
+      <TabPanel id="groups" tabs={GROUP_TABS} className="activity">
+        {/* The list head's button opens its form here. */}
+        {query.post === "1" ? (
+          <FormPanel
+            id="post-group"
+            title="Post a group"
+            hint="Goes up in Discord as you, with Join buttons."
+            open={query.post === "1"}
+          >
+            <form action={requestAction} className="card-col create-raid">
+              <input type="hidden" name="guildId" value={guild.id} />
+              <input type="hidden" name="page" value="rally" />
+              <input type="hidden" name="kind" value="create_lfg" />
+              <div className="field-row">
                 <label className="g-field">
-                  <span>Template</span>
-                  <select className="g-input" name="templateId" defaultValue="">
-                    <option value="">{defaultTemplate ? defaultTemplate.name : "None"}</option>
-                    {templates
-                      .filter((t) => t !== defaultTemplate)
-                      .map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.game ? `${t.name} · ${t.game}` : t.name}
-                        </option>
-                      ))}
+                  <span>Title</span>
+                  <input
+                    className="g-input"
+                    name="title"
+                    maxLength={80}
+                    required
+                    placeholder="Ranked duos, Gold+"
+                  />
+                </label>
+                <label className="g-field">
+                  <span>Post in</span>
+                  <select className="g-input" name="channelId" required defaultValue="">
+                    <option value="" disabled>
+                      Pick a channel
+                    </option>
+                    {channels.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        #{c.name}
+                      </option>
+                    ))}
                   </select>
                 </label>
-              ) : null}
-              <label className="g-field">
-                <span>Starts</span>
-                <select className="g-input" name="starts" defaultValue="now">
-                  <option value="now">Now</option>
-                  <option value="10m">In 10 minutes</option>
-                  <option value="30m">In 30 minutes</option>
-                  <option value="1h">In 1 hour</option>
-                  <option value="2h">In 2 hours</option>
-                  <option value="4h">In 4 hours</option>
-                  <option value="8h">In 8 hours</option>
-                  <option value="1d">Tomorrow, this time</option>
-                </select>
-              </label>
-            </div>
-            <div className="field-row">
-              <fieldset className="g-field checklist">
-                <legend className="checklist__legend">Roles and caps</legend>
-                <SlotRows defaultSlots={[]} />
-                <span className="g-help">
-                  Leave the role empty for a plain group, or to use the template's.
-                </span>
-              </fieldset>
-              <label className="g-field">
-                <span>Or just a size</span>
-                <input
-                  className="g-input"
-                  name="size"
-                  type="number"
-                  min={2}
-                  max={40}
-                  placeholder="5"
-                />
-              </label>
-            </div>
-            <div className="field-row">
-              <label className="g-field">
-                <span>Your role</span>
-                <input className="g-input" name="myRole" maxLength={40} placeholder="Tank" />
-                <span className="g-help">
-                  Only when the group has roles. Blank takes the first.
-                </span>
-              </label>
-              <label className="g-field">
-                <span>Note</span>
-                <input className="g-input" name="note" maxLength={120} placeholder="Mic required" />
-              </label>
-            </div>
-            <p className="g-help">
-              Garrison posts the group as you, with Join buttons. You can host one open group at a
-              time.
-            </p>
-            <button type="submit" className="g-btn g-btn--primary">
-              Post group
-            </button>
-          </form>
-        </FormPanel>
-      ) : null}
-      {query.create === "1" ? (
-        <FormPanel
-          id="create-raid"
-          title="Create raid"
-          hint={`A signup card with role caps and a bench, in ${timezone}.`}
-          open={query.create === "1"}
-        >
-          <form action={requestCreateRaid} className="card-col create-raid">
-            <input type="hidden" name="guildId" value={guild.id} />
-            <div className="field-row">
-              <label className="g-field">
-                <span>Title</span>
-                <input
-                  className="g-input"
-                  name="title"
-                  maxLength={80}
-                  required
-                  placeholder="Molten Core"
-                />
-              </label>
-              <label className="g-field">
-                <span>Post in</span>
-                <select className="g-input" name="channelId" required defaultValue="">
-                  <option value="" disabled>
-                    Pick a channel
-                  </option>
-                  {channels.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      #{c.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <div className="field-row">
-              <label className="g-field">
-                <span>Date</span>
-                <input className="g-input" name="date" type="date" required />
-              </label>
-              <label className="g-field">
-                <span>Time ({timezone})</span>
-                <input className="g-input" name="time" type="time" required />
-              </label>
-            </div>
-            <fieldset className="g-field checklist">
-              <legend className="checklist__legend">Roles and caps</legend>
-              <SlotRows
-                required
-                defaultSlots={[
-                  { name: "Tank", count: "2" },
-                  { name: "Healer", count: "4" },
-                  { name: "DPS", count: "14" },
-                ]}
-              />
-              <span className="g-help">Each role and how many of it the raid takes.</span>
-            </fieldset>
-            <label className="g-field">
-              <span>Note</span>
-              <input className="g-input" name="note" maxLength={200} placeholder="Requirements" />
-            </label>
-            <label className="check">
-              <input type="checkbox" name="repeatWeekly" />
-              <span>Post it again every week</span>
-            </label>
-            <p className="g-help">
-              Garrison posts it as you, with a signup card, in the time zone set in Settings. You
-              must be able to post in that channel yourself.
-            </p>
-            <button type="submit" className="g-btn g-btn--primary">
-              Create raid
-            </button>
-          </form>
-        </FormPanel>
-      ) : null}
-      <div className="rally-board">
+              </div>
+              <div className="field-row">
+                {templates.length ? (
+                  <label className="g-field">
+                    <span>Template</span>
+                    <select className="g-input" name="templateId" defaultValue="">
+                      <option value="">{defaultTemplate ? defaultTemplate.name : "None"}</option>
+                      {templates
+                        .filter((t) => t !== defaultTemplate)
+                        .map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.game ? `${t.name} · ${t.game}` : t.name}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                ) : null}
+                <label className="g-field">
+                  <span>Starts</span>
+                  <select className="g-input" name="starts" defaultValue="now">
+                    <option value="now">Now</option>
+                    <option value="10m">In 10 minutes</option>
+                    <option value="30m">In 30 minutes</option>
+                    <option value="1h">In 1 hour</option>
+                    <option value="2h">In 2 hours</option>
+                    <option value="4h">In 4 hours</option>
+                    <option value="8h">In 8 hours</option>
+                    <option value="1d">Tomorrow, this time</option>
+                  </select>
+                </label>
+              </div>
+              <div className="field-row">
+                <fieldset className="g-field checklist">
+                  <legend className="checklist__legend">Roles and caps</legend>
+                  <SlotRows defaultSlots={[]} />
+                  <span className="g-help">
+                    Leave the role empty for a plain group, or to use the template's.
+                  </span>
+                </fieldset>
+                <label className="g-field">
+                  <span>Or just a size</span>
+                  <input
+                    className="g-input"
+                    name="size"
+                    type="number"
+                    min={2}
+                    max={40}
+                    placeholder="5"
+                  />
+                </label>
+              </div>
+              <div className="field-row">
+                <label className="g-field">
+                  <span>Your role</span>
+                  <input className="g-input" name="myRole" maxLength={40} placeholder="Tank" />
+                  <span className="g-help">
+                    Only when the group has roles. Blank takes the first.
+                  </span>
+                </label>
+                <label className="g-field">
+                  <span>Note</span>
+                  <input
+                    className="g-input"
+                    name="note"
+                    maxLength={120}
+                    placeholder="Mic required"
+                  />
+                </label>
+              </div>
+              <p className="g-help">
+                Garrison posts the group as you, with Join buttons. You can host one open group at a
+                time.
+              </p>
+              <button type="submit" className="g-btn g-btn--primary">
+                Post group
+              </button>
+            </form>
+          </FormPanel>
+        ) : null}
+
         <section aria-labelledby="open-groups" className="block">
           <ListHead
             title="Open groups"
@@ -492,6 +435,83 @@ export default async function RallyPage({
             </EmptyState>
           )}
         </section>
+      </TabPanel>
+      <TabPanel id="raids" tabs={GROUP_TABS} className="activity">
+        {query.create === "1" ? (
+          <FormPanel
+            id="create-raid"
+            title="Create raid"
+            hint={`A signup card with role caps and a bench, in ${timezone}.`}
+            open={query.create === "1"}
+          >
+            <form action={requestCreateRaid} className="card-col create-raid">
+              <input type="hidden" name="guildId" value={guild.id} />
+              <div className="field-row">
+                <label className="g-field">
+                  <span>Title</span>
+                  <input
+                    className="g-input"
+                    name="title"
+                    maxLength={80}
+                    required
+                    placeholder="Molten Core"
+                  />
+                </label>
+                <label className="g-field">
+                  <span>Post in</span>
+                  <select className="g-input" name="channelId" required defaultValue="">
+                    <option value="" disabled>
+                      Pick a channel
+                    </option>
+                    {channels.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        #{c.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="field-row">
+                <label className="g-field">
+                  <span>Date</span>
+                  <input className="g-input" name="date" type="date" required />
+                </label>
+                <label className="g-field">
+                  <span>Time ({timezone})</span>
+                  <input className="g-input" name="time" type="time" required />
+                </label>
+              </div>
+              <fieldset className="g-field checklist">
+                <legend className="checklist__legend">Roles and caps</legend>
+                <SlotRows
+                  required
+                  defaultSlots={[
+                    { name: "Tank", count: "2" },
+                    { name: "Healer", count: "4" },
+                    { name: "DPS", count: "14" },
+                  ]}
+                />
+                <span className="g-help">Each role and how many of it the raid takes.</span>
+              </fieldset>
+              <label className="g-field">
+                <span>Note</span>
+                <input className="g-input" name="note" maxLength={200} placeholder="Requirements" />
+              </label>
+              <label className="check">
+                <input type="checkbox" name="repeatWeekly" />
+                <span>Post it again every week</span>
+              </label>
+              <p className="g-help">
+                Garrison posts it as you, with a signup card, in the time zone set in Settings. You
+                must be able to post in that channel yourself.
+              </p>
+              <button type="submit" className="g-btn g-btn--primary">
+                Create raid
+              </button>
+            </form>
+          </FormPanel>
+        ) : null}
+
         <section aria-labelledby="upcoming-raids" className="block">
           <ListHead
             title="Upcoming raids"
@@ -687,209 +707,213 @@ export default async function RallyPage({
             </EmptyState>
           )}
         </section>
-      </div>
 
-      <section className="g-card card-col" id="calendar" aria-labelledby="calendar-title">
-        <div className="queue__head">
-          <h2 className="card-title" id="calendar-title">
-            Calendar
-          </h2>
-          <span className="g-help">Times in {timezone}</span>
-        </div>
-        <OpsCalendar raids={calendarRaids} timeZone={timezone} />
-        <div className="card-col">
-          <h3 className="field-label">Calendar feed</h3>
-          {feedUrl ? (
-            <>
-              <p className="g-help">
-                Add this link in Google Calendar (Other calendars → From URL), Outlook or Apple
-                Calendar, and raids show up there. Anyone with the link sees raid names, times and
-                notes, not who signed up. Members see it on the{" "}
-                <a href={`/play/${guild.id}`}>player page</a>.
-              </p>
+        <section className="g-card card-col" id="attendance" aria-labelledby="attendance-title">
+          <div className="queue__head">
+            <h2 className="card-title" id="attendance-title">
+              Attendance <ProTag on={ent["ops.attendance"]} />
+            </h2>
+          </div>
+          <p className="g-help">
+            Garrison counts someone as there if they're in any voice channel in this server from 10
+            minutes before a raid or group starts to 45 minutes after. Anyone not seen by then is a
+            no-show. Bench players and people who left before the start don't count.
+          </p>
+          <form action={saveAttendance} className="row-between">
+            <input type="hidden" name="guildId" value={guild.id} />
+            <label className="switch">
               <input
-                className="g-input mono"
-                readOnly
-                value={feedUrl}
-                aria-label="Calendar feed link"
+                type="checkbox"
+                name="trackAttendance"
+                defaultChecked={tracking}
+                disabled={!ent["ops.attendance"] && !tracking}
               />
-              <div className="row-between">
-                <form action={setCalendarFeed}>
-                  <input type="hidden" name="guildId" value={guild.id} />
-                  <button type="submit" className="g-btn g-btn--secondary g-btn--sm">
-                    New link
-                  </button>
-                </form>
-                <form action={setCalendarFeed}>
-                  <input type="hidden" name="guildId" value={guild.id} />
-                  <input type="hidden" name="feed" value="off" />
-                  <button type="submit" className="g-btn g-btn--ghost g-btn--sm">
-                    Turn off
-                  </button>
-                </form>
-              </div>
-              <p className="g-help">A new link stops the old one working.</p>
-            </>
-          ) : (
-            <form action={setCalendarFeed} className="row-between">
-              <input type="hidden" name="guildId" value={guild.id} />
-              <p className="g-help">
-                A link calendar apps can subscribe to, so raids show up next to everything else.
-              </p>
-              <button type="submit" className="g-btn g-btn--secondary g-btn--sm">
-                Make a link
-              </button>
-            </form>
-          )}
-        </div>
-      </section>
-
-      <section className="g-card card-col" id="attendance" aria-labelledby="attendance-title">
-        <div className="queue__head">
-          <h2 className="card-title" id="attendance-title">
-            Attendance <ProTag on={ent["ops.attendance"]} />
-          </h2>
-        </div>
-        <p className="g-help">
-          Garrison counts someone as there if they're in any voice channel in this server from 10
-          minutes before a raid or group starts to 45 minutes after. Anyone not seen by then is a
-          no-show. Bench players and people who left before the start don't count.
-        </p>
-        <form action={saveAttendance} className="row-between">
-          <input type="hidden" name="guildId" value={guild.id} />
-          <label className="switch">
-            <input
-              type="checkbox"
-              name="trackAttendance"
-              defaultChecked={tracking}
+              <span className="switch__text">
+                <span className="field-label">Track attendance from voice</span>
+                {tracking && !ent["ops.attendance"] ? (
+                  <span className="g-help">Paused while this server is on Free.</span>
+                ) : null}
+              </span>
+            </label>
+            <button
+              type="submit"
+              className="g-btn g-btn--secondary g-btn--sm"
               disabled={!ent["ops.attendance"] && !tracking}
-            />
-            <span className="switch__text">
-              <span className="field-label">Track attendance from voice</span>
-              {tracking && !ent["ops.attendance"] ? (
-                <span className="g-help">Paused while this server is on Free.</span>
-              ) : null}
-            </span>
-          </label>
-          <button
-            type="submit"
-            className="g-btn g-btn--secondary g-btn--sm"
-            disabled={!ent["ops.attendance"] && !tracking}
-          >
-            Save
-          </button>
-        </form>
-        {ent["ops.attendance"] ? (
-          <>
-            <h3 className="field-label">Reliability, last 90 days</h3>
-            {reliability.length ? (
-              <div className="table-wrap">
-                <table className="g-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Member</th>
-                      <th scope="col">Raids</th>
-                      <th scope="col">Groups</th>
-                      <th scope="col">No-shows</th>
-                      <th scope="col">Showed up</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reliability.map((r) => (
-                      <tr key={r.userId}>
-                        <td>{nameOf(r.userId)}</td>
-                        <td className="mono">
-                          {r.raidsShown}/{r.raidsShown + r.raidsMissed}
-                        </td>
-                        <td className="mono">
-                          {r.groupsShown}/{r.groupsShown + r.groupsMissed}
-                        </td>
-                        <td className="mono">{r.raidsMissed + r.groupsMissed}</td>
-                        <td>
+            >
+              Save
+            </button>
+          </form>
+          {ent["ops.attendance"] ? (
+            <>
+              <h3 className="field-label">Reliability, last 90 days</h3>
+              {reliability.length ? (
+                <div className="table-wrap">
+                  <table className="g-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Member</th>
+                        <th scope="col">Raids</th>
+                        <th scope="col">Groups</th>
+                        <th scope="col">No-shows</th>
+                        <th scope="col">Showed up</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reliability.map((r) => (
+                        <tr key={r.userId}>
+                          <td>{nameOf(r.userId)}</td>
+                          <td className="mono">
+                            {r.raidsShown}/{r.raidsShown + r.raidsMissed}
+                          </td>
+                          <td className="mono">
+                            {r.groupsShown}/{r.groupsShown + r.groupsMissed}
+                          </td>
+                          <td className="mono">{r.raidsMissed + r.groupsMissed}</td>
+                          <td>
+                            <span
+                              className={`g-badge ${
+                                (r.reliability ?? 0) >= 80
+                                  ? "g-badge--go"
+                                  : (r.reliability ?? 0) >= 50
+                                    ? "g-badge--caution"
+                                    : "g-badge--alert"
+                              }`}
+                            >
+                              {r.reliability ?? 0}%
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="queue__empty muted">
+                  {tracking
+                    ? "Nothing yet. Marks appear once a tracked raid or group has started."
+                    : "Turn tracking on to start counting."}
+                </p>
+              )}
+              {recentRaids.some((r) => r.signups.length) ? (
+                <>
+                  <h3 className="field-label">Recent raids</h3>
+                  <p className="g-help">
+                    Correct a mark if someone was there but not in voice, or the other way round.
+                  </p>
+                  <ul className="queue__list">
+                    {recentRaids.flatMap((r) =>
+                      r.signups.map((s) => (
+                        <li key={`${r.event.id}-${s.userId}`} className="gw-row">
+                          <span className="gw-row__main">
+                            <span className="ticket-row__topic">{nameOf(s.userId)}</span>
+                            <span className="ticket-row__who">
+                              {r.event.title} · {formatTime(r.event.startsAt, r.event.timezone)}
+                            </span>
+                          </span>
                           <span
                             className={`g-badge ${
-                              (r.reliability ?? 0) >= 80
+                              s.attended === true
                                 ? "g-badge--go"
-                                : (r.reliability ?? 0) >= 50
-                                  ? "g-badge--caution"
-                                  : "g-badge--alert"
+                                : s.attended === false
+                                  ? "g-badge--alert"
+                                  : ""
                             }`}
                           >
-                            {r.reliability ?? 0}%
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="queue__empty muted">
-                {tracking
-                  ? "Nothing yet. Marks appear once a tracked raid or group has started."
-                  : "Turn tracking on to start counting."}
-              </p>
-            )}
-            {recentRaids.some((r) => r.signups.length) ? (
-              <>
-                <h3 className="field-label">Recent raids</h3>
-                <p className="g-help">
-                  Correct a mark if someone was there but not in voice, or the other way round.
-                </p>
-                <ul className="queue__list">
-                  {recentRaids.flatMap((r) =>
-                    r.signups.map((s) => (
-                      <li key={`${r.event.id}-${s.userId}`} className="gw-row">
-                        <span className="gw-row__main">
-                          <span className="ticket-row__topic">{nameOf(s.userId)}</span>
-                          <span className="ticket-row__who">
-                            {r.event.title} · {formatTime(r.event.startsAt, r.event.timezone)}
-                          </span>
-                        </span>
-                        <span
-                          className={`g-badge ${
-                            s.attended === true
-                              ? "g-badge--go"
+                            {s.attended === true
+                              ? "Showed up"
                               : s.attended === false
-                                ? "g-badge--alert"
-                                : ""
-                          }`}
-                        >
-                          {s.attended === true
-                            ? "Showed up"
-                            : s.attended === false
-                              ? "No-show"
-                              : "Not marked"}
-                        </span>
-                        <span className="gw-row__actions">
-                          <form action={markAttendance}>
-                            <input type="hidden" name="guildId" value={guild.id} />
-                            <input type="hidden" name="eventId" value={r.event.id} />
-                            <input type="hidden" name="userId" value={s.userId} />
-                            <input
-                              type="hidden"
-                              name="mark"
-                              value={s.attended === true ? "no" : "yes"}
-                            />
-                            <button type="submit" className="g-btn g-btn--ghost g-btn--sm">
-                              {s.attended === true ? "Mark no-show" : "Mark there"}
-                            </button>
-                          </form>
-                        </span>
-                      </li>
-                    )),
-                  )}
-                </ul>
+                                ? "No-show"
+                                : "Not marked"}
+                          </span>
+                          <span className="gw-row__actions">
+                            <form action={markAttendance}>
+                              <input type="hidden" name="guildId" value={guild.id} />
+                              <input type="hidden" name="eventId" value={r.event.id} />
+                              <input type="hidden" name="userId" value={s.userId} />
+                              <input
+                                type="hidden"
+                                name="mark"
+                                value={s.attended === true ? "no" : "yes"}
+                              />
+                              <button type="submit" className="g-btn g-btn--ghost g-btn--sm">
+                                {s.attended === true ? "Mark no-show" : "Mark there"}
+                              </button>
+                            </form>
+                          </span>
+                        </li>
+                      )),
+                    )}
+                  </ul>
+                </>
+              ) : null}
+            </>
+          ) : (
+            <p className="g-help">
+              On Pro: each member's record over 90 days, and the marks on recent raids, which staff
+              can correct.
+            </p>
+          )}
+        </section>
+      </TabPanel>
+      <TabPanel id="calendar" tabs={GROUP_TABS}>
+        <section className="g-card card-col" id="calendar" aria-labelledby="calendar-title">
+          <div className="queue__head">
+            <h2 className="card-title" id="calendar-title">
+              Calendar
+            </h2>
+            <span className="g-help">Times in {timezone}</span>
+          </div>
+          <OpsCalendar raids={calendarRaids} timeZone={timezone} />
+          <div className="card-col">
+            <h3 className="field-label">Calendar feed</h3>
+            {feedUrl ? (
+              <>
+                <p className="g-help">
+                  Add this link in Google Calendar (Other calendars → From URL), Outlook or Apple
+                  Calendar, and raids show up there. Anyone with the link sees raid names, times and
+                  notes, not who signed up. Members see it on the{" "}
+                  <a href={`/play/${guild.id}`}>player page</a>.
+                </p>
+                <input
+                  className="g-input mono"
+                  readOnly
+                  value={feedUrl}
+                  aria-label="Calendar feed link"
+                />
+                <div className="row-between">
+                  <form action={setCalendarFeed}>
+                    <input type="hidden" name="guildId" value={guild.id} />
+                    <button type="submit" className="g-btn g-btn--secondary g-btn--sm">
+                      New link
+                    </button>
+                  </form>
+                  <form action={setCalendarFeed}>
+                    <input type="hidden" name="guildId" value={guild.id} />
+                    <input type="hidden" name="feed" value="off" />
+                    <button type="submit" className="g-btn g-btn--ghost g-btn--sm">
+                      Turn off
+                    </button>
+                  </form>
+                </div>
+                <p className="g-help">A new link stops the old one working.</p>
               </>
-            ) : null}
-          </>
-        ) : (
-          <p className="g-help">
-            On Pro: each member's record over 90 days, and the marks on recent raids, which staff
-            can correct.
-          </p>
-        )}
-      </section>
+            ) : (
+              <form action={setCalendarFeed} className="row-between">
+                <input type="hidden" name="guildId" value={guild.id} />
+                <p className="g-help">
+                  A link calendar apps can subscribe to, so raids show up next to everything else.
+                </p>
+                <button type="submit" className="g-btn g-btn--secondary g-btn--sm">
+                  Make a link
+                </button>
+              </form>
+            )}
+          </div>
+        </section>
+      </TabPanel>
+      <TabPanel id="templates" tabs={GROUP_TABS}>
+        <TemplatesTab guildId={guild.id} />
+      </TabPanel>
 
       {recent.length ? (
         <div className="g-card table-card">

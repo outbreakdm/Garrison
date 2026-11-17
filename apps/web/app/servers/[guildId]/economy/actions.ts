@@ -32,7 +32,8 @@ export async function saveEconomy(form: FormData): Promise<AutoResult> {
   const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
   if (!access) redirect("/servers");
   const { guild, session } = access;
-  const back = (outcome: Outcome) => answer(form, `/servers/${guild.id}/economy`, outcome);
+  const back = (outcome: Outcome) =>
+    answer(form, `/servers/${guild.id}/economy`, outcome, "?tab=setup");
   const own = ownedFields(form);
   const take = (k: string) => !own || own.has(k);
   const db = await getDb();

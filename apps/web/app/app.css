@@ -1152,93 +1152,7 @@ select[multiple].g-input option {
   background: var(--surface-raised);
   border-color: var(--text-muted);
 }
-.card-edit > form {
-  animation: reveal 0.24s var(--ease-out);
-}
-
-/* Global settings: server and account on the left, the map of everything else on the right */
-.settings-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
-  gap: var(--space-4);
-  align-items: start;
-}
-.settings-layout > .card-col {
-  gap: var(--space-4);
-}
-.places {
-  display: flex;
-  flex-direction: column;
-}
-.place {
-  display: grid;
-  grid-template-columns: minmax(120px, 0.7fr) minmax(0, 1.3fr) auto;
-  gap: var(--space-3);
-  align-items: center;
-  margin: 0 calc(-1 * var(--space-2));
-  padding: 10px var(--space-2);
-  border-bottom: 1px solid var(--line);
-  color: var(--text);
-  font-size: 14px;
-  text-decoration: none;
-  transition: background-color 0.12s var(--ease-out);
-}
-.place:last-child {
-  border-bottom: 0;
-}
-.place:hover,
-.place:focus-visible {
-  background: var(--surface-raised);
-  color: var(--text);
-}
-.place:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: -2px;
-}
-.place__name {
-  font-weight: 600;
-}
-.place__value {
-  overflow: hidden;
-  color: var(--text-muted);
-  font-size: 13px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.place__cue {
-  width: 7px;
-  height: 7px;
-  margin-right: 3px;
-  border-top: 2px solid var(--text-muted);
-  border-right: 2px solid var(--text-muted);
-  transform: rotate(45deg);
-  transition:
-    transform 0.2s var(--ease-out),
-    border-color 0.15s var(--ease-out);
-}
-.place:hover .place__cue {
-  border-color: var(--accent-strong);
-  transform: translateX(3px) rotate(45deg);
-}
-@media (max-width: 960px) {
-  .settings-layout {
-    grid-template-columns: 1fr;
-  }
-}
 @media (max-width: 520px) {
-  .place {
-    grid-template-columns: 1fr auto;
-    row-gap: 2px;
-  }
-  .place__value {
-    grid-column: 1;
-    grid-row: 2;
-    white-space: normal;
-  }
-  .place__cue {
-    grid-row: 1 / 3;
-    grid-column: 2;
-  }
   .panel__summary {
     flex-wrap: wrap;
   }
@@ -1249,6 +1163,10 @@ select[multiple].g-input option {
   .panel__title {
     flex: 1;
   }
+}
+
+.card-edit > form {
+  animation: reveal 0.24s var(--ease-out);
 }
 
 /* Cards keep their own height: one opening its form must not stretch its neighbors. */

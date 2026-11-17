@@ -11,19 +11,18 @@ import {
   type StatKind,
 } from "@garrison/db";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { AutoSaveCard } from "@/components/AutoSave";
 import { formatTime } from "@/components/format";
+import { SetupLayout } from "@/components/PageLayouts";
+import { PageTabs, TabPanel } from "@/components/PageTabs";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { SettingsNotice, Switch } from "@/components/settings";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { formAction } from "@/lib/autosave";
 import { getDb } from "@/lib/db";
 import { botLook, listGuildRoles, listTextChannels, searchMembers } from "@/lib/discord";
 import { readFlash } from "@/lib/flash";
 import { requireGuildAccess } from "@/lib/session";
 import { FIELD_LABELS, ladderText, templatesChangeText } from "@/lib/settings-schema";
-import { currentTheme } from "@/lib/theme";
 import { requestAction } from "../requests";
 import { AccessPanel } from "./AccessPanel";
 import { saveMemberPages, saveOps, undoChange } from "./actions";
@@ -172,16 +171,8 @@ const ANNOUNCE: Record<string, string> = {
   channel: "a set channel",
 };
 
-/** One line in "Where the rest lives": a setting group, its current values, and its page. */
-function Place({ href, name, value }: { href: string; name: string; value: string }) {
-  return (
-    <Link className="place" href={href}>
-      <span className="place__name">{name}</span>
-      <span className="place__value">{value}</span>
-      <span className="place__cue" aria-hidden="true" />
-    </Link>
-  );
-}
+/** Settings' tabs. Each module's own settings stay on its page. */
+const SETTINGS_TABS = ["general", "access", "profile", "history"] as const;
 
 export default async function SettingsPage({
   params,
@@ -191,7 +182,7 @@ export default async function SettingsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { guildId } = await params;
-  const { guild, session, role } = await requireGuildAccess(guildId);
+  const { guild, role } = await requireGuildAccess(guildId);
   const query = await searchParams;
   const db = await getDb();
   // Managers find people to give access to (a GET search, like Moderation's).
@@ -205,12 +196,11 @@ export default async function SettingsPage({
     readFlash(),
     getMemberPages(db, guild.id),
   ]);
-  const [timezone, history, channels, roles, theme, plan, look] = await Promise.all([
+  const [timezone, history, channels, roles, plan, look] = await Promise.all([
     getOpsTimezone(db, guild.id),
     listSettingsChanges(db, guild.id),
     listTextChannels(guild.id).catch(() => []),
     listGuildRoles(guild.id).catch(() => []),
-    currentTheme(),
     getGuildPlan(db, guild.id),
     botLook(guild.id),
   ]);
@@ -224,16 +214,33 @@ export default async function SettingsPage({
       <div className="page-head">
         <div>
           <h1>Settings</h1>
-          <p>
-            What applies to the whole server, your own account, and the record of every change. Each
-            module's settings are on its own page.
-          </p>
+          <p>What applies to the whole server, who can open this dashboard, and every change.</p>
         </div>
       </div>
       <SettingsNotice query={query} />
 
-      <div className="settings-layout">
-        <div className="card-col">
+      <PageTabs
+        label="Settings"
+        tabs={[
+          { id: "general", label: "General" },
+          { id: "access", label: "Access", count: grants.length },
+          { id: "profile", label: "Garrison's profile" },
+          { id: "history", label: "History" },
+        ]}
+      />
+      {flash?.ok ? (
+        <div className="notice notice--ok" role="status">
+          {flash.ok}
+        </div>
+      ) : null}
+      {flash?.error ? (
+        <div className="notice" role="alert">
+          {flash.error}
+        </div>
+      ) : null}
+
+      <TabPanel id="general" tabs={SETTINGS_TABS}>
+        <SetupLayout index={false}>
           <AutoSaveCard
             id="server"
             title="Server"
@@ -258,195 +265,132 @@ export default async function SettingsPage({
               </span>
             </label>
           </AutoSaveCard>
-
-          <div className="g-card card-col" id="account">
-            <h2 className="card-title">Your account</h2>
-            <div className="list-row">
-              <span>Signed in as</span>
-              <span className="mono">{session.username}</span>
-            </div>
-            <div className="list-row">
-              <span>
-                Game accounts
-                <br />
-                <span className="g-help">Steam, Battle.net, OSRS and which servers see them.</span>
-              </span>
-              <a className="g-btn g-btn--secondary" href="/account">
-                Manage
-              </a>
-            </div>
-            <div className="list-row">
-              <span>Theme: {theme === "dark" ? "Dark" : "Light"}</span>
-              <ThemeToggle back={`${base}/settings`} theme={theme} />
-            </div>
-            <div className="list-row">
-              <span>This browser</span>
-              {/* POST + Origin check + SameSite cookie: logout can't be triggered cross-site. */}
-              <form method="post" action="/auth/logout">
-                <button type="submit" className="g-btn g-btn--secondary">
-                  Sign out
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-
-        <nav className="g-card card-col" aria-label="Settings inside other pages">
-          <h2 className="card-title">Inside other pages</h2>
-          <p className="g-help">
-            Every module's settings are on its own page in the menu. These three sit inside one.
-          </p>
-          <div className="places">
-            <Place
-              href={`${base}/watch?edit=edit-ladder#edit-ladder`}
-              name="Escalation ladder"
-              value="On Moderation: what happens as warnings add up"
-            />
-            <Place
-              href={`${base}/ranks#rewards`}
-              name="Level rewards"
-              value="On Leveling: roles given at a level"
-            />
-            <Place
-              href={`${base}/rally/templates`}
-              name="LFG templates"
-              value="On Groups and raids: roles and wording per game"
-            />
-          </div>
-        </nav>
-      </div>
-
-      {flash?.ok ? (
-        <div className="notice notice--ok" role="status">
-          {flash.ok}
-        </div>
-      ) : null}
-      {flash?.error ? (
-        <div className="notice" role="alert">
-          {flash.error}
-        </div>
-      ) : null}
-      <AccessPanel
-        guildId={guild.id}
-        role={role}
-        grants={grants}
-        roles={roles}
-        query={accessQuery}
-        found={found}
-      />
-
-      <AutoSaveCard
-        id="members"
-        title="Member pages"
-        action={saveMemberPages}
-        undo={undoChange}
-        guildId={guild.id}
-        stamp={`${memberPages.showYou}-${memberPages.showRecord}`}
-        saveLabel="Save member pages"
-        need="manager"
-      >
-        <p className="g-help">
-          Everyone in the server can sign in and see their own space here: groups and raids, and the
-          pages below that are on. They only ever see and change themselves.{" "}
-          <a href={`/play/${guild.id}/you`}>See it as a member</a>.
-        </p>
-        <Switch
-          name="showYou"
-          defaultChecked={memberPages.showYou}
-          label="You: their level, rank card details and the leaderboard"
-          help="Shows while Leveling is on. Their card details are the same ones /rankcard fills in."
-        />
-        <Switch
-          name="showRecord"
-          defaultChecked={memberPages.showRecord}
-          label="Your record: their own warnings, timeouts, kicks and bans"
-          help="Each member sees only their own cases, never who acted, with your appeal page if it's on."
-        />
-      </AutoSaveCard>
-
-      <RequestsPanel guildId={guild.id} kinds={["bot_profile"]} query={query} />
-      <section className="g-card card-col" id="profile" aria-labelledby="profile-title">
-        <h2 className="card-title" id="profile-title">
-          Garrison in this server
-        </h2>
-        <p className="g-help">
-          Its name and look here only; other servers keep their own. Undo by putting back Garrison's
-          own for each part.
-        </p>
-        {look ? (
-          <BotProfileForm
+          <AutoSaveCard
+            id="members"
+            title="Member pages"
+            action={saveMemberPages}
+            undo={undoChange}
             guildId={guild.id}
-            current={look}
-            pro={entitlements(plan)["profile.identity"]}
-            planHref={`${base}/plan`}
-            requestAction={requestAction}
-          />
-        ) : (
-          <p className="notice" role="alert">
-            Discord didn't say how Garrison looks here. Refresh to try again.
+            stamp={`${memberPages.showYou}-${memberPages.showRecord}`}
+            saveLabel="Save member pages"
+            need="manager"
+          >
+            <p className="g-help">
+              Everyone in the server can sign in and see their own space here: groups and raids, and
+              the pages below that are on. They only ever see and change themselves.{" "}
+              <a href={`/play/${guild.id}/you`}>See it as a member</a>.
+            </p>
+            <Switch
+              name="showYou"
+              defaultChecked={memberPages.showYou}
+              label="You: their level, rank card details and the leaderboard"
+              help="Shows while Leveling is on. Their card details are the same ones /rankcard fills in."
+            />
+            <Switch
+              name="showRecord"
+              defaultChecked={memberPages.showRecord}
+              label="Your record: their own warnings, timeouts, kicks and bans"
+              help="Each member sees only their own cases, never who acted, with your appeal page if it's on."
+            />
+          </AutoSaveCard>
+        </SetupLayout>
+      </TabPanel>
+      <TabPanel id="access" tabs={SETTINGS_TABS}>
+        <AccessPanel
+          guildId={guild.id}
+          role={role}
+          grants={grants}
+          roles={roles}
+          query={accessQuery}
+          found={found}
+        />
+      </TabPanel>
+      <TabPanel id="profile" tabs={SETTINGS_TABS}>
+        <RequestsPanel guildId={guild.id} kinds={["bot_profile"]} query={query} />
+        <section className="g-card card-col" id="profile" aria-labelledby="profile-title">
+          <h2 className="card-title" id="profile-title">
+            Garrison in this server
+          </h2>
+          <p className="g-help">
+            Its name and look here only; other servers keep their own. Undo by putting back
+            Garrison's own for each part.
           </p>
-        )}
-      </section>
-
-      <div className="g-card table-card" id="history">
-        <div className="table-card__head row-between">
-          <h2 className="card-title">History</h2>
-          <span className="g-help">Garrison picks changes up within a minute.</span>
-        </div>
-        <div className="table-wrap">
-          <table className="g-table">
-            <thead>
-              <tr>
-                {["When", "Who", "Change", ""].map((h) => (
-                  <th key={h || "actions"} scope="col">
-                    <span className="g-label">{h}</span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {history.map((h: SettingsChange) => (
-                <tr key={h.id} className={undone.has(h.id) ? "revoked" : undefined}>
-                  <td className="mono">{formatTime(h.createdAt)}</td>
-                  <td>{h.username}</td>
-                  <td>
-                    {h.revertsChangeId ? <span className="muted">Undo: </span> : null}
-                    {Object.entries(h.changes).map(([field, { from, to }]) => (
-                      <div key={field}>
-                        {FIELD_LABELS[`${h.module}.${field}`] ?? FIELD_LABELS[field] ?? field}:{" "}
-                        {field === "templates" ||
-                        field === "menus" ||
-                        field === "messages" ||
-                        field === "panels" ||
-                        field === "feeds"
-                          ? templatesChangeText(from, to)
-                          : historyLine(
-                              describe(field, from, names, roleNames),
-                              describe(field, to, names, roleNames),
-                            )}
-                      </div>
-                    ))}
-                  </td>
-                  <td>
-                    {!h.revertsChangeId && !undone.has(h.id) ? (
-                      <form action={formAction(undoChange)}>
-                        <input type="hidden" name="guildId" value={guild.id} />
-                        <input type="hidden" name="changeId" value={h.id} />
-                        <button type="submit" className="g-btn g-btn--ghost">
-                          Undo
-                        </button>
-                      </form>
-                    ) : null}
-                  </td>
+          {look ? (
+            <BotProfileForm
+              guildId={guild.id}
+              current={look}
+              pro={entitlements(plan)["profile.identity"]}
+              planHref={`${base}/plan`}
+              requestAction={requestAction}
+            />
+          ) : (
+            <p className="notice" role="alert">
+              Discord didn't say how Garrison looks here. Refresh to try again.
+            </p>
+          )}
+        </section>
+      </TabPanel>
+      <TabPanel id="history" tabs={SETTINGS_TABS}>
+        <div className="g-card table-card" id="history">
+          <div className="table-card__head row-between">
+            <h2 className="card-title">History</h2>
+            <span className="g-help">Garrison picks changes up within a minute.</span>
+          </div>
+          <div className="table-wrap">
+            <table className="g-table">
+              <thead>
+                <tr>
+                  {["When", "Who", "Change", ""].map((h) => (
+                    <th key={h || "actions"} scope="col">
+                      <span className="g-label">{h}</span>
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          {history.length === 0 ? (
-            <div className="table-card__head muted">No changes yet.</div>
-          ) : null}
+              </thead>
+              <tbody>
+                {history.map((h: SettingsChange) => (
+                  <tr key={h.id} className={undone.has(h.id) ? "revoked" : undefined}>
+                    <td className="mono">{formatTime(h.createdAt)}</td>
+                    <td>{h.username}</td>
+                    <td>
+                      {h.revertsChangeId ? <span className="muted">Undo: </span> : null}
+                      {Object.entries(h.changes).map(([field, { from, to }]) => (
+                        <div key={field}>
+                          {FIELD_LABELS[`${h.module}.${field}`] ?? FIELD_LABELS[field] ?? field}:{" "}
+                          {field === "templates" ||
+                          field === "menus" ||
+                          field === "messages" ||
+                          field === "panels" ||
+                          field === "feeds"
+                            ? templatesChangeText(from, to)
+                            : historyLine(
+                                describe(field, from, names, roleNames),
+                                describe(field, to, names, roleNames),
+                              )}
+                        </div>
+                      ))}
+                    </td>
+                    <td>
+                      {!h.revertsChangeId && !undone.has(h.id) ? (
+                        <form action={formAction(undoChange)}>
+                          <input type="hidden" name="guildId" value={guild.id} />
+                          <input type="hidden" name="changeId" value={h.id} />
+                          <button type="submit" className="g-btn g-btn--ghost">
+                            Undo
+                          </button>
+                        </form>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {history.length === 0 ? (
+              <div className="table-card__head muted">No changes yet.</div>
+            ) : null}
+          </div>
         </div>
-      </div>
+      </TabPanel>
     </>
   );
 }

@@ -16,6 +16,8 @@ import { DurationBar, untilText } from "@/components/DurationBar";
 import { formatTime } from "@/components/format";
 import { ListField } from "@/components/ListField";
 import { HeadSwitch } from "@/components/ModuleHead";
+import { ActivityLayout, SetupLayout } from "@/components/PageLayouts";
+import { PageTabs, TabPanel } from "@/components/PageTabs";
 import { PresetFill } from "@/components/PresetFill";
 import { RecValue } from "@/components/RecValue";
 import { RequestsPanel } from "@/components/RequestsPanel";
@@ -73,6 +75,9 @@ function Hidden({ guildId, kind }: { guildId: string; kind: string }) {
   );
 }
 
+/** Security's tabs: what you can do right now first, then each guard's setup. */
+const SECURITY_TABS = ["now", "antiraid", "verification", "antinuke"] as const;
+
 export default async function GatehousePage({
   params,
   searchParams,
@@ -124,12 +129,232 @@ export default async function GatehousePage({
           defaultChecked={g?.antiRaidEnabled ?? true}
         />
       </div>
+      <PageTabs
+        label="Security"
+        tabs={[
+          { id: "now", label: "Now" },
+          { id: "antiraid", label: "Anti-raid" },
+          { id: "verification", label: "Verification" },
+          { id: "antinuke", label: "Anti-nuke" },
+        ]}
+      />
 
       <RequestsPanel guildId={guild.id} kinds={KINDS} query={query} />
       <SettingsNotice query={query} />
 
-      <div className="page-split page-split--tools-first">
-        <div className="page-split__main">
+      <TabPanel id="now" tabs={SECURITY_TABS}>
+        <ActivityLayout
+          main={
+            <>
+              {" "}
+              <section
+                className={`g-card card-col gate-lockdown ${l ? "gate-lockdown--on" : ""}`}
+                id="lockdown"
+                aria-labelledby="lockdown-title"
+              >
+                <div className="card-head">
+                  <h2 className="card-title" id="lockdown-title">
+                    Lockdown
+                  </h2>
+                  {l ? (
+                    <span className="g-badge g-badge--alert">Active</span>
+                  ) : (
+                    <span className="g-badge g-badge--off">Not locked</span>
+                  )}
+                </div>
+                {l ? (
+                  <>
+                    <Row label="Started" value={formatTime(l.startedAt)} />
+                    <Row
+                      label="Lifts"
+                      value={l.endsAt ? formatTime(l.endsAt) : "When someone lifts it"}
+                    />
+                    {l.endsAt && l.endsAt.getTime() > Date.now() ? (
+                      <DurationBar
+                        value={Date.now() - l.startedAt.getTime()}
+                        max={l.endsAt.getTime() - l.startedAt.getTime()}
+                        label="Lockdown time served, out of its length"
+                        text={`Lifts ${untilText(l.endsAt.getTime() - Date.now())}`}
+                        tone="alert"
+                      />
+                    ) : null}
+                    <Row label="Invites" value={l.invitesPaused ? "Paused" : "Open"} />
+                    <Row label="Reason" value={l.reason ?? "No reason given"} />
+                    <form action={requestAction}>
+                      <Hidden guildId={guild.id} kind="lockdown_end" />
+                      <button type="submit" className="g-btn g-btn--primary">
+                        Lift lockdown
+                      </button>
+                    </form>
+                  </>
+                ) : (
+                  <>
+                    <p className="g-help">
+                      Locking stops @everyone talking in every channel; staff roles keep talking.
+                    </p>
+                    <details className="confirm">
+                      <summary className="confirm__toggle g-btn g-btn--secondary">
+                        Lock the server…
+                      </summary>
+                      <form action={requestAction} className="card-col">
+                        <Hidden guildId={guild.id} kind="lockdown_start" />
+                        <label className="g-field">
+                          <span>Lift automatically after</span>
+                          <select className="g-input" name="durationMinutes" defaultValue="60">
+                            <option value="0">Don't: lift it by hand</option>
+                            <option value="15">15 minutes</option>
+                            <option value="30">30 minutes</option>
+                            <option value="60">1 hour</option>
+                            <option value="120">2 hours</option>
+                            <option value="360">6 hours</option>
+                            <option value="1440">24 hours</option>
+                          </select>
+                        </label>
+                        <label className="check">
+                          <input type="checkbox" name="pauseInvites" defaultChecked />
+                          <span>Pause invites too</span>
+                        </label>
+                        <label className="g-field">
+                          <span>Reason (shown in the alert)</span>
+                          <input
+                            className="g-input"
+                            name="reason"
+                            maxLength={200}
+                            placeholder="Raid in progress"
+                          />
+                        </label>
+                        <button type="submit" className="g-btn g-btn--danger">
+                          Lock the server now
+                        </button>
+                      </form>
+                    </details>
+                  </>
+                )}
+              </section>
+              <section className="g-card card-col" aria-labelledby="quarantine-title">
+                <h2 className="card-title" id="quarantine-title">
+                  Quarantined <span className="count">{quarantines.length}</span>
+                </h2>
+                {quarantines.length ? (
+                  quarantines.map((q) => (
+                    <div className="list-row" key={q.id}>
+                      <span>
+                        {q.userTag} <span className="mono">{formatTime(q.createdAt)}</span>
+                        <br />
+                        <span className="muted">{q.reason}</span>
+                      </span>
+                      {q.kicked ? (
+                        <span className="mono">Bot kicked</span>
+                      ) : (
+                        <form action={requestAction}>
+                          <Hidden guildId={guild.id} kind="release_quarantine" />
+                          <input type="hidden" name="id" value={q.id} />
+                          <button type="submit" className="g-btn g-btn--secondary">
+                            Restore roles
+                          </button>
+                        </form>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="feed__empty">
+                    Nobody. Admins anti-nuke stops land here until the owner or a trusted user
+                    restores them.
+                  </p>
+                )}
+              </section>
+            </>
+          }
+          side={
+            <>
+              {" "}
+              <AutoSaveCard
+                id="backups"
+                title="Backups"
+                action={saveBackupWeekly}
+                undo={undoChange}
+                guildId={guild.id}
+                stamp={stamp}
+                saveLabel="Save"
+                aside={<span className="count">{backups.length}</span>}
+                footer={
+                  <>
+                    <p className="g-help">
+                      Roles, categories, channels and their permissions. Restoring recreates only
+                      what's missing, so it's safe after a nuke. Garrison keeps {backupsKept(ent)}{" "}
+                      {backupsKept(ent) === 1 ? "backup" : "backups"}; only the owner can restore.
+                    </p>
+                    <form action={requestAction}>
+                      <Hidden guildId={guild.id} kind="backup_create" />
+                      <button type="submit" className="g-btn g-btn--secondary">
+                        Back up now
+                      </button>
+                    </form>
+                    {backups.length ? (
+                      <ul className="feed">
+                        {backups.map((b) => (
+                          <li key={b.id} className="feed__item feed__item--backup">
+                            <span className="feed__what">
+                              {formatTime(b.createdAt)}
+                              <br />
+                              <span className="muted">
+                                {b.roleCount} roles · {b.channelCount} channels ·{" "}
+                                {b.kind === "weekly"
+                                  ? "weekly"
+                                  : `by ${b.createdByName ?? "staff"}`}
+                                {b.restoredAt ? ` · restored ${formatTime(b.restoredAt)}` : ""}
+                              </span>
+                            </span>
+                            {isOwner ? (
+                              <details className="confirm">
+                                <summary className="confirm__toggle g-btn g-btn--ghost g-btn--sm">
+                                  Restore…
+                                </summary>
+                                <form action={requestAction} className="card-col">
+                                  <Hidden guildId={guild.id} kind="backup_restore" />
+                                  <input type="hidden" name="backupId" value={b.id} />
+                                  <p className="g-help">
+                                    Recreates roles and channels from this backup that aren't in the
+                                    server now.
+                                  </p>
+                                  <button type="submit" className="g-btn g-btn--danger g-btn--sm">
+                                    Yes, restore what's missing
+                                  </button>
+                                </form>
+                              </details>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="feed__empty">
+                        No backups yet. Take one now, before you need it.
+                      </p>
+                    )}
+                  </>
+                }
+              >
+                <label className="switch">
+                  <input
+                    type="checkbox"
+                    name="backupWeekly"
+                    defaultChecked={g?.backupWeekly ?? false}
+                    disabled={!ent["backups.weekly"] && !g?.backupWeekly}
+                  />
+                  <span className="switch__text">
+                    <span className="field-label">
+                      Back up every week by itself <ProTag on={ent["backups.weekly"]} />
+                    </span>
+                  </span>
+                </label>
+              </AutoSaveCard>
+            </>
+          }
+        />
+      </TabPanel>
+      <TabPanel id="antiraid" tabs={SECURITY_TABS}>
+        <SetupLayout index={false}>
+          {" "}
           <AutoSaveCard
             id="anti-raid"
             title="Anti-raid"
@@ -266,7 +491,11 @@ export default async function GatehousePage({
               help={<>Up to 10.</>}
             />
           </AutoSaveCard>
-
+        </SetupLayout>
+      </TabPanel>
+      <TabPanel id="verification" tabs={SECURITY_TABS}>
+        <SetupLayout>
+          {" "}
           <AutoSaveCard
             id="verification"
             title="Verification"
@@ -357,7 +586,6 @@ export default async function GatehousePage({
               help="The Verify button links to a page where members sign in with Discord (and pass a captcha if the host has Turnstile keys) before getting the role."
             />
           </AutoSaveCard>
-
           <QuestionsEditor
             guildId={guild.id}
             questions={readVerifyQuestions(g?.verifyQuestions)}
@@ -370,7 +598,6 @@ export default async function GatehousePage({
             undo={undoChange}
             stamp={String(stamp)}
           />
-
           {answers.length ? (
             <section className="g-card card-col" id="answers" aria-labelledby="answers-title">
               <div className="card-head">
@@ -424,7 +651,11 @@ export default async function GatehousePage({
               <p className="g-help">Answers are deleted after 30 days.</p>
             </section>
           ) : null}
-
+        </SetupLayout>
+      </TabPanel>
+      <TabPanel id="antinuke" tabs={SECURITY_TABS}>
+        <SetupLayout index={false}>
+          {" "}
           <section className="g-card card-col" id="anti-nuke" aria-labelledby="anti-nuke-title">
             <div className="card-head">
               <h2 className="card-title" id="anti-nuke-title">
@@ -541,205 +772,8 @@ export default async function GatehousePage({
               </>
             )}
           </section>
-        </div>
-
-        <aside className="page-split__side" aria-label="Right now">
-          <section
-            className={`g-card card-col gate-lockdown ${l ? "gate-lockdown--on" : ""}`}
-            id="lockdown"
-            aria-labelledby="lockdown-title"
-          >
-            <div className="card-head">
-              <h2 className="card-title" id="lockdown-title">
-                Lockdown
-              </h2>
-              {l ? (
-                <span className="g-badge g-badge--alert">Active</span>
-              ) : (
-                <span className="g-badge g-badge--off">Not locked</span>
-              )}
-            </div>
-            {l ? (
-              <>
-                <Row label="Started" value={formatTime(l.startedAt)} />
-                <Row
-                  label="Lifts"
-                  value={l.endsAt ? formatTime(l.endsAt) : "When someone lifts it"}
-                />
-                {l.endsAt && l.endsAt.getTime() > Date.now() ? (
-                  <DurationBar
-                    value={Date.now() - l.startedAt.getTime()}
-                    max={l.endsAt.getTime() - l.startedAt.getTime()}
-                    label="Lockdown time served, out of its length"
-                    text={`Lifts ${untilText(l.endsAt.getTime() - Date.now())}`}
-                    tone="alert"
-                  />
-                ) : null}
-                <Row label="Invites" value={l.invitesPaused ? "Paused" : "Open"} />
-                <Row label="Reason" value={l.reason ?? "No reason given"} />
-                <form action={requestAction}>
-                  <Hidden guildId={guild.id} kind="lockdown_end" />
-                  <button type="submit" className="g-btn g-btn--primary">
-                    Lift lockdown
-                  </button>
-                </form>
-              </>
-            ) : (
-              <>
-                <p className="g-help">
-                  Locking stops @everyone talking in every channel; staff roles keep talking.
-                </p>
-                <details className="confirm">
-                  <summary className="confirm__toggle g-btn g-btn--secondary">
-                    Lock the server…
-                  </summary>
-                  <form action={requestAction} className="card-col">
-                    <Hidden guildId={guild.id} kind="lockdown_start" />
-                    <label className="g-field">
-                      <span>Lift automatically after</span>
-                      <select className="g-input" name="durationMinutes" defaultValue="60">
-                        <option value="0">Don't: lift it by hand</option>
-                        <option value="15">15 minutes</option>
-                        <option value="30">30 minutes</option>
-                        <option value="60">1 hour</option>
-                        <option value="120">2 hours</option>
-                        <option value="360">6 hours</option>
-                        <option value="1440">24 hours</option>
-                      </select>
-                    </label>
-                    <label className="check">
-                      <input type="checkbox" name="pauseInvites" defaultChecked />
-                      <span>Pause invites too</span>
-                    </label>
-                    <label className="g-field">
-                      <span>Reason (shown in the alert)</span>
-                      <input
-                        className="g-input"
-                        name="reason"
-                        maxLength={200}
-                        placeholder="Raid in progress"
-                      />
-                    </label>
-                    <button type="submit" className="g-btn g-btn--danger">
-                      Lock the server now
-                    </button>
-                  </form>
-                </details>
-              </>
-            )}
-          </section>
-
-          <section className="g-card card-col" aria-labelledby="quarantine-title">
-            <h2 className="card-title" id="quarantine-title">
-              Quarantined <span className="count">{quarantines.length}</span>
-            </h2>
-            {quarantines.length ? (
-              quarantines.map((q) => (
-                <div className="list-row" key={q.id}>
-                  <span>
-                    {q.userTag} <span className="mono">{formatTime(q.createdAt)}</span>
-                    <br />
-                    <span className="muted">{q.reason}</span>
-                  </span>
-                  {q.kicked ? (
-                    <span className="mono">Bot kicked</span>
-                  ) : (
-                    <form action={requestAction}>
-                      <Hidden guildId={guild.id} kind="release_quarantine" />
-                      <input type="hidden" name="id" value={q.id} />
-                      <button type="submit" className="g-btn g-btn--secondary">
-                        Restore roles
-                      </button>
-                    </form>
-                  )}
-                </div>
-              ))
-            ) : (
-              <p className="feed__empty">
-                Nobody. Admins anti-nuke stops land here until the owner or a trusted user restores
-                them.
-              </p>
-            )}
-          </section>
-
-          <AutoSaveCard
-            id="backups"
-            title="Backups"
-            action={saveBackupWeekly}
-            undo={undoChange}
-            guildId={guild.id}
-            stamp={stamp}
-            saveLabel="Save"
-            aside={<span className="count">{backups.length}</span>}
-            footer={
-              <>
-                <p className="g-help">
-                  Roles, categories, channels and their permissions. Restoring recreates only what's
-                  missing, so it's safe after a nuke. Garrison keeps {backupsKept(ent)}{" "}
-                  {backupsKept(ent) === 1 ? "backup" : "backups"}; only the owner can restore.
-                </p>
-                <form action={requestAction}>
-                  <Hidden guildId={guild.id} kind="backup_create" />
-                  <button type="submit" className="g-btn g-btn--secondary">
-                    Back up now
-                  </button>
-                </form>
-                {backups.length ? (
-                  <ul className="feed">
-                    {backups.map((b) => (
-                      <li key={b.id} className="feed__item feed__item--backup">
-                        <span className="feed__what">
-                          {formatTime(b.createdAt)}
-                          <br />
-                          <span className="muted">
-                            {b.roleCount} roles · {b.channelCount} channels ·{" "}
-                            {b.kind === "weekly" ? "weekly" : `by ${b.createdByName ?? "staff"}`}
-                            {b.restoredAt ? ` · restored ${formatTime(b.restoredAt)}` : ""}
-                          </span>
-                        </span>
-                        {isOwner ? (
-                          <details className="confirm">
-                            <summary className="confirm__toggle g-btn g-btn--ghost g-btn--sm">
-                              Restore…
-                            </summary>
-                            <form action={requestAction} className="card-col">
-                              <Hidden guildId={guild.id} kind="backup_restore" />
-                              <input type="hidden" name="backupId" value={b.id} />
-                              <p className="g-help">
-                                Recreates roles and channels from this backup that aren't in the
-                                server now.
-                              </p>
-                              <button type="submit" className="g-btn g-btn--danger g-btn--sm">
-                                Yes, restore what's missing
-                              </button>
-                            </form>
-                          </details>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="feed__empty">No backups yet. Take one now, before you need it.</p>
-                )}
-              </>
-            }
-          >
-            <label className="switch">
-              <input
-                type="checkbox"
-                name="backupWeekly"
-                defaultChecked={g?.backupWeekly ?? false}
-                disabled={!ent["backups.weekly"] && !g?.backupWeekly}
-              />
-              <span className="switch__text">
-                <span className="field-label">
-                  Back up every week by itself <ProTag on={ent["backups.weekly"]} />
-                </span>
-              </span>
-            </label>
-          </AutoSaveCard>
-        </aside>
-      </div>
+        </SetupLayout>
+      </TabPanel>
     </>
   );
 }

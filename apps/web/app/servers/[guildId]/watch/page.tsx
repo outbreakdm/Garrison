@@ -27,6 +27,8 @@ import { ActionBadge, formatDuration, formatTime, plainMentions } from "@/compon
 import { ListField } from "@/components/ListField";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { HeadNote, HeadSwitch } from "@/components/ModuleHead";
+import { ActivityLayout, SetupLayout } from "@/components/PageLayouts";
+import { PageTabs, TabPanel } from "@/components/PageTabs";
 import { PresetFill } from "@/components/PresetFill";
 import { RecValue } from "@/components/RecValue";
 import { RequestsPanel } from "@/components/RequestsPanel";
@@ -70,6 +72,9 @@ const UNDO_LABEL: Record<string, string> = {
 };
 
 const ACTION_LABEL = { timeout: "Timeout", kick: "Kick", ban: "Ban" } as const;
+
+/** Moderation's tabs: the cases first (the daily job), then automod, then escalation. */
+const WATCH_TABS = ["cases", "automod", "escalation"] as const;
 
 export default async function WatchPage({
   params,
@@ -160,6 +165,18 @@ export default async function WatchPage({
           />
         ) : null}
       </div>
+      <PageTabs
+        label="Moderation"
+        tabs={[
+          { id: "cases", label: "Cases", count: appeals.open.length },
+          { id: "automod", label: "Automod" },
+          {
+            id: "escalation",
+            label: "Escalation and appeals",
+            blocked: status.state === "blocked",
+          },
+        ]}
+      />
 
       <RequestsPanel
         guildId={guild.id}
@@ -177,93 +194,382 @@ export default async function WatchPage({
           {flash.error}
         </div>
       ) : null}
-      {appealsOn || appeals.open.length || appeals.decided.length ? (
-        <section className="g-card queue" id="appeals" aria-labelledby="appeals-title">
-          <div className="queue__head">
-            <h2 className="card-title" id="appeals-title">
-              Appeals <span className="count">{appeals.open.length}</span>
-            </h2>
-            <span className="appeal-link">
-              <a className="appeal-link__open" href={appealUrl} target="_blank" rel="noreferrer">
-                Appeal page
-              </a>
-              <CopyButton text={appealUrl} />
-            </span>
-          </div>
-          {appeals.open.length ? (
-            <ul className="queue__list">
-              {appeals.open.map((a) => (
-                <li key={a.id} className="appeal-row">
-                  <div className="card-col">
-                    <span className="ticket-row__topic">
-                      <Link href={`/servers/${guild.id}/watch/member/${a.userId}`}>
-                        {a.username}
-                      </Link>
-                      {a.caseNumber ? ` · case #${a.caseNumber}` : ""}
+
+      <TabPanel id="cases" tabs={WATCH_TABS}>
+        <ActivityLayout
+          main={
+            <>
+              {appealsOn || appeals.open.length || appeals.decided.length ? (
+                <section
+                  className={`g-card queue${appeals.open.length ? "" : " queue--quiet"}`}
+                  id="appeals"
+                  aria-labelledby="appeals-title"
+                >
+                  <div className="queue__head">
+                    <h2 className="card-title" id="appeals-title">
+                      Appeals <span className="count">{appeals.open.length}</span>
+                    </h2>
+                    <span className="appeal-link">
+                      <a
+                        className="appeal-link__open"
+                        href={appealUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Appeal page
+                      </a>
+                      <CopyButton text={appealUrl} />
                     </span>
-                    <p className="appeal-row__body">{a.body}</p>
-                    <span className="g-help">{ago(a.createdAt)}</span>
                   </div>
-                  <form action={decide} className="card-col" data-need="manager">
-                    <input type="hidden" name="guildId" value={guild.id} />
-                    <input type="hidden" name="appealId" value={a.id} />
-                    <label className="g-field" htmlFor={`resp-${a.id}`}>
-                      <span>Reply (they see it)</span>
-                      <textarea
-                        className="g-input"
-                        id={`resp-${a.id}`}
-                        name="response"
-                        rows={2}
-                        maxLength={1000}
-                      />
-                    </label>
-                    {a.caseNumber ? (
-                      <label className="check">
-                        <input type="checkbox" name="undo" defaultChecked />
-                        <span>If accepted, undo case #{a.caseNumber}</span>
+                  {appeals.open.length ? (
+                    <ul className="queue__list">
+                      {appeals.open.map((a) => (
+                        <li key={a.id} className="appeal-row">
+                          <div className="card-col">
+                            <span className="ticket-row__topic">
+                              <Link href={`/servers/${guild.id}/watch/member/${a.userId}`}>
+                                {a.username}
+                              </Link>
+                              {a.caseNumber ? ` · case #${a.caseNumber}` : ""}
+                            </span>
+                            <p className="appeal-row__body">{a.body}</p>
+                            <span className="g-help">{ago(a.createdAt)}</span>
+                          </div>
+                          <form action={decide} className="card-col" data-need="manager">
+                            <input type="hidden" name="guildId" value={guild.id} />
+                            <input type="hidden" name="appealId" value={a.id} />
+                            <label className="g-field" htmlFor={`resp-${a.id}`}>
+                              <span>Reply (they see it)</span>
+                              <textarea
+                                className="g-input"
+                                id={`resp-${a.id}`}
+                                name="response"
+                                rows={2}
+                                maxLength={1000}
+                              />
+                            </label>
+                            {a.caseNumber ? (
+                              <label className="check">
+                                <input type="checkbox" name="undo" defaultChecked />
+                                <span>If accepted, undo case #{a.caseNumber}</span>
+                              </label>
+                            ) : null}
+                            <div className="row-between">
+                              <button
+                                type="submit"
+                                name="decision"
+                                value="accept"
+                                className="g-btn g-btn--secondary"
+                              >
+                                Accept
+                              </button>
+                              <button
+                                type="submit"
+                                name="decision"
+                                value="deny"
+                                className="g-btn g-btn--ghost"
+                              >
+                                Deny
+                              </button>
+                            </div>
+                          </form>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="queue__empty muted">No appeals waiting.</p>
+                  )}
+                  {appeals.decided.length ? (
+                    <p className="g-help">
+                      Last 30 days:{" "}
+                      {appeals.decided
+                        .map(
+                          (a) =>
+                            `${a.username}'s appeal ${a.status === "accepted" ? "accepted" : "denied"} by ${a.reviewerName ?? "staff"}`,
+                        )
+                        .join(" · ")}
+                    </p>
+                  ) : null}
+                </section>
+              ) : null}
+              <div className="g-card table-card">
+                <div className="table-card__head row-between">
+                  <h2 className="card-title">{q ? `Cases matching “${q}”` : "Latest 50 cases"}</h2>
+                  <search>
+                    <form className="row-between" method="get">
+                      <label className="sr-only" htmlFor="case-search">
+                        Search member or case number
                       </label>
-                    ) : null}
-                    <div className="row-between">
-                      <button
-                        type="submit"
-                        name="decision"
-                        value="accept"
-                        className="g-btn g-btn--secondary"
+                      <input
+                        id="case-search"
+                        className="g-input g-input--sm"
+                        name="q"
+                        type="search"
+                        maxLength={64}
+                        placeholder="Member or case #"
+                        defaultValue={q ?? ""}
+                      />
+                      {q ? (
+                        <Link className="g-btn g-btn--ghost" href={`/servers/${guild.id}/watch`}>
+                          Clear
+                        </Link>
+                      ) : null}
+                    </form>
+                  </search>
+                </div>
+                <div className="table-wrap">
+                  <table className="g-table case-table">
+                    <thead>
+                      <tr>
+                        {["Case", "Action", "Member", "Reason", "By", "When", ""].map((h) => (
+                          <th key={h || "actions"} scope="col">
+                            <span className="g-label">{h}</span>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cases.map((c) => (
+                        <tr key={c.id} className={c.revokedAt ? "revoked" : undefined}>
+                          <td className="mono" data-label="Case">
+                            #{c.caseNumber}
+                          </td>
+                          <td data-label="Action">
+                            <ActionBadge action={c.action} />{" "}
+                            <span className="mono">{formatDuration(c.durationSeconds)}</span>
+                          </td>
+                          {/* React escapes all of this: user-typed reasons can't inject markup. */}
+                          <td data-label="Member">
+                            {c.targetId ? (
+                              <Link
+                                href={`/servers/${guild.id}/watch/member/${c.targetId}`}
+                                transitionTypes={["nav"]}
+                              >
+                                {c.targetTag ?? c.targetId}
+                              </Link>
+                            ) : (
+                              (c.targetTag ?? "—")
+                            )}
+                          </td>
+                          <td data-label="Reason">
+                            {c.reason ? (
+                              plainMentions(c.reason)
+                            ) : (
+                              <span className="muted">No reason given</span>
+                            )}
+                            {c.revokedAt ? <span className="muted"> · undone</span> : null}
+                          </td>
+                          <td className="muted" data-label="By">
+                            {c.source === "manual"
+                              ? c.moderatorTag
+                              : c.source === "escalation"
+                                ? "Escalation rule"
+                                : "Automod"}
+                          </td>
+                          <td className="mono" data-label="When">
+                            {formatTime(c.createdAt)}
+                          </td>
+                          <td>
+                            {!c.revokedAt && UNDOABLE.has(c.action) ? (
+                              // Undoing reaches back into Discord (an unban is public), so it asks once.
+                              <details className="confirm case-undo">
+                                <summary className="confirm__toggle g-btn g-btn--ghost">
+                                  Undo…
+                                </summary>
+                                <form action={requestAction}>
+                                  <input type="hidden" name="guildId" value={guild.id} />
+                                  <input type="hidden" name="page" value="watch" />
+                                  <input type="hidden" name="kind" value="undo_case" />
+                                  <input type="hidden" name="caseNumber" value={c.caseNumber} />
+                                  <button type="submit" className="g-btn g-btn--danger">
+                                    {UNDO_LABEL[c.action]} (case #{c.caseNumber})
+                                  </button>
+                                </form>
+                              </details>
+                            ) : null}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {cases.length === 0 ? (
+                    <EmptyState compact mark="cases" title="No cases yet">
+                      Every warn, timeout, kick and ban gets a numbered case here, with who did it
+                      and an Undo. Search for a member above to act from the dashboard.
+                    </EmptyState>
+                  ) : null}
+                </div>
+              </div>
+            </>
+          }
+          side={
+            <>
+              <section className="g-card card-col" id="moderate" aria-labelledby="moderate-title">
+                <h2 className="card-title" id="moderate-title">
+                  Moderate a member
+                </h2>
+                <p className="g-help">Warn, time out, kick or ban, and see their cases and rank.</p>
+                <search>
+                  <form className="side-search" method="get" action="#moderate">
+                    <label className="sr-only" htmlFor="member-search">
+                      Member name or user ID
+                    </label>
+                    <input
+                      id="member-search"
+                      className="g-input"
+                      name="member"
+                      type="search"
+                      maxLength={32}
+                      required
+                      placeholder="Name or user ID"
+                      defaultValue={memberQuery}
+                    />
+                    <button type="submit" className="g-btn g-btn--primary">
+                      Find
+                    </button>
+                  </form>
+                </search>
+                {memberQuery ? (
+                  found === null ? (
+                    <span className="notice" role="alert">
+                      Discord didn't answer. Try again in a moment.
+                    </span>
+                  ) : found.length ? (
+                    <ul className="member-list">
+                      {found.map((m) => (
+                        <li key={m.id}>
+                          <Link
+                            className="member-row"
+                            href={`/servers/${guild.id}/watch/member/${m.id}`}
+                            transitionTypes={["nav"]}
+                          >
+                            <MemberAvatar name={m.name} src={m.avatar} />
+                            <span className="member-row__name">
+                              {m.name}
+                              <span className="mono">
+                                {m.username}
+                                {m.bot ? " · bot" : ""}
+                                {m.joinedAt ? "" : " · not in the server"}
+                              </span>
+                            </span>
+                            <span className="g-btn g-btn--ghost">Open</span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="muted">
+                      Nobody's name starts with “{memberQuery}”. To ban someone who isn't in the
+                      server, search their user ID.
+                    </p>
+                  )
+                ) : null}
+                <details className="card-edit" open={query.clear === "1"}>
+                  <summary className="g-btn g-btn--secondary">Clear messages…</summary>
+                  <form action={requestAction} className="settings-form">
+                    <input type="hidden" name="guildId" value={guild.id} />
+                    <input type="hidden" name="page" value="watch" />
+                    <input type="hidden" name="kind" value="purge" />
+                    <label className="g-field" htmlFor="purge-channel">
+                      <span>Channel</span>
+                      <select
+                        className="g-input"
+                        id="purge-channel"
+                        name="channelId"
+                        required
+                        defaultValue=""
                       >
-                        Accept
-                      </button>
-                      <button
-                        type="submit"
-                        name="decision"
-                        value="deny"
-                        className="g-btn g-btn--ghost"
-                      >
-                        Deny
+                        <option value="" disabled>
+                          Pick a channel
+                        </option>
+                        {channels.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            #{c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="field-row">
+                      <label className="g-field" htmlFor="purge-amount">
+                        <span>How many</span>
+                        <input
+                          className="g-input"
+                          id="purge-amount"
+                          name="amount"
+                          type="number"
+                          min={1}
+                          max={100}
+                          required
+                          defaultValue={20}
+                        />
+                      </label>
+                      <label className="g-field" htmlFor="purge-user">
+                        <span>Only from user ID</span>
+                        <input
+                          className="g-input"
+                          id="purge-user"
+                          name="userId"
+                          inputMode="numeric"
+                          pattern="\d{17,20}"
+                          placeholder="Everyone"
+                        />
+                      </label>
+                    </div>
+                    <label className="g-field" htmlFor="purge-reason">
+                      <span>Reason</span>
+                      <input className="g-input" id="purge-reason" name="reason" maxLength={512} />
+                    </label>
+                    <p className="g-help">
+                      Deletes the channel's most recent messages, 100 at most. Pinned messages and
+                      ones older than 14 days are kept. This can't be undone.
+                    </p>
+                    <div className="form-foot">
+                      <button type="submit" className="g-btn g-btn--danger">
+                        Delete messages
                       </button>
                     </div>
                   </form>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="queue__empty muted">No appeals waiting.</p>
-          )}
-          {appeals.decided.length ? (
-            <p className="g-help">
-              Last 30 days:{" "}
-              {appeals.decided
-                .map(
-                  (a) =>
-                    `${a.username}'s appeal ${a.status === "accepted" ? "accepted" : "denied"} by ${a.reviewerName ?? "staff"}`,
-                )
-                .join(" · ")}
-            </p>
-          ) : null}
-        </section>
-      ) : null}
+                </details>
+              </section>
 
-      <div className="page-split page-split--tools-first">
-        <div className="page-split__main">
+              <section className="g-card card-col" aria-labelledby="caught-title">
+                <h2 className="card-title" id="caught-title">
+                  Caught by automod
+                </h2>
+                {caught.length ? (
+                  <ul className="feed">
+                    {caught.map((c) => (
+                      <li className="feed__item" key={c.id}>
+                        <ActionBadge action={c.action} />
+                        <span className="feed__what">
+                          {c.targetId ? (
+                            <Link href={`/servers/${guild.id}/watch/member/${c.targetId}`}>
+                              {c.targetTag ?? c.targetId}
+                            </Link>
+                          ) : (
+                            (c.targetTag ?? "Someone")
+                          )}
+                          {c.reason ? (
+                            <span className="muted"> · {plainMentions(c.reason)}</span>
+                          ) : null}
+                        </span>
+                        <span className="feed__when">{ago(c.createdAt)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="feed__empty">
+                    Nothing yet. What automod removes and who it warns shows up here.
+                  </p>
+                )}
+              </section>
+            </>
+          }
+        />
+      </TabPanel>
+
+      <TabPanel id="automod" tabs={WATCH_TABS}>
+        <SetupLayout>
           <AutoSaveCard
             id="automod"
             title="Automod"
@@ -566,169 +872,11 @@ export default async function WatchPage({
               />
             </div>
           </AutoSaveCard>
-        </div>
+        </SetupLayout>
+      </TabPanel>
 
-        <aside className="page-split__side" aria-label="Tools">
-          <section className="g-card card-col" id="moderate" aria-labelledby="moderate-title">
-            <h2 className="card-title" id="moderate-title">
-              Moderate a member
-            </h2>
-            <p className="g-help">Warn, time out, kick or ban, and see their cases and rank.</p>
-            <search>
-              <form className="side-search" method="get" action="#moderate">
-                <label className="sr-only" htmlFor="member-search">
-                  Member name or user ID
-                </label>
-                <input
-                  id="member-search"
-                  className="g-input"
-                  name="member"
-                  type="search"
-                  maxLength={32}
-                  required
-                  placeholder="Name or user ID"
-                  defaultValue={memberQuery}
-                />
-                <button type="submit" className="g-btn g-btn--primary">
-                  Find
-                </button>
-              </form>
-            </search>
-            {memberQuery ? (
-              found === null ? (
-                <span className="notice" role="alert">
-                  Discord didn't answer. Try again in a moment.
-                </span>
-              ) : found.length ? (
-                <ul className="member-list">
-                  {found.map((m) => (
-                    <li key={m.id}>
-                      <Link
-                        className="member-row"
-                        href={`/servers/${guild.id}/watch/member/${m.id}`}
-                        transitionTypes={["nav"]}
-                      >
-                        <MemberAvatar name={m.name} src={m.avatar} />
-                        <span className="member-row__name">
-                          {m.name}
-                          <span className="mono">
-                            {m.username}
-                            {m.bot ? " · bot" : ""}
-                            {m.joinedAt ? "" : " · not in the server"}
-                          </span>
-                        </span>
-                        <span className="g-btn g-btn--ghost">Open</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="muted">
-                  Nobody's name starts with “{memberQuery}”. To ban someone who isn't in the server,
-                  search their user ID.
-                </p>
-              )
-            ) : null}
-            <details className="card-edit" open={query.clear === "1"}>
-              <summary className="g-btn g-btn--secondary">Clear messages…</summary>
-              <form action={requestAction} className="settings-form">
-                <input type="hidden" name="guildId" value={guild.id} />
-                <input type="hidden" name="page" value="watch" />
-                <input type="hidden" name="kind" value="purge" />
-                <label className="g-field" htmlFor="purge-channel">
-                  <span>Channel</span>
-                  <select
-                    className="g-input"
-                    id="purge-channel"
-                    name="channelId"
-                    required
-                    defaultValue=""
-                  >
-                    <option value="" disabled>
-                      Pick a channel
-                    </option>
-                    {channels.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        #{c.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="field-row">
-                  <label className="g-field" htmlFor="purge-amount">
-                    <span>How many</span>
-                    <input
-                      className="g-input"
-                      id="purge-amount"
-                      name="amount"
-                      type="number"
-                      min={1}
-                      max={100}
-                      required
-                      defaultValue={20}
-                    />
-                  </label>
-                  <label className="g-field" htmlFor="purge-user">
-                    <span>Only from user ID</span>
-                    <input
-                      className="g-input"
-                      id="purge-user"
-                      name="userId"
-                      inputMode="numeric"
-                      pattern="\d{17,20}"
-                      placeholder="Everyone"
-                    />
-                  </label>
-                </div>
-                <label className="g-field" htmlFor="purge-reason">
-                  <span>Reason</span>
-                  <input className="g-input" id="purge-reason" name="reason" maxLength={512} />
-                </label>
-                <p className="g-help">
-                  Deletes the channel's most recent messages, 100 at most. Pinned messages and ones
-                  older than 14 days are kept. This can't be undone.
-                </p>
-                <div className="form-foot">
-                  <button type="submit" className="g-btn g-btn--danger">
-                    Delete messages
-                  </button>
-                </div>
-              </form>
-            </details>
-          </section>
-
-          <section className="g-card card-col" aria-labelledby="caught-title">
-            <h2 className="card-title" id="caught-title">
-              Caught by automod
-            </h2>
-            {caught.length ? (
-              <ul className="feed">
-                {caught.map((c) => (
-                  <li className="feed__item" key={c.id}>
-                    <ActionBadge action={c.action} />
-                    <span className="feed__what">
-                      {c.targetId ? (
-                        <Link href={`/servers/${guild.id}/watch/member/${c.targetId}`}>
-                          {c.targetTag ?? c.targetId}
-                        </Link>
-                      ) : (
-                        (c.targetTag ?? "Someone")
-                      )}
-                      {c.reason ? (
-                        <span className="muted"> · {plainMentions(c.reason)}</span>
-                      ) : null}
-                    </span>
-                    <span className="feed__when">{ago(c.createdAt)}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="feed__empty">
-                Nothing yet. What automod removes and who it warns shows up here.
-              </p>
-            )}
-          </section>
-
+      <TabPanel id="escalation" tabs={WATCH_TABS}>
+        <SetupLayout>
           <AutoSaveCard
             id="settings"
             title="Cases and appeals"
@@ -776,243 +924,138 @@ export default async function WatchPage({
               <span className="g-help">In moderation DMs, 300 characters. Blank: the default.</span>
             </label>
           </AutoSaveCard>
-        </aside>
-      </div>
 
-      <div className="g-card table-card">
-        <div className="table-card__head row-between">
-          <h2 className="card-title">{q ? `Cases matching “${q}”` : "Latest 50 cases"}</h2>
-          <search>
-            <form className="row-between" method="get">
-              <label className="sr-only" htmlFor="case-search">
-                Search member or case number
-              </label>
-              <input
-                id="case-search"
-                className="g-input g-input--sm"
-                name="q"
-                type="search"
-                maxLength={64}
-                placeholder="Member or case #"
-                defaultValue={q ?? ""}
-              />
-              {q ? (
-                <Link className="g-btn g-btn--ghost" href={`/servers/${guild.id}/watch`}>
-                  Clear
-                </Link>
-              ) : null}
-            </form>
-          </search>
-        </div>
-        <div className="table-wrap">
-          <table className="g-table case-table">
-            <thead>
-              <tr>
-                {["Case", "Action", "Member", "Reason", "By", "When", ""].map((h) => (
-                  <th key={h || "actions"} scope="col">
-                    <span className="g-label">{h}</span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {cases.map((c) => (
-                <tr key={c.id} className={c.revokedAt ? "revoked" : undefined}>
-                  <td className="mono" data-label="Case">
-                    #{c.caseNumber}
-                  </td>
-                  <td data-label="Action">
-                    <ActionBadge action={c.action} />{" "}
-                    <span className="mono">{formatDuration(c.durationSeconds)}</span>
-                  </td>
-                  {/* React escapes all of this: user-typed reasons can't inject markup. */}
-                  <td data-label="Member">
-                    {c.targetId ? (
-                      <Link
-                        href={`/servers/${guild.id}/watch/member/${c.targetId}`}
-                        transitionTypes={["nav"]}
-                      >
-                        {c.targetTag ?? c.targetId}
-                      </Link>
-                    ) : (
-                      (c.targetTag ?? "—")
-                    )}
-                  </td>
-                  <td data-label="Reason">
-                    {c.reason ? (
-                      plainMentions(c.reason)
-                    ) : (
-                      <span className="muted">No reason given</span>
-                    )}
-                    {c.revokedAt ? <span className="muted"> · undone</span> : null}
-                  </td>
-                  <td className="muted" data-label="By">
-                    {c.source === "manual"
-                      ? c.moderatorTag
-                      : c.source === "escalation"
-                        ? "Escalation rule"
-                        : "Automod"}
-                  </td>
-                  <td className="mono" data-label="When">
-                    {formatTime(c.createdAt)}
-                  </td>
-                  <td>
-                    {!c.revokedAt && UNDOABLE.has(c.action) ? (
-                      // Undoing reaches back into Discord (an unban is public), so it asks once.
-                      <details className="confirm case-undo">
-                        <summary className="confirm__toggle g-btn g-btn--ghost">Undo…</summary>
-                        <form action={requestAction}>
-                          <input type="hidden" name="guildId" value={guild.id} />
-                          <input type="hidden" name="page" value="watch" />
-                          <input type="hidden" name="kind" value="undo_case" />
-                          <input type="hidden" name="caseNumber" value={c.caseNumber} />
-                          <button type="submit" className="g-btn g-btn--danger">
-                            {UNDO_LABEL[c.action]} (case #{c.caseNumber})
-                          </button>
-                        </form>
-                      </details>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {cases.length === 0 ? (
-            <EmptyState compact mark="cases" title="No cases yet">
-              Every warn, timeout, kick and ban gets a numbered case here, with who did it and an
-              Undo. Search for a member above to act from the dashboard.
-            </EmptyState>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="g-card card-col">
-        <div className="row-between">
-          <div>
-            <h2 className="card-title">Escalation ladder</h2>
-            <div className="g-help">
-              Applied automatically when a member's active warnings reach a step. Undone warnings
-              don't count.
+          <div className="g-card card-col">
+            <div className="row-between">
+              <div>
+                <h2 className="card-title">Escalation ladder</h2>
+                <div className="g-help">
+                  Applied automatically when a member's active warnings reach a step. Undone
+                  warnings don't count.
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        {rules.length ? (
-          <div className="ladder">
-            {first > 1 ? (
-              <div className="ladder__step">
-                <span className="mono">
-                  {first === 2 ? "1 warning" : `1–${first - 1} warnings`}
-                </span>
-                <span className="big">Recorded</span>
+            {rules.length ? (
+              <div className="ladder">
+                {first > 1 ? (
+                  <div className="ladder__step">
+                    <span className="mono">
+                      {first === 2 ? "1 warning" : `1–${first - 1} warnings`}
+                    </span>
+                    <span className="big">Recorded</span>
+                  </div>
+                ) : null}
+                {rules.map((r, i) => (
+                  <div
+                    key={r.id}
+                    className={`ladder__step ${r.action === "ban" ? "ladder__step--alert" : ""}`}
+                  >
+                    <span
+                      className={`mono ${i === rules.length - 1 ? "tone-alert" : "tone-caution"}`}
+                    >
+                      {r.warnCount} warnings in {windowText(r.windowMinutes)}
+                    </span>
+                    <span className="big">
+                      {ACTION_LABEL[r.action]}
+                      {r.action === "timeout" && r.durationSeconds
+                        ? ` ${durationText(r.durationSeconds)}`
+                        : ""}
+                    </span>
+                  </div>
+                ))}
               </div>
-            ) : null}
-            {rules.map((r, i) => (
-              <div
-                key={r.id}
-                className={`ladder__step ${r.action === "ban" ? "ladder__step--alert" : ""}`}
-              >
-                <span className={`mono ${i === rules.length - 1 ? "tone-alert" : "tone-caution"}`}>
-                  {r.warnCount} warnings in {windowText(r.windowMinutes)}
-                </span>
-                <span className="big">
-                  {ACTION_LABEL[r.action]}
-                  {r.action === "timeout" && r.durationSeconds
-                    ? ` ${durationText(r.durationSeconds)}`
-                    : ""}
-                </span>
-              </div>
-            ))}
+            ) : (
+              <p className="muted">
+                No rules: warnings are recorded, but nothing happens automatically.
+              </p>
+            )}
           </div>
-        ) : (
-          <p className="muted">
-            No rules: warnings are recorded, but nothing happens automatically.
-          </p>
-        )}
-      </div>
 
-      <FormPanel
-        id="edit-ladder"
-        title="Edit ladder"
-        hint="Change the steps, how many warnings each needs, and what happens."
-        open={isEditing(query, "edit-ladder")}
-      >
-        <form
-          action={formAction(saveLadder)}
-          className="card-col"
-          key={rules
-            .map((r) => `${r.warnCount}:${r.windowMinutes}:${r.action}:${r.durationSeconds}`)
-            .join("|")}
-        >
-          <input type="hidden" name="guildId" value={guild.id} />
-          <p className="g-help">
-            Up to {LADDER_MAX_STEPS} steps. Leave a row's warnings blank to remove it. Every change
-            is in Settings history and can be undone there.
-          </p>
-          {Array.from({ length: LADDER_MAX_STEPS }, (_, i) => {
-            const r = rules[i];
-            return (
-              <fieldset key={r?.id ?? `new-${i}`} className="ladder-row">
-                <legend className="sr-only">Step {i + 1}</legend>
-                <label className="g-field">
-                  <span>Warnings</span>
-                  <input
-                    className="g-input"
-                    name={`step${i}_warns`}
-                    type="number"
-                    min={1}
-                    max={50}
-                    defaultValue={r?.warnCount ?? ""}
-                  />
-                </label>
-                <label className="g-field">
-                  <span>Within</span>
-                  <select
-                    className="g-input"
-                    name={`step${i}_window`}
-                    defaultValue={String(r?.windowMinutes ?? 1440)}
-                  >
-                    {LADDER_WINDOWS.map((m) => (
-                      <option key={m} value={m}>
-                        {windowText(m)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="g-field">
-                  <span>Then</span>
-                  <select
-                    className="g-input"
-                    name={`step${i}_action`}
-                    defaultValue={r?.action ?? ""}
-                  >
-                    <option value="">No step</option>
-                    <option value="timeout">Timeout</option>
-                    <option value="kick">Kick</option>
-                    <option value="ban">Ban</option>
-                  </select>
-                </label>
-                <label className="g-field">
-                  <span>Timeout for</span>
-                  <select
-                    className="g-input"
-                    name={`step${i}_duration`}
-                    defaultValue={String(r?.durationSeconds ?? 3600)}
-                  >
-                    {LADDER_DURATIONS.map((d) => (
-                      <option key={d} value={d}>
-                        {durationText(d)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </fieldset>
-            );
-          })}
-          <button type="submit" className="g-btn g-btn--primary">
-            Save ladder
-          </button>
-        </form>
-      </FormPanel>
+          <FormPanel
+            id="edit-ladder"
+            title="Edit ladder"
+            hint="Change the steps, how many warnings each needs, and what happens."
+            open={isEditing(query, "edit-ladder")}
+          >
+            <form
+              action={formAction(saveLadder)}
+              className="card-col"
+              key={rules
+                .map((r) => `${r.warnCount}:${r.windowMinutes}:${r.action}:${r.durationSeconds}`)
+                .join("|")}
+            >
+              <input type="hidden" name="guildId" value={guild.id} />
+              <p className="g-help">
+                Up to {LADDER_MAX_STEPS} steps. Leave a row's warnings blank to remove it. Every
+                change is in Settings history and can be undone there.
+              </p>
+              {Array.from({ length: LADDER_MAX_STEPS }, (_, i) => {
+                const r = rules[i];
+                return (
+                  <fieldset key={r?.id ?? `new-${i}`} className="ladder-row">
+                    <legend className="sr-only">Step {i + 1}</legend>
+                    <label className="g-field">
+                      <span>Warnings</span>
+                      <input
+                        className="g-input"
+                        name={`step${i}_warns`}
+                        type="number"
+                        min={1}
+                        max={50}
+                        defaultValue={r?.warnCount ?? ""}
+                      />
+                    </label>
+                    <label className="g-field">
+                      <span>Within</span>
+                      <select
+                        className="g-input"
+                        name={`step${i}_window`}
+                        defaultValue={String(r?.windowMinutes ?? 1440)}
+                      >
+                        {LADDER_WINDOWS.map((m) => (
+                          <option key={m} value={m}>
+                            {windowText(m)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="g-field">
+                      <span>Then</span>
+                      <select
+                        className="g-input"
+                        name={`step${i}_action`}
+                        defaultValue={r?.action ?? ""}
+                      >
+                        <option value="">No step</option>
+                        <option value="timeout">Timeout</option>
+                        <option value="kick">Kick</option>
+                        <option value="ban">Ban</option>
+                      </select>
+                    </label>
+                    <label className="g-field">
+                      <span>Timeout for</span>
+                      <select
+                        className="g-input"
+                        name={`step${i}_duration`}
+                        defaultValue={String(r?.durationSeconds ?? 3600)}
+                      >
+                        {LADDER_DURATIONS.map((d) => (
+                          <option key={d} value={d}>
+                            {durationText(d)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </fieldset>
+                );
+              })}
+              <button type="submit" className="g-btn g-btn--primary">
+                Save ladder
+              </button>
+            </form>
+          </FormPanel>
+        </SetupLayout>
+      </TabPanel>
     </>
   );
 }

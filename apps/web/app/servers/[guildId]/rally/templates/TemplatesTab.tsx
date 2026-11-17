@@ -1,0 +1,313 @@
+import {
+  checkTemplates,
+  getGuildPlan,
+  getRallyTemplates,
+  PLAN_LIMITS,
+  parseSlots,
+  type RallyTemplate,
+  renderWording,
+  TEMPLATE_PRESETS,
+  WORDING_LIMITS,
+} from "@garrison/db";
+import Link from "next/link";
+import { SlotRows } from "@/components/ListField";
+import { CheckList } from "@/components/settings";
+import { TemplateField } from "@/components/TemplateField";
+import { getDb } from "@/lib/db";
+import { listNotifiableRoles, listTextChannels } from "@/lib/discord";
+import { contentKey, readFlash } from "@/lib/flash";
+import { slotsFromText } from "@/lib/slots";
+import { addTemplate, removeTemplate, saveTemplate } from "./actions";
+
+/** What "@" offers in the wording boxes. */
+const GROUP_VARS = [
+  { key: "role", label: "Role", about: "the role they pick, like Tank" },
+  { key: "group", label: "group", about: "the group's name, as written" },
+  { key: "Group", label: "Group", about: "the group's name, capital first" },
+];
+
+const WORDING_FIELDS = [
+  ["group", "What a group is called", "squad, party, fireteam, raid"],
+  ["join", "Join button (with roles)", "Join as {role}"],
+  ["joinAny", "Join button (no roles)", "Join"],
+  ["leave", "Leave button", "Leave"],
+  ["close", "Close button", "Close {group}"],
+  ["full", "When it fills up", "{Group}'s full."],
+  ["requirement", "Requirement label", "Item level, Rank, Power"],
+] as const;
+
+/** How a post from this template looks in Discord. Rendered on the server from saved values. */
+function Preview({ t }: { t: RallyTemplate }) {
+  const w = t.wording;
+  const slots = parseSlots(t.roles, t.size);
+  const groups = slots.ok ? slots.value : [];
+  return (
+    <figure className="g-lfg g-lfg--wide preview" aria-label={`Preview of ${t.name}`}>
+      <div className="g-lfg__head">
+        <span className="g-lfg__title">{t.game ? `${t.name} · ${t.game}` : t.name}</span>
+        <span className="g-badge g-badge--accent">Open</span>
+      </div>
+      <div className="g-lfg__meta">@host · now{w.requirement ? ` · ${w.requirement}: …` : ""}</div>
+      <div className="preview__groups">
+        {groups.map((g) => (
+          <span key={g.name || "any"} className="mono">
+            {g.name || renderWording("{Group}", w)} · 1/{g.count}
+          </span>
+        ))}
+      </div>
+      <div className="preview__buttons">
+        {groups.map((g, i) => (
+          <span
+            key={g.name || "any"}
+            className={`g-btn ${i === 0 ? "g-btn--primary" : "g-btn--secondary"}`}
+          >
+            {g.name ? renderWording(w.join, w, { role: g.name }) : renderWording(w.joinAny, w)}
+          </span>
+        ))}
+        <span className="g-btn g-btn--secondary">{renderWording(w.leave, w)}</span>
+        <span className="g-btn g-btn--danger">{renderWording(w.close, w)}</span>
+      </div>
+      <div className="g-help">
+        When full: “{renderWording(w.full, w)}”
+        {t.voice ? " and a members-only voice channel opens." : ""}
+      </div>
+    </figure>
+  );
+}
+
+/**
+ * The Templates tab of Groups and raids (it was its own page). The page around it has
+ * already checked access.
+ */
+export async function TemplatesTab({ guildId }: { guildId: string }) {
+  const guild = { id: guildId };
+  const db = await getDb();
+  const [raw, plan, channels, roles] = await Promise.all([
+    getRallyTemplates(db, guild.id),
+    getGuildPlan(db, guild.id),
+    listTextChannels(guild.id).catch(() => []),
+    listNotifiableRoles(guild.id).catch(() => []),
+  ]);
+  const checked = checkTemplates(raw, "pro");
+  const templates = checked.ok ? checked.value : [];
+  const limit = PLAN_LIMITS[plan];
+  const full = templates.length >= limit.templates;
+  const flash = await readFlash();
+
+  return (
+    <>
+      <div className="list-head">
+        <p className="g-help">
+          Make groups fit each game: default roles, the words on every button and message, where it
+          can be posted. Players pick one with /lfg create template:.
+        </p>
+        <span className="list-head__count">
+          {templates.length} of {limit.templates} templates
+        </span>
+      </div>
+      {flash?.ok ? (
+        <div className="notice notice--ok" role="status">
+          {flash.ok}
+        </div>
+      ) : null}
+      {flash?.error ? (
+        <div className="notice" role="alert">
+          {flash.error}
+        </div>
+      ) : null}
+      {templates.length > limit.templates ? (
+        <div className="notice" role="alert">
+          This server has {templates.length} templates, but its plan includes {limit.templates}.
+          Only the first {limit.templates} can be used until you remove some or upgrade.
+        </div>
+      ) : null}
+
+      <form action={addTemplate} className="g-card card-col">
+        <input type="hidden" name="guildId" value={guild.id} />
+        <h2 className="card-title">Add a template</h2>
+        <div className="field-row">
+          <label className="g-field">
+            <span>Start from</span>
+            <select className="g-input" name="preset" defaultValue="dungeon">
+              {Object.entries(TEMPLATE_PRESETS).map(([key, p]) => (
+                <option key={key} value={key}>
+                  {p.name}
+                  {p.game ? ` (${p.game})` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="g-field">
+            <span>Name</span>
+            <input
+              className="g-input"
+              name="name"
+              maxLength={32}
+              placeholder="Keeps the preset's name"
+            />
+          </label>
+        </div>
+        <p className="g-help">
+          Presets are only a starting point: every word can be changed, so any game works.
+          {plan === "free"
+            ? ` Free servers get ${PLAN_LIMITS.free.templates} templates; Garrison Pro gets ${PLAN_LIMITS.pro.templates} and role notifications.`
+            : ""}
+        </p>
+        <button type="submit" className="g-btn g-btn--primary" disabled={full}>
+          {full ? `${limit.templates} of ${limit.templates} templates used` : "Add template"}
+        </button>
+      </form>
+
+      {templates.map((t) => (
+        <details className="g-card template" id={t.id} key={`${t.id}-${contentKey(t)}`}>
+          <summary className="row-between">
+            <span>
+              <strong>{t.name}</strong>
+              {t.game ? <span className="muted"> · {t.game}</span> : null}
+              {t.isDefault ? <span className="g-badge g-badge--accent"> Default</span> : null}
+            </span>
+            <span className="g-help">Edit</span>
+          </summary>
+          <div className="template__body">
+            <form action={saveTemplate} className="card-col">
+              <input type="hidden" name="guildId" value={guild.id} />
+              <input type="hidden" name="templateId" value={t.id} />
+              <div className="field-row">
+                <label className="g-field">
+                  <span>Name</span>
+                  <input
+                    className="g-input"
+                    name="name"
+                    maxLength={32}
+                    required
+                    defaultValue={t.name}
+                  />
+                </label>
+                <label className="g-field">
+                  <span>Game</span>
+                  <input
+                    className="g-input"
+                    name="game"
+                    maxLength={40}
+                    defaultValue={t.game ?? ""}
+                  />
+                </label>
+              </div>
+              <div className="field-row">
+                <fieldset className="g-field checklist">
+                  <legend className="checklist__legend">Roles and counts</legend>
+                  <SlotRows defaultSlots={slotsFromText(t.roles)} />
+                </fieldset>
+                <label className="g-field">
+                  <span>Or a size (no roles)</span>
+                  <input
+                    className="g-input"
+                    name="size"
+                    type="number"
+                    min={2}
+                    max={40}
+                    defaultValue={t.size ?? ""}
+                  />
+                </label>
+              </div>
+              <fieldset className="wording">
+                <legend className="g-label">Wording</legend>
+                {WORDING_FIELDS.map(([key, label, hint]) => (
+                  <div className="g-field" key={key}>
+                    <span aria-hidden="true">{label}</span>
+                    <TemplateField
+                      vars={GROUP_VARS}
+                      hideChips
+                      aria-label={label}
+                      name={`w_${key}`}
+                      maxLength={WORDING_LIMITS[key]}
+                      defaultValue={t.wording[key] ?? ""}
+                      placeholder={hint}
+                    />
+                  </div>
+                ))}
+                <p className="g-help">
+                  Type @ in a box to add the role, or the group's name (lower or capital first
+                  letter). Plain text only: no mentions, links or markdown.
+                </p>
+              </fieldset>
+              <div className="field-row">
+                <label className="g-field">
+                  <span>Posts stay open (hours after start)</span>
+                  <input
+                    className="g-input"
+                    name="lifetimeHours"
+                    type="number"
+                    min={1}
+                    max={12}
+                    defaultValue={t.lifetimeHours}
+                  />
+                </label>
+                <CheckList
+                  name="channelIds"
+                  label="Only in these channels"
+                  value={t.channelIds}
+                  options={channels.map((c) => ({ id: c.id, label: `#${c.name}` }))}
+                  help={<>None selected: any channel.</>}
+                />
+              </div>
+              <label className="g-field">
+                <span>Notify a role when a post goes up {plan === "pro" ? "" : "(Pro)"}</span>
+                <select
+                  className="g-input"
+                  name="notifyRoleId"
+                  defaultValue={t.notifyRoleId ?? ""}
+                  disabled={!limit.notifyRole}
+                >
+                  <option value="">Nobody</option>
+                  {roles.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      @{r.name}
+                      {r.mentionable ? "" : " (not mentionable)"}
+                    </option>
+                  ))}
+                </select>
+                <span className="g-help">
+                  At most once every 15 minutes per template. The role must be mentionable, or
+                  Garrison needs Mention Everyone.
+                </span>
+              </label>
+              <label className="check">
+                <input type="checkbox" name="voice" defaultChecked={t.voice} />
+                <span>Open a members-only voice channel when it fills</span>
+              </label>
+              <label className="check">
+                <input type="checkbox" name="isDefault" defaultChecked={t.isDefault} />
+                <span>Use when /lfg create names no template</span>
+              </label>
+              <button type="submit" className="g-btn g-btn--primary">
+                Save {t.name}
+              </button>
+            </form>
+            <div className="card-col">
+              <span className="g-label">Preview</span>
+              <Preview t={t} />
+              <form action={removeTemplate}>
+                <input type="hidden" name="guildId" value={guild.id} />
+                <input type="hidden" name="templateId" value={t.id} />
+                <button type="submit" className="g-btn g-btn--ghost">
+                  Remove {t.name}
+                </button>
+              </form>
+            </div>
+          </div>
+        </details>
+      ))}
+      {templates.length === 0 ? (
+        <div className="g-card muted">
+          No templates yet. Without one, /lfg create uses Garrison's standard wording.
+        </div>
+      ) : null}
+      <p className="g-help">
+        Every change is in{" "}
+        <Link href={`/servers/${guild.id}/settings#history`}>Settings history</Link> and can be
+        undone. Posts already up keep the wording they were posted with.
+      </p>
+    </>
+  );
+}

@@ -21,6 +21,8 @@ import { EmptyState } from "@/components/EmptyState";
 import { formatTime } from "@/components/format";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { HeadSwitch } from "@/components/ModuleHead";
+import { SetupLayout } from "@/components/PageLayouts";
+import { PageTabs, TabPanel } from "@/components/PageTabs";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { ChannelSelect, SettingsNotice, Switch } from "@/components/settings";
 import { formAction } from "@/lib/autosave";
@@ -36,6 +38,9 @@ import { saveBoosts, saveRankCard } from "./actions";
 import { RankCardEditor } from "./RankCardEditor";
 
 export const metadata: Metadata = { title: "Leveling" };
+
+/** Leveling's tabs: who's on top first, then how XP works, the card and the rewards. */
+const LEVELING_TABS = ["board", "settings", "card", "rewards"] as const;
 
 export default async function RanksPage({
   params,
@@ -98,6 +103,15 @@ export default async function RanksPage({
           defaultChecked={settings.enabled}
         />
       </div>
+      <PageTabs
+        label="Leveling"
+        tabs={[
+          { id: "board", label: "Leaderboard" },
+          { id: "settings", label: "Settings" },
+          { id: "card", label: "Rank card" },
+          { id: "rewards", label: "Rewards", count: rewards.length },
+        ]}
+      />
       <SettingsNotice query={query} />
       <RequestsPanel guildId={guild.id} kinds={["season_start"]} query={query} />
       {flash?.ok ? (
@@ -111,144 +125,143 @@ export default async function RanksPage({
         </div>
       ) : null}
 
-      <div className="page-split">
-        <div className="page-split__main">
-          <section className="g-card table-card" aria-labelledby="board-title">
-            <div className="table-card__head card-head">
-              <h2 className="card-title" id="board-title">
-                Most XP
-              </h2>
-              <span className="g-help">Members check theirs with /rank in Discord.</span>
-            </div>
-            {top.length ? (
-              <ol className="board">
-                <li className="board__row board__row--head" aria-hidden="true">
-                  <span className="g-label">Rank</span>
-                  <span className="g-label">Member</span>
-                  <span className="g-label">Level</span>
-                  <span className="g-label">XP</span>
-                  <span className="g-label">Messages</span>
-                </li>
-                {top.map((m, i) => {
-                  const lv = levelForXp(m.xp);
-                  const name = m.username || `Member ${m.userId.slice(-4)}`;
-                  return (
-                    <li
-                      key={m.userId}
-                      className={`board__row ${i < 3 ? "board__row--top" : ""} ${i === 0 ? "board__row--first" : ""}`}
-                    >
-                      <span className="board__rank" title={`Rank ${i + 1}`}>
-                        {i + 1}
-                      </span>
-                      <span className="board__who">
-                        <MemberAvatar name={name} src={null} />
-                        <span>{name}</span>
-                      </span>
-                      <span className="board__level">
-                        <span className="board__lv">Lv {m.level}</span>
-                        <progress
-                          className="xpbar"
-                          value={lv.intoLevel}
-                          max={lv.needed}
-                          aria-label={`${Math.floor((lv.intoLevel / lv.needed) * 100)}% of the way to level ${m.level + 1}`}
-                        />
-                      </span>
-                      <span className="board__xp">{m.xp.toLocaleString("en-US")} XP</span>
-                      <span className="board__msgs">{m.messages.toLocaleString("en-US")}</span>
-                    </li>
-                  );
-                })}
-              </ol>
-            ) : (
-              <EmptyState compact mark="leaderboard" title="Nobody has XP yet">
-                {settings.enabled
-                  ? "Members earn XP by chatting (and in voice, if it's on). The top 25 show here."
-                  : "XP is off, so nobody earns it. Turn it on with the switch beside Leveling."}
-              </EmptyState>
-            )}
-          </section>
-
-          <section className="g-card card-col" id="seasons" aria-labelledby="seasons-title">
-            <div className="card-head">
-              <h2 className="card-title" id="seasons-title">
-                Seasons
-              </h2>
-              <ProTag on={ent["ranks.seasons"]} />
-            </div>
-            <p className="g-help">
-              {seasons[0]
-                ? `Season ${seasons[0].number + 1}, since ${formatTime(seasons[0].endedAt)}.`
-                : "Season 1, since leveling began."}{" "}
-              Ending a season keeps its top 100, then puts everyone back to 0 XP. Reward roles stay.
-              This can't be undone.
-            </p>
-            {ent["ranks.seasons"] ? (
-              <details className="confirm">
-                <summary className="confirm__toggle g-btn g-btn--secondary g-btn--sm">
-                  End this season…
-                </summary>
-                <form action={requestAction} className="card-col">
-                  <input type="hidden" name="guildId" value={guild.id} />
-                  <input type="hidden" name="page" value="ranks" />
-                  <input type="hidden" name="kind" value="season_start" />
-                  <input type="hidden" name="confirm" value="yes" />
-                  <label className="g-field" htmlFor="season-name">
-                    <span>Name for the season that's ending</span>
-                    <input
-                      className="g-input"
-                      id="season-name"
-                      name="name"
-                      maxLength={SEASON_NAME_MAX}
-                      placeholder={`Season ${(seasons[0]?.number ?? 0) + 1}`}
-                    />
-                  </label>
-                  <button type="submit" className="g-btn g-btn--danger g-btn--sm">
-                    Yes, end it and reset everyone's XP
-                  </button>
-                </form>
-              </details>
-            ) : null}
-            {seasons.length ? (
-              <ul className="queue__list">
-                {seasons.map((s) => (
-                  <li key={s.id} className="season-row">
-                    <details>
-                      <summary className="gw-row">
-                        <span className="gw-row__main">
-                          <span className="ticket-row__topic">{s.name}</span>
-                          <span className="ticket-row__who">
-                            {s.startedAt ? `${formatTime(s.startedAt)} to ` : "Until "}
-                            {formatTime(s.endedAt)} · {s.members} members
-                            {s.endedByName ? ` · ended by ${s.endedByName}` : ""}
-                          </span>
-                        </span>
-                        <span className="ticket-row__who">
-                          {s.standings[0]
-                            ? `Top: ${s.standings[0].username || "a member"}`
-                            : "Nobody ranked"}
-                        </span>
-                      </summary>
-                      <ol className="season-board">
-                        {s.standings.slice(0, 10).map((p) => (
-                          <li key={p.userId}>
-                            <span>{p.username || `Member ${p.userId.slice(-4)}`}</span>
-                            <span className="mono muted">
-                              Lv {p.level} · {p.xp.toLocaleString("en-US")} XP
-                            </span>
-                          </li>
-                        ))}
-                      </ol>
-                    </details>
+      <TabPanel id="board" tabs={LEVELING_TABS} className="activity">
+        <section className="g-card table-card" aria-labelledby="board-title">
+          <div className="table-card__head card-head">
+            <h2 className="card-title" id="board-title">
+              Most XP
+            </h2>
+            <span className="g-help">Members check theirs with /rank in Discord.</span>
+          </div>
+          {top.length ? (
+            <ol className="board">
+              <li className="board__row board__row--head" aria-hidden="true">
+                <span className="g-label">Rank</span>
+                <span className="g-label">Member</span>
+                <span className="g-label">Level</span>
+                <span className="g-label">XP</span>
+                <span className="g-label">Messages</span>
+              </li>
+              {top.map((m, i) => {
+                const lv = levelForXp(m.xp);
+                const name = m.username || `Member ${m.userId.slice(-4)}`;
+                return (
+                  <li
+                    key={m.userId}
+                    className={`board__row ${i < 3 ? "board__row--top" : ""} ${i === 0 ? "board__row--first" : ""}`}
+                  >
+                    <span className="board__rank" title={`Rank ${i + 1}`}>
+                      {i + 1}
+                    </span>
+                    <span className="board__who">
+                      <MemberAvatar name={name} src={null} />
+                      <span>{name}</span>
+                    </span>
+                    <span className="board__level">
+                      <span className="board__lv">Lv {m.level}</span>
+                      <progress
+                        className="xpbar"
+                        value={lv.intoLevel}
+                        max={lv.needed}
+                        aria-label={`${Math.floor((lv.intoLevel / lv.needed) * 100)}% of the way to level ${m.level + 1}`}
+                      />
+                    </span>
+                    <span className="board__xp">{m.xp.toLocaleString("en-US")} XP</span>
+                    <span className="board__msgs">{m.messages.toLocaleString("en-US")}</span>
                   </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="feed__empty">No finished seasons yet.</p>
-            )}
-          </section>
-        </div>
+                );
+              })}
+            </ol>
+          ) : (
+            <EmptyState compact mark="leaderboard" title="Nobody has XP yet">
+              {settings.enabled
+                ? "Members earn XP by chatting (and in voice, if it's on). The top 25 show here."
+                : "XP is off, so nobody earns it. Turn it on with the switch beside Leveling."}
+            </EmptyState>
+          )}
+        </section>
 
-        <aside className="page-split__side" aria-label="Settings">
+        <section className="g-card card-col" id="seasons" aria-labelledby="seasons-title">
+          <div className="card-head">
+            <h2 className="card-title" id="seasons-title">
+              Seasons
+            </h2>
+            <ProTag on={ent["ranks.seasons"]} />
+          </div>
+          <p className="g-help">
+            {seasons[0]
+              ? `Season ${seasons[0].number + 1}, since ${formatTime(seasons[0].endedAt)}.`
+              : "Season 1, since leveling began."}{" "}
+            Ending a season keeps its top 100, then puts everyone back to 0 XP. Reward roles stay.
+            This can't be undone.
+          </p>
+          {ent["ranks.seasons"] ? (
+            <details className="confirm">
+              <summary className="confirm__toggle g-btn g-btn--secondary g-btn--sm">
+                End this season…
+              </summary>
+              <form action={requestAction} className="card-col">
+                <input type="hidden" name="guildId" value={guild.id} />
+                <input type="hidden" name="page" value="ranks" />
+                <input type="hidden" name="kind" value="season_start" />
+                <input type="hidden" name="confirm" value="yes" />
+                <label className="g-field" htmlFor="season-name">
+                  <span>Name for the season that's ending</span>
+                  <input
+                    className="g-input"
+                    id="season-name"
+                    name="name"
+                    maxLength={SEASON_NAME_MAX}
+                    placeholder={`Season ${(seasons[0]?.number ?? 0) + 1}`}
+                  />
+                </label>
+                <button type="submit" className="g-btn g-btn--danger g-btn--sm">
+                  Yes, end it and reset everyone's XP
+                </button>
+              </form>
+            </details>
+          ) : null}
+          {seasons.length ? (
+            <ul className="queue__list">
+              {seasons.map((s) => (
+                <li key={s.id} className="season-row">
+                  <details>
+                    <summary className="gw-row">
+                      <span className="gw-row__main">
+                        <span className="ticket-row__topic">{s.name}</span>
+                        <span className="ticket-row__who">
+                          {s.startedAt ? `${formatTime(s.startedAt)} to ` : "Until "}
+                          {formatTime(s.endedAt)} · {s.members} members
+                          {s.endedByName ? ` · ended by ${s.endedByName}` : ""}
+                        </span>
+                      </span>
+                      <span className="ticket-row__who">
+                        {s.standings[0]
+                          ? `Top: ${s.standings[0].username || "a member"}`
+                          : "Nobody ranked"}
+                      </span>
+                    </summary>
+                    <ol className="season-board">
+                      {s.standings.slice(0, 10).map((p) => (
+                        <li key={p.userId}>
+                          <span>{p.username || `Member ${p.userId.slice(-4)}`}</span>
+                          <span className="mono muted">
+                            Lv {p.level} · {p.xp.toLocaleString("en-US")} XP
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                  </details>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="feed__empty">No finished seasons yet.</p>
+          )}
+        </section>
+      </TabPanel>
+      <TabPanel id="settings" tabs={LEVELING_TABS}>
+        <SetupLayout>
           <AutoSaveCard
             id="settings"
             title="Leveling"
@@ -372,82 +385,84 @@ export default async function RanksPage({
             </div>
             {ent["ranks.boosts"] ? <AddRow list="boost-rows" label="Add a boost" /> : null}
           </AutoSaveCard>
-        </aside>
-      </div>
-
-      <RankCardEditor
-        guildId={guild.id}
-        saved={card}
-        ent={ent}
-        sampleName={session.username}
-        planHref={`/servers/${guild.id}/plan`}
-        action={saveRankCard}
-        undo={undoChange}
-        stamp={contentKey(card)}
-      />
-
-      <form
-        action={formAction(saveRewards)}
-        id="rewards"
-        className="g-card card-col"
-        key={JSON.stringify(rewards)}
-      >
-        <input type="hidden" name="guildId" value={guild.id} />
-        <h2 className="card-title">Level rewards</h2>
-        <p className="g-help">
-          Members get the role when they reach the level, and keep it. Roles with admin or
-          moderation powers aren't offered. Garrison's role must sit above these roles.
-        </p>
-        <div className="reward-rows" id="reward-rows">
-          {Array.from({ length: REWARD_ROWS }, (_, i) => {
-            const r = rewards[i];
-            return (
-              <div
-                className="reward-row"
-                key={r ? `lvl-${r.level}` : `new-${i}`}
-                hidden={i > rewards.length}
-              >
-                <input
-                  className="g-input"
-                  name={`reward${i}_level`}
-                  type="number"
-                  min={1}
-                  max={500}
-                  placeholder="Level"
-                  aria-label={`Reward ${i + 1} level`}
-                  defaultValue={r?.level ?? ""}
-                />
-                <select
-                  className="g-input"
-                  name={`reward${i}_role`}
-                  aria-label={`Reward ${i + 1} role`}
-                  defaultValue={r?.roleId ?? ""}
+        </SetupLayout>
+      </TabPanel>
+      <TabPanel id="card" tabs={LEVELING_TABS}>
+        <RankCardEditor
+          guildId={guild.id}
+          saved={card}
+          ent={ent}
+          sampleName={session.username}
+          planHref={`/servers/${guild.id}/plan`}
+          action={saveRankCard}
+          undo={undoChange}
+          stamp={contentKey(card)}
+        />
+      </TabPanel>
+      <TabPanel id="rewards" tabs={LEVELING_TABS}>
+        <form
+          action={formAction(saveRewards)}
+          id="rewards"
+          className="g-card card-col"
+          key={JSON.stringify(rewards)}
+        >
+          <input type="hidden" name="guildId" value={guild.id} />
+          <h2 className="card-title">Level rewards</h2>
+          <p className="g-help">
+            Members get the role when they reach the level, and keep it. Roles with admin or
+            moderation powers aren't offered. Garrison's role must sit above these roles.
+          </p>
+          <div className="reward-rows" id="reward-rows">
+            {Array.from({ length: REWARD_ROWS }, (_, i) => {
+              const r = rewards[i];
+              return (
+                <div
+                  className="reward-row"
+                  key={r ? `lvl-${r.level}` : `new-${i}`}
+                  hidden={i > rewards.length}
                 >
-                  <option value="">No reward</option>
-                  {r?.roleId && !grantable.some((g) => g.id === r.roleId) ? (
-                    <option value={r.roleId}>@{roleName.get(r.roleId) ?? "deleted role"}</option>
-                  ) : null}
-                  {grantable.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      @{g.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            );
-          })}
-        </div>
-        <AddRow list="reward-rows" label="Add a reward" />
-        <div className="form-foot">
-          <button type="submit" className="g-btn g-btn--primary">
-            Save rewards
-          </button>
-          <span className="g-help">
-            Saved together, since a reward needs both its level and its role. Every change is in
-            Settings history and can be undone.
-          </span>
-        </div>
-      </form>
+                  <input
+                    className="g-input"
+                    name={`reward${i}_level`}
+                    type="number"
+                    min={1}
+                    max={500}
+                    placeholder="Level"
+                    aria-label={`Reward ${i + 1} level`}
+                    defaultValue={r?.level ?? ""}
+                  />
+                  <select
+                    className="g-input"
+                    name={`reward${i}_role`}
+                    aria-label={`Reward ${i + 1} role`}
+                    defaultValue={r?.roleId ?? ""}
+                  >
+                    <option value="">No reward</option>
+                    {r?.roleId && !grantable.some((g) => g.id === r.roleId) ? (
+                      <option value={r.roleId}>@{roleName.get(r.roleId) ?? "deleted role"}</option>
+                    ) : null}
+                    {grantable.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        @{g.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })}
+          </div>
+          <AddRow list="reward-rows" label="Add a reward" />
+          <div className="form-foot">
+            <button type="submit" className="g-btn g-btn--primary">
+              Save rewards
+            </button>
+            <span className="g-help">
+              Saved together, since a reward needs both its level and its role. Every change is in
+              Settings history and can be undone.
+            </span>
+          </div>
+        </form>
+      </TabPanel>
     </>
   );
 }

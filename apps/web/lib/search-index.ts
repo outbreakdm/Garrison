@@ -116,9 +116,14 @@ export const SEARCH_INDEX: SearchEntry[] = [
     null,
     "ai assistant builder chat channels roles settings post undo quartermaster",
   ),
-  page("/settings", "Settings", null, "configure history undo account theme sign out"),
   page(
-    "/rally/templates",
+    "/settings",
+    "Settings",
+    null,
+    "configure history undo access dashboard managers bot profile",
+  ),
+  page(
+    "/rally?tab=templates",
     "LFG templates",
     "Groups and raids",
     "lfg wording game presets roles buttons customize",
