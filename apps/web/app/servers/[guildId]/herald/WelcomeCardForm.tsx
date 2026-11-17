@@ -160,6 +160,11 @@ function WelcomeCardFields({
           card={card}
           onChange={setCard}
           idPrefix={part}
+          vars={WELCOME_PLACEHOLDERS.map((p) => ({
+            key: p.token.slice(1, -1),
+            label: p.token.slice(1, -1).replace(/^./, (c) => c.toUpperCase()),
+            about: part === "leave" && p.token === "{user}" ? "their name (they've left)" : p.about,
+          }))}
           plan={{
             accent: ent["cards.accent"],
             images: ent["cards.images"],
@@ -168,7 +173,7 @@ function WelcomeCardFields({
           }}
         />
         <p className="g-help">
-          Placeholders:{" "}
+          Type @ in the title or text to add one:{" "}
           {WELCOME_PLACEHOLDERS.filter((p) => part !== "leave" || p.token !== "{user}").map(
             (p, i) => (
               <span key={p.token}>

@@ -236,6 +236,28 @@ function MessageFields({
       };
     });
   const target = channels.find((c) => c.id === m.channelId) ?? null;
+  // "@" in the card's text mentions a role or links a channel, as Discord writes them.
+  const mentions = useMemo(
+    () => [
+      ...roleNames.map(([id, name]) => ({
+        key: name.toLowerCase(),
+        label: `@${name}`,
+        about: "mentions the role (it won't ping)",
+        insert: `<@&${id}>`,
+        chip: false as const,
+      })),
+      ...channels
+        .filter((c) => c.kind !== "thread")
+        .map((c) => ({
+          key: c.name.toLowerCase(),
+          label: `#${c.name}`,
+          about: c.kind === "forum" ? "links the forum" : "links the channel",
+          insert: `<#${c.id}>`,
+          chip: false as const,
+        })),
+    ],
+    [roleNames, channels],
+  );
   const forum = target?.kind === "forum";
   const [link, setLink] = useState("");
   const linked = link.trim() ? parseDiscordLink(link) : null;
@@ -273,6 +295,7 @@ function MessageFields({
           card={m.card}
           onChange={(card) => set({ card })}
           idPrefix={saved.id}
+          vars={mentions}
           plan={{
             accent: ent["cards.accent"],
             images: ent["cards.images"],

@@ -12,6 +12,11 @@ import {
 } from "@garrison/db/cards";
 import { useState } from "react";
 import { AutoSaveCard, useSaveSignal } from "@/components/AutoSave";
+import { TemplateField, type TemplateVar } from "@/components/TemplateField";
+
+const COUNT_VAR: TemplateVar = { key: "count", label: "Count", about: "the number, like 372" };
+const ROLE_VAR: TemplateVar = { key: "role", label: "Role", about: "the role's name" };
+
 import type { AutoResult } from "@/lib/autosave";
 
 type Action = (form: FormData) => Promise<AutoResult>;
@@ -103,27 +108,48 @@ function StatsFields({
   const [category, setCategory] = useState(categoryId ?? "");
   const signal = useSaveSignal<HTMLDivElement>(JSON.stringify(rows));
   const roleName = new Map(roles.map((r) => [r.id, r.name]));
-  const set = (i: number, patch: Partial<StatCounter>) =>
-    setRows(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
-  const add = () => {
-    if (rows.length >= Math.min(limit, STATS_LIMITS.counters)) return;
-    // The first kind not in use yet, so a fresh row says something new.
-    const kind = STAT_KIND_LIST.find((k) => k !== "role" && !rows.some((r) => r.kind === k));
+  // A counter switched off and on again keeps its key, so it keeps its channel.
+  const [kept] = useState(() => new Map<StatKind, StatCounter>());
+  const max = Math.min(limit, STATS_LIMITS.counters);
+  const full = rows.length >= max;
+  const update = (key: string, patch: Partial<StatCounter>) =>
+    setRows(rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  const toggle = (kind: StatKind, on: boolean) => {
+    if (!on) {
+      const gone = rows.find((r) => r.kind === kind);
+      if (gone) kept.set(kind, gone);
+      setRows(rows.filter((r) => r.kind !== kind));
+      return;
+    }
+    if (full) return;
+    setRows([
+      ...rows,
+      kept.get(kind) ?? {
+        key: newStatKey(),
+        kind,
+        roleId: null,
+        template: STAT_KINDS[kind].template,
+        channelId: null,
+      },
+    ]);
+  };
+  const addRole = () => {
+    if (full) return;
     setRows([
       ...rows,
       {
         key: newStatKey(),
-        kind: kind ?? "members",
+        kind: "role",
         roleId: null,
-        template: STAT_KINDS[kind ?? "members"].template,
+        template: STAT_KINDS.role.template,
         channelId: null,
       },
     ]);
   };
   const blocked = rows.some((r) => r.kind === "role" && !r.roleId)
-    ? "Pick the role for each “Members with a role” counter."
+    ? "Pick the role for each role counter."
     : rows.some((r) => r.template.trim() && !r.template.includes("{count}"))
-      ? "Each name needs {count}, where the number goes."
+      ? "Each name needs the number: type @ in it and pick Count."
       : null;
   const value = (r: StatCounter) =>
     shown[r.key] ?? (r.kind === "role" ? null : (known[r.kind] ?? null));
@@ -139,38 +165,110 @@ function StatsFields({
     ? (categories.find((c) => c.id === category)?.name ?? STATS_CATEGORY_NAME)
     : STATS_CATEGORY_NAME;
   const over = rows.length > limit;
+  const paused = new Set(rows.slice(limit).map((r) => r.key));
+
+  /** Where a counter shows and what it's called: the same two fields for every counter. */
+  const details = (r: StatCounter) => (
+    <div className="stat-option__fields">
+      <div className="g-field">
+        <span className="field-label" aria-hidden="true">
+          Channel name
+        </span>
+        <TemplateField
+          aria-label="Channel name"
+          vars={r.kind === "role" ? [COUNT_VAR, ROLE_VAR] : [COUNT_VAR]}
+          value={r.template}
+          maxLength={STATS_LIMITS.template}
+          placeholder={STAT_KINDS[r.kind].template}
+          aria-invalid={Boolean(r.template.trim() && !r.template.includes("{count}"))}
+          onChange={(template) => update(r.key, { template })}
+        />
+      </div>
+      <label className="g-field">
+        <span className="field-label">Shows in</span>
+        <select
+          className="g-input"
+          value={r.channelId ?? ""}
+          onChange={(e) => update(r.key, { channelId: e.target.value || null })}
+        >
+          <option value="">A channel Garrison makes</option>
+          {voice.map((c) => (
+            <option
+              key={c.id}
+              value={c.id}
+              disabled={rows.some((x) => x.key !== r.key && x.channelId === c.id)}
+            >
+              🔊 {c.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {paused.has(r.key) ? (
+        <p className="g-help stat-option__note">Paused on Free: Garrison Pro runs it.</p>
+      ) : null}
+    </div>
+  );
+  const roleRows = rows.filter((r) => r.kind === "role");
 
   return (
     <div ref={signal} className="editor-layout" data-hold={blocked ?? undefined}>
       <input type="hidden" name="counters" value={JSON.stringify(rows)} />
       <div className="editor-fields">
-        {rows.length ? (
-          <ol className="counter-rows">
-            {rows.map((r, i) => (
-              <li className="counter-row" key={r.key} data-paused={i >= limit ? "" : undefined}>
-                <div className="counter-row__head">
-                  <span className="counter-row__num" aria-hidden="true">
-                    {i + 1}
+        <ul className="stat-options">
+          {STAT_KIND_LIST.filter((k) => k !== "role").map((kind) => {
+            const r = rows.find((x) => x.kind === kind);
+            const sample = known[kind];
+            return (
+              <li className="stat-option" key={kind} data-on={r ? "" : undefined}>
+                <label className="stat-option__head">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(r)}
+                    disabled={!r && full}
+                    onChange={(e) => toggle(kind, e.target.checked)}
+                  />
+                  <span className="stat-option__name">
+                    {STAT_KINDS[kind].label}
+                    <span className="stat-option__about">
+                      {STAT_KINDS[kind].about}
+                      {sample !== undefined ? ` · ${sample.toLocaleString("en-US")} now` : ""}
+                    </span>
                   </span>
-                  <label className="g-field counter-row__kind">
-                    <span className="sr-only">Counter {i + 1} counts</span>
+                </label>
+                {r ? details(r) : null}
+              </li>
+            );
+          })}
+          <li className="stat-option" data-on={roleRows.length ? "" : undefined}>
+            <div className="stat-option__head">
+              <span className="stat-option__name">
+                {STAT_KINDS.role.label}
+                <span className="stat-option__about">{STAT_KINDS.role.about}</span>
+              </span>
+              <button
+                type="button"
+                className="g-btn g-btn--secondary g-btn--sm"
+                onClick={addRole}
+                disabled={full}
+              >
+                Add a role
+              </button>
+            </div>
+            {roleRows.map((r) => (
+              <div className="stat-option__role" key={r.key}>
+                <div className="stat-option__role-head">
+                  <label className="g-field">
+                    <span className="sr-only">Role to count</span>
                     <select
                       className="g-input"
-                      value={r.kind}
-                      onChange={(e) => {
-                        const kind = e.target.value as StatKind;
-                        const standard = r.template === STAT_KINDS[r.kind].template;
-                        set(i, {
-                          kind,
-                          roleId: kind === "role" ? r.roleId : null,
-                          // A name still the standard one follows the new kind.
-                          template: standard ? STAT_KINDS[kind].template : r.template,
-                        });
-                      }}
+                      value={r.roleId ?? ""}
+                      aria-invalid={!r.roleId}
+                      onChange={(e) => update(r.key, { roleId: e.target.value || null })}
                     >
-                      {STAT_KIND_LIST.map((k) => (
-                        <option key={k} value={k}>
-                          {STAT_KINDS[k].label}
+                      <option value="">Pick a role</option>
+                      {roles.map((role) => (
+                        <option key={role.id} value={role.id}>
+                          @{role.name}
                         </option>
                       ))}
                     </select>
@@ -178,8 +276,8 @@ function StatsFields({
                   <button
                     type="button"
                     className="list-rows__remove"
-                    aria-label={`Remove counter ${i + 1}`}
-                    onClick={() => setRows(rows.filter((_, j) => j !== i))}
+                    aria-label={`Remove the ${r.roleId ? `@${roleName.get(r.roleId) ?? "role"}` : "role"} counter`}
+                    onClick={() => setRows(rows.filter((x) => x.key !== r.key))}
                   >
                     <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
                       <path
@@ -191,83 +289,14 @@ function StatsFields({
                     </svg>
                   </button>
                 </div>
-                <div className="counter-row__body">
-                  {r.kind === "role" ? (
-                    <label className="g-field">
-                      <span className="field-label">Role</span>
-                      <select
-                        className="g-input"
-                        value={r.roleId ?? ""}
-                        aria-invalid={!r.roleId}
-                        onChange={(e) => set(i, { roleId: e.target.value || null })}
-                      >
-                        <option value="">Pick a role</option>
-                        {roles.map((role) => (
-                          <option key={role.id} value={role.id}>
-                            @{role.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  ) : null}
-                  <label className="g-field">
-                    <span className="field-label">Channel name</span>
-                    <input
-                      className="g-input"
-                      value={r.template}
-                      maxLength={STATS_LIMITS.template}
-                      placeholder={STAT_KINDS[r.kind].template}
-                      aria-invalid={Boolean(r.template.trim() && !r.template.includes("{count}"))}
-                      onChange={(e) => set(i, { template: e.target.value })}
-                    />
-                  </label>
-                  <label className="g-field">
-                    <span className="field-label">Shows in</span>
-                    <select
-                      className="g-input"
-                      value={r.channelId ?? ""}
-                      onChange={(e) => set(i, { channelId: e.target.value || null })}
-                    >
-                      <option value="">A channel Garrison makes</option>
-                      {voice.map((c) => (
-                        <option
-                          key={c.id}
-                          value={c.id}
-                          disabled={rows.some((x, j) => j !== i && x.channelId === c.id)}
-                        >
-                          🔊 {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                {i >= limit ? (
-                  <p className="g-help counter-row__note">Paused on Free: Garrison Pro runs it.</p>
-                ) : null}
-              </li>
+                {details(r)}
+              </div>
             ))}
-          </ol>
-        ) : (
-          <p className="g-help">
-            No counters yet. Add one and Garrison makes a voice channel named with the number.
-          </p>
-        )}
-        <div className="list-rows__foot">
-          <button
-            type="button"
-            className="g-btn g-btn--secondary g-btn--sm"
-            onClick={add}
-            disabled={rows.length >= Math.min(limit, STATS_LIMITS.counters)}
-          >
-            Add a counter
-          </button>
-          <span className="g-help">
-            {Math.min(rows.length, STATS_LIMITS.counters)} of {limit}
-            {limit < STATS_LIMITS.counters ? ` on Free; up to ${STATS_LIMITS.counters} on Pro` : ""}
-          </span>
-        </div>
+          </li>
+        </ul>
         <p className="g-help">
-          <code>{"{count}"}</code> is the number; <code>{"{role}"}</code> is the role's name.
+          {rows.length} of {max} counters on
+          {limit < STATS_LIMITS.counters ? `; Pro runs up to ${STATS_LIMITS.counters}` : ""}.
           Numbers refresh every ten minutes, Discord's limit for renaming a channel.
         </p>
         {blocked ? (

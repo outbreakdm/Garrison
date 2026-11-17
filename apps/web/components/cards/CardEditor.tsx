@@ -8,6 +8,7 @@ import {
   STANDARD_ACCENT,
 } from "@garrison/db/cards";
 import { type ReactNode, useEffect, useState } from "react";
+import { TemplateField, type TemplateVar } from "../TemplateField";
 
 /**
  * The shared card editor: every part of a card, field by field. Controlled: the
@@ -176,12 +177,15 @@ export function CardEditor({
   onChange,
   plan,
   idPrefix,
+  vars,
 }: {
   card: CustomCard;
   onChange: (card: CustomCard) => void;
   plan: CardPlan;
   /** Keeps field IDs unique when several editors share a page. */
   idPrefix: string;
+  /** What "@" offers in the title and text: a template's words, roles and channels. */
+  vars?: readonly TemplateVar[];
 }) {
   const set = (patch: Partial<CustomCard>) => onChange({ ...card, ...patch });
   const setBlocks = (blocks: CardBlock[]) => set({ blocks });
@@ -347,14 +351,26 @@ export function CardEditor({
         <legend className="g-label">Card</legend>
         <label className="g-field" htmlFor={id("title")}>
           <span>Title</span>
-          <input
-            className="g-input"
-            id={id("title")}
-            value={card.title}
-            maxLength={CARD_LIMITS.title}
-            required
-            onChange={(e) => set({ title: e.target.value })}
-          />
+          {vars?.length ? (
+            <TemplateField
+              vars={vars}
+              hideChips
+              id={id("title")}
+              value={card.title}
+              maxLength={CARD_LIMITS.title}
+              required
+              onChange={(title) => set({ title })}
+            />
+          ) : (
+            <input
+              className="g-input"
+              id={id("title")}
+              value={card.title}
+              maxLength={CARD_LIMITS.title}
+              required
+              onChange={(e) => set({ title: e.target.value })}
+            />
+          )}
         </label>
 
         <div className="block-list">
@@ -394,17 +410,20 @@ export function CardEditor({
                         )
                       }
                     />
-                    <textarea
+                    <TemplateField
+                      vars={vars ?? []}
+                      hideChips
+                      multiline
                       className="g-input block__text"
                       aria-label={`Field ${fieldCount} value`}
                       placeholder="Value"
                       value={block.value}
                       maxLength={CARD_LIMITS.fieldValue}
                       rows={2}
-                      onChange={(e) =>
+                      onChange={(value) =>
                         setBlocks(
                           card.blocks.map((b, j) =>
-                            j === i && b.kind === "field" ? { ...b, value: e.target.value } : b,
+                            j === i && b.kind === "field" ? { ...b, value } : b,
                           ),
                         )
                       }
@@ -423,18 +442,17 @@ export function CardEditor({
             ) : (
               // biome-ignore lint/suspicious/noArrayIndexKey: as above
               <div className="block" key={i}>
-                <textarea
+                <TemplateField
+                  vars={vars ?? []}
+                  hideChips
+                  multiline
                   className="g-input block__text"
                   aria-label={`Text ${textCount}`}
                   value={block.text}
                   maxLength={CARD_LIMITS.block}
                   rows={3}
-                  onChange={(e) =>
-                    setBlocks(
-                      card.blocks.map((b, j) =>
-                        j === i ? { kind: "text", text: e.target.value } : b,
-                      ),
-                    )
+                  onChange={(text) =>
+                    setBlocks(card.blocks.map((b, j) => (j === i ? { kind: "text", text } : b)))
                   }
                 />
                 {tools}

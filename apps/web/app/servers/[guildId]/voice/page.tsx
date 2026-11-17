@@ -12,6 +12,7 @@ import { ProTag } from "@/components/cards/CardEditor";
 import { EmptyState } from "@/components/EmptyState";
 import { HeadNote, HeadSwitch } from "@/components/ModuleHead";
 import { CheckList, SettingsNotice } from "@/components/settings";
+import { TemplateField } from "@/components/TemplateField";
 import { getDb } from "@/lib/db";
 import { botPermissions, getServerLayout, memberNames } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
@@ -157,22 +158,21 @@ export default async function VoiceRoomsPage({
                 }
               />
               <div className="card-col">
-                <label className="g-field" htmlFor="nameTemplate">
+                <div className="g-field">
                   <span className="field-label">
                     Room name <ProTag on={ent["voice.names"]} />
                   </span>
-                  <input
-                    className="g-input"
+                  <TemplateField
+                    vars={[{ key: "user", label: "Owner", about: "the room owner's name" }]}
+                    aria-label="Room name"
                     id="nameTemplate"
                     name="nameTemplate"
                     maxLength={VOICE_LIMITS.name}
                     defaultValue={config.nameTemplate ?? ""}
                     placeholder={STANDARD_ROOM_NAME}
                   />
-                  <span className="g-help">
-                    <code>{"{user}"}</code> is the owner's name. Empty: "{STANDARD_ROOM_NAME}".
-                  </span>
-                </label>
+                  <span className="g-help">Empty: "{STANDARD_ROOM_NAME}".</span>
+                </div>
                 <label className="g-field" htmlFor="userLimit">
                   <span>Member limit</span>
                   <input

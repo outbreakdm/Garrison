@@ -13,12 +13,20 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SlotRows } from "@/components/ListField";
 import { CheckList } from "@/components/settings";
+import { TemplateField } from "@/components/TemplateField";
 import { getDb } from "@/lib/db";
 import { listNotifiableRoles, listTextChannels } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
 import { requireGuildAccess } from "@/lib/session";
 import { slotsFromText } from "@/lib/slots";
 import { addTemplate, removeTemplate, saveTemplate } from "./actions";
+
+/** What "@" offers in the wording boxes. */
+const GROUP_VARS = [
+  { key: "role", label: "Role", about: "the role they pick, like Tank" },
+  { key: "group", label: "group", about: "the group's name, as written" },
+  { key: "Group", label: "Group", about: "the group's name, capital first" },
+];
 
 export const metadata: Metadata = { title: "LFG templates" };
 
@@ -213,20 +221,22 @@ export default async function RallyTemplatesPage({
               <fieldset className="wording">
                 <legend className="g-label">Wording</legend>
                 {WORDING_FIELDS.map(([key, label, hint]) => (
-                  <label className="g-field" key={key}>
-                    <span>{label}</span>
-                    <input
-                      className="g-input"
+                  <div className="g-field" key={key}>
+                    <span aria-hidden="true">{label}</span>
+                    <TemplateField
+                      vars={GROUP_VARS}
+                      hideChips
+                      aria-label={label}
                       name={`w_${key}`}
                       maxLength={WORDING_LIMITS[key]}
                       defaultValue={t.wording[key] ?? ""}
                       placeholder={hint}
                     />
-                  </label>
+                  </div>
                 ))}
                 <p className="g-help">
-                  Use {"{role}"}, {"{group}"} and {"{Group}"} as placeholders. Plain text only: no
-                  mentions, links or markdown.
+                  Type @ in a box to add the role, or the group's name (lower or capital first
+                  letter). Plain text only: no mentions, links or markdown.
                 </p>
               </fieldset>
               <div className="field-row">
