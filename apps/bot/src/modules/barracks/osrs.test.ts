@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { combatLevel, fetchHiscores, isValidRsn, normalizeRsn } from "./osrs.js";
 
 describe("OSRS names", () => {
@@ -25,9 +25,22 @@ describe("combatLevel", () => {
 describe("fetchHiscores", () => {
   const json = (status: number, body: unknown) => async () =>
     new Response(JSON.stringify(body), { status });
+  // Lookups wait their turn, 1.5 s apart (politely, for Jagex's sake). Fake timers skip the
+  // waits, so four lookups don't outlast the test's 5 s limit.
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+  const look = async (name: string, impl: typeof fetch) => {
+    const result = fetchHiscores(name, impl);
+    await vi.runAllTimersAsync();
+    return result;
+  };
 
   it("summarizes a player", async () => {
-    const r = await fetchHiscores(
+    const r = await look(
       "Zezima",
       json(200, {
         name: "Zezima",
@@ -45,20 +58,20 @@ describe("fetchHiscores", () => {
   });
 
   it("separates unknown players from outages", async () => {
-    expect(await fetchHiscores("nobody", json(404, {}) as typeof fetch)).toEqual({
+    expect(await look("nobody", json(404, {}) as typeof fetch)).toEqual({
       ok: false,
       reason: "not_found",
     });
-    expect(await fetchHiscores("x", json(503, {}) as typeof fetch)).toEqual({
+    expect(await look("x", json(503, {}) as typeof fetch)).toEqual({
       ok: false,
       reason: "unavailable",
     });
-    expect(await fetchHiscores("x", json(200, { unexpected: true }) as typeof fetch)).toEqual({
+    expect(await look("x", json(200, { unexpected: true }) as typeof fetch)).toEqual({
       ok: false,
       reason: "unavailable",
     });
     expect(
-      await fetchHiscores("x", (async () => {
+      await look("x", (async () => {
         throw new Error("network");
       }) as typeof fetch),
     ).toEqual({ ok: false, reason: "unavailable" });

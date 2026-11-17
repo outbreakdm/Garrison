@@ -1195,6 +1195,6 @@ Decided (2026-11-12, owner):
   pins the Worker beside the database (Supabase is in us-west-2; the Worker ran in Dallas).
   Polish: all controls at least 24 px on phones, hex color fields named, light-theme change badges
   above 4.5:1, a pending bar on library tiles, the legal summary without its side stripe, about
-  220 lines of unused CSS removed. Pre-existing and left alone: the bot's
-  `osrs.test.ts > separates unknown players from outages` times out (four lookups spaced 1.5 s
-  apart against a 5 s limit).
+  220 lines of unused CSS removed.
+- 2026-11-17: The bot's hiscores tests use fake timers: four lookups spaced 1.5 s apart had
+  outlasted the 5 s test limit. All 258 bot tests pass.
