@@ -12,6 +12,8 @@ import {
   SCHEDULED_HARD_MAX,
 } from "@garrison/db";
 import type { Metadata } from "next";
+import { HowItWorks } from "@/components/HowItWorks";
+import { LibraryItem } from "@/components/Library";
 import { ListHead } from "@/components/ListHead";
 import { HeadStatus } from "@/components/ModuleHead";
 import { PlansLink } from "@/components/ProUpsell";
@@ -70,6 +72,7 @@ export default async function MessagesPage({
   const limit = ent["messages.scheduled"];
   const full = messages.length >= MESSAGE_LIMITS.saved;
   const editing = typeof query.edit === "string" ? query.edit : null;
+  const current = messages.some((x) => x.id === editing) ? editing : null;
   const channelName = new Map(
     channels.map((c) => [c.id, c.kind === "text" ? `#${c.name}` : c.name]),
   );
@@ -97,10 +100,8 @@ export default async function MessagesPage({
       <div className="page-head">
         <div>
           <h1>Messages</h1>
-          <p>
-            Design announcements, rules and reminders as cards, then post them now or on a schedule.
-            Garrison posts them as itself, in the server's time zone.
-          </p>
+          <p>Announcements, rules and reminders as cards, posted now or on a schedule.</p>
+          <HowItWorks>Garrison posts them as itself, in the server's time zone.</HowItWorks>
         </div>
         <HeadStatus
           on={upcoming > 0}
@@ -139,21 +140,25 @@ export default async function MessagesPage({
 
       <RequestsPanel guildId={guild.id} kinds={["post_message"]} query={query} />
 
-      <ListHead
-        filters={SHOWS.map((k) => ({
-          key: k,
-          label: SHOW_LABELS[k],
-          n: k === "all" ? messages.length : messages.filter((m) => stateOf(m) === k).length,
-          href: k === "all" ? base : `${base}?show=${k}`,
-        }))}
-        current={show}
-        count={`${scheduled} of ${limit} scheduled`}
-        create={{
-          label: "New message",
-          href: `${base}?edit=new#new`,
-          disabled: full ? `${MESSAGE_LIMITS.saved} messages saved: remove one first.` : undefined,
-        }}
-      />
+      {current ? null : (
+        <ListHead
+          filters={SHOWS.map((k) => ({
+            key: k,
+            label: SHOW_LABELS[k],
+            n: k === "all" ? messages.length : messages.filter((m) => stateOf(m) === k).length,
+            href: k === "all" ? base : `${base}?show=${k}`,
+          }))}
+          current={show}
+          count={`${scheduled} of ${limit} scheduled`}
+          create={{
+            label: "New message",
+            href: `${base}?edit=new#new`,
+            disabled: full
+              ? `${MESSAGE_LIMITS.saved} messages saved: remove one first.`
+              : undefined,
+          }}
+        />
+      )}
 
       <div className="item-grid">
         {messages
@@ -174,101 +179,104 @@ export default async function MessagesPage({
               sent ? `Last sent ${when(sent)}` : "Never sent",
             ].filter((f): f is string => Boolean(f));
             return (
-              <details
-                className="g-card panel item-tile"
+              <LibraryItem
                 id={m.id}
                 key={m.id}
-                open={editing === m.id}
+                editing={current}
+                href={`${base}?edit=${m.id}`}
+                back={`${base}#${m.id}`}
+                backLabel="All messages"
+                summary={
+                  <>
+                    <span className="item-tile__mark" aria-hidden="true" />
+                    <span className="panel__title panel__title--lg">{m.name}</span>
+                    {paused.has(m.id) ? (
+                      <span className="g-badge g-badge--caution">Paused</span>
+                    ) : null}
+                    <span className="panel__facts">
+                      {facts.map((f) => (
+                        <span className="fact" key={f}>
+                          {f}
+                        </span>
+                      ))}
+                    </span>
+                    <span
+                      className={`item-tile__state g-badge${next ? " g-badge--go" : missed ? " g-badge--caution" : ""}`}
+                    >
+                      {next ? "Scheduled" : missed ? "Missed" : sent ? "Sent" : "Draft"}
+                    </span>
+                  </>
+                }
               >
-                <summary className="panel__summary">
-                  <span className="item-tile__mark" aria-hidden="true" />
-                  <span className="panel__title panel__title--lg">{m.name}</span>
-                  {paused.has(m.id) ? (
-                    <span className="g-badge g-badge--caution">Paused</span>
-                  ) : null}
-                  <span className="panel__facts">
-                    {facts.map((f) => (
-                      <span className="fact" key={f}>
-                        {f}
-                      </span>
-                    ))}
-                  </span>
-                  <span
-                    className={`item-tile__state g-badge${next ? " g-badge--go" : missed ? " g-badge--caution" : ""}`}
-                  >
-                    {next ? "Scheduled" : missed ? "Missed" : sent ? "Sent" : "Draft"}
-                  </span>
-                  <span className="panel__cue" aria-hidden="true" />
-                </summary>
-                <div className="panel__body">
-                  <MessageEditor
-                    guildId={guild.id}
-                    saved={m}
-                    ent={ent}
-                    channels={channels}
-                    roleNames={roleNames}
-                    tz={tz}
-                    nextSend={next ? when(next) : null}
-                    paused={paused.has(m.id)}
-                    planHref={`/servers/${guild.id}/plan`}
-                    saveAction={saveMessage}
-                    undoAction={undoChange}
-                    removeAction={formAction(removeMessage)}
-                    requestAction={requestAction}
-                    stamp={contentKey(m)}
-                  />
-                </div>
-              </details>
+                <MessageEditor
+                  guildId={guild.id}
+                  saved={m}
+                  ent={ent}
+                  channels={channels}
+                  roleNames={roleNames}
+                  tz={tz}
+                  nextSend={next ? when(next) : null}
+                  paused={paused.has(m.id)}
+                  planHref={`/servers/${guild.id}/plan`}
+                  saveAction={saveMessage}
+                  undoAction={undoChange}
+                  removeAction={formAction(removeMessage)}
+                  requestAction={requestAction}
+                  stamp={contentKey(m)}
+                />
+              </LibraryItem>
             );
           })}
-        <FormPanel
-          className="item-tile item-tile--new"
-          id="new"
-          title="New message"
-          hint={
-            full
-              ? `${MESSAGE_LIMITS.saved} messages saved: remove one first`
-              : "Start from a ready-made card"
-          }
-          open={messages.length === 0 || editing === "new"}
-        >
-          <form action={formAction(addMessage)} className="card-col">
-            <input type="hidden" name="guildId" value={guild.id} />
-            <div className="preset-grid" role="radiogroup" aria-label="Start from">
-              {Object.entries(MESSAGE_PRESETS).map(([key, p], i) => (
-                <label className="preset" key={key}>
-                  <input type="radio" name="preset" value={key} defaultChecked={i === 0} />
-                  <span className="preset__body">
-                    <span className="preset__name">{p.name}</span>
-                    <span className="preset__title">{p.card.title}</span>
-                  </span>
+        {current ? null : (
+          <FormPanel
+            className="item-tile item-tile--new"
+            id="new"
+            title="New message"
+            hint={
+              full
+                ? `${MESSAGE_LIMITS.saved} messages saved: remove one first`
+                : "Start from a ready-made card"
+            }
+            open={messages.length === 0 || editing === "new"}
+          >
+            <form action={formAction(addMessage)} className="card-col">
+              <input type="hidden" name="guildId" value={guild.id} />
+              <div className="preset-grid" role="radiogroup" aria-label="Start from">
+                {Object.entries(MESSAGE_PRESETS).map(([key, p], i) => (
+                  <label className="preset" key={key}>
+                    <input type="radio" name="preset" value={key} defaultChecked={i === 0} />
+                    <span className="preset__body">
+                      <span className="preset__name">{p.name}</span>
+                      <span className="preset__title">{p.card.title}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <div className="field-row">
+                <label className="g-field">
+                  <span>Name</span>
+                  <input
+                    className="g-input"
+                    name="name"
+                    maxLength={MESSAGE_LIMITS.name}
+                    placeholder="Keeps the starting point's name"
+                  />
                 </label>
-              ))}
-            </div>
-            <div className="field-row">
-              <label className="g-field">
-                <span>Name</span>
-                <input
-                  className="g-input"
-                  name="name"
-                  maxLength={MESSAGE_LIMITS.name}
-                  placeholder="Keeps the starting point's name"
-                />
-              </label>
-            </div>
-            <div className="form-foot">
-              <button type="submit" className="g-btn g-btn--primary" disabled={full}>
-                Add message
-              </button>
-              {plan === "free" ? (
-                <span className="g-help">
-                  Free servers schedule {limit} messages, once each. Pro schedules{" "}
-                  {SCHEDULED_HARD_MAX}, repeats them daily or weekly, and adds link buttons.
-                </span>
-              ) : null}
-            </div>
-          </form>
-        </FormPanel>
+              </div>
+              <div className="form-foot">
+                <button type="submit" className="g-btn g-btn--primary" disabled={full}>
+                  Add message
+                </button>
+                {plan === "free" ? (
+                  <span className="g-help">
+                    Free servers schedule {limit} messages, once each. Pro schedules{" "}
+                    {SCHEDULED_HARD_MAX}, repeats them daily or weekly, and adds link buttons.
+                  </span>
+                ) : null}
+              </div>
+            </form>
+          </FormPanel>
+        )}
       </div>
     </>
   );

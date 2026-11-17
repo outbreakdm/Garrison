@@ -21,6 +21,7 @@ import Link from "next/link";
 import { AutoSaveCard } from "@/components/AutoSave";
 import { ProTag } from "@/components/cards/CardEditor";
 import { Segmented } from "@/components/choices";
+import { LibraryItem } from "@/components/Library";
 import { ListHead } from "@/components/ListHead";
 import { HeadStatus } from "@/components/ModuleHead";
 import { SetupLayout } from "@/components/PageLayouts";
@@ -94,6 +95,7 @@ export default async function TicketsPage({
   const full = config.panels.length >= limit;
   const pausedPanels = Math.max(0, config.panels.length - limit);
   const editing = typeof query.edit === "string" ? query.edit : null;
+  const current = config.panels.some((x) => x.id === editing) ? editing : null;
   const channelName = new Map(channels.map((c) => [c.id, c.name]));
   const categories = layout?.categories.map(({ id, name }) => ({ id, name })) ?? [];
   const staffRoles = roles.filter((r) => !r.managed);
@@ -406,17 +408,19 @@ export default async function TicketsPage({
         </SetupLayout>
       </TabPanel>
       <TabPanel id="panels" tabs={TICKET_TABS}>
-        <ListHead
-          title="Ticket panels"
-          count={`${config.panels.length} of ${limit} panels`}
-          create={{
-            label: "New panel",
-            href: `${base}?edit=new#new`,
-            disabled: full
-              ? `${limit} of ${limit} panels used${plan === "pro" ? "" : `. Pro runs ${PANEL_HARD_MAX}`}.`
-              : undefined,
-          }}
-        />
+        {current ? null : (
+          <ListHead
+            title="Ticket panels"
+            count={`${config.panels.length} of ${limit} panels`}
+            create={{
+              label: "New panel",
+              href: `${base}?edit=new#new`,
+              disabled: full
+                ? `${limit} of ${limit} panels used${plan === "pro" ? "" : `. Pro runs ${PANEL_HARD_MAX}`}.`
+                : undefined,
+            }}
+          />
+        )}
 
         <div className="item-grid" id="panels">
           {config.panels.map((panel, index) => {
@@ -427,97 +431,100 @@ export default async function TicketsPage({
               ...(post ? [`in #${channelName.get(post.channelId) ?? "deleted-channel"}`] : []),
             ];
             return (
-              <details
-                className="g-card panel item-tile"
+              <LibraryItem
                 id={panel.id}
                 key={`${panel.id}-${contentKey(panel)}`}
-                open={editing === panel.id}
+                editing={current}
+                href={`${base}?tab=panels&edit=${panel.id}`}
+                back={`${base}?tab=panels#${panel.id}`}
+                backLabel="All ticket panels"
+                summary={
+                  <>
+                    <span className="item-tile__mark" aria-hidden="true" />
+                    <span className="panel__title panel__title--lg">{panel.name}</span>
+                    {paused ? <span className="g-badge g-badge--caution">Paused</span> : null}
+                    <span className="panel__facts">
+                      {facts.map((f) => (
+                        <span className="fact" key={f}>
+                          {f}
+                        </span>
+                      ))}
+                    </span>
+                    <span className={`item-tile__state g-badge${post ? " g-badge--go" : ""}`}>
+                      {post ? "Posted" : "Not posted"}
+                    </span>
+                  </>
+                }
               >
-                <summary className="panel__summary">
-                  <span className="item-tile__mark" aria-hidden="true" />
-                  <span className="panel__title panel__title--lg">{panel.name}</span>
-                  {paused ? <span className="g-badge g-badge--caution">Paused</span> : null}
-                  <span className="panel__facts">
-                    {facts.map((f) => (
-                      <span className="fact" key={f}>
-                        {f}
-                      </span>
-                    ))}
-                  </span>
-                  <span className={`item-tile__state g-badge${post ? " g-badge--go" : ""}`}>
-                    {post ? "Posted" : "Not posted"}
-                  </span>
-                  <span className="panel__cue" aria-hidden="true" />
-                </summary>
-                <div className="panel__body">
-                  <TicketPanelEditor
-                    guildId={guild.id}
-                    saved={panel}
-                    ent={ent}
-                    channels={channels}
-                    roleNames={roles.map(({ id, name }) => ({ id, name }))}
-                    postedIn={post?.channelId ?? null}
-                    paused={paused}
-                    planHref={`/servers/${guild.id}/plan`}
-                    saveAction={savePanel}
-                    removeAction={removePanel}
-                    requestAction={requestAction}
-                    serverEmoji={serverEmoji}
-                  />
-                </div>
-              </details>
+                <TicketPanelEditor
+                  guildId={guild.id}
+                  saved={panel}
+                  ent={ent}
+                  channels={channels}
+                  roleNames={roles.map(({ id, name }) => ({ id, name }))}
+                  postedIn={post?.channelId ?? null}
+                  paused={paused}
+                  planHref={`/servers/${guild.id}/plan`}
+                  saveAction={savePanel}
+                  removeAction={removePanel}
+                  requestAction={requestAction}
+                  serverEmoji={serverEmoji}
+                />
+              </LibraryItem>
             );
           })}
-          <FormPanel
-            id="new"
-            className="item-tile item-tile--new"
-            title="New ticket panel"
-            hint={
-              full
-                ? `${limit} of ${limit} panels used${plan === "pro" ? "" : `. Pro runs ${PANEL_HARD_MAX}.`}`
-                : "Start from a ready-made card, then change every word"
-            }
-            open={config.panels.length === 0 || editing === "new"}
-          >
-            <form action={addPanel} className="card-col">
-              <input type="hidden" name="guildId" value={guild.id} />
-              <div className="preset-grid" role="radiogroup" aria-label="Start from">
-                {Object.entries(TICKET_PANEL_PRESETS).map(([key, p], i) => (
-                  <label className="preset" key={key}>
-                    <input type="radio" name="preset" value={key} defaultChecked={i === 0} />
-                    <span className="preset__body">
-                      <span className="preset__name">{p.name}</span>
-                      <span className="preset__title">{p.card.title}</span>
-                      <span className="g-help">{p.topics.join(" · ")}</span>
-                    </span>
+          {current ? null : (
+            <FormPanel
+              id="new"
+              className="item-tile item-tile--new"
+              title="New ticket panel"
+              hint={
+                full
+                  ? `${limit} of ${limit} panels used${plan === "pro" ? "" : `. Pro runs ${PANEL_HARD_MAX}.`}`
+                  : "Start from a ready-made card, then change every word"
+              }
+              open={config.panels.length === 0 || editing === "new"}
+            >
+              <form action={addPanel} className="card-col">
+                <input type="hidden" name="guildId" value={guild.id} />
+                <div className="preset-grid" role="radiogroup" aria-label="Start from">
+                  {Object.entries(TICKET_PANEL_PRESETS).map(([key, p], i) => (
+                    <label className="preset" key={key}>
+                      <input type="radio" name="preset" value={key} defaultChecked={i === 0} />
+                      <span className="preset__body">
+                        <span className="preset__name">{p.name}</span>
+                        <span className="preset__title">{p.card.title}</span>
+                        <span className="g-help">{p.topics.join(" · ")}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <div className="field-row">
+                  <label className="g-field">
+                    <span>Name</span>
+                    <input
+                      className="g-input"
+                      name="name"
+                      maxLength={TICKET_LIMITS.name}
+                      placeholder="Keeps the starting point's name"
+                    />
                   </label>
-                ))}
-              </div>
-              <div className="field-row">
-                <label className="g-field">
-                  <span>Name</span>
-                  <input
-                    className="g-input"
-                    name="name"
-                    maxLength={TICKET_LIMITS.name}
-                    placeholder="Keeps the starting point's name"
-                  />
-                </label>
-              </div>
-              <div className="form-foot">
-                <button type="submit" className="g-btn g-btn--primary" disabled={full}>
-                  {full ? `${limit} of ${limit} panels used` : "Add panel"}
-                </button>
-                {plan === "free" ? (
-                  <span className="g-help">
-                    Free servers run 1 panel of {ent["tickets.topics"]} topics and keep transcripts{" "}
-                    {ent["tickets.historyDays"]} days. Pro runs {PANEL_HARD_MAX} panels of{" "}
-                    {TOPIC_HARD_MAX}, with forms, auto-assign and 365 days.
-                  </span>
-                ) : null}
-              </div>
-            </form>
-          </FormPanel>
+                </div>
+                <div className="form-foot">
+                  <button type="submit" className="g-btn g-btn--primary" disabled={full}>
+                    {full ? `${limit} of ${limit} panels used` : "Add panel"}
+                  </button>
+                  {plan === "free" ? (
+                    <span className="g-help">
+                      Free servers run 1 panel of {ent["tickets.topics"]} topics and keep
+                      transcripts {ent["tickets.historyDays"]} days. Pro runs {PANEL_HARD_MAX}{" "}
+                      panels of {TOPIC_HARD_MAX}, with forms, auto-assign and 365 days.
+                    </span>
+                  ) : null}
+                </div>
+              </form>
+            </FormPanel>
+          )}
         </div>
       </TabPanel>
     </>

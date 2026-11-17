@@ -12,6 +12,7 @@ import { AddRow } from "@/components/AddRow";
 import { ProTag } from "@/components/cards/CardEditor";
 import { EmptyState } from "@/components/EmptyState";
 import { GameMark, linkDetail, providerLabel } from "@/components/GameMark";
+import { HowItWorks } from "@/components/HowItWorks";
 import { ListHead } from "@/components/ListHead";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { HeadStatus } from "@/components/ModuleHead";
@@ -53,10 +54,10 @@ export default async function BarracksPage({ params }: { params: Promise<{ guild
       <div className="page-head">
         <div>
           <h1>Game accounts</h1>
-          <p>
-            Game accounts members chose to share here with /link. Verified accounts were proven
-            through Discord or Battle.net; claimed ones weren't.
-          </p>
+          <p>Game accounts members chose to share here with /link.</p>
+          <HowItWorks>
+            Verified accounts were proven through Discord or Battle.net; claimed ones weren't.
+          </HowItWorks>
         </div>
         <HeadStatus
           on={rules.length > 0}

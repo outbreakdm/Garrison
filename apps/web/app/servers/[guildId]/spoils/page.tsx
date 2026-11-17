@@ -10,6 +10,7 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import { ProTag } from "@/components/cards/CardEditor";
+import { HowItWorks } from "@/components/HowItWorks";
 import { ListHead } from "@/components/ListHead";
 import { HeadStatus } from "@/components/ModuleHead";
 import { RequestsPanel } from "@/components/RequestsPanel";
@@ -97,10 +98,8 @@ export default async function GiveawaysPage({
       <div className="page-head">
         <div>
           <h1>Giveaways</h1>
-          <p>
-            Post a prize with an Enter button. When time's up, Garrison draws the winners at random
-            and announces them.
-          </p>
+          <p>Post a prize with an Enter button, and Garrison draws the winners when time's up.</p>
+          <HowItWorks>Winners are picked at random and announced in Discord.</HowItWorks>
         </div>
         <HeadStatus
           on={running.length > 0}

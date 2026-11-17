@@ -247,10 +247,7 @@ export default async function QuartermasterPage({
       <div className="page-head">
         <div>
           <h1>AI assistant</h1>
-          <p>
-            Tell Garrison what you need in plain words. It drafts the changes as you talk; apply
-            them whenever you like what you see, and undo them any time.
-          </p>
+          <p>Say what you need in plain words; Garrison drafts it, and you apply or undo it.</p>
         </div>
       </div>
 

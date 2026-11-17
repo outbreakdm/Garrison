@@ -11,6 +11,8 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { HowItWorks } from "@/components/HowItWorks";
+import { LibraryItem } from "@/components/Library";
 import { ListHead } from "@/components/ListHead";
 import { HeadStatus } from "@/components/ModuleHead";
 import { PlansLink } from "@/components/ProUpsell";
@@ -57,6 +59,7 @@ export default async function AlertsPage({
   const full = feeds.length >= limit;
   const paused = Math.max(0, feeds.length - limit);
   const editing = typeof query.edit === "string" ? query.edit : null;
+  const current = feeds.some((x) => x.id === editing) ? editing : null;
   const channelName = new Map(channels.map((c) => [c.id, c.name]));
   const roleName = new Map(roles.map((r) => [r.id, r.name]));
   const stateOf = new Map(states.map((s) => [s.feedId, s]));
@@ -83,10 +86,10 @@ export default async function AlertsPage({
       <div className="page-head">
         <div>
           <h1>Stream alerts</h1>
-          <p>
-            Garrison posts when a Twitch channel goes live or a YouTube channel posts a video, and
-            pings the role you pick. Each stream and video is announced once.
-          </p>
+          <p>A post when a Twitch channel goes live or a YouTube channel posts a video.</p>
+          <HowItWorks>
+            It pings the role you pick, and each stream and video is announced once.
+          </HowItWorks>
         </div>
         <HeadStatus
           on={feeds.length > 0}
@@ -119,23 +122,25 @@ export default async function AlertsPage({
 
       <RequestsPanel guildId={guild.id} kinds={["test_alert"]} query={query} />
 
-      <ListHead
-        filters={SHOWS.map((k) => ({
-          key: k,
-          label: k === "all" ? "All" : ALERT_PROVIDERS[k].label,
-          n: k === "all" ? feeds.length : feeds.filter((x) => x.provider === k).length,
-          href: k === "all" ? base : `${base}?show=${k}`,
-        }))}
-        current={show}
-        count={`${feeds.length} of ${limit} alerts`}
-        create={{
-          label: "New alert",
-          href: `${base}?edit=new#new`,
-          disabled: full
-            ? `${limit} of ${limit} alerts used${plan === "pro" ? "" : `. Pro runs ${FEED_HARD_MAX}`}.`
-            : undefined,
-        }}
-      />
+      {current ? null : (
+        <ListHead
+          filters={SHOWS.map((k) => ({
+            key: k,
+            label: k === "all" ? "All" : ALERT_PROVIDERS[k].label,
+            n: k === "all" ? feeds.length : feeds.filter((x) => x.provider === k).length,
+            href: k === "all" ? base : `${base}?show=${k}`,
+          }))}
+          current={show}
+          count={`${feeds.length} of ${limit} alerts`}
+          create={{
+            label: "New alert",
+            href: `${base}?edit=new#new`,
+            disabled: full
+              ? `${limit} of ${limit} alerts used${plan === "pro" ? "" : `. Pro runs ${FEED_HARD_MAX}`}.`
+              : undefined,
+          }}
+        />
+      )}
 
       <div className="item-grid">
         {shown.map(({ feed, index }) => {
@@ -146,116 +151,119 @@ export default async function AlertsPage({
             feed.roleId ? `pings @${roleName.get(feed.roleId) ?? "deleted-role"}` : "no ping",
           ];
           return (
-            <details
-              className="g-card panel item-tile"
+            <LibraryItem
               id={feed.id}
               key={`${feed.id}-${contentKey(feed)}`}
-              open={editing === feed.id}
+              editing={current}
+              href={`${base}?edit=${feed.id}`}
+              back={`${base}#${feed.id}`}
+              backLabel="All stream alerts"
+              summary={
+                <>
+                  <span className="item-tile__mark" aria-hidden="true" />
+                  <span className="panel__title panel__title--lg">{feed.handle}</span>
+                  {isFeedPaused(index, ent) ? (
+                    <span className="g-badge g-badge--caution">Paused</span>
+                  ) : null}
+                  <span className="panel__facts">
+                    {facts.map((f) => (
+                      <span className="fact" key={f}>
+                        {f}
+                      </span>
+                    ))}
+                  </span>
+                  {isFeedPaused(index, ent) ? null : (
+                    <span className={`item-tile__state g-badge ${st.tone}`}>{st.text}</span>
+                  )}
+                </>
+              }
             >
-              <summary className="panel__summary">
-                <span className="item-tile__mark" aria-hidden="true" />
-                <span className="panel__title panel__title--lg">{feed.handle}</span>
-                {isFeedPaused(index, ent) ? (
-                  <span className="g-badge g-badge--caution">Paused</span>
-                ) : null}
-                <span className="panel__facts">
-                  {facts.map((f) => (
-                    <span className="fact" key={f}>
-                      {f}
-                    </span>
-                  ))}
-                </span>
-                {isFeedPaused(index, ent) ? null : (
-                  <span className={`item-tile__state g-badge ${st.tone}`}>{st.text}</span>
-                )}
-                <span className="panel__cue" aria-hidden="true" />
-              </summary>
-              <div className="panel__body">
-                <FeedEditor
-                  guildId={guild.id}
-                  saved={feed}
-                  ent={ent}
-                  channels={channels}
-                  roles={roles}
-                  planHref={`/servers/${guild.id}/plan`}
-                  saveAction={saveFeed}
-                  removeAction={removeFeed}
-                  requestAction={requestAction}
-                />
-              </div>
-            </details>
+              <FeedEditor
+                guildId={guild.id}
+                saved={feed}
+                ent={ent}
+                channels={channels}
+                roles={roles}
+                planHref={`/servers/${guild.id}/plan`}
+                saveAction={saveFeed}
+                removeAction={removeFeed}
+                requestAction={requestAction}
+              />
+            </LibraryItem>
           );
         })}
-        <FormPanel
-          id="new"
-          className="item-tile item-tile--new"
-          title="New alert"
-          hint={
-            full
-              ? `${limit} of ${limit} alerts used${plan === "pro" ? "" : `. Pro runs ${FEED_HARD_MAX}.`}`
-              : "A Twitch or YouTube channel, and where to post"
-          }
-          open={feeds.length === 0 || editing === "new"}
-        >
-          <form action={addFeed} className="card-col">
-            <input type="hidden" name="guildId" value={guild.id} />
-            <div className="segmented" role="radiogroup" aria-label="Watch">
-              {(["twitch", "youtube"] as const).map((p, i) => (
-                <label className="segmented__item" key={p}>
-                  <input type="radio" name="provider" value={p} defaultChecked={i === 0} />
-                  <span>
-                    {ALERT_PROVIDERS[p].label}: when it {ALERT_PROVIDERS[p].verb}
-                  </span>
+        {current ? null : (
+          <FormPanel
+            id="new"
+            className="item-tile item-tile--new"
+            title="New alert"
+            hint={
+              full
+                ? `${limit} of ${limit} alerts used${plan === "pro" ? "" : `. Pro runs ${FEED_HARD_MAX}.`}`
+                : "A Twitch or YouTube channel, and where to post"
+            }
+            open={feeds.length === 0 || editing === "new"}
+          >
+            <form action={addFeed} className="card-col">
+              <input type="hidden" name="guildId" value={guild.id} />
+              <div className="segmented" role="radiogroup" aria-label="Watch">
+                {(["twitch", "youtube"] as const).map((p, i) => (
+                  <label className="segmented__item" key={p}>
+                    <input type="radio" name="provider" value={p} defaultChecked={i === 0} />
+                    <span>
+                      {ALERT_PROVIDERS[p].label}: when it {ALERT_PROVIDERS[p].verb}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <div className="field-row">
+                <label className="g-field" htmlFor="new-handle">
+                  <span>Channel to watch</span>
+                  <input
+                    className="g-input"
+                    id="new-handle"
+                    name="handle"
+                    required
+                    maxLength={120}
+                    placeholder="shroud, @handle or a channel link"
+                  />
                 </label>
-              ))}
-            </div>
-            <div className="field-row">
-              <label className="g-field" htmlFor="new-handle">
-                <span>Channel to watch</span>
-                <input
-                  className="g-input"
-                  id="new-handle"
-                  name="handle"
-                  required
-                  maxLength={120}
-                  placeholder="shroud, @handle or a channel link"
-                />
-              </label>
-              <label className="g-field" htmlFor="new-channel">
-                <span>Post in</span>
-                <select className="g-input" id="new-channel" name="channelId" required>
-                  {channels.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      #{c.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="g-field" htmlFor="new-role">
-                <span>Ping</span>
-                <select className="g-input" id="new-role" name="roleId" defaultValue="">
-                  <option value="">Nobody</option>
-                  {roles.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      @{r.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <div className="form-foot">
-              <button type="submit" className="g-btn g-btn--primary" disabled={full}>
-                {full ? `${limit} of ${limit} alerts used` : "Add alert"}
-              </button>
-              {plan === "free" ? (
-                <span className="g-help">
-                  Free servers run {limit} alerts with the standard look. Pro runs {FEED_HARD_MAX},
-                  with your own message and color.
-                </span>
-              ) : null}
-            </div>
-          </form>
-        </FormPanel>
+                <label className="g-field" htmlFor="new-channel">
+                  <span>Post in</span>
+                  <select className="g-input" id="new-channel" name="channelId" required>
+                    {channels.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        #{c.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="g-field" htmlFor="new-role">
+                  <span>Ping</span>
+                  <select className="g-input" id="new-role" name="roleId" defaultValue="">
+                    <option value="">Nobody</option>
+                    {roles.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        @{r.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="form-foot">
+                <button type="submit" className="g-btn g-btn--primary" disabled={full}>
+                  {full ? `${limit} of ${limit} alerts used` : "Add alert"}
+                </button>
+                {plan === "free" ? (
+                  <span className="g-help">
+                    Free servers run {limit} alerts with the standard look. Pro runs {FEED_HARD_MAX}
+                    , with your own message and color.
+                  </span>
+                ) : null}
+              </div>
+            </form>
+          </FormPanel>
+        )}
       </div>
 
       {feeds.length ? (

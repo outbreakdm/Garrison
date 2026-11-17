@@ -201,10 +201,7 @@ export default async function PlanPage({
       <div className="page-head">
         <div>
           <h1>Plan</h1>
-          <p>
-            What this server has, and what each plan adds. Everything a server needs to stay safe is
-            free, on every plan.
-          </p>
+          <p>What this server has and what each plan adds; staying safe is free on every plan.</p>
         </div>
       </div>
       {outcome ? (

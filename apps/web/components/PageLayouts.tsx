@@ -27,10 +27,22 @@ export function SetupLayout({ children, index = true }: { children: ReactNode; i
   );
 }
 
-/** Settings first in the reading order (wide on desktop); the live list beside them. */
-export function CompactLayout({ settings, live }: { settings: ReactNode; live: ReactNode }) {
+/**
+ * Settings in the wide column (60%), the live list beside them (40%). On phones the live list
+ * comes first when it has items, since that's what changes; with nothing in it, settings lead.
+ */
+export function CompactLayout({
+  settings,
+  live,
+  liveFirst = false,
+}: {
+  settings: ReactNode;
+  live?: ReactNode;
+  liveFirst?: boolean;
+}) {
+  if (!live) return <div className="compact__settings">{settings}</div>;
   return (
-    <div className="compact">
+    <div className={liveFirst ? "compact compact--live-first" : "compact"}>
       <div className="compact__settings">{settings}</div>
       <div className="compact__live">{live}</div>
     </div>

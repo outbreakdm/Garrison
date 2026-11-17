@@ -10,7 +10,9 @@ import type { Metadata } from "next";
 import { AutoSaveCard } from "@/components/AutoSave";
 import { ProTag } from "@/components/cards/CardEditor";
 import { EmptyState } from "@/components/EmptyState";
+import { HowItWorks } from "@/components/HowItWorks";
 import { HeadNote, HeadSwitch } from "@/components/ModuleHead";
+import { CompactLayout } from "@/components/PageLayouts";
 import { CheckList, SettingsNotice } from "@/components/settings";
 import { TemplateField } from "@/components/TemplateField";
 import { getDb } from "@/lib/db";
@@ -68,10 +70,12 @@ export default async function VoiceRoomsPage({
         <div>
           <h1>Voice rooms</h1>
           <p>
-            Members join a "New room" voice channel and get their own, moved straight in. The owner
-            can rename it, set a limit and choose who joins from Discord's channel settings. It
-            passes on when the owner leaves and is deleted once empty.
+            Members join a "New room" voice channel and get a room of their own, moved straight in.
           </p>
+          <HowItWorks>
+            The owner can rename it, set a limit and choose who joins from Discord's channel
+            settings. It passes on when the owner leaves and is deleted once empty.
+          </HowItWorks>
         </div>
         <HeadSwitch
           key={contentKey(config)}
@@ -107,33 +111,9 @@ export default async function VoiceRoomsPage({
         </div>
       ) : null}
 
-      <div className={!rooms.length ? "page-split page-split--setup" : "page-split"}>
-        <div className="page-split__main">
-          <section className="g-card table-card" aria-labelledby="open-rooms">
-            <div className="table-card__head">
-              <h2 className="card-title" id="open-rooms">
-                Open now <span className="count">{rooms.length}</span>
-              </h2>
-            </div>
-            {rooms.length ? (
-              <ul className="seats-list voice-rooms">
-                {rooms.map((r) => (
-                  <li key={r.channelId}>
-                    <span>{names.get(r.channelId) ?? "Room"}</span>
-                    <span className="muted">
-                      {owners.get(r.ownerId) ?? "Someone"} · opened {ago(r.createdAt)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <EmptyState compact mark="groups" title="No rooms open">
-                Rooms appear here while someone's in them. They're deleted once everyone leaves.
-              </EmptyState>
-            )}
-          </section>
-        </div>
-        <aside className="page-split__side" aria-label="Settings">
+      <CompactLayout
+        liveFirst={rooms.length > 0}
+        settings={
           <AutoSaveCard
             id="settings"
             title="Voice rooms"
@@ -208,8 +188,33 @@ export default async function VoiceRoomsPage({
               </div>
             </div>
           </AutoSaveCard>
-        </aside>
-      </div>
+        }
+        live={
+          <section className="g-card table-card" aria-labelledby="open-rooms">
+            <div className="table-card__head">
+              <h2 className="card-title" id="open-rooms">
+                Open now <span className="count">{rooms.length}</span>
+              </h2>
+            </div>
+            {rooms.length ? (
+              <ul className="seats-list voice-rooms">
+                {rooms.map((r) => (
+                  <li key={r.channelId}>
+                    <span>{names.get(r.channelId) ?? "Room"}</span>
+                    <span className="muted">
+                      {owners.get(r.ownerId) ?? "Someone"} · opened {ago(r.createdAt)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <EmptyState compact mark="groups" title="No rooms open">
+                Rooms appear here while someone's in them. They're deleted once everyone leaves.
+              </EmptyState>
+            )}
+          </section>
+        }
+      />
     </>
   );
 }

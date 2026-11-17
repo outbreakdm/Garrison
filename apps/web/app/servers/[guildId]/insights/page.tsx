@@ -43,8 +43,7 @@ export default async function InsightsPage({
         <div>
           <h1>Insights</h1>
           <p>
-            How the server is doing: messages, who's active, who joins and who stays. Counts only,
-            never message content.
+            Messages, who's active, who joins and who stays: counts only, never message content.
           </p>
         </div>
       </div>

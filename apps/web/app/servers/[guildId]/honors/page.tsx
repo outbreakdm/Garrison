@@ -10,7 +10,9 @@ import {
 import type { Metadata } from "next";
 import { AutoSaveCard } from "@/components/AutoSave";
 import { ProTag } from "@/components/cards/CardEditor";
+import { HowItWorks } from "@/components/HowItWorks";
 import { HeadNote, HeadSwitch } from "@/components/ModuleHead";
+import { CompactLayout } from "@/components/PageLayouts";
 import { RecValue } from "@/components/RecValue";
 import { CheckList } from "@/components/settings";
 import { getDb } from "@/lib/db";
@@ -52,10 +54,10 @@ export default async function StarboardPage({ params }: { params: Promise<{ guil
       <div className="page-head">
         <div>
           <h1>Starboard</h1>
-          <p>
-            When a message collects enough of one emoji, Garrison reposts it to a channel of its
-            own, with a link back. Only the message's IDs and its count are kept.
-          </p>
+          <p>Messages that collect enough of one emoji are reposted to a channel of their own.</p>
+          <HowItWorks>
+            Each repost links back to the original. Only the message's IDs and its count are kept.
+          </HowItWorks>
         </div>
         <HeadSwitch
           key={contentKey(config)}
@@ -84,49 +86,9 @@ export default async function StarboardPage({ params }: { params: Promise<{ guil
         </div>
       ) : null}
 
-      <div className={!posts.length ? "page-split page-split--setup" : "page-split"}>
-        <div className="page-split__main">
-          <section className="g-card queue" aria-labelledby="star-recent">
-            <h2 className="card-title" id="star-recent">
-              On the board
-            </h2>
-            {posts.length ? (
-              <ul className="queue__list">
-                {posts.map((p) => (
-                  <li key={p.messageId}>
-                    <a
-                      className="ticket-row"
-                      href={`https://discord.com/channels/${guild.id}/${p.channelId}/${p.messageId}`}
-                      rel="noreferrer noopener"
-                      target="_blank"
-                    >
-                      <span className="ticket-row__num mono">
-                        {config.emoji} {p.stars}
-                      </span>
-                      <span className="ticket-row__main">
-                        <span className="ticket-row__topic">
-                          {names.get(p.authorId) ?? "A member"}
-                        </span>
-                        <span className="ticket-row__who">
-                          in #{channelName.get(p.channelId) ?? "deleted-channel"}
-                        </span>
-                      </span>
-                      <span />
-                      <span className="ticket-row__when mono">{ago(p.createdAt)}</span>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="queue__empty muted">
-                {config.enabled
-                  ? `Nothing yet. A message needs ${config.threshold} ${config.emoji} to get here.`
-                  : "Turn the starboard on, pick a channel, and starred messages show up here."}
-              </p>
-            )}
-          </section>
-        </div>
-        <aside className="page-split__side" aria-label="Settings">
+      <CompactLayout
+        liveFirst={posts.length > 0}
+        settings={
           <AutoSaveCard
             id="settings"
             title="Starboard"
@@ -220,8 +182,49 @@ export default async function StarboardPage({ params }: { params: Promise<{ guil
               </span>
             </label>
           </AutoSaveCard>
-        </aside>
-      </div>
+        }
+        live={
+          <section className="g-card queue" aria-labelledby="star-recent">
+            <h2 className="card-title" id="star-recent">
+              On the board
+            </h2>
+            {posts.length ? (
+              <ul className="queue__list">
+                {posts.map((p) => (
+                  <li key={p.messageId}>
+                    <a
+                      className="ticket-row"
+                      href={`https://discord.com/channels/${guild.id}/${p.channelId}/${p.messageId}`}
+                      rel="noreferrer noopener"
+                      target="_blank"
+                    >
+                      <span className="ticket-row__num mono">
+                        {config.emoji} {p.stars}
+                      </span>
+                      <span className="ticket-row__main">
+                        <span className="ticket-row__topic">
+                          {names.get(p.authorId) ?? "A member"}
+                        </span>
+                        <span className="ticket-row__who">
+                          in #{channelName.get(p.channelId) ?? "deleted-channel"}
+                        </span>
+                      </span>
+                      <span />
+                      <span className="ticket-row__when mono">{ago(p.createdAt)}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="queue__empty muted">
+                {config.enabled
+                  ? `Nothing yet. A message needs ${config.threshold} ${config.emoji} to get here.`
+                  : "Turn the starboard on, pick a channel, and starred messages show up here."}
+              </p>
+            )}
+          </section>
+        }
+      />
     </>
   );
 }

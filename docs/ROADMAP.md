@@ -8,7 +8,7 @@ then updates **Status** and the **Log** before stopping.
 ## Pick up here
 
 - **Layout (2026-11-17), being built, not deployed:** `docs/LAYOUT_PROPOSAL.md`, every
-  recommendation accepted. Phase A (`b5a5996`) and phase B are committed; C and D are next.
+  recommendation accepted. Phases A (`b5a5996`), B (`356e9cc`) and C are committed; D is next.
   - A: the menu scrolls on its own (server card and plan card stay put), Needs you is one strip
     under the page head, fields sized to what they hold, repeating rows show one spare with Add.
   - B: page tabs (`components/PageTabs.tsx`) on Moderation, Security, Settings, Welcome,
@@ -18,8 +18,14 @@ then updates **Status** and the **Log** before stopping.
     `#section` link opens its tab. Templates in `components/PageLayouts.tsx`: Activity, Setup
     (with "On this page" and save dots from 1280px), Compact. Your account left Settings (it's
     in the top bar).
-  - C: Starboard, Suggestions, Voice, Server stats and Invites on Compact; library editors full
-    page; old page-split variants deleted; long intros cut to a sentence.
+  - C: Starboard, Suggestions, Voice rooms and Invites on Compact (settings 60%, the live list
+    40%, the list first on phones when it has items); Server stats says its problem once. Role
+    menus, Messages, Stream alerts and Ticket panels: a tile links to `?edit=<id>`, where the
+    editor stands alone at full width with "All role menus" back to the tile
+    (`components/Library.tsx`); only that editor is rendered. Fifteen intros cut to one sentence,
+    the rest under "How this works" (`components/HowItWorks.tsx`, hidden on phones with the
+    intro). The page head is one rule (three layers merged, computed styles unchanged on 8 pages
+    in both themes); the setup and tools-first split variants are gone.
   - D: the Overview's four bands, the phone head, the regrouped menu with Settings and Plan at
     its foot, four breakpoints, DESIGN.md's Layout section.
 - **Landing clips (2026-11-17), deployed** (`174c9f3`, run 44096284680, dashboard): "Watch it work" shows three 1080p60
@@ -1151,3 +1157,7 @@ Decided (2026-11-12, owner):
   became a tab of Groups and raids; Settings lost Your account and "Inside other pages". Checked
   every tab at 1440 and 390 (no sideways scroll) and in Chrome: switching in place, Back, a
   #section link opening its tab, the old templates address. 101 web tests pass.
+- 2026-11-17: Layout phase C: Compact pages, library editors on a page of their own, one-sentence
+  intros with "How this works", the page-head layers merged. Checked at 1440 and 390, and in
+  Chrome: tile, editor, back to the tile on all four library pages. 101 web tests pass; lint at
+  36 warnings (37 before).

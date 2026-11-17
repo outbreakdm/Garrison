@@ -22,6 +22,7 @@ import { AutoRefresh } from "@/components/AutoRefresh";
 import { ProTag } from "@/components/cards/CardEditor";
 import { EmptyState } from "@/components/EmptyState";
 import { formatTime } from "@/components/format";
+import { HowItWorks } from "@/components/HowItWorks";
 import { SlotRows } from "@/components/ListField";
 import { ListHead } from "@/components/ListHead";
 import { HeadStatus } from "@/components/ModuleHead";
@@ -136,10 +137,10 @@ export default async function RallyPage({
       <div className="page-head">
         <div>
           <h1>Groups and raids</h1>
-          <p>
-            Post groups, schedule raids, and join or sign up without leaving the dashboard. Members
-            without Manage Server join on the <a href={`/play/${guild.id}`}>player page</a>.
-          </p>
+          <p>Post groups, schedule raids, and join or sign up without leaving the dashboard.</p>
+          <HowItWorks>
+            Members without Manage Server join on the <a href={`/play/${guild.id}`}>player page</a>.
+          </HowItWorks>
         </div>
         <HeadStatus
           on={posts.length + raids.length > 0}

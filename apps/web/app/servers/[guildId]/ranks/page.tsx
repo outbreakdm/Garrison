@@ -19,6 +19,7 @@ import { ProTag } from "@/components/cards/CardEditor";
 import { Segmented } from "@/components/choices";
 import { EmptyState } from "@/components/EmptyState";
 import { formatTime } from "@/components/format";
+import { HowItWorks } from "@/components/HowItWorks";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { HeadSwitch } from "@/components/ModuleHead";
 import { SetupLayout } from "@/components/PageLayouts";
@@ -91,9 +92,9 @@ export default async function RanksPage({
               ? settings.voiceXp
                 ? "Members earn XP for chatting and for time in voice, once a minute at most."
                 : "Members earn XP for chatting, once a minute at most."
-              : "XP is off: members earn none."}{" "}
-            Garrison counts who posted and when, never what they wrote.
+              : "XP is off: members earn none."}
           </p>
+          <HowItWorks>Garrison counts who posted and when, never what they wrote.</HowItWorks>
         </div>
         <HeadSwitch
           key={settings.updatedAt.getTime()}

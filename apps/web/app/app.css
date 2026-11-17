@@ -79,16 +79,22 @@ h2 {
   flex-direction: column;
   gap: var(--space-6);
 }
+/* The page head: title and intro on the left, its state or actions on the right. Inside the
+   console, console.css gives it its own spacing ("Page head" there). */
 .page-head {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-4);
   align-items: flex-end;
   justify-content: space-between;
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid color-mix(in srgb, var(--id, var(--line)) 22%, var(--line));
 }
 .page-head p {
-  margin: var(--space-1) 0 0;
+  max-width: 68ch;
+  margin: var(--space-2) 0 0;
   color: var(--text-muted);
+  text-wrap: pretty;
 }
 
 .grid-stats {
@@ -836,14 +842,6 @@ input[type="number"].g-input {
 .shell {
   max-width: 1400px;
   margin: 0 auto;
-}
-.page-head {
-  padding-bottom: var(--space-4);
-  border-bottom: 1px solid var(--line);
-}
-.page-head p {
-  max-width: 68ch;
-  text-wrap: pretty;
 }
 .g-nav__item {
   transition:
@@ -2114,12 +2112,6 @@ h1 {
   flex-direction: column;
   gap: var(--space-3);
   min-width: 0;
-}
-.page-head {
-  padding-bottom: var(--space-6);
-}
-.page-head p {
-  margin-top: var(--space-2);
 }
 
 /* Top bar: the signed-in person as a plate, not loose text. */
@@ -3731,22 +3723,12 @@ form[data-pending] [aria-busy="true"]::after {
   transform: rotate(45deg) translateY(-3px);
   vertical-align: middle;
 }
-.page-head {
-  border-bottom-color: color-mix(in srgb, var(--id, var(--line)) 22%, var(--line));
-}
 /* Text links inside a page read in the page's color. */
 .main a:not([class]) {
   color: var(--accent-strong);
 }
 .main a:not([class]):hover {
   color: var(--text);
-}
-@media (max-width: 720px) {
-  .main .page-head h1::before {
-    width: 10px;
-    height: 10px;
-    margin-right: 12px;
-  }
 }
 /* Lockdown on: the security card says so by its edge as well as its badge. */
 .gate-lockdown--on {
@@ -3983,31 +3965,9 @@ form[data-pending] [aria-busy="true"]::after {
   }
 }
 
-/* --- The section color owns the page (bolder pass) ---------------------------------------
-   The page head is the module's name card, printed in its section's color: a tinted face,
-   an edge in the same hue, the gem and the section tag. Safety, Community, Gaming and
-   Server pages now differ at a glance, not only by an 8px gem. The current menu item and an
-   open panel's head carry the same tint, so where you are and what you are editing match. */
-.main .page-head,
-.picker__head {
-  --head: var(--id, var(--accent));
-  padding: 22px 24px;
-  border: 1px solid color-mix(in srgb, var(--head) 42%, var(--line));
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--head) 13%, var(--surface));
-  box-shadow: var(--shadow-card);
-}
-[data-theme="light"] .main .page-head,
-[data-theme="light"] .picker__head {
-  background: color-mix(in srgb, var(--head) 9%, var(--surface));
-}
-.main .page-head p {
-  color: color-mix(in srgb, var(--head) 14%, var(--text-muted));
-}
-.main .page-head h1::before {
-  width: 14px;
-  height: 14px;
-}
+/* --- The section color (bolder pass) -----------------------------------------------------
+   The current menu item and an open panel's head carry the section's tint, so where you are
+   and what you are editing match. */
 .g-nav__item[aria-current="page"] {
   border-color: color-mix(in srgb, var(--gem, var(--accent)) 45%, var(--line));
   background: color-mix(in srgb, var(--gem, var(--accent)) 14%, var(--surface));

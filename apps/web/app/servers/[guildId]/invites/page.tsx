@@ -7,6 +7,8 @@ import {
   PARTNERS,
 } from "@garrison/db";
 import type { Metadata } from "next";
+import { HowItWorks } from "@/components/HowItWorks";
+import { CompactLayout } from "@/components/PageLayouts";
 import { SettingsNotice } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { listGuildRoles, listInvites } from "@/lib/discord";
@@ -67,11 +69,11 @@ export default async function InvitesPage({
       <div className="page-head">
         <div>
           <h1>Invites</h1>
-          <p>
-            Every invite to the server, who it brings and how many stay. Name them, sort them into
-            categories, keep partner details beside their link, and give a role to everyone who
-            joins with one.
-          </p>
+          <p>Every invite to the server, who it brings and how many stay.</p>
+          <HowItWorks>
+            Name invites, sort them into categories, keep partner details beside their link, and
+            give a role to everyone who joins with one.
+          </HowItWorks>
         </div>
       </div>
 
@@ -86,86 +88,100 @@ export default async function InvitesPage({
       ) : null}
       <SettingsNotice query={query} />
 
-      {categories.length ? (
-        <section className="g-card table-card" aria-labelledby="by-category">
-          <div className="table-card__head">
-            <h2 className="card-title" id="by-category">
-              By category <span className="muted">last {DAYS} days</span>
-            </h2>
-          </div>
-          <ul className="category-sums">
-            {categories.map((c) => (
-              <li key={c.name}>
-                <span className="category-sums__name">{c.name}</span>
-                <span>
-                  <strong>{c.joins}</strong> joined
-                </span>
-                <span>
-                  <strong>{pct(c)}</strong> stayed a week
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      <InvitesEditor
-        guildId={guild.id}
-        invites={
-          invites?.map((i) => ({
-            code: i.code,
-            uses: i.uses,
-            maxUses: i.maxUses,
-            expiresAt: i.expiresAt?.toISOString() ?? null,
-            inviter: i.inviter,
-            channel: i.channel,
-            vanity: i.vanity,
-          })) ?? null
+      <CompactLayout
+        settings={
+          <InvitesEditor
+            guildId={guild.id}
+            invites={
+              invites?.map((i) => ({
+                code: i.code,
+                uses: i.uses,
+                maxUses: i.maxUses,
+                expiresAt: i.expiresAt?.toISOString() ?? null,
+                inviter: i.inviter,
+                channel: i.channel,
+                vanity: i.vanity,
+              })) ?? null
+            }
+            labels={labels}
+            stats={byCode}
+            roles={roles
+              .filter((r) => !r.managed && !isDangerousRole(r.permissions))
+              .map((r) => ({ id: r.id, name: r.name }))}
+            limit={entitlements(plan)["invites.labels"]}
+            days={DAYS}
+            action={saveInviteLabels}
+            undo={undoChange}
+            stamp={contentKey(labels)}
+          />
         }
-        labels={labels}
-        stats={byCode}
-        roles={roles
-          .filter((r) => !r.managed && !isDangerousRole(r.permissions))
-          .map((r) => ({ id: r.id, name: r.name }))}
-        limit={entitlements(plan)["invites.labels"]}
-        days={DAYS}
-        action={saveInviteLabels}
-        undo={undoChange}
-        stamp={contentKey(labels)}
+        live={
+          categories.length || partners.length ? (
+            <>
+              {categories.length ? (
+                <section className="g-card table-card" aria-labelledby="by-category">
+                  <div className="table-card__head">
+                    <h2 className="card-title" id="by-category">
+                      By category <span className="muted">last {DAYS} days</span>
+                    </h2>
+                  </div>
+                  <ul className="category-sums">
+                    {categories.map((c) => (
+                      <li key={c.name}>
+                        <span className="category-sums__name">{c.name}</span>
+                        <span>
+                          <strong>{c.joins}</strong> joined
+                        </span>
+                        <span>
+                          <strong>{pct(c)}</strong> stayed a week
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+              {partners.length ? (
+                <section
+                  className="g-card table-card"
+                  id="partners"
+                  aria-labelledby="partners-title"
+                >
+                  <div className="table-card__head">
+                    <h2 className="card-title" id="partners-title">
+                      Partners <span className="count">{partners.length}</span>
+                    </h2>
+                  </div>
+                  <ul className="partner-list">
+                    {partners.map((p) => {
+                      const s = byCode[p.code] ?? { joins: 0, settled: 0, stayed: 0 };
+                      return (
+                        <li key={p.code}>
+                          <div className="partner-list__head">
+                            <strong>{p.partner?.server ?? p.name}</strong>
+                            <span className="mono muted">{p.code}</span>
+                          </div>
+                          <div className="partner-list__stats">
+                            <span>
+                              <strong>{s.joins}</strong> joined
+                            </span>
+                            <span>
+                              <strong>{pct(s)}</strong> stayed a week
+                            </span>
+                            {p.partner?.contact ? <span>Contact: {p.partner.contact}</span> : null}
+                          </div>
+                          {p.partner?.note ? (
+                            <p className="partner-list__note">{p.partner.note}</p>
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              ) : null}
+            </>
+          ) : undefined
+        }
       />
-
-      {partners.length ? (
-        <section className="g-card table-card" id="partners" aria-labelledby="partners-title">
-          <div className="table-card__head">
-            <h2 className="card-title" id="partners-title">
-              Partners <span className="count">{partners.length}</span>
-            </h2>
-          </div>
-          <ul className="partner-list">
-            {partners.map((p) => {
-              const s = byCode[p.code] ?? { joins: 0, settled: 0, stayed: 0 };
-              return (
-                <li key={p.code}>
-                  <div className="partner-list__head">
-                    <strong>{p.partner?.server ?? p.name}</strong>
-                    <span className="mono muted">{p.code}</span>
-                  </div>
-                  <div className="partner-list__stats">
-                    <span>
-                      <strong>{s.joins}</strong> joined
-                    </span>
-                    <span>
-                      <strong>{pct(s)}</strong> stayed a week
-                    </span>
-                    {p.partner?.contact ? <span>Contact: {p.partner.contact}</span> : null}
-                  </div>
-                  {p.partner?.note ? <p className="partner-list__note">{p.partner.note}</p> : null}
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ) : null}
     </>
   );
 }

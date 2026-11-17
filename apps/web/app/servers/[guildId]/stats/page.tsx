@@ -6,6 +6,7 @@ import {
   type StatKind,
 } from "@garrison/db";
 import type { Metadata } from "next";
+import { HowItWorks } from "@/components/HowItWorks";
 import { HeadNote, HeadSwitch } from "@/components/ModuleHead";
 import { SettingsNotice } from "@/components/settings";
 import { getDb } from "@/lib/db";
@@ -64,10 +65,11 @@ export default async function ServerStatsPage({
       <div className="page-head">
         <div>
           <h1>Server stats</h1>
-          <p>
-            Voice channels named with a live count, like “Members: 372”, at the top of your channel
-            list. Members see them but can't join; Garrison keeps the numbers current.
-          </p>
+          <p>Voice channels named with a live count, like “Members: 372”.</p>
+          <HowItWorks>
+            They sit at the top of your channel list. Members see them but can't join; Garrison
+            keeps the numbers current.
+          </HowItWorks>
         </div>
         <HeadSwitch
           key={contentKey(config)}
@@ -95,7 +97,8 @@ export default async function ServerStatsPage({
         </div>
       ) : null}
       <SettingsNotice query={query} />
-      {!canManage ? (
+      {/* Said once: when the head already says it (on but can't work), no banner too. */}
+      {!canManage && status.state !== "blocked" ? (
         <div className="notice" role="alert">
           Garrison can't make channels yet: give its role the Manage Channels permission (Server
           Settings, Roles), or add Garrison again from the server list to accept it.
