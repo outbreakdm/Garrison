@@ -196,6 +196,7 @@ function RankCardFields({ saved, ent, sampleName, planHref }: Props) {
             />
             <HexInput
               id="rc-accent"
+              label="Accent color, as a hex code"
               value={style.accent ?? STANDARD_ACCENT}
               onChange={(v) => set({ accent: v === STANDARD_ACCENT ? null : v })}
             />

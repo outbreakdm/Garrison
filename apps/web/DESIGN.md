@@ -178,6 +178,8 @@ The rules from docs/LAYOUT_PROPOSAL.md, as built. One meaning per column, one te
 - **Fields have a width for what they hold:** numbers up to 160px, pickers up to 360px, text up to 640px. Repeating rows show what's set plus one spare, with an Add button for the next.
 - **A rule reads as a sentence** with its numbers in place: "Remove messages when someone sends more than [6] messages within [8] seconds", "It's a raid when [10] or more people join within [30] seconds".
 - **Help text stays at two lines;** anything more sits under "How this works". A warning the reader needs (what's sent to OpenAI, that claimed accounts count) stays in the visible part.
+- **Every control is at least 24px tall** (WCAG 2.5.8), the small text ones too ("How this works", "Use it", a header bar's link). Links inside sentences and table rows keep their line height.
+- **Nothing moves once it has drawn:** a part that only scripts can finish (an auto-saving panel's fallback Save row) is laid out for scripts from the start (`@media (scripting: enabled)`), so the page never shifts as it loads.
 - **"Needs you" carries its fix:** a setting jumps to its panel; a missing permission is a button to Discord's page for giving it ("Give Move Members").
 - **Panels stack with 16 to 24px gaps.** Editors put fields and a 320 to 460px preview side by side from 1100px; below that the preview comes first.
 - **AI assistant:** chat beside a 340 to 400px plan panel from 1100px; the chat fills the screen height and scrolls inside.
@@ -257,6 +259,8 @@ The four section colors say where something lives. The menu's icons carry their 
 
 ### Motion
 One authored moment: the state ripple. Flip a module and the change travels: the head pill eases to its new color, the menu's light flares once in the new state's color (pop and ring, `data-changed`, first paint never flares), the toast says what happened. Feedback around it is small and fast: the save mark's dot lands, a Needs you note arrives, folds open by height. Reduced motion keeps every color and state change and drops the movement.
+
+Only what just happened moves. What is already on the page when it loads shows at once: an entrance on loaded content holds it invisible until the page's scripts are ready (two seconds on a slow phone). The AI chat pops in the message you sent and the reply on its way, not the conversation. A library tile that takes a moment to open its editor runs a thin bar along its foot after a beat (`LinkPending`).
 
 ### Member space
 `/play/[guildId]`, for anyone in the server: no rail, a header with the server's initial tile and name ("Your space in this server"), text tabs for its pages (You, Groups and raids, Your record when on), then the page in the same panels. You puts the member's rank card, drawn as /rank draws it, beside the details it asks for and changes as they type; the leaderboard marks their own row. Your record lists their cases with the action badge, reason and length, undone ones marked, and the appeal link. The server list's "Servers you're in" opens it.

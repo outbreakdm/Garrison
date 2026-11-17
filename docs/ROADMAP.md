@@ -7,10 +7,15 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **Layout (2026-11-17), built, not deployed:** `docs/LAYOUT_PROPOSAL.md`, every
-  recommendation accepted. All four phases are committed: A (`b5a5996`), B (`356e9cc`),
-  C (`0a4fe77`), D (`3d4393f`), and a last pass for what the proposal asked that those had
-  left out. No migration.
+- **Optimize and polish (2026-11-17):** 15 fewer database queries on every dashboard page (the
+  menu's module settings in one query), faster AI assistant paint, no layout shift on Settings,
+  24 px targets, unused CSS removed (see the Log). To run the Worker beside the database, set the
+  GitHub variable `CF_PLACEMENT_REGION` to `aws:us-west-2` (GO-LIVE.md); without it, Smart
+  Placement.
+- **Layout (2026-11-17), deployed** (`9674d94`, run 44149308218): `docs/LAYOUT_PROPOSAL.md`, every
+  recommendation accepted. All four phases: A (`b5a5996`), B (`356e9cc`), C (`0a4fe77`),
+  D (`3d4393f`), and a last pass for what the proposal asked that those had left out. No
+  migration.
   - A: the menu scrolls on its own (server card and plan card stay put), Needs you is one strip
     under the page head, fields sized to what they hold, repeating rows show one spare with Add.
   - B: page tabs (`components/PageTabs.tsx`) on Moderation, Security, Settings, Welcome,
@@ -1181,3 +1186,15 @@ Decided (2026-11-12, owner):
   Voice rooms and Server stats say a missing permission in the head with a "Give …" button to
   Discord, not a banner. Checked at 1440 and 390 and in Chrome; production build passes; 101
   web tests pass; lint at 36 warnings.
+- 2026-11-17: Optimize and polish (impeccable), measured on a production build. Every dashboard
+  page runs 15 fewer database queries: the menu's sixteen module settings are one query
+  (`readManySettings`), so the session check no longer queues behind them (Settings 28 to 13
+  queries, about four round trips instead of eight). AI assistant's largest paint on a slow phone
+  2.1 s to 1.0 s (the conversation no longer animates in); Settings' layout shift 0.051 to 0
+  (auto-save's fallback row is hidden for scripts from the start). Optional `CF_PLACEMENT_REGION`
+  pins the Worker beside the database (Supabase is in us-west-2; the Worker ran in Dallas).
+  Polish: all controls at least 24 px on phones, hex color fields named, light-theme change badges
+  above 4.5:1, a pending bar on library tiles, the legal summary without its side stripe, about
+  220 lines of unused CSS removed. Pre-existing and left alone: the bot's
+  `osrs.test.ts > separates unknown players from outages` times out (four lookups spaced 1.5 s
+  apart against a 5 s limit).

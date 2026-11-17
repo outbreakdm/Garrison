@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNotNull, notInArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableName, isNotNull, notInArray, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import {
   alertSettings,
@@ -9,6 +9,7 @@ import {
   economySettings,
   escalationRules,
   gatehouseSettings,
+  guilds,
   inviteSettings,
   ledgerSettings,
   memberPages,
@@ -359,6 +360,49 @@ export async function readSettings(
   const [row] = (await db.select().from(table).where(eq(table.guildId, guildId))) as Row[];
   if (!row) return null;
   return Object.fromEntries(EDITABLE_FIELDS[module].map((f) => [f, row[f] ?? null]));
+}
+
+/**
+ * Several modules' settings in one round trip, each exactly as readSettings gives it: one
+ * query that joins every module's table to the server's row. The dashboard reads sixteen
+ * modules on every page for its menu, and where the database is a continent away from the
+ * page, one query instead of sixteen is most of a page's wait. Rewards and the warning
+ * ladder span several rows, so they're read on their own; so is everything when the
+ * server's row is missing.
+ */
+export async function readManySettings(
+  db: Db,
+  guildId: string,
+  modules: readonly SettingsModule[],
+): Promise<Map<SettingsModule, Record<string, unknown> | null>> {
+  const out = new Map<SettingsModule, Record<string, unknown> | null>();
+  const wanted = [...new Set(modules)];
+  const joined = wanted.filter((m): m is keyof typeof TABLES => m in TABLES);
+  const alone: SettingsModule[] = wanted.filter((m) => !(m in TABLES));
+  if (joined.length) {
+    type Query = ReturnType<typeof base>;
+    const base = () => db.select().from(guilds).$dynamic();
+    let query: Query = base();
+    for (const m of joined) {
+      const table = TABLES[m];
+      query = query.leftJoin(table, eq(table.guildId, guilds.id)) as unknown as Query;
+    }
+    const [row] = (await query.where(eq(guilds.id, guildId))) as unknown as Record<
+      string,
+      Row | null
+    >[];
+    if (row)
+      for (const m of joined) {
+        const found = row[getTableName(TABLES[m])];
+        out.set(
+          m,
+          found ? Object.fromEntries(EDITABLE_FIELDS[m].map((f) => [f, found[f] ?? null])) : null,
+        );
+      }
+    else alone.push(...joined);
+  }
+  await Promise.all(alone.map(async (m) => out.set(m, await readSettings(db, guildId, m))));
+  return out;
 }
 
 /** Write whitelisted values. Callers only pass fields from EDITABLE_FIELDS. */

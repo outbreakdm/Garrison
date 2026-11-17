@@ -34,6 +34,7 @@ jobs:
       APP_URL: ${{ vars.APP_URL }}
       HYPERDRIVE_ID: ${{ vars.HYPERDRIVE_ID }}
       DASHBOARD_DOMAIN: ${{ vars.DASHBOARD_DOMAIN }}
+      CF_PLACEMENT_REGION: ${{ vars.CF_PLACEMENT_REGION }}
     steps:
       - uses: actions/checkout@v4
         with:

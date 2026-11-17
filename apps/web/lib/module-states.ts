@@ -3,8 +3,8 @@ import {
   getOpsTimezone,
   listRoleMenuPosts,
   nextOccurrence,
+  readManySettings,
   readMessages,
-  readSettings,
   type SettingsModule,
 } from "@garrison/db";
 import { cache } from "react";
@@ -208,9 +208,10 @@ const MODULES: { name: string; href: string; module: SettingsModule; check: Chec
 export const moduleStates = cache(async (guildId: string): Promise<ModuleStatus[]> => {
   const db = await getDb();
   const wanted = [...new Set(MODULES.map((m) => m.module))];
-  const [entries, postedMenus, names, perms, tz] = await Promise.all([
-    Promise.all(
-      wanted.map(async (m) => [m, await readSettings(db, guildId, m).catch(() => null)] as const),
+  const [values, postedMenus, names, perms, tz] = await Promise.all([
+    // Every module's settings in one query: this runs on every page, ahead of the page's own.
+    readManySettings(db, guildId, wanted).catch(
+      () => new Map<SettingsModule, Record<string, unknown> | null>(),
     ),
     listRoleMenuPosts(db, guildId)
       .then((posts) => posts.length > 0)
@@ -220,7 +221,6 @@ export const moduleStates = cache(async (guildId: string): Promise<ModuleStatus[
     botPermissions(guildId).catch(() => null),
     getOpsTimezone(db, guildId).catch(() => "UTC"),
   ]);
-  const values = new Map(entries);
   const facts: ServerFacts = {
     channels: names ? new Set(names.keys()) : null,
     perms,

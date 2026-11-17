@@ -210,6 +210,7 @@ export function FeedEditor({
                   />
                   <HexInput
                     id={id("accent")}
+                    label="Alert color, as a hex code"
                     value={feed.accent ?? STANDARD_ACCENT}
                     onChange={(v) => set({ accent: v === STANDARD_ACCENT ? null : v })}
                   />

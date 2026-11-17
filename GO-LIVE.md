@@ -160,6 +160,7 @@ github.com/outbreakdm/Garrison → **Settings** (top tab) → left menu
 | `APP_URL`           | `https://` + **[1]**, e.g. `https://dash.yourdomain.com` (no slash at the end) |
 | `HYPERDRIVE_ID`     | **[3]**                                                                        |
 | `DASHBOARD_DOMAIN`  | **[1]**, e.g. `dash.yourdomain.com` (no https)                                 |
+| `CF_PLACEMENT_REGION` | optional, and worth it: where your database is, e.g. `aws:us-west-2` for a Supabase project in West US (Oregon). Pages load faster with the dashboard beside its database. |
 
 Don't add any `BNET_…` items; they're for an optional WoW feature.
 

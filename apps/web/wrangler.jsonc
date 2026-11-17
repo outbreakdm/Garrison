@@ -11,7 +11,9 @@
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
   "observability": { "enabled": true },
-  // Near the database: a page makes several round trips to it and one to the browser.
+  // Near the database: a page makes several round trips to it and one to the browser. In CI,
+  // the GitHub variable CF_PLACEMENT_REGION (e.g. "aws:us-west-2") pins it beside the
+  // database instead (scripts/cf-config.mjs); Smart Placement only moves a busy Worker.
   "placement": { "mode": "smart" },
   // The bot's private entrypoint: wakes it the moment a dashboard request is queued.
   "services": [{ "binding": "BOT", "service": "garrison-bot", "entrypoint": "BotControl" }],

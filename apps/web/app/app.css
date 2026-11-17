@@ -97,11 +97,6 @@ h2 {
   text-wrap: pretty;
 }
 
-.grid-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--space-4);
-}
 .grid-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -363,13 +358,7 @@ a.topbar__user:hover {
 .switcher__menu a[aria-current="true"] {
   background: var(--surface-raised);
 }
-.build-line {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-  font-size: 13px;
-  color: var(--text-muted);
-}
+
 .health-row {
   display: flex;
   gap: 10px;
@@ -482,17 +471,13 @@ a.topbar__user:hover {
   max-width: 220px;
 }
 
-.ladder-edit > summary,
-.raid-create > summary,
 .template > summary {
   cursor: pointer;
 }
 .template > summary {
   list-style: none;
 }
-.ladder-edit[open] > summary {
-  margin-bottom: var(--space-3);
-}
+
 .ladder-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -548,9 +533,6 @@ a.topbar__user:hover {
 }
 .tone-go {
   color: var(--go);
-}
-.raid-create[open] > summary {
-  margin-bottom: var(--space-3);
 }
 
 /* Phones: the rail gives way to one button naming the current page, which opens the
@@ -661,10 +643,7 @@ a.topbar__user:hover {
     font-size: 15px;
     text-decoration: none;
   }
-  .nav-sheet__item--wide {
-    grid-column: 1 / -1;
-    border-color: var(--line);
-  }
+
   .nav-sheet__item[aria-current="page"] {
     border-color: color-mix(in srgb, var(--gem, var(--accent)) 55%, var(--line));
     background: color-mix(in srgb, var(--gem, var(--accent)) 14%, var(--surface));
@@ -730,20 +709,6 @@ figure.preview {
 }
 
 /* Server list */
-.server-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  color: var(--text);
-  text-decoration: none;
-}
-.server-row .big {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .guild-icon {
   flex: none;
   width: 40px;
@@ -1198,20 +1163,6 @@ select[multiple].g-input option {
   object-fit: cover;
   border-bottom: 1px solid var(--line);
 }
-.table-card__head:has(.empty-art) {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-8) var(--space-4);
-  text-align: center;
-}
-.empty-art {
-  width: 120px;
-  height: 120px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-}
 
 /* --- Members and moderation --------------------------------------------------- */
 .avatar {
@@ -1278,13 +1229,7 @@ select[multiple].g-input option {
 .member-row .g-btn {
   pointer-events: none;
 }
-.grid-stats > .g-card > span {
-  display: block;
-}
-.stat-text {
-  font-size: 20px;
-  line-height: 32px;
-}
+
 .chip-row {
   display: flex;
   flex-wrap: wrap;
@@ -1312,12 +1257,6 @@ select[multiple].g-input option {
 }
 .mod-action .g-btn {
   align-self: flex-start;
-}
-.lfg-actions {
-  margin-top: var(--space-2);
-}
-.lfg-actions .bench-row {
-  flex: 0 1 auto;
 }
 
 .act-row {
@@ -1374,6 +1313,12 @@ select[multiple].g-input option {
   display: flex;
   gap: var(--space-3);
   align-items: flex-end;
+}
+/* Only what just happened pops in: the message you sent and the reply on its way. The
+   conversation already there shows at once (animating it held it invisible until the
+   page's scripts were ready, about two seconds on a slow phone). */
+.qm-msg--queued,
+.qm-msg:has(> .qm-msg__typing) {
   animation: pop-in 0.25s var(--ease-out) both;
 }
 .qm-msg--me {
@@ -1568,48 +1513,7 @@ select[multiple].g-input option {
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
-/* The draft: what applying does and the button, then everything in depth behind a toggle. */
-.qm-changes {
-  display: grid;
-  gap: 0;
-  padding: 0;
-  overflow: hidden;
-  border-color: color-mix(in srgb, var(--accent-strong) 45%, var(--line));
-  scroll-margin-top: 80px;
-}
-.qm-changes__body {
-  scroll-margin-top: 80px;
-}
-.qm-changes__bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3) var(--space-4);
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-4);
-}
-.qm-changes__what {
-  display: grid;
-  flex: 1 1 320px;
-  gap: var(--space-1);
-  min-width: 0;
-}
-.qm-changes__what p {
-  margin: 0;
-}
-.qm-changes__title {
-  margin: 0;
-  font: 700 17px / 24px var(--font-display);
-}
-.qm-changes__actions {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-}
-.qm-changes__more {
-  border-top: 1px solid var(--line);
-}
-.qm-changes__toggle,
+
 .qm-history__toggle {
   display: flex;
   gap: var(--space-3);
@@ -1619,16 +1523,13 @@ select[multiple].g-input option {
   list-style: none;
   cursor: pointer;
 }
-.qm-changes__toggle:hover,
 .qm-history__toggle:hover {
   background: var(--surface-raised);
 }
-.qm-changes__toggle:focus-visible,
 .qm-history__toggle:focus-visible {
   outline: 2px solid var(--accent-strong);
   outline-offset: -2px;
 }
-.qm-changes__toggle .muted,
 .qm-history__toggle .muted {
   /* Pushes the open/close cue to the right edge. */
   margin-right: auto;
@@ -1636,29 +1537,13 @@ select[multiple].g-input option {
   font-weight: 400;
   font-variant-numeric: tabular-nums;
 }
-.qm-changes__toggle::-webkit-details-marker,
 .qm-history__toggle::-webkit-details-marker {
   display: none;
 }
-.qm-changes__more[open] .panel__cue,
 .qm-history[open] .panel__cue {
   transform: translateY(2px) rotate(-135deg);
 }
-.qm-changes__body {
-  display: grid;
-  border-top: 1px solid var(--line);
-}
-.qm-changes__body .sp {
-  border-width: 0 0 1px;
-  border-radius: 0;
-}
-.qm-changes__rules {
-  max-width: 72ch;
-  margin: 0;
-  padding: var(--space-3) var(--space-4);
-  color: var(--text-muted);
-  font-size: 13px;
-}
+
 .qm-history {
   padding: 0;
 }
@@ -1758,16 +1643,7 @@ select[multiple].g-input option {
   .qm-msg__bubble {
     max-width: 88%;
   }
-  .qm-changes__actions {
-    flex: 1 1 100%;
-    justify-content: flex-end;
-  }
-  .qm-changes__actions form:last-child {
-    flex: 1 1 auto;
-  }
-  .qm-changes__actions form:last-child .g-btn {
-    width: 100%;
-  }
+
   .qm-chat__choices {
     padding-left: 0;
   }
@@ -2482,21 +2358,7 @@ a.server-tile .server-tile__foot {
   background: var(--surface-raised);
   color: var(--text-muted);
 }
-.picker__empty {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: var(--space-6);
-  align-items: center;
-  padding: var(--space-6);
-}
-.picker__empty .empty-art {
-  width: 96px;
-  height: 96px;
-}
-.picker__empty p {
-  margin: var(--space-1) 0 0;
-  color: var(--text-muted);
-}
+
 .picker__foot {
   padding-top: var(--space-6);
   border-top: 1px solid var(--line);
@@ -2522,17 +2384,7 @@ a.server-tile .server-tile__foot {
 }
 
 /* --- Rally: groups and raids, read like the cards players know from Discord ------ */
-.rally-board {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
-  gap: var(--space-6);
-  align-items: start;
-}
-@media (max-width: 1099px) {
-  .rally-board {
-    grid-template-columns: 1fr;
-  }
-}
+
 .lfg {
   display: flex;
   flex-direction: column;
@@ -2775,30 +2627,12 @@ a.server-tile .server-tile__foot {
 .xpbar--go::-moz-progress-bar {
   background: var(--go);
 }
-.board__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-8) var(--space-4);
-  border-top: 1px solid var(--line);
-  color: var(--text-muted);
-  text-align: center;
-}
-.ranks-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr);
-  gap: var(--space-4);
-  align-items: start;
-}
+
 .reward-rows {
   display: grid;
   gap: var(--space-2);
 }
 @media (max-width: 1099px) {
-  .ranks-layout {
-    grid-template-columns: 1fr;
-  }
   .reward-rows {
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   }
@@ -2926,9 +2760,7 @@ a.server-tile .server-tile__foot {
   gap: var(--space-2);
   font-weight: 600;
 }
-.card-pad {
-  padding: var(--space-4);
-}
+
 @media (max-width: 520px) {
   .game-row {
     grid-template-columns: 40px minmax(0, 1fr) auto;
@@ -2972,11 +2804,7 @@ a.server-tile .server-tile__foot {
   grid-template-columns: 30px minmax(0, 1fr) auto;
   padding: 10px var(--space-4);
 }
-.roster-filter {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
+
 .chip[aria-current="true"] {
   border-color: var(--accent-strong);
   background: var(--accent);
@@ -3321,10 +3149,6 @@ form[data-pending] [aria-busy="true"]::after {
 ::view-transition-image-pair(.morph) {
   animation-name: via-blur;
 }
-::view-transition-group(.pip) {
-  animation-duration: 0.34s;
-  animation-timing-function: var(--ease-snap);
-}
 
 /* Reduced motion: no travel or sweeps; fades, color and state stay. */
 @media (prefers-reduced-motion: reduce) {
@@ -3360,29 +3184,12 @@ form[data-pending] [aria-busy="true"]::after {
    Security leads with the lockdown (the page's emergency control), then pairs the
    tall anti-raid settings with verification and anti-nuke stacked beside it, so no
    card leaves a void under a short neighbor. Form buttons size to their label. */
-.gate-layout {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-.gate-cols {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-4);
-  align-items: start;
-}
-.gate-stack {
-  gap: var(--space-4);
-}
+
 .gate-lockdown .confirm > form,
 .gate-lockdown form {
   max-width: 560px;
 }
-@media (max-width: 1099px) {
-  .gate-cols {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
+
 .card-col > button.g-btn,
 .card-col > a.g-btn,
 .card-col > .g-btn--primary {
@@ -3822,21 +3629,6 @@ form[data-pending] [aria-busy="true"]::after {
   height: 4px;
 }
 @media (max-width: 720px) {
-  /* Queue filters: one row that scrolls, never two wrapped rows. */
-  nav.queue__views {
-    flex-wrap: nowrap;
-    max-width: 100%;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .queue__view {
-    flex: none;
-  }
-  /* The row fades at its right edge, so it reads as one that scrolls. */
-  nav.queue__views {
-    padding-right: var(--space-6);
-    mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent);
-  }
   /* Page-head actions stack full width, the primary first. */
   .page-head > .row-between {
     display: grid;
@@ -3970,12 +3762,7 @@ form[data-pending] [aria-busy="true"]::after {
   --tone: var(--text);
   font-weight: 700;
 }
-/* Security: settings as one column of panels, like every other page. */
-.gate-settings {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
+
 .g-btn--sm {
   min-height: 30px;
   padding: 4px 10px;
@@ -4530,11 +4317,11 @@ button.list-rows__remove:focus-visible {
   color: var(--text-muted);
   max-width: 60ch;
 }
+/* The plain-words summary: a lightly tinted panel, set apart by its color, not a stripe. */
 .legal__summary {
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--accent-strong);
+  border: 1px solid color-mix(in srgb, var(--accent-strong) 35%, var(--line));
   border-radius: var(--radius-md);
-  background: var(--surface);
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
   padding: var(--space-4) var(--space-6);
 }
 .legal__summary h2 {

@@ -19,6 +19,12 @@ const hyperdriveId = need("HYPERDRIVE_ID", /^[0-9a-f]{32}$/);
 const domain = (process.env.DASHBOARD_DOMAIN ?? "").trim();
 if (domain && !/^[a-z0-9.-]+$/i.test(domain))
   throw new Error(`DASHBOARD_DOMAIN doesn't look right: "${domain}".`);
+// Where the database is, as provider:region ("aws:us-west-2" for a Supabase project in
+// Oregon). Optional: with it, the dashboard runs beside its database, so a page's several
+// queries each cross a few miles instead of a continent. Without it, Smart Placement.
+const placement = (process.env.CF_PLACEMENT_REGION ?? "").trim();
+if (placement && !/^(aws|gcp|azure):[a-z0-9-]+$/.test(placement))
+  throw new Error(`CF_PLACEMENT_REGION doesn't look right: "${placement}" (try aws:us-west-2).`);
 
 /**
  * The dashboard's domain, plus the public site when the dashboard is on a
@@ -56,6 +62,14 @@ fill("apps/web/wrangler.jsonc", [
         [
           '// "routes": [{ "pattern": "dash.example.com", "custom_domain": true }],',
           `"routes": ${JSON.stringify(routesFor(domain))},`,
+        ],
+      ]
+    : []),
+  ...(placement
+    ? [
+        [
+          '"placement": { "mode": "smart" },',
+          `"placement": { "region": ${JSON.stringify(placement)} },`,
         ],
       ]
     : []),

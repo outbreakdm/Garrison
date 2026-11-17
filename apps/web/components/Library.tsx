@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { LinkPending } from "./LinkPending";
 
 /**
  * A saved item on a library page (role menus, messages, stream alerts, ticket panels;
@@ -34,6 +35,7 @@ export function LibraryItem({
     return (
       <Link className="g-card panel item-tile" id={id} href={href}>
         <span className="panel__summary">{summary}</span>
+        <LinkPending />
       </Link>
     );
   }

@@ -144,10 +144,13 @@ export function RowTools({
 /** A #rrggbb field that lets you type freely and only reports whole colors. */
 export function HexInput({
   id,
+  label,
   value,
   onChange,
 }: {
   id: string;
+  /** What the field is called, for screen readers: the swatch beside it has its own name. */
+  label: string;
   value: string;
   onChange: (hex: string) => void;
 }) {
@@ -158,6 +161,7 @@ export function HexInput({
     <input
       className={`g-input mono color-field__hex${valid ? "" : " g-input--invalid"}`}
       id={id}
+      aria-label={label}
       value={draft}
       maxLength={7}
       spellCheck={false}
@@ -256,6 +260,7 @@ export function CardEditor({
               />
               <HexInput
                 id={id("accent")}
+                label="Accent color, as a hex code"
                 value={card.accent ?? STANDARD_ACCENT}
                 onChange={(v) => set({ accent: v === STANDARD_ACCENT ? null : v })}
               />

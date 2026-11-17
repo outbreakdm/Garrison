@@ -1061,13 +1061,15 @@ a.g-btn--primary:hover {
   font-weight: 650;
   font-variant-numeric: tabular-nums;
 }
+/* The figure takes a little of the text color, so it clears 4.5:1 on its own tint in both
+   themes (light green on its pale tint fell just short). */
 .ov-delta--up {
   background: color-mix(in srgb, var(--go) 14%, transparent);
-  color: var(--go);
+  color: color-mix(in srgb, var(--go) 80%, var(--text));
 }
 .ov-delta--down {
   background: color-mix(in srgb, var(--alert) 14%, transparent);
-  color: var(--alert);
+  color: color-mix(in srgb, var(--alert) 80%, var(--text));
 }
 .ov-delta--flat {
   background: var(--surface-raised);
@@ -1135,7 +1137,6 @@ a.g-btn--primary:hover {
   font-size: 13px;
 }
 /* Modules: one row each, a dot that's green when it's on. */
-.ov-modules,
 .ov-cases {
   display: grid;
   margin: calc(-1 * var(--space-1)) calc(-1 * var(--space-4)) calc(-1 * var(--space-4));
@@ -1150,34 +1151,10 @@ a.g-btn--primary:hover {
   padding: 10px var(--space-4);
   font-size: 13.5px;
 }
-.ov-modules > li + li,
 .ov-cases > li + li {
   border-top: 1px solid var(--line);
 }
-.ov-modules__link {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: 9px var(--space-4);
-  color: var(--text);
-  font-size: 13.5px;
-  font-weight: 550;
-  text-decoration: none;
-}
-.ov-modules__link:hover {
-  background: var(--surface-raised);
-}
-.ov-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--line-strong);
-}
-.ov-dot--on {
-  background: var(--go);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--go) 18%, transparent);
-}
+
 .ov-cases__who {
   font-weight: 600;
 }
@@ -1671,6 +1648,13 @@ a.g-btn--primary:hover {
 }
 .autosave[data-live] .autosave__fallback {
   display: none;
+}
+/* With scripts on, the panel saves itself: its fallback Save row never shows, so it can't
+   collapse after load and shift the page under it. */
+@media (scripting: enabled) {
+  .autosave__fallback {
+    display: none;
+  }
 }
 .save-mark {
   display: inline-flex;
@@ -2425,15 +2409,7 @@ a.pro-sheet__go:hover {
   flex: 1 1 auto;
   min-width: 0;
 }
-/* Three numbers in a row (spam count, window, mentions); two and one on a phone. */
-.field-row--3 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-@media (max-width: 520px) {
-  .field-row--3 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
+
 /* A lone short field keeps a short width, not the whole panel. */
 .field-narrow {
   max-width: 220px;
@@ -3038,14 +3014,7 @@ form[data-locked] .seg__opt:has(input:disabled) {
   animation: fade-in 0.18s var(--ease-out);
   color: var(--text-muted);
 }
-.choice__rec-go {
-  color: var(--accent-strong);
-  font-weight: 600;
-  cursor: pointer;
-}
-.choice__rec-go:hover {
-  text-decoration: underline;
-}
+
 /* Which half shows follows the radios, so it changes the moment you pick. */
 .choice:has([data-rec]:checked) .choice__rec-use,
 .choice:not(:has([data-rec]:checked)) .choice__rec-is {
@@ -3868,6 +3837,7 @@ a.item-tile:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-height: 24px;
   color: var(--text-muted);
   font-weight: 600;
   list-style: none;
@@ -4167,10 +4137,88 @@ a.item-tile:focus-visible {
   display: inline-block;
   vertical-align: middle;
 }
+/* A rule's recommendation follows its sentence on the same line, set apart. */
+.rule-line > .rec-value {
+  display: inline-flex;
+  margin-left: 8px;
+  vertical-align: middle;
+}
 .rule-line__num > .g-input {
   width: 76px;
   padding-right: 8px;
   padding-left: 8px;
   line-height: 20px;
   text-align: center;
+}
+
+/* A tile whose editor is on its way: a thin bar runs along its foot, after a beat. */
+a.item-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+/* The face fills the tile, so its hover shade reaches the tile's foot in a taller row. */
+a.item-tile:not([open]) > .panel__summary {
+  flex: 1;
+}
+.link-pending {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  opacity: 0;
+  pointer-events: none;
+}
+.link-pending[data-pending] {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--id, var(--accent)) 40%,
+    var(--id, var(--accent)) 60%,
+    transparent
+  );
+  background-size: 50% 100%;
+  background-repeat: no-repeat;
+  animation:
+    link-pending-in 0.2s var(--ease-out) 0.12s forwards,
+    link-pending-run 1s linear 0.12s infinite;
+}
+@keyframes link-pending-in {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes link-pending-run {
+  from {
+    background-position: -100% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .link-pending[data-pending] {
+    background: var(--id, var(--accent));
+    animation: link-pending-in 0.2s linear 0.12s forwards;
+  }
+}
+
+/* --- Touch targets: every control is at least 24px tall (WCAG 2.5.8), the small text ones
+   too. Links inside sentences and table rows are spaced apart and keep their line height. */
+.rec-value__go,
+.pro-slot__link,
+.appeal-link__open,
+.ov-live--late,
+.tpl-chip,
+.switch,
+.g-card > :is(.card-head, .queue__head):first-child > a:not([class]) {
+  min-height: 24px;
+}
+.rec-value__go,
+.appeal-link__open,
+.tpl-chip {
+  display: inline-flex;
+  align-items: center;
 }
