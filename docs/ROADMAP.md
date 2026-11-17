@@ -1198,3 +1198,10 @@ Decided (2026-11-12, owner):
   220 lines of unused CSS removed.
 - 2026-11-17: The bot's hiscores tests use fake timers: four lookups spaced 1.5 s apart had
   outlasted the 5 s test limit. All 258 bot tests pass.
+- 2026-11-17: Fix: the AI assistant showed "This page couldn't load". The dashboard ran out of
+  database connections (Supavisor session mode allows 15 for garrison_web): while a chat
+  request waited, the page refreshed itself every 1-2 s and each refresh re-prefetched all 20
+  menu pages, every one a full render with its queries. Menu links and library tiles no longer
+  prefetch (a pending bar shows while their page loads). The bot's request loop had also
+  stalled since a pass hung on a database call that never answered (a 16-hour-old bot query
+  was still open); a pass now gets 3 minutes before the next tick starts a fresh one.

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { LinkPending } from "./LinkPending";
 import { NavIcon, type NavIconName } from "./NavIcon";
 
 type NavItem = {
@@ -217,6 +218,10 @@ export function ServerNav({
       key={item.name}
       className={className}
       data-id={item.id}
+      // No prefetching: twenty links each rendering their page in the background, again
+      // after every refresh (the AI assistant refreshes every 2 s while it waits), ran the
+      // database out of connections. The page's loading frame shows the moment one is picked.
+      prefetch={false}
       // The group each item sits under, named beside the page title (app.css).
       data-section={section || undefined}
       href={item.href}
@@ -226,6 +231,7 @@ export function ServerNav({
       <NavIcon name={item.icon} />
       <span className="g-nav__name">{item.name}</span>
       <State state={states[item.path]} changed={changed.has(item.path)} />
+      <LinkPending />
     </Link>
   );
 

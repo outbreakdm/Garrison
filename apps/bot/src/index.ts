@@ -136,6 +136,13 @@ let flushTimer: NodeJS.Timeout | undefined;
 
 /** The longest one sweep step may hold up the others; it keeps running on its own after. */
 const STEP_LIMIT_MS = 45_000;
+/**
+ * The longest one pass over dashboard requests may hold the queue. A pass that hangs (a
+ * database or Discord call that never answers) once held it for good: every later tick saw
+ * it still running and did nothing. Now it's left to finish on its own and the next tick starts
+ * a fresh pass. Claiming marks a request running, so two passes never take the same one.
+ */
+const PASS_LIMIT_MS = 3 * 60_000;
 /** Steps still running from an earlier sweep: not started again until they finish. */
 const inFlight = new Set<string>();
 
@@ -234,9 +241,21 @@ client.once(Events.ClientReady, async (ready) => {
     try {
       do {
         again = false;
-        await processDashboardActions(ctx, ready).catch((error) =>
+        const pass = processDashboardActions(ctx, ready).catch((error) =>
           logger.error("Dashboard actions failed", { error }),
         );
+        let timer: NodeJS.Timeout | undefined;
+        const late = new Promise<"late">((resolve) => {
+          timer = setTimeout(() => resolve("late"), PASS_LIMIT_MS);
+        });
+        const result = await Promise.race([pass.then(() => "done" as const), late]);
+        clearTimeout(timer);
+        if (result === "late") {
+          logger.error("Dashboard requests pass is stuck; the next tick starts a fresh one", {
+            ms: PASS_LIMIT_MS,
+          });
+          break;
+        }
       } while (again);
     } finally {
       running = false;

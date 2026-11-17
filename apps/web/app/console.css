@@ -4151,6 +4151,13 @@ a.item-tile:focus-visible {
   text-align: center;
 }
 
+/* A menu item whose page is on its way (menu links aren't prefetched) carries the same bar. */
+/* biome-ignore lint/style/noDescendingSpecificity: only positions the bar; the earlier, more specific menu rules set neither property */
+.g-nav__item,
+.nav-sheet__item {
+  position: relative;
+  overflow: hidden;
+}
 /* A tile whose editor is on its way: a thin bar runs along its foot, after a beat. */
 a.item-tile {
   position: relative;

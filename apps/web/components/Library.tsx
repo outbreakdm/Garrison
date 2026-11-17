@@ -33,7 +33,9 @@ export function LibraryItem({
   if (editing && editing !== id) return null;
   if (!editing) {
     return (
-      <Link className="g-card panel item-tile" id={id} href={href}>
+      // Not prefetched: each tile's editor is a whole page render. The tile shows a pending
+      // bar while it opens instead.
+      <Link className="g-card panel item-tile" id={id} href={href} prefetch={false}>
         <span className="panel__summary">{summary}</span>
         <LinkPending />
       </Link>
