@@ -7,13 +7,13 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **Follow-ups (2026-11-17), built, not deployed:** Server Stats lists every counter as an
+- **Follow-ups (2026-11-17), deployed** (`eba3caf`, run 44022932381; migration 0072 applied
+  and recorded, 73 rows; bot back at 05:19:44 UTC): Server Stats lists every counter as an
   option to tick; an "@" picker in template boxes (stats names, welcome card, messages, voice
   room names, Rally wording) inserts `{count}`, `{user}` and the rest, and mentions in
   messages; the AI assistant can put categories, a category's channels and roles in a new
-  order and knows Discord's layout and role-hierarchy rules. **Before deploying:** apply
-  migration `0072_qm_orders` in production (one column on `qm_builds`) and record its row.
-  Still to try on a test server: "tidy my server" with the AI assistant, Apply, then Undo.
+  order and knows Discord's layout and role-hierarchy rules. Still to try on a test server:
+  "tidy my server" with the AI assistant, Apply, then Undo.
 - **Community requests (2026-11-17):** all eight are **deployed** (`3f76d1b`, runs 43981846349,
   44015846630 and 44016955567; migrations 0065 to 0071 applied and recorded, 72 rows; 33 slash
   commands registered). Still to check on a test server: the list in `docs/COMMUNITY_REQUESTS.md`
@@ -1106,3 +1106,5 @@ Decided (2026-11-12, owner):
   again against Discord at apply time); Undo restores the old order; removing an item from a
   draft keeps its orders. Its instructions now cover Discord's sidebar order, text above voice,
   the role hierarchy and permission overwrites. Migration 0072 (local only). Not deployed.
+- 2026-11-17: Deployed `eba3caf` (everything, no command changes) with migration 0072, applied
+  and recorded first (73 rows). The new bot started at 05:19:44 UTC and is beating.
