@@ -7,14 +7,10 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **Community requests (2026-11-16):** `docs/COMMUNITY_REQUESTS.md`, built in the owner's
-  order. Server stats, regex moderation, verification questions and the member pages are
-  **deployed** (`7849b5a`, run 43974339633, dashboard and bot; migrations 0065 to 0068 applied
-  and recorded, 69 rows). Threads and forum posts and the invite tracker (with partners) are
-  built, and the Insights share link, not deployed: **apply migrations `0069_invite_labels` and
-  `0070_insights_shares`** first. The economy is built too (`docs/ECONOMY.md`): apply
-  **`0071_economy`** and deploy with **register_commands=true** (six new commands and a new
-  /leaderboard option).
+- **Community requests (2026-11-17):** all eight are **deployed** (`3f76d1b`, runs 43981846349,
+  44015846630 and 44016955567; migrations 0065 to 0071 applied and recorded, 72 rows; 33 slash
+  commands registered). Still to check on a test server: the list in `docs/COMMUNITY_REQUESTS.md`
+  and `docs/ECONOMY.md`.
 - **Member pages (2026-11-16):** first build **deployed** with `7849b5a` (`docs/MEMBER_PAGES.md`).
   Next pieces: Roles, Suggestions, Giveaways.
 - **Latest deploy:** `2e2b93f` (run 43918628506, dashboard only): steps 6 to 8 of redesign v2,
@@ -1086,3 +1082,11 @@ Decided (2026-11-12, owner):
   of roles (timed on Pro, refunded if Discord refuses) and staff-handled items (a card with Done
   and Refund); an Economy page and a member Wallet. Money moves lock the wallet; balances can't
   go below zero; the bot alone moves money. Migration 0071. Not deployed.
+- 2026-11-17: Deployed `eb9c6a1` (everything, commands registered) with migrations 0069 to 0071.
+  **Outage:** the bot stopped sending heartbeats at 23:43 UTC and the new container stalled in its
+  first sweep twice (23:48, 04:17); nothing restarted it because the health check only sees the
+  Discord connection, and the bot started its timers only after the first sweep finished. Fixed in
+  `3f76d1b` (deployed 04:26): every sweep step has a 45-second limit and is logged by name when
+  stuck, the timers start at once, and the heartbeat has its own timer. Back at 04:26:44, first
+  sweep done in 5 seconds. Which step stalled isn't known: the Cloudflare container logs for
+  23:44 to 04:26 would say ("Sweep step is stuck" appears only from 3f76d1b on).
