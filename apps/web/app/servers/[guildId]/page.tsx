@@ -5,7 +5,6 @@ import {
   getBotStatus,
   getHealthSnapshot,
   getInsights,
-  getLatency,
   getOverview,
   listDashboardActions,
   listQmBuilds,
@@ -166,7 +165,6 @@ const ICONS = {
   messages: "M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z",
   active: "M1.5 8h3l2-4.5 3 9 2-4.5h3",
   cases: "M8 1.5 13.5 4v4c0 3-2.4 5.4-5.5 6.5C4.9 13.4 2.5 11 2.5 8V4z",
-  reply: "M9 1.5 3 9h4.5L7 14.5 13 7H8.5z",
 } as const;
 
 function Icon({ d }: { d: string }) {
@@ -198,12 +196,11 @@ export default async function OverviewPage({
   const query = await searchParams;
   const { guild } = await requireGuildAccess(guildId);
   const db = await getDb();
-  const [o, cases, activity, latency, health, [build], actions, ins, counts, mods, names, bot] =
+  const [o, cases, activity, health, [build], actions, ins, counts, mods, names, bot] =
     await Promise.all([
       getOverview(db, guild.id),
       listRecentCases(db, guild.id, 6),
       getActivity(db, guild.id),
-      getLatency(db, guild.id),
       getHealthSnapshot(db, guild.id),
       listQmBuilds(db, guild.id, 1),
       listDashboardActions(db, guild.id, 30),
@@ -409,13 +406,34 @@ export default async function OverviewPage({
         </section>
       )}
 
-      {attention.length ? (
-        <section className="g-card attention" aria-labelledby="attention-title">
-          <div className="attention__head">
-            <h2 className="card-title" id="attention-title">
-              Needs attention <span className="count">{attention.length}</span>
-            </h2>
+      {/* Band 1: what needs you, or one line saying nothing does, and the health check. */}
+      <section
+        className={attention.length ? "g-card attention" : "g-card attention attention--clear"}
+        aria-labelledby="attention-title"
+      >
+        <div className="attention__head">
+          <h2 className="card-title" id="attention-title">
+            {attention.length ? (
+              <>
+                Needs attention <span className="count">{attention.length}</span>
+              </>
+            ) : (
+              "All clear"
+            )}
+          </h2>
+          <div className="attention__check">
+            <span>{health ? `Health check ${ago(health.computedAt)}` : "No health check yet"}</span>
+            <form action={requestAction}>
+              <input type="hidden" name="guildId" value={guild.id} />
+              <input type="hidden" name="page" value="" />
+              <input type="hidden" name="kind" value="run_health" />
+              <button type="submit" className="g-btn g-btn--ghost g-btn--sm">
+                Run a check
+              </button>
+            </form>
           </div>
+        </div>
+        {attention.length ? (
           <ul className="attention__list">
             {attention.map((a, i) => (
               <li key={a.title}>
@@ -437,11 +455,36 @@ export default async function OverviewPage({
               </li>
             ))}
           </ul>
-        </section>
-      ) : null}
+        ) : (
+          <p className="attention__clear">Every module that's on works.</p>
+        )}
+        {health ? (
+          <details className="attention__checks" id="health" open={failing.length > 0}>
+            <summary>
+              Health checks <span className="count">{health.checks.length}</span>
+            </summary>
+            {health.checks.slice(0, 6).map((c) => (
+              <div className="health-row" key={c.text}>
+                <span
+                  className={`g-badge ${c.status === "ok" ? "g-badge--go" : c.status === "fix" ? "g-badge--alert" : "g-badge--caution"}`}
+                >
+                  {c.status === "ok" ? "OK" : c.status === "fix" ? "Fix" : "Check"}
+                </span>
+                <span>{plainMentions(c.text)}</span>
+              </div>
+            ))}
+            {health && health.problems > 0 && fixUrl ? (
+              <a className="g-btn g-btn--primary" href={fixUrl}>
+                Fix permissions
+              </a>
+            ) : null}
+          </details>
+        ) : null}
+      </section>
 
       <RequestsPanel guildId={guild.id} kinds={["run_health"]} query={query} />
 
+      {/* Band 2: the pulse. */}
       <section className="g-card ov-stats" aria-label="This week">
         <div className="ov-stat" data-tint="orchid">
           <span className="ov-stat__label">
@@ -493,31 +536,11 @@ export default async function OverviewPage({
             {o.automatic24h} automatic · {o.modActions24h - o.automatic24h} by staff
           </span>
         </div>
-        <div className="ov-stat" data-tint="steel">
-          <span className="ov-stat__label">
-            <span className="ov-stat__icon">
-              <Icon d={ICONS.reply} />
-            </span>
-            Command reply · p95
-          </span>
-          <span className="ov-stat__value">
-            {latency ? (
-              <>
-                {latency.p95Ms}
-                <span className="unit">ms</span>
-              </>
-            ) : (
-              "—"
-            )}
-          </span>
-          <span className="ov-stat__note">
-            {latency ? `${latency.count} commands in 24 h` : "No commands in 24 h"}
-          </span>
-        </div>
       </section>
 
-      <div className="ov-charts">
-        <section className="g-card card-col" aria-labelledby="ov-messages" data-tint="steel">
+      {/* Band 3: activity. */}
+      <div className="ov-band">
+        <section className="g-card card-col ov-w8" aria-labelledby="ov-messages" data-tint="steel">
           <div className="card-head">
             <h2 className="card-title" id="ov-messages">
               Messages <span className="count">14 days</span>
@@ -544,14 +567,9 @@ export default async function OverviewPage({
               dayName(ins.daily.at(-1)?.day ?? ""),
             ]}
           />
-        </section>
-
-        <section className="g-card card-col" aria-labelledby="ov-channels" data-tint="steel">
-          <div className="card-head">
-            <h2 className="card-title" id="ov-channels">
-              Top channels <span className="count">14 days</span>
-            </h2>
-          </div>
+          <h3 className="ov-sub" id="ov-channels">
+            Top channels
+          </h3>
           {topChannels.length ? (
             <ol className="ov-top">
               {topChannels.map((c) => (
@@ -581,37 +599,8 @@ export default async function OverviewPage({
             </p>
           )}
         </section>
-      </div>
 
-      <div className={worth.length ? "ov-pair" : "ov-pair ov-pair--one"}>
-        {worth.length ? (
-          <section className="g-card card-col" aria-labelledby="ov-worth">
-            <div className="card-head">
-              <h2 className="card-title" id="ov-worth">
-                Worth turning on <span className="count">{worth.length}</span>
-              </h2>
-            </div>
-            <ul className="ov-worth">
-              {worth.map((w) => (
-                <li key={w.name} data-tint={w.tint}>
-                  <Link
-                    className="ov-worth__link"
-                    href={`${base}${w.href}`}
-                    transitionTypes={["nav"]}
-                  >
-                    <span className="ov-worth__name">
-                      <span className="ov-worth__gem" aria-hidden="true" />
-                      {w.name}
-                    </span>
-                    <span className="ov-worth__why">{w.why}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
-        <section className="g-card card-col" aria-labelledby="cases-title" data-tint="cobalt">
+        <section className="g-card card-col ov-w4" aria-labelledby="cases-title" data-tint="cobalt">
           <div className="card-head">
             <h2 className="card-title" id="cases-title">
               Recent cases <span className="count">{cases.length}</span>
@@ -637,59 +626,40 @@ export default async function OverviewPage({
         </section>
       </div>
 
-      <div className="overview-grid">
-        <section className="g-card card-col" aria-labelledby="next-op" data-tint="volt">
-          <div className="card-head">
-            <h2 className="card-title" id="next-op">
-              Next raid
-            </h2>
-            <Link href={`${base}/rally`} transitionTypes={["nav"]}>
-              Groups and raids
-            </Link>
-          </div>
-          {o.nextOp ? (
-            <>
-              <div>
-                <div className="big">{o.nextOp.title}</div>
-                <div className="mono">{formatTime(o.nextOp.startsAt, o.nextOp.timezone)}</div>
-              </div>
-              {o.nextOp.startsAt.getTime() > Date.now() ? (
-                <DurationBar
-                  value={WEEK_MS - (o.nextOp.startsAt.getTime() - Date.now())}
-                  max={WEEK_MS}
-                  label="Time until the raid starts, out of a week"
-                  text={`Starts ${untilText(o.nextOp.startsAt.getTime() - Date.now())}`}
-                />
-              ) : null}
-              {o.nextOp.slots.map((s) => {
-                const n = seated.filter((x) => x.role === s.name).length;
-                return (
-                  <div className="op-bar" key={s.name}>
-                    <span>{s.name}</span>
-                    <progress
-                      className={`xpbar ${n >= s.count ? "xpbar--go" : ""}`}
-                      value={Math.min(n, s.count)}
-                      max={s.count}
-                      aria-label={`${s.name}: ${n} of ${s.count}`}
-                    />
-                    <span className="mono">
-                      {n}/{s.count}
-                    </span>
-                  </div>
-                );
-              })}
-              <div className="mono">
-                {seated.length} / {capacity(o.nextOp.slots)} signed up
-              </div>
-            </>
-          ) : (
-            <div className="muted">
-              No raids scheduled. <a href={`${base}/rally?create=1#create-raid`}>Create one</a>
+      {/* Band 4: modules, safety first. */}
+      <div className="ov-band ov-band--tiles">
+        {worth.length ? (
+          <section className="g-card card-col ov-w3" aria-labelledby="ov-worth">
+            <div className="card-head">
+              <h2 className="card-title" id="ov-worth">
+                Worth turning on <span className="count">{worth.length}</span>
+              </h2>
             </div>
-          )}
-        </section>
+            <ul className="ov-worth">
+              {worth.map((w) => (
+                <li key={w.name} data-tint={w.tint}>
+                  <Link
+                    className="ov-worth__link"
+                    href={`${base}${w.href}`}
+                    transitionTypes={["nav"]}
+                  >
+                    <span className="ov-worth__name">
+                      <span className="ov-worth__gem" aria-hidden="true" />
+                      {w.name}
+                    </span>
+                    <span className="ov-worth__why">{w.why}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
-        <section className="g-card card-col" aria-labelledby="gatehouse-title" data-tint="cobalt">
+        <section
+          className={`g-card card-col ${worth.length ? "ov-w3" : "ov-w4"}`}
+          aria-labelledby="gatehouse-title"
+          data-tint="cobalt"
+        >
           <div className="card-head">
             <h2 className="card-title" id="gatehouse-title">
               Security
@@ -739,63 +709,77 @@ export default async function OverviewPage({
           </Link>
         </section>
 
-        <section className="g-card card-col" aria-labelledby="groups-title" data-tint="volt">
+        <section
+          className={`g-card card-col ${worth.length ? "ov-w3" : "ov-w4"}`}
+          aria-labelledby="next-op"
+          data-tint="volt"
+        >
+          <div className="card-head">
+            <h2 className="card-title" id="next-op">
+              Next raid
+            </h2>
+            <Link href={`${base}/rally`} transitionTypes={["nav"]}>
+              All raids
+            </Link>
+          </div>
+          {o.nextOp ? (
+            <>
+              <div>
+                <div className="big">{o.nextOp.title}</div>
+                <div className="mono">{formatTime(o.nextOp.startsAt, o.nextOp.timezone)}</div>
+              </div>
+              {o.nextOp.startsAt.getTime() > Date.now() ? (
+                <DurationBar
+                  value={WEEK_MS - (o.nextOp.startsAt.getTime() - Date.now())}
+                  max={WEEK_MS}
+                  label="Time until the raid starts, out of a week"
+                  text={`Starts ${untilText(o.nextOp.startsAt.getTime() - Date.now())}`}
+                />
+              ) : null}
+              {o.nextOp.slots.map((s) => {
+                const n = seated.filter((x) => x.role === s.name).length;
+                return (
+                  <div className="op-bar" key={s.name}>
+                    <span>{s.name}</span>
+                    <progress
+                      className={`xpbar ${n >= s.count ? "xpbar--go" : ""}`}
+                      value={Math.min(n, s.count)}
+                      max={s.count}
+                      aria-label={`${s.name}: ${n} of ${s.count}`}
+                    />
+                    <span className="mono">
+                      {n}/{s.count}
+                    </span>
+                  </div>
+                );
+              })}
+              <div className="mono">
+                {seated.length} / {capacity(o.nextOp.slots)} signed up
+              </div>
+            </>
+          ) : (
+            <div className="muted">
+              No raids scheduled. <a href={`${base}/rally?create=1#create-raid`}>Create one</a>
+            </div>
+          )}
+        </section>
+
+        <section
+          className={`g-card card-col ${worth.length ? "ov-w3" : "ov-w4"}`}
+          aria-labelledby="groups-title"
+          data-tint="volt"
+        >
           <div className="card-head">
             <h2 className="card-title" id="groups-title">
               Open groups
             </h2>
             <Link href={`${base}/rally`} transitionTypes={["nav"]}>
-              Groups and raids
+              All groups
             </Link>
           </div>
           <div className="readout__value">{o.openGroups}</div>
           <div className="g-help">
             LFG posts players can join right now, from Discord or from the Groups and raids page.
-          </div>
-        </section>
-
-        <section
-          className="g-card card-col span-3"
-          id="health"
-          aria-labelledby="health-title"
-          data-tint="steel"
-        >
-          <div className="card-head">
-            <h2 className="card-title" id="health-title">
-              Health checks
-            </h2>
-            {health ? <span className="mono">{ago(health.computedAt)}</span> : null}
-          </div>
-          {health ? (
-            health.checks.slice(0, 6).map((c) => (
-              <div className="health-row" key={c.text}>
-                <span
-                  className={`g-badge ${c.status === "ok" ? "g-badge--go" : c.status === "fix" ? "g-badge--alert" : "g-badge--caution"}`}
-                >
-                  {c.status === "ok" ? "OK" : c.status === "fix" ? "Fix" : "Check"}
-                </span>
-                <span>{plainMentions(c.text)}</span>
-              </div>
-            ))
-          ) : (
-            <span className="muted">
-              Garrison checks this server every 30 minutes. Run a check now to see it straight away.
-            </span>
-          )}
-          <div className="g-row">
-            {health && health.problems > 0 && fixUrl ? (
-              <a className="g-btn g-btn--primary" href={fixUrl}>
-                Fix permissions
-              </a>
-            ) : null}
-            <form action={requestAction}>
-              <input type="hidden" name="guildId" value={guild.id} />
-              <input type="hidden" name="page" value="" />
-              <input type="hidden" name="kind" value="run_health" />
-              <button type="submit" className="g-btn g-btn--secondary">
-                Run health check
-              </button>
-            </form>
           </div>
         </section>
       </div>

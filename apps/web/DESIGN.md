@@ -162,12 +162,22 @@ The current page's color reaches its icon tiles, gems, the server card's initial
 
 ## Layout
 
-- **Shell:** a 256px rail beside the page from 721px up; the rail is sticky, full height and scrolls on its own. The top bar (60px) holds search, theme and account. The page is centered at up to 1280px with 24px top and 32px side padding.
-- **Phones (720px and under):** no rail. The top bar keeps the logo and server switcher; the page menu is a pinned bar that opens a scrollable sheet of sections, two pages a row.
-- **Page shape (redesign v2):** settings pages split into a wide main column of open panels and a side column (300 to 360px, from 1100px up) for tools and live lists: Moderate a member and what automod caught, the lockdown, quarantine and backups, top inviters and downloads. Below 1100px the side column follows the main one. Wide tables (cases, events) run full width under the split.
-- **Panels stack with 16 to 24px gaps.** Saved items (role menus, messages) sit in a grid of tiles, minimum 260px wide, with a dashed "new" tile last; an opened tile spans the row.
-- **Editors:** fields and a 320 to 460px preview side by side above 1100px; below that the preview comes first.
-- **AI assistant:** chat beside a 340 to 400px plan panel above 1100px; the chat fills the screen height and scrolls inside.
+The rules from docs/LAYOUT_PROPOSAL.md, as built. One meaning per column, one template per view.
+
+- **Four widths, nothing else:** 520 (small phones), 720 (the rail becomes the phone sheet), 1100 (side columns, previews and the 12-column Overview come in; rules below it use 1099) and 1280 ("On this page" beside Setup). Height queries and hover or motion queries are separate.
+- **Shell:** a 256px rail beside the page from 721px up. The logo, server card and plan card stay put; only the menu list between them scrolls, with Settings pinned at its foot. The top bar holds search, theme and account. The page is centered at up to 1280px.
+- **Phones (720px and under):** one bar row (server switcher, a search icon that opens the field across the top, theme, account), then the pinned page bar, which names the page and opens every page as a sheet. The page's own title is kept for screen readers only, so the head starts with its state, then its tabs. The first panel sits about 180px down.
+- **The head:** title, section tag and state on one line; the intro is one sentence of about 90 characters at most, with anything more under "How this works". A problem is said once, as the Needs-you strip across the foot of the head.
+- **Page tabs** split a module with several jobs (Moderation: Cases, Automod, Escalation and appeals). Each tab is its own address (`?tab=`), switches in place, and a `#section` link opens the tab it's on. Every tab stays on the page, hidden, so the head switch and the settings form always work.
+- **Templates.** Each tab or small page uses one:
+  - *Activity* (cases, the queue, the board, events): the live list in the wide column, quick tools and small facts in a 300 to 360px side column from 1100px; below that the list comes first.
+  - *Setup* (configuration): one column of panels; from 1280px an "On this page" index beside it jumps to each panel and shows its save state.
+  - *Library* (role menus, messages, stream alerts, ticket panels): a grid of tiles, at least 260px wide, with a dashed "new" tile last. A tile opens its editor on a page of its own (`?edit=<id>`), full width with its preview and a link back to the tile.
+  - *Compact* (Starboard, Suggestions, Voice rooms, Invites): settings at 60% beside the live list at 40% from 1100px; on phones the list comes first when it has items.
+- **The Overview** is four bands on 12 columns: attention (or "All clear", with the health check), the pulse (four numbers), activity (the messages chart with top channels, 8, beside recent cases, 4), modules (tiles of 3 or 4). A band's tiles share one height.
+- **Fields have a width for what they hold:** numbers up to 160px, pickers up to 360px, text up to 640px. Repeating rows show what's set plus one spare, with an Add button for the next.
+- **Panels stack with 16 to 24px gaps.** Editors put fields and a 320 to 460px preview side by side from 1100px; below that the preview comes first.
+- **AI assistant:** chat beside a 340 to 400px plan panel from 1100px; the chat fills the screen height and scrolls inside.
 
 ## Elevation & Depth
 
@@ -204,7 +214,7 @@ Where a setting is a pair of numbers (spam, what counts as a raid, when anti-nuk
 A label in muted 13px, the number at 26px semibold in tabular figures, then a line: the change against the range's first half (▲ in go, ▼ in caution, as a whole percent) and a sentence of context. Where the range has a series, a 12-point sparkline under it: a 2px muted line, the latest point in the page's section color. The tile's words carry the meaning; the sparkline is only the shape.
 
 ### Page tabs
-For a page with views of one subject (Insights): text tabs on a hairline, the current one underlined in the section color, with the range as pills at the right of the same row. Each tab and range is a link, so a view has its own address.
+For a page with several jobs (Moderation, Security, Settings, Welcome, Leveling, Tickets, Groups and raids, Economy, Logs, Game accounts) or views of one subject (Insights): text tabs on the head's bottom hairline, the current one underlined in the section color. A tab can carry a count ("Queue 1") or a caution mark when something on it needs you. Each tab is a link with its own address; switching keeps the page and its forms in place.
 
 ### Shared access
 Someone a manager gave access sees one line above the page: a Viewer or Editor badge and what they can do. What they can't do stays on the page, disabled and dimmed, with the reason on hover; searches and filters keep working. On Settings, Dashboard access lists each person or role with a Viewer / Editor switch and Remove, then adding a role or finding a person. The server list has "Shared with you", each tile saying what you can do there.
@@ -237,7 +247,7 @@ Every list page opens with it: filter pills in a track (each with its count, the
 Panel Raised, hairline edge (strong on hover), 8px corners, 38px tall; focus ring 2px in the section color.
 
 ### Navigation (rail)
-Groups follow what an owner sets out to do: Overview, AI assistant, Insights and Settings first, then Safety, Onboarding, Engagement, Community and Gaming. Group names at 11.5px led by their gem; items 34px with Garrison's own 16px line icon, muted, raised on hover, and the module's state at the end. The current page is the white pill, on the phone menu too. The server card on top shows the server's initial in a tinted tile, its name and "Switch server". The plan card at the foot names the plan with one line and a grey button (the rail keeps one white thing), and marks itself on the Plan page.
+Groups follow what an owner sets out to do: Overview, AI assistant and Insights first, then Safety, Members, Engagement, Posts, Support and Gaming, with Settings pinned at the foot (Plan is the plan card below it, and in the phone sheet). A group folds behind its name, remembered per browser; a folded group still shows a Needs-you mark, and arriving on a page opens its group. Group names at 11.5px led by their gem; items 32px with Garrison's own 16px line icon, muted, raised on hover, and the module's state at the end. The group name is also the tag beside each page's title. The current page is the white pill, on the phone menu too. The server card on top shows the server's initial in a tinted tile, its name and "Switch server". The plan card at the foot names the plan with one line and a grey button (the rail keeps one white thing), and marks itself on the Plan page.
 
 ### Color as place
 The four section colors say where something lives. The menu's icons carry their section's tint (Safety reads blue before you read a word); a panel or tile that belongs to another part of the server than the page it's on takes that part's color on its tile, gem and icon through `data-tint` (the Overview's Security panel and moderation stat in cobalt, raids in volt, charts in steel). Links, focus and selection keep the page's color. Charts and meters draw at a tint (about 40 to 55% of the section color over the panel), never a full fill. The landing's product shots wear the color of the page they show.

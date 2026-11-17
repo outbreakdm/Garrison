@@ -5,45 +5,90 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { NavIcon, type NavIconName } from "./NavIcon";
 
-/**
- * Plain names first: the address keeps each module's original path. The groups follow what
- * an owner sets out to do (keep it safe, greet people, keep them talking, run the community,
- * play); each page keeps its color identity (Safety cobalt, people pages orchid, Gaming volt,
- * the server's own pages steel), which colors the whole page (app.css).
- */
-const ITEMS: {
-  group: string | null;
+type NavItem = {
   id: "volt" | "cobalt" | "orchid" | "steel";
   href: string;
   name: string;
   icon: NavIconName;
   /** Only in the phone menu: the rail has the plan card at its foot. */
   sheetOnly?: boolean;
-}[] = [
-  { group: "", id: "volt", href: "", name: "Overview", icon: "overview" },
-  { group: null, id: "steel", href: "/quartermaster", name: "AI assistant", icon: "ai" },
-  { group: null, id: "steel", href: "/insights", name: "Insights", icon: "insights" },
-  { group: null, id: "steel", href: "/settings", name: "Settings", icon: "settings" },
-  { group: "Safety", id: "cobalt", href: "/watch", name: "Moderation", icon: "moderation" },
-  { group: null, id: "cobalt", href: "/gatehouse", name: "Security", icon: "security" },
-  { group: null, id: "cobalt", href: "/ledger", name: "Logs", icon: "logs" },
-  { group: "Onboarding", id: "orchid", href: "/herald", name: "Welcome", icon: "welcome" },
-  { group: null, id: "orchid", href: "/insignia", name: "Role menus", icon: "roles" },
-  { group: "Engagement", id: "orchid", href: "/ranks", name: "Leveling", icon: "leveling" },
-  { group: null, id: "orchid", href: "/spoils", name: "Giveaways", icon: "giveaways" },
-  { group: null, id: "orchid", href: "/honors", name: "Starboard", icon: "starboard" },
-  { group: null, id: "orchid", href: "/suggestions", name: "Suggestions", icon: "suggestions" },
-  { group: null, id: "orchid", href: "/economy", name: "Economy", icon: "economy" },
-  { group: "Community", id: "orchid", href: "/parley", name: "Tickets", icon: "tickets" },
-  { group: null, id: "orchid", href: "/dispatch", name: "Messages", icon: "messages" },
-  { group: null, id: "orchid", href: "/beacon", name: "Stream alerts", icon: "alerts" },
-  { group: null, id: "orchid", href: "/invites", name: "Invites", icon: "invites" },
-  { group: null, id: "orchid", href: "/stats", name: "Server stats", icon: "stats" },
-  { group: "Gaming", id: "volt", href: "/rally", name: "Groups and raids", icon: "groups" },
-  { group: null, id: "volt", href: "/voice", name: "Voice rooms", icon: "voice" },
-  { group: null, id: "volt", href: "/barracks", name: "Game accounts", icon: "accounts" },
-  { group: null, id: "steel", href: "/plan", name: "Plan", icon: "plan", sheetOnly: true },
+};
+
+/**
+ * Plain names first: the address keeps each module's original path. The groups follow what
+ * an owner sets out to do (docs/LAYOUT_PROPOSAL.md §6): keep it safe, look after members, keep
+ * them talking, post things, help people, play. Settings and Plan sit at the foot, where
+ * people look for them. Each page keeps its color identity (Safety cobalt, people pages
+ * orchid, Gaming volt, the server's own pages steel), which colors the whole page (app.css);
+ * the group name is the tag beside each page's title (app.css, "data-section").
+ */
+const GROUPS: { name: string; foot?: boolean; items: NavItem[] }[] = [
+  {
+    name: "",
+    items: [
+      { id: "volt", href: "", name: "Overview", icon: "overview" },
+      { id: "steel", href: "/quartermaster", name: "AI assistant", icon: "ai" },
+      { id: "steel", href: "/insights", name: "Insights", icon: "insights" },
+    ],
+  },
+  {
+    name: "Safety",
+    items: [
+      { id: "cobalt", href: "/watch", name: "Moderation", icon: "moderation" },
+      { id: "cobalt", href: "/gatehouse", name: "Security", icon: "security" },
+      { id: "cobalt", href: "/ledger", name: "Logs", icon: "logs" },
+    ],
+  },
+  {
+    name: "Members",
+    items: [
+      { id: "orchid", href: "/herald", name: "Welcome", icon: "welcome" },
+      { id: "orchid", href: "/insignia", name: "Role menus", icon: "roles" },
+      { id: "orchid", href: "/invites", name: "Invites", icon: "invites" },
+      { id: "orchid", href: "/barracks", name: "Game accounts", icon: "accounts" },
+    ],
+  },
+  {
+    name: "Engagement",
+    items: [
+      { id: "orchid", href: "/ranks", name: "Leveling", icon: "leveling" },
+      { id: "orchid", href: "/economy", name: "Economy", icon: "economy" },
+      { id: "orchid", href: "/spoils", name: "Giveaways", icon: "giveaways" },
+      { id: "orchid", href: "/honors", name: "Starboard", icon: "starboard" },
+      { id: "orchid", href: "/suggestions", name: "Suggestions", icon: "suggestions" },
+    ],
+  },
+  {
+    name: "Posts",
+    items: [
+      { id: "orchid", href: "/dispatch", name: "Messages", icon: "messages" },
+      { id: "orchid", href: "/beacon", name: "Stream alerts", icon: "alerts" },
+      { id: "orchid", href: "/stats", name: "Server stats", icon: "stats" },
+    ],
+  },
+  {
+    name: "Support",
+    items: [{ id: "orchid", href: "/parley", name: "Tickets", icon: "tickets" }],
+  },
+  {
+    name: "Gaming",
+    items: [
+      { id: "volt", href: "/rally", name: "Groups and raids", icon: "groups" },
+      { id: "volt", href: "/voice", name: "Voice rooms", icon: "voice" },
+    ],
+  },
+  {
+    name: "",
+    foot: true,
+    items: [
+      { id: "steel", href: "/settings", name: "Settings", icon: "settings" },
+      { id: "steel", href: "/plan", name: "Plan", icon: "plan", sheetOnly: true },
+    ],
+  },
 ];
+
+/** Folded groups live in a cookie, so the rail is drawn folded on the server: no flash. */
+const FOLD_COOKIE = "nav_folded";
 
 /** Whether each module works, by its path ("/ranks"): on, blocked (on but can't work), off. */
 export type ModuleStates = Record<string, "on" | "blocked" | "off">;
@@ -78,12 +123,21 @@ export function ServerNav({
   guildId,
   variant,
   states = {},
+  folded: foldedAtLoad = [],
 }: {
   guildId: string;
   variant: "rail" | "sheet";
   states?: ModuleStates;
+  /** Rail groups folded last time (from the cookie). */
+  folded?: string[];
 }) {
   const pathname = usePathname();
+  const [folded, setFolded] = useState<ReadonlySet<string>>(() => new Set(foldedAtLoad));
+  const keepFolded = (next: ReadonlySet<string>) => {
+    setFolded(next);
+    // biome-ignore lint/suspicious/noDocumentCookie: a preference the server reads to draw the rail
+    document.cookie = `${FOLD_COOKIE}=${encodeURIComponent([...next].join("|"))}; path=/; max-age=31536000; samesite=lax`;
+  };
   // What changed since the last render (a save refreshes the layout): those lights flare.
   const seen = useRef<ModuleStates | null>(null);
   const [changed, setChanged] = useState<ReadonlySet<string>>(new Set());
@@ -133,49 +187,89 @@ export function ServerNav({
   // Sub-pages (LFG templates, a ticket) keep their module lit.
   const isCurrent = (href: string, own: string) =>
     pathname === href || Boolean(own && pathname.startsWith(`${href}/`));
-  let section = "";
-  const items = ITEMS.map((item) => {
-    if (item.group !== null) section = item.group;
-    const href = `${base}${item.href}`;
-    return { ...item, href, path: item.href, section, current: isCurrent(href, item.href) };
-  });
-  const here = items.find((i) => i.current) ?? (items[0] as (typeof items)[number]);
-  const groups = [...new Set(items.map((i) => i.section))].map((name) => ({
-    name,
-    items: items.filter((i) => i.section === name),
+  const groups = GROUPS.map((g) => ({
+    ...g,
+    items: g.items.map((item) => {
+      const href = `${base}${item.href}`;
+      return { ...item, href, path: item.href, current: isCurrent(href, item.href) };
+    }),
   }));
+  const all = groups.flatMap((g) => g.items);
+  // Search isn't in the menu; on phones this bar is the page's visible title, so it says so.
+  const here =
+    all.find((i) => i.current) ??
+    (pathname.endsWith("/search")
+      ? { ...(all[0] as (typeof all)[number]), id: "steel" as const, name: "Search" }
+      : (all[0] as (typeof all)[number]));
+  const hereGroup = groups.find((g) => g.items.some((i) => i.current))?.name ?? "";
+  // Arriving on a page opens its group, even one folded before.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-run when the page changes
+  useEffect(() => {
+    if (variant === "rail" && hereGroup && folded.has(hereGroup)) {
+      const next = new Set(folded);
+      next.delete(hereGroup);
+      keepFolded(next);
+    }
+  }, [hereGroup]);
+
+  const link = (item: (typeof all)[number], section: string, className: string) => (
+    <Link
+      key={item.name}
+      className={className}
+      data-id={item.id}
+      // The group each item sits under, named beside the page title (app.css).
+      data-section={section || undefined}
+      href={item.href}
+      transitionTypes={["nav"]}
+      aria-current={item.current ? "page" : undefined}
+    >
+      <NavIcon name={item.icon} />
+      <span className="g-nav__name">{item.name}</span>
+      <State state={states[item.path]} changed={changed.has(item.path)} />
+    </Link>
+  );
 
   if (variant === "rail")
     return (
       // Desktop and tablet: the rail, grouped, each page with its icon and whether it's on.
+      // A group folds behind its name; Settings stays at the foot as the list scrolls.
       <nav className="g-nav" aria-label="Server pages" ref={rail}>
-        {groups.map((g) => (
-          <div className="g-nav__section" key={g.name || "main"}>
-            {g.name ? (
-              <div className="g-nav__group g-label" data-id={g.items[0]?.id}>
-                {g.name}
-              </div>
-            ) : null}
-            {g.items
-              .filter((item) => !item.sheetOnly)
-              .map((item) => (
-                <Link
-                  key={item.name}
-                  className="g-nav__item"
-                  data-id={item.id}
-                  // The section each item sits under, named beside the page title (app.css).
-                  data-section={item.section || undefined}
-                  href={item.href}
-                  transitionTypes={["nav"]}
-                  aria-current={item.current ? "page" : undefined}
+        {groups.map((g) => {
+          const items = g.items.filter((item) => !item.sheetOnly);
+          const shut = Boolean(g.name) && folded.has(g.name) && g.name !== hereGroup;
+          // A folded group still says when one of its pages needs you.
+          const needs = shut && items.some((i) => states[i.path] === "blocked");
+          const list = `nav-${g.name.toLowerCase() || (g.foot ? "foot" : "main")}`;
+          return (
+            <div
+              className={g.foot ? "g-nav__section g-nav__section--foot" : "g-nav__section"}
+              key={list}
+            >
+              {g.name ? (
+                <button
+                  type="button"
+                  className="g-nav__group g-label"
+                  data-id={items[0]?.id}
+                  aria-expanded={!shut}
+                  aria-controls={list}
+                  onClick={() => {
+                    const next = new Set(folded);
+                    if (shut || folded.has(g.name)) next.delete(g.name);
+                    else next.add(g.name);
+                    keepFolded(next);
+                  }}
                 >
-                  <NavIcon name={item.icon} />
-                  <span className="g-nav__name">{item.name}</span>
-                  <State state={states[item.path]} changed={changed.has(item.path)} />
-                </Link>
-              ))}
-          </div>
-        ))}
+                  <span className="g-nav__group-name">{g.name}</span>
+                  {needs ? <State state="blocked" /> : null}
+                  <span className="g-nav__fold" aria-hidden="true" />
+                </button>
+              ) : null}
+              <div className="g-nav__items" id={list} hidden={shut}>
+                {items.map((item) => link(item, g.name, "g-nav__item"))}
+              </div>
+            </div>
+          );
+        })}
       </nav>
     );
   return (
@@ -188,26 +282,13 @@ export function ServerNav({
       </summary>
       <nav className="nav-sheet__body" aria-label="Server pages">
         {groups.map((g) => (
-          <div className="nav-sheet__group" key={g.name || "main"}>
+          <div className="nav-sheet__group" key={g.name || (g.foot ? "foot" : "main")}>
             {g.name ? (
               <div className="g-nav__group g-label" data-id={g.items[0]?.id}>
                 {g.name}
               </div>
             ) : null}
-            {g.items.map((item) => (
-              <Link
-                key={item.name}
-                className="nav-sheet__item"
-                data-id={item.id}
-                href={item.href}
-                transitionTypes={["nav"]}
-                aria-current={item.current ? "page" : undefined}
-              >
-                <NavIcon name={item.icon} />
-                <span className="g-nav__name">{item.name}</span>
-                <State state={states[item.path]} changed={changed.has(item.path)} />
-              </Link>
-            ))}
+            {g.items.map((item) => link(item, g.name, "nav-sheet__item"))}
           </div>
         ))}
       </nav>

@@ -7,8 +7,9 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **Layout (2026-11-17), being built, not deployed:** `docs/LAYOUT_PROPOSAL.md`, every
-  recommendation accepted. Phases A (`b5a5996`), B (`356e9cc`) and C are committed; D is next.
+- **Layout (2026-11-17), built, not deployed:** `docs/LAYOUT_PROPOSAL.md`, every
+  recommendation accepted. All four phases are committed: A (`b5a5996`), B (`356e9cc`),
+  C (`0a4fe77`) and D. Deploy the dashboard when the owner asks; no migration.
   - A: the menu scrolls on its own (server card and plan card stay put), Needs you is one strip
     under the page head, fields sized to what they hold, repeating rows show one spare with Add.
   - B: page tabs (`components/PageTabs.tsx`) on Moderation, Security, Settings, Welcome,
@@ -26,8 +27,14 @@ then updates **Status** and the **Log** before stopping.
     the rest under "How this works" (`components/HowItWorks.tsx`, hidden on phones with the
     intro). The page head is one rule (three layers merged, computed styles unchanged on 8 pages
     in both themes); the setup and tools-first split variants are gone.
-  - D: the Overview's four bands, the phone head, the regrouped menu with Settings and Plan at
-    its foot, four breakpoints, DESIGN.md's Layout section.
+  - D: the menu regrouped (Safety, Members, Engagement, Posts, Support, Gaming; Settings
+    pinned at the foot) with groups that fold, kept in a cookie so the rail is drawn folded,
+    a folded group still flagging Needs you, and arriving on a page opening its group. The
+    Overview in four bands on 12 columns (attention or "All clear" with the health check,
+    four numbers, the messages chart with top channels beside recent cases, module tiles);
+    command reply time is on Status only. The phone head: one bar row with search behind an
+    icon, the page bar as the visible title. Four breakpoints (520, 720, 1100, 1280); plans in
+    the same order on phones. DESIGN.md's Layout, Page tabs and Navigation rewritten.
 - **Landing clips (2026-11-17), deployed** (`174c9f3`, run 44096284680, dashboard): "Watch it work" shows three 1080p60
   clips (about 2.8 MB each) made in HyperFrames: the dashboard rebuilt with its real labels on a
   lime-lit stage, a 3D settle, a turning rim light and sheen, a drawn pointer, and steps a screen
@@ -1161,3 +1168,8 @@ Decided (2026-11-12, owner):
   intros with "How this works", the page-head layers merged. Checked at 1440 and 390, and in
   Chrome: tile, editor, back to the tile on all four library pages. 101 web tests pass; lint at
   36 warnings (37 before).
+- 2026-11-17: Layout phase D: the regrouped, folding menu; the Overview in four bands (1,476px
+  at 1440, 1,759 before); the phone head (first panel about 180px down); four breakpoints;
+  DESIGN.md updated. Checked every page at 1440 and 390 (no sideways scroll), key pages at
+  1000 and 600, and in Chrome: folding kept across a reload, the search icon, the section tag
+  on each page. 101 web tests pass; lint at 36 warnings.

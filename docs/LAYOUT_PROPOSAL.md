@@ -396,6 +396,8 @@ heights and positions above as the before numbers.
 
 ## Decisions for the owner
 
+**Built 2026-11-17** in four commits (phases A to D); not deployed yet. See docs/ROADMAP.md.
+
 **Decided 2026-11-17:** all five as recommended: page tabs; the menu groups as proposed, with
 Settings and Plan at the foot; "Your account" moves to the account menu; LFG templates becomes a
 tab of Groups and raids; Library editors open full page.

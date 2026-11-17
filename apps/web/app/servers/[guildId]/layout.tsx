@@ -1,4 +1,5 @@
 import { aiTier, formatPrice, listActiveGuilds, PRICING } from "@garrison/db";
+import { cookies } from "next/headers";
 import type { ReactNode } from "react";
 import { AccessGuard } from "@/components/AccessGuard";
 import { Logo } from "@/components/Logo";
@@ -50,6 +51,8 @@ export default async function ServerLayout({
   // Blocked if anything on a page can't work, else on if anything is (Moderation: automod
   // or its log channel), else off.
   const states = pageStates(mods);
+  // Menu groups folded last time (a name that isn't a group matches nothing).
+  const folded = readFolded((await cookies()).get("nav_folded")?.value);
   return (
     <div className="shell console">
       <aside className="console__side" aria-label="Server">
@@ -57,7 +60,7 @@ export default async function ServerLayout({
           <Logo />
         </a>
         <ServerSwitcher guild={guild} guilds={guilds} variant="card" />
-        <ServerNav guildId={guild.id} variant="rail" states={states} />
+        <ServerNav guildId={guild.id} variant="rail" states={states} folded={folded} />
         <PlanFoot guildId={guild.id} tier={tier} />
       </aside>
       <div className="console__body">
@@ -88,6 +91,16 @@ export default async function ServerLayout({
       ) : null}
     </div>
   );
+}
+
+/** The rail's folded groups from their cookie; a malformed one folds nothing. */
+function readFolded(raw: string | undefined): string[] {
+  if (!raw) return [];
+  try {
+    return decodeURIComponent(raw).split("|").filter(Boolean).slice(0, 12);
+  } catch {
+    return [];
+  }
 }
 
 /** For someone with shared access: what they can do here, in a line. */
