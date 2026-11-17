@@ -7,7 +7,7 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **Landing clips (2026-11-17), built, not deployed:** "Watch it work" shows three 1080p60
+- **Landing clips (2026-11-17), deployed** (`174c9f3`, run 44096284680, dashboard): "Watch it work" shows three 1080p60
   clips (about 2.8 MB each) made in HyperFrames: the dashboard rebuilt with its real labels on a
   lime-lit stage, a 3D settle, a turning rim light and sheen, a drawn pointer, and steps a screen
   recording can't show (the channel list open). Rows beside their text, loading near the screen
@@ -1124,3 +1124,5 @@ Decided (2026-11-12, owner):
 - 2026-11-17: Landing clips remade in HyperFrames in the style of the promo ads (PeakBot-like
   glow, sheen and camera, Garrison's colours). Same file names, posters from each end state;
   the frame lost its fake browser bar. Not deployed.
+- 2026-11-17: Deployed `174c9f3` (dashboard): the new landing clips are live on garrisonbot.com
+  (served files match the build byte for byte).
