@@ -7,6 +7,11 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
+- **Layout proposal (2026-11-17), waiting on the owner:** `docs/LAYOUT_PROPOSAL.md`, from an
+  `/impeccable layout` pass over all 30 pages at 1440 and 390 px. One meaning per column, page tabs
+  for pages with several jobs, three page templates plus Compact, a menu that fits the screen, a
+  shorter phone head, fields sized to content, an Overview grid; four phases. Five decisions at the
+  end of the doc.
 - **Landing clips (2026-11-17), deployed** (`174c9f3`, run 44096284680, dashboard): "Watch it work" shows three 1080p60
   clips (about 2.8 MB each) made in HyperFrames: the dashboard rebuilt with its real labels on a
   lime-lit stage, a 3D settle, a turning rim light and sheen, a drawn pointer, and steps a screen
@@ -1126,3 +1131,6 @@ Decided (2026-11-12, owner):
   the frame lost its fake browser bar. Not deployed.
 - 2026-11-17: Deployed `174c9f3` (dashboard): the new landing clips are live on garrisonbot.com
   (served files match the build byte for byte).
+- 2026-11-17: Layout audit of every dashboard page (desktop and phone captures, DOM structure,
+  measurements, the impeccable layout scan, which was clean) and a proposal in
+  `docs/LAYOUT_PROPOSAL.md`. Nothing built yet.
