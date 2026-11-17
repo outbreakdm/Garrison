@@ -3589,3 +3589,84 @@ form[data-locked] .seg__opt:has(input:disabled) {
     grid-column: 1 / -1;
   }
 }
+
+/* --- Layout, phase A (2026-11-17, docs/LAYOUT_PROPOSAL.md) ------------------------------- */
+/* The menu fits the screen: the logo, server card and plan card stay put; only the list
+   between them scrolls. */
+@media (min-width: 721px) {
+  .console__side {
+    overflow: hidden;
+  }
+  .console .console__side .g-nav {
+    flex: 1 1 auto;
+    min-height: 0;
+    margin: 0 -6px;
+    padding: 0 6px 6px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--text-muted) 30%, transparent) transparent;
+  }
+  .console__side .g-nav__item {
+    min-height: 32px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+  .console__side .g-nav__group {
+    padding-top: var(--space-3);
+  }
+}
+
+/* A problem is said once: the head's Needs you is a strip across its foot, the reason in full
+   and the fix beside it. It wraps on phones instead of running off the side. */
+.page-head > .head-state--blocked {
+  flex: 1 1 100%;
+  order: 10;
+  align-self: stretch;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  line-height: 20px;
+}
+.page-head > .head-state--blocked .head-state__detail {
+  min-width: 0;
+  white-space: normal;
+}
+
+/* Fields sized to what they hold: a time zone or a name doesn't need 900px. */
+.main .g-input:not(textarea) {
+  max-width: 640px;
+}
+.main select.g-input {
+  max-width: 360px;
+}
+.main input.g-input[type="number"] {
+  max-width: 160px;
+}
+.add-row {
+  align-self: flex-start;
+}
+
+/* Tickets' counts: a compact strip on phones, not three full-width boxes. */
+@media (max-width: 720px) {
+  .queue-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-2);
+  }
+  .queue-stat {
+    padding: 10px 12px;
+  }
+  .queue-stat .g-stat {
+    font-size: 22px;
+  }
+}
+/* Spare repeating rows stay in the form, hidden until Add reveals them (their own display
+   rules would otherwise beat the hidden attribute). */
+.reward-row[hidden],
+.boost-row[hidden],
+.stat-row[hidden] {
+  display: none;
+}
+/* In the strip the reason may wrap to its own line, so no dot between. */
+.page-head > .head-state--blocked .head-state__sep {
+  display: none;
+}

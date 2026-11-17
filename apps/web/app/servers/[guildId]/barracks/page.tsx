@@ -8,6 +8,7 @@ import {
   STAT_SOURCES,
 } from "@garrison/db";
 import type { Metadata } from "next";
+import { AddRow } from "@/components/AddRow";
 import { ProTag } from "@/components/cards/CardEditor";
 import { EmptyState } from "@/components/EmptyState";
 import { GameMark, linkDetail, providerLabel } from "@/components/GameMark";
@@ -140,12 +141,16 @@ export default async function BarracksPage({ params }: { params: Promise<{ guild
             Claimed accounts count too, so use these for flair, not for access.
             {rules.length && !ent["barracks.statRoles"] ? " Saved on Pro, paused on Free." : ""}
           </p>
-          <div className="boost-rows">
+          <div className="boost-rows" id="stat-rows">
             {Array.from({ length: Math.min(STAT_ROLES_MAX, rules.length + 2) }, (_, i) => {
               const r = rules[i];
               const locked = !ent["barracks.statRoles"] && !r;
               return (
-                <div className="stat-row" key={r ? `${r.source}-${r.roleId}-${r.min}` : `new-${i}`}>
+                <div
+                  className="stat-row"
+                  key={r ? `${r.source}-${r.roleId}-${r.min}` : `new-${i}`}
+                  hidden={i > rules.length}
+                >
                   <select
                     className="g-input"
                     name={`rule${i}_source`}
@@ -191,6 +196,7 @@ export default async function BarracksPage({ params }: { params: Promise<{ guild
               );
             })}
           </div>
+          {ent["barracks.statRoles"] ? <AddRow list="stat-rows" label="Add a rule" /> : null}
           <div className="form-foot">
             <button type="submit" className="g-btn g-btn--primary">
               Save rules

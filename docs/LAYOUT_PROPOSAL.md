@@ -1,8 +1,8 @@
 # Layout proposal: one predictable page, everywhere
 
 2026-11-17. An `/impeccable layout` pass over every dashboard page, with a proposal to make the
-layouts easier to find your way around. **Proposal only: nothing here is built yet.** The
-decisions that need the owner are at the end.
+layouts easier to find your way around. The owner took every
+recommendation (see Decisions); it's being built in the four phases below.
 
 ## What I looked at
 
@@ -395,6 +395,10 @@ Each phase is checked the way this audit was: every page captured at 1440 and 39
 heights and positions above as the before numbers.
 
 ## Decisions for the owner
+
+**Decided 2026-11-17:** all five as recommended: page tabs; the menu groups as proposed, with
+Settings and Plan at the foot; "Your account" moves to the account menu; LFG templates becomes a
+tab of Groups and raids; Library editors open full page.
 
 1. **Page tabs vs one long page with an index.** Recommended: tabs (section 2). The alternative
    keeps every page as one scroll and adds only the sticky "On this page" index. It's less

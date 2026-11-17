@@ -99,7 +99,8 @@ export default async function VoiceRoomsPage({
         </div>
       ) : null}
       <SettingsNotice query={query} />
-      {!canMove ? (
+      {/* Said once: when the head already says it (on but can't work), no banner too. */}
+      {!canMove && status.state !== "blocked" ? (
         <div className="notice" role="alert">
           Garrison can't move members yet: give its role the Move Members permission (Server
           Settings, Roles), or add Garrison again from the server list to accept the new permission.

@@ -13,6 +13,7 @@ import {
   SEASON_NAME_MAX,
 } from "@garrison/db";
 import type { Metadata } from "next";
+import { AddRow } from "@/components/AddRow";
 import { AutoSaveCard } from "@/components/AutoSave";
 import { ProTag } from "@/components/cards/CardEditor";
 import { Segmented } from "@/components/choices";
@@ -303,12 +304,16 @@ export default async function RanksPage({
               several, the biggest counts, and No XP always wins.
               {boosts.length && !ent["ranks.boosts"] ? " Saved on Pro, paused on Free." : ""}
             </p>
-            <div className="boost-rows">
+            <div className="boost-rows" id="boost-rows">
               {Array.from({ length: Math.min(BOOSTS_MAX, boosts.length + 3) }, (_, i) => {
                 const b = boosts[i];
                 const value = b ? `${b.kind}:${b.id}` : "";
                 return (
-                  <div className="boost-row" key={b ? value : `new-${i}`}>
+                  <div
+                    className="boost-row"
+                    key={b ? value : `new-${i}`}
+                    hidden={i > boosts.length}
+                  >
                     <select
                       className="g-input"
                       name={`boost${i}_target`}
@@ -365,6 +370,7 @@ export default async function RanksPage({
                 );
               })}
             </div>
+            {ent["ranks.boosts"] ? <AddRow list="boost-rows" label="Add a boost" /> : null}
           </AutoSaveCard>
         </aside>
       </div>
@@ -392,11 +398,15 @@ export default async function RanksPage({
           Members get the role when they reach the level, and keep it. Roles with admin or
           moderation powers aren't offered. Garrison's role must sit above these roles.
         </p>
-        <div className="reward-rows">
+        <div className="reward-rows" id="reward-rows">
           {Array.from({ length: REWARD_ROWS }, (_, i) => {
             const r = rewards[i];
             return (
-              <div className="reward-row" key={r ? `lvl-${r.level}` : `new-${i}`}>
+              <div
+                className="reward-row"
+                key={r ? `lvl-${r.level}` : `new-${i}`}
+                hidden={i > rewards.length}
+              >
                 <input
                   className="g-input"
                   name={`reward${i}_level`}
@@ -427,6 +437,7 @@ export default async function RanksPage({
             );
           })}
         </div>
+        <AddRow list="reward-rows" label="Add a reward" />
         <div className="form-foot">
           <button type="submit" className="g-btn g-btn--primary">
             Save rewards

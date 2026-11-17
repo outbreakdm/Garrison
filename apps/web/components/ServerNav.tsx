@@ -104,9 +104,8 @@ export function ServerNav({
   // biome-ignore lint/correctness/useExhaustiveDependencies: re-run when the page changes
   useEffect(() => {
     if (sheet.current) sheet.current.open = false;
-    // The rail scrolls inside the server sidebar.
-    const nav = (rail.current?.closest<HTMLElement>(".console__side") ??
-      rail.current) as HTMLElement | null;
+    // The menu list scrolls on its own between the server card and the plan card.
+    const nav = rail.current;
     const here = rail.current?.querySelector<HTMLElement>('[aria-current="page"]');
     if (!nav || !here || nav.scrollHeight <= nav.clientHeight) return;
     const top = here.getBoundingClientRect().top - nav.getBoundingClientRect().top + nav.scrollTop;
