@@ -46,6 +46,8 @@ export type PlannerContinuation =
       settings?: { module: string; field: string; value_json: string }[];
       /** What it posts. */
       posts?: { kind: string; item_id: string; channel: string }[];
+      /** The new orders it sets. */
+      order?: { scope: string; parent: string | null; items: string[] }[];
     }
   | {
       mode: "extend";
@@ -58,7 +60,13 @@ export interface PlannerInput {
   request: string;
   server: ServerSnapshot;
   /** Existing channels, for context only: name, type and category name. */
-  channels: { name: string; type: "text" | "voice" | "other"; category: string | null }[];
+  channels: {
+    id?: string;
+    name: string;
+    type: "text" | "voice" | "other";
+    category: string | null;
+    categoryId?: string | null;
+  }[];
   /** The most operations this plan may have: 20, or what's left of the day's changes. */
   maxOperations?: number;
   continuation?: PlannerContinuation;
@@ -136,6 +144,7 @@ export const AiChatSchema = z.object({
   plan_summary: z
     .string()
     .describe("When you draft a plan: one short sentence describing it. Otherwise empty."),
+  order: AiPlanSchema.shape.order,
   operations: AiPlanSchema.shape.operations.describe(
     "The plan's operations when you draft one now. Empty while you're still asking.",
   ),
@@ -169,7 +178,7 @@ export const AiChatSchema = z.object({
  * proposes: Garrison validates every operation afterwards and a person approves the
  * result, so this explains the job rather than being the safety boundary.
  */
-const DESIGN = `You can only add. A plan is made of these operations: create_category, create_text_channel, create_voice_channel, create_role. You cannot edit, rename, move or delete anything that already exists. If the admin asks for something you can't do (deleting things, moderation, admin or moderator roles, posting messages), leave it out and say so briefly.
+const DESIGN = `A plan adds things and can put things in a better order. It adds with these operations: create_category, create_text_channel, create_voice_channel, create_role. It orders with entries in order (see Ordering). You cannot rename, edit or delete anything that already exists. If the admin asks for something you can't do (deleting or merging channels, renaming, moderation, admin or moderator roles, posting messages), leave it out and say so briefly; for too many channels, name the ones you'd delete or merge and say they can delete them in Discord.
 
 How to design:
 - Read the request for what the admin is trying to achieve, not just the nouns in it. "A Valorant section" means a place where the Valorant players in this server can find teammates, talk, share clips and play together, so build all of that, not one channel.
@@ -184,6 +193,21 @@ How to design:
 - Fit the server: look at the existing channels and roles in the snapshot, match their naming style (emoji prefixes, separators, capitalization), reuse an existing category or role by id when it fits, and never duplicate something that already exists.
 - Text channel names are lowercase with hyphens. Category, voice channel and role names use normal capitalization.
 - Never go over the operations allowed in <limits>. If a good design needs more, build the most important part and list what you'd add next in notes, so the admin can continue for it.
+
+How Discord lays a server out (design with this in mind):
+- The sidebar shows categories top to bottom. Put what everyone needs first: a start-here or info category (welcome, rules, announcements, verify, roles to pick) at the top, then general community chat, then game or topic sections, then voice, and staff, logs and other private categories last.
+- Inside a category Discord always lists text channels above voice channels. Order text channels by importance: rules and announcements before chat, chat before niche channels.
+- New categories and channels go to the bottom of their list, so when you create a start-here, rules or verify category, also put it near the top with an order entry.
+- Roles: the role list is a hierarchy. The highest role a member has sets their name color, and the highest hoisted role decides which group they appear in in the member list. A role can only manage, kick or ban members whose top role is lower, and Garrison can only give roles below its own. Keep staff roles above member roles, cosmetic and color roles above the general member role so their color shows, and opt-in game, ping and pronoun roles near the bottom.
+- Permissions add up across a member's roles. Channel overwrites decide visibility: a channel private to a role hides from @everyone and shows to that role; a verified-only server hides categories from @everyone and shows them to the verified role, leaving only a verify channel visible. Channels in a category follow its permissions unless they have their own.
+- Limits: 500 channels and 250 roles per server, 50 channels per category, names up to 100 characters.
+
+Ordering:
+- An order entry lists items top to bottom: scope "categories" (category ids or refs), "channels" with parent set to one category (the channels in it, ids or refs of channels this plan creates there), or "roles" (role ids or refs).
+- The items swap among the places they hold now, so list only what should move, in the order you want; anything not listed stays put. Two or more items per entry.
+- Roles marked movable: false (staff powers, bot roles, roles above Garrison) never go in an order, and you can't put a role above them. Say so if the admin wants them moved; they move them in Server Settings.
+- Each order entry counts as one change. Use one entry per list you reorder (all categories, one category's channels, the roles).
+- When asked to tidy or sort the server, look at the snapshot's order and propose a better one with a sentence on why (info first, staff last, staff roles above members).
 
 Continuing a plan:
 - <previous_plan> means the admin is revising a plan that hasn't been built yet. Return the whole plan again: keep what they didn't ask to change, apply what they asked for, and keep the same refs for items you keep.
@@ -242,12 +266,28 @@ const CHAT_SYSTEM_BLOCKS = cachedSystem(CHAT_SYSTEM);
 
 /** The snapshot, limits and continuation, as the blocks that open a request. */
 function contextBlocks(input: Omit<PlannerInput, "request">) {
+  const listed = input.channels.slice(0, 150);
+  const inCategory = (id: string | null) =>
+    listed
+      .filter((c) => (c.categoryId ?? null) === id)
+      .map(({ id: cid, name, type }) => (cid ? { id: cid, name, type } : { name, type }));
   const snapshot = {
-    categories: input.server.categories,
+    // Top to bottom, as the sidebar shows them; inside each, text above voice as Discord does.
+    channels_without_category: inCategory(null),
+    categories: input.server.categories.map((c) => ({
+      id: c.id,
+      name: c.name,
+      channels: inCategory(c.id),
+    })),
+    // Top of the role list first. movable: false means it stays where it is in any order.
     roles: input.server.roles
-      .filter((r) => !r.managed && r.id !== input.server.everyoneId)
-      .map(({ id, name }) => ({ id, name })),
-    channels: input.channels.slice(0, 150),
+      .filter((r) => r.id !== input.server.everyoneId)
+      .map(({ id, name, managed, movable }) => ({
+        id,
+        name,
+        ...(managed ? { managed: true } : {}),
+        movable: Boolean(movable),
+      })),
   };
   const limit = Math.max(1, Math.min(MAX_OPERATIONS, input.maxOperations ?? MAX_OPERATIONS));
   const perms = input.server.grantable ?? QM_ROLE_PERMISSION_KEYS;
@@ -270,8 +310,13 @@ function contextBlocks(input: Omit<PlannerInput, "request">) {
         ? {
             type: "text",
             text: `<previous_plan>\n${JSON.stringify(
-              cont.settings?.length || cont.posts?.length
-                ? { operations: cont.operations, settings: cont.settings, posts: cont.posts }
+              cont.settings?.length || cont.posts?.length || cont.order?.length
+                ? {
+                    operations: cont.operations,
+                    settings: cont.settings,
+                    posts: cont.posts,
+                    order: cont.order,
+                  }
                 : cont.operations,
             )}\n</previous_plan>`,
           }
@@ -433,10 +478,11 @@ export class ClaudePlanner implements Planner {
           reply: out.reply,
           choices: out.choices,
           plan:
-            out.operations.length || settings.length || posts.length
+            out.operations.length || out.order.length || settings.length || posts.length
               ? {
                   summary: out.plan_summary,
                   operations: out.operations,
+                  order: out.order,
                   notes: out.plan_notes,
                   settings,
                   posts,

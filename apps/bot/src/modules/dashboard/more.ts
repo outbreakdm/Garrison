@@ -412,6 +412,7 @@ const removeOne = z.object({
   ref: z.string().min(1).max(40).optional(),
   setting: z.string().min(3).max(60).optional(),
   post: z.number().int().min(0).max(20).optional(),
+  order: z.number().int().min(0).max(20).optional(),
 });
 
 /**
@@ -427,14 +428,14 @@ export async function doQmRemove(ctx: BotContext, guild: Guild, member: GuildMem
     return fail("That draft isn't waiting anymore.");
   if (build.requestedById !== member.id)
     return fail("Only the person who asked for this draft can change it.");
-  const { ref, setting, post } = p.data;
-  const t = withoutItem(build, { ref, setting, post });
+  const { ref, setting, post, order } = p.data;
+  const t = withoutItem(build, { ref, setting, post, order });
   if (!t.removed.length) return fail("That isn't in the draft anymore.");
   const what =
     t.removed.length > 1
       ? `${t.removed[0]} and ${t.removed.length - 1} more that depended on it`
       : (t.removed[0] as string);
-  if (!t.plan.length && !t.settings.length && !t.posts.length) {
+  if (!t.plan.length && !t.settings.length && !t.posts.length && !t.orders.length) {
     await transitionQmBuild(ctx.db, build.id, "pending", "cancelled");
     return { ok: true, message: `Removed ${what}. Nothing was left, so the draft is discarded.` };
   }
@@ -447,6 +448,7 @@ export async function doQmRemove(ctx: BotContext, guild: Guild, member: GuildMem
     plan: t.plan,
     settings: t.settings,
     posts: t.posts,
+    orders: t.orders,
     notes: build.notes,
     continuesId: build.id,
     model: build.model,

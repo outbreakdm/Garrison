@@ -20,6 +20,7 @@ import {
   type Guild,
   type GuildMember,
   PermissionFlagsBits,
+  PermissionsBitField,
 } from "discord.js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { BotContext } from "../../commands/types.js";
@@ -73,13 +74,35 @@ function fakeGuild(id: string, failOn?: number) {
   const deleted: string[] = [];
   const channels = new Collection<
     string,
-    { id: string; name: string; type: ChannelType; delete: () => Promise<void> }
+    {
+      id: string;
+      name: string;
+      type: ChannelType;
+      isThread: () => boolean;
+      rawPosition?: number;
+      parentId?: string | null;
+      delete: () => Promise<void>;
+    }
   >();
   const roles = new Collection<
     string,
-    { id: string; name: string; managed: boolean; position: number; delete: () => Promise<void> }
+    {
+      id: string;
+      name: string;
+      managed: boolean;
+      position: number;
+      permissions: PermissionsBitField;
+      delete: () => Promise<void>;
+    }
   >();
-  roles.set(id, { id, name: "@everyone", managed: false, position: 0, delete: async () => {} });
+  roles.set(id, {
+    id,
+    name: "@everyone",
+    managed: false,
+    position: 0,
+    permissions: new PermissionsBitField(),
+    delete: async () => {},
+  });
   const make = async (kind: string, options: Record<string, unknown>) => {
     if (failOn !== undefined && ++creates === failOn) throw new Error("Missing Permissions");
     const newId = `${id}-${++n}`;
@@ -95,6 +118,7 @@ function fakeGuild(id: string, failOn?: number) {
         name: String(options.name),
         managed: false,
         position: 1,
+        permissions: new PermissionsBitField(),
         delete: del,
       });
     else
@@ -102,10 +126,16 @@ function fakeGuild(id: string, failOn?: number) {
         id: newId,
         name: String(options.name),
         type: options.type as ChannelType,
+        isThread: () => false,
+        // Discord puts a new channel at the bottom of its list.
+        rawPosition: 100 + n,
+        parentId: (options.parent as string | undefined) ?? null,
         delete: del,
       });
     return { id: newId, name: String(options.name) };
   };
+  /** Every setPositions call: which list, and the ids top to bottom after it. */
+  const moves: { kind: "roles" | "channels"; to: { id: string; position: number }[] }[] = [];
   const guild = {
     id,
     name: id,
@@ -113,8 +143,28 @@ function fakeGuild(id: string, failOn?: number) {
       everyone: { id },
       cache: roles,
       create: (o: Record<string, unknown>) => make("role", o),
+      setPositions: async (list: { role: string; position: number }[]) => {
+        moves.push({ kind: "roles", to: list.map((x) => ({ id: x.role, position: x.position })) });
+        for (const x of list) {
+          const r = roles.get(x.role);
+          if (r) r.position = x.position;
+        }
+      },
     },
-    channels: { cache: channels, create: (o: Record<string, unknown>) => make("channel", o) },
+    channels: {
+      cache: channels,
+      create: (o: Record<string, unknown>) => make("channel", o),
+      setPositions: async (list: { channel: string; position: number }[]) => {
+        moves.push({
+          kind: "channels",
+          to: list.map((x) => ({ id: x.channel, position: x.position })),
+        });
+        for (const x of list) {
+          const c = channels.get(x.channel);
+          if (c) c.rawPosition = x.position;
+        }
+      },
+    },
     members: {
       me: {
         id: "garrison",
@@ -123,7 +173,7 @@ function fakeGuild(id: string, failOn?: number) {
       },
     },
   };
-  return { guild: guild as unknown as Guild, calls, deleted, channels, roles };
+  return { guild: guild as unknown as Guild, calls, deleted, channels, roles, moves };
 }
 
 /** A plan of `n` roles, for counting changes. */
@@ -237,6 +287,7 @@ describe("Quartermaster end to end", () => {
       id: "pre-existing",
       name: "general",
       type: ChannelType.GuildText,
+      isThread: () => false,
       delete: async () => {
         throw new Error("should not be deleted");
       },
@@ -265,6 +316,89 @@ describe("Quartermaster end to end", () => {
     expect(await undoBuild(ctx, f.guild, { ...stored, status: "applied" }, "2")).toMatchObject({
       ok: false,
     });
+  });
+
+  it("puts categories and roles in a new order, keeps staff where they are, and Undo puts it back", async () => {
+    const f = fakeGuild("q31");
+    const cat = (cid: string, name: string, rawPosition: number) =>
+      f.channels.set(cid, {
+        id: cid,
+        name,
+        type: ChannelType.GuildCategory,
+        isThread: () => false,
+        rawPosition,
+        parentId: null,
+        delete: async () => {},
+      });
+    cat("123456789012345101", "Games", 0);
+    cat("123456789012345102", "Chat", 1);
+    const role = (rid: string, name: string, position: number, bits = 0n) =>
+      f.roles.set(rid, {
+        id: rid,
+        name,
+        managed: false,
+        position,
+        permissions: new PermissionsBitField(bits),
+        delete: async () => {},
+      });
+    role("123456789012345201", "Mods", 6, PermissionFlagsBits.KickMembers);
+    role("123456789012345202", "VIP", 5);
+    role("123456789012345203", "Pings", 4);
+    const order: AiPlan["order"] = [
+      {
+        scope: "categories",
+        parent: null,
+        items: ["start", "123456789012345102", "123456789012345101"],
+      },
+      { scope: "roles", parent: null, items: ["123456789012345203", "123456789012345202"] },
+    ];
+    const plan: AiPlan = {
+      summary: "Start here on top",
+      notes: "",
+      operations: [op({ kind: "create_category", ref: "start", name: "Start here" })],
+      order,
+    };
+    // Staff stay put: an order that moves Mods is refused before anything happens.
+    const refused = await planBuild(
+      ctx,
+      stub({
+        ...plan,
+        order: [
+          { scope: "roles", parent: null, items: ["123456789012345202", "123456789012345201"] },
+        ],
+      }),
+      f.guild,
+      asker(f),
+      "VIP above mods",
+    );
+    expect(refused.ok).toBe(false);
+
+    const planned = await planBuild(ctx, stub(plan), f.guild, asker(f), "tidy up");
+    if (!planned.ok) throw new Error(planned.error);
+    expect(planned.build.orders.map((o) => o.names)).toEqual([
+      ["Start here", "Chat", "Games"],
+      ["Pings", "VIP"],
+    ]);
+    const applied = await applyBuild(ctx, f.guild, planned.build);
+    expect(applied).toMatchObject({ ok: true, failed: null });
+    const sorted = (kind: "channels" | "roles") =>
+      kind === "channels"
+        ? [...f.channels.values()]
+            .sort((a, b) => (a.rawPosition ?? 0) - (b.rawPosition ?? 0))
+            .map((c) => c.name)
+        : [...f.roles.values()].sort((a, b) => b.position - a.position).map((r) => r.name);
+    expect(sorted("channels")).toEqual(["Start here", "Chat", "Games"]);
+    expect(sorted("roles")).toEqual(["Mods", "Pings", "VIP", "@everyone"]);
+
+    const { getQmBuild } = await import("@garrison/db");
+    const stored = await getQmBuild(ctx.db, "q31", planned.build.id);
+    if (!stored) throw new Error("build missing");
+    expect(stored.created.filter((c) => c.kind === "order")).toHaveLength(2);
+    const undone = await undoBuild(ctx, f.guild, stored, "2");
+    expect(undone).toMatchObject({ ok: true, failed: 0 });
+    expect(sorted("roles")).toEqual(["Mods", "VIP", "Pings", "@everyone"]);
+    // The made category is gone; the others are back in their old order.
+    expect(sorted("channels")).toEqual(["Games", "Chat"]);
   });
 
   it("counts supplies: a typical message is 3, each change 1, and the rest carry over", async () => {
@@ -692,6 +826,7 @@ describe("AI assistant chat", () => {
       id: ideas,
       name: "ideas",
       type: ChannelType.GuildText,
+      isThread: () => false,
       delete: async () => {},
     });
     await ctx.db
@@ -800,8 +935,8 @@ describe("AI assistant chat", () => {
       managed: false,
       position: 5,
       delete: async () => {},
-      permissions: { bitfield: PermissionFlagsBits.Administrator },
-    } as never);
+      permissions: new PermissionsBitField(PermissionFlagsBits.Administrator),
+    });
     const plan = {
       summary: "x",
       notes: "",

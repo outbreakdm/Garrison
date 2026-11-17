@@ -1,6 +1,7 @@
 import {
   QM_ROLE_PERMISSIONS,
   type QmOperation,
+  type QmOrder,
   type QmPost,
   type QmRolePermission,
   type QmSettingChange,
@@ -13,8 +14,15 @@ import type { LayoutChannel, ServerLayout } from "./discord";
 /**
  * The server as it would look after a Quartermaster plan is built: today's
  * categories, channels and roles with the plan's additions slotted in where
- * Discord will put them. Pure, so it's unit tested. A plan only ever adds.
+ * Discord will put them, in the plan's new order. Pure, so it's unit tested. A plan only
+ * adds and reorders.
  */
+
+/**
+ * A row a plan's order moves shows twice: `"from"` where it is now (the Now view) and
+ * `"to"` where it goes (With changes). Counts and details use the `"to"` one.
+ */
+export type Moved = "from" | "to";
 
 /** One role's overwrite on a channel, in words: what it's allowed and denied there. */
 export interface PermRow {
@@ -38,6 +46,7 @@ export interface PreviewChannel {
   perms?: PermRow[];
   /** A new channel's ref in the plan, so it can be taken out of it. */
   ref?: string;
+  moved?: Moved;
 }
 export interface PreviewCategory {
   key: string;
@@ -46,6 +55,7 @@ export interface PreviewCategory {
   /** An existing category the plan adds channels to. */
   touched: boolean;
   channels: PreviewChannel[];
+  moved?: Moved;
 }
 export interface PreviewRole {
   key: string;
@@ -59,12 +69,53 @@ export interface PreviewRole {
   /** Position from the top (1 is highest); new roles go to the bottom. */
   position?: number | null;
   ref?: string;
+  moved?: Moved;
 }
 export interface ServerPreview {
   loose: PreviewChannel[];
   categories: PreviewCategory[];
   roles: PreviewRole[];
   added: { categories: number; channels: number; roles: number };
+  /** Rows the plan's orders move, counted once. */
+  moved?: number;
+}
+
+/** The rows as they'll be: a moved row's old place left out. */
+export const afterRows = <T extends { moved?: Moved }>(list: T[]) =>
+  list.filter((x) => x.moved !== "from");
+
+/**
+ * Put `keys` in that order among the places they hold now (the bot's orderPositions does
+ * the same with Discord positions), then `settle` (text above voice). Rows whose place
+ * changed come back twice, old place first, so Now and With changes each show one.
+ */
+export function reorderRows<T extends { key: string; isNew: boolean; moved?: Moved }>(
+  list: T[],
+  keys: string[],
+  settle: (l: T[]) => T[] = (l) => l,
+): { rows: T[]; moved: number } {
+  const byKey = new Map(list.map((x) => [x.key, x]));
+  const ranked = keys.filter((k, i) => byKey.has(k) && keys.indexOf(k) === i);
+  if (ranked.length < 2) return { rows: list, moved: 0 };
+  const slots = list.flatMap((x, i) => (ranked.includes(x.key) ? [i] : []));
+  const after = [...list];
+  slots.forEach((slot, i) => {
+    after[slot] = byKey.get(ranked[i] as string) as T;
+  });
+  const settled = settle(after);
+  const rows: T[] = [];
+  let moved = 0;
+  settled.forEach((x, i) => {
+    const was = list[i] as T;
+    if (was.key === x.key) {
+      rows.push(x);
+      return;
+    }
+    if (!was.isNew) rows.push({ ...was, moved: "from" });
+    rows.push({ ...x, moved: "to" });
+    if (!x.isNew) moved++;
+  });
+  return { rows, moved };
 }
 
 /** Discord permission bits worth naming, in the order people think of them. */
@@ -129,6 +180,7 @@ export function previewServer(
   layout: ServerLayout,
   plan: QmOperation[],
   everyoneId = "",
+  orders: QmOrder[] = [],
 ): ServerPreview {
   const roleName = new Map<string, string>([
     ...layout.roles.map((r) => [r.id, r.name] as [string, string]),
@@ -235,7 +287,39 @@ export function previewServer(
     ...list.filter((c) => c.kind === "voice"),
   ];
 
-  return {
+  // An order names existing things by id and the plan's own by ref.
+  const keyOf = (item: string, known: Set<string>) => (known.has(item) ? item : `new:${item}`);
+  const categoryIds = new Set(layout.categories.map((c) => c.id));
+  let moved = 0;
+  const ordered = <T extends { key: string; isNew: boolean; moved?: Moved }>(
+    list: T[],
+    scope: QmOrder["scope"],
+    known: Set<string>,
+    parentKey: string | null = null,
+    settle?: (l: T[]) => T[],
+  ) => {
+    let rows = list;
+    for (const o of orders) {
+      if (o.scope !== scope) continue;
+      if (scope === "channels" && keyOf(o.parent ?? "", categoryIds) !== parentKey) continue;
+      const r = reorderRows(
+        afterRows(rows),
+        o.items.map((i) => keyOf(i, known)),
+        settle,
+      );
+      rows = r.rows;
+      moved += r.moved;
+    }
+    return rows;
+  };
+  const channelIds = new Set(
+    [...layout.loose, ...layout.categories.flatMap((c) => c.channels)].map((c) => c.id),
+  );
+  const roleIds = new Set(layout.roles.map((r) => r.id));
+  const inOrder = (key: string, list: PreviewChannel[]) =>
+    ordered(list, "channels", channelIds, key, voiceLast);
+
+  const preview: ServerPreview = {
     // A channel with no category, or whose category has since gone, sits at the top.
     loose: voiceLast([
       ...layout.loose.map(existing),
@@ -249,7 +333,7 @@ export function previewServer(
           name: c.name,
           isNew: false,
           touched: added.length > 0,
-          channels: voiceLast([...c.channels.map(existing), ...added]),
+          channels: inOrder(c.id, voiceLast([...c.channels.map(existing), ...added])),
         };
       }),
       // Discord puts new categories at the bottom.
@@ -258,7 +342,7 @@ export function previewServer(
         name: o.name,
         isNew: true,
         touched: true,
-        channels: voiceLast(into(o.ref)),
+        channels: inOrder(`new:${o.ref}`, voiceLast(into(o.ref))),
       })),
     ],
     roles: [
@@ -300,7 +384,43 @@ export function previewServer(
       channels: channels.length,
       roles: plan.filter((o) => o.kind === "create_role").length,
     },
+    moved: 0,
   };
+  if (!orders.length) return preview;
+  preview.categories = ordered(preview.categories, "categories", categoryIds).map((c) =>
+    // A category with a channel moved inside it opens, like one with new channels.
+    c.channels.some((x) => x.moved) ? { ...c, touched: true } : c,
+  );
+  const roles = ordered(preview.roles, "roles", roleIds);
+  if (roles !== preview.roles) {
+    // Positions as they'll be; new roles nobody moved still go to the bottom.
+    let at = 0;
+    preview.roles = roles.map((r) => {
+      if (r.moved === "from") return r;
+      at++;
+      return r.isNew && !r.moved ? r : { ...r, position: at };
+    });
+  }
+  preview.moved = moved;
+  return preview;
+}
+
+/** A plan's orders in words, for the plan panel: where, and the new order top to bottom. */
+export function orderLines(orders: QmOrder[], plan: QmOperation[], layout: ServerLayout | null) {
+  const names = new Map<string, string>([
+    ...(layout?.categories ?? []).map((c) => [c.id, c.name] as [string, string]),
+    ...plan.map((o) => [o.ref, o.name] as [string, string]),
+  ]);
+  return orders.map((o, i) => ({
+    key: `${o.scope}:${o.parent ?? ""}:${i}`,
+    where:
+      o.scope === "categories"
+        ? "Categories"
+        : o.scope === "roles"
+          ? "Roles"
+          : `Channels in ${names.get(o.parent ?? "") ?? "a category"}`,
+    names: o.scope === "roles" ? o.names.map((n) => `@${n}`) : o.names,
+  }));
 }
 
 /** A new role's permissions in words: "Attach files, Create threads", or "No permissions". */

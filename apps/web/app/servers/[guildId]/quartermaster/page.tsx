@@ -31,7 +31,14 @@ import { cleanPrompt } from "@/lib/build-prompt";
 import { getDb } from "@/lib/db";
 import { getServerLayout, guildOwnerId } from "@/lib/discord";
 import { readFlash } from "@/lib/flash";
-import { addedText, postPreviews, previewServer, settingDiffs } from "@/lib/qm-preview";
+import {
+  addedText,
+  afterRows,
+  orderLines,
+  postPreviews,
+  previewServer,
+  settingDiffs,
+} from "@/lib/qm-preview";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
 import { removeTemplate } from "./actions";
@@ -141,7 +148,9 @@ export default async function QuartermasterPage({
           (a.payload as { id?: string }).id === plan.id,
       )
     : false;
-  const preview = layout ? previewServer(layout, plan?.plan ?? [], guild.id) : null;
+  const preview = layout
+    ? previewServer(layout, plan?.plan ?? [], guild.id, plan?.orders ?? [])
+    : null;
   // Taking one item out of the draft: the bot stores the rest as the next version.
   const removeForm = (what: Record<string, string>, label = "Remove from plan") =>
     plan && mine ? (
@@ -164,12 +173,14 @@ export default async function QuartermasterPage({
     ) : null;
   const diffs = plan ? settingDiffs(layout, plan.plan, plan.settings ?? []) : [];
   const posts = plan ? postPreviews(layout, plan.plan, plan.posts ?? []) : [];
+  const orders = plan ? orderLines(plan.orders ?? [], plan.plan, layout) : [];
   const changes = plan ? qmChangeCount(plan) : 0;
   // What applying does, in one sentence: "Adds 2 channels, changes 1 setting and posts 1 item."
   const doing = [
     plan?.plan.length && preview ? `adds ${addedText(preview.added)}` : null,
     diffs.length ? `changes ${plural(diffs.length, "setting")}` : null,
     posts.length ? `posts ${plural(posts.length, "saved item")}` : null,
+    orders.length ? `puts ${plural(orders.length, "list")} in a new order` : null,
   ].filter((x): x is string => Boolean(x));
   const sentence = doing.length
     ? `${doing.slice(0, -1).join(", ")}${doing.length > 1 ? " and " : ""}${doing.at(-1)}`
@@ -178,12 +189,13 @@ export default async function QuartermasterPage({
   const counts = preview
     ? {
         channels:
-          preview.loose.length + preview.categories.reduce((n, c) => n + c.channels.length, 0),
-        roles: preview.roles.length,
-        categories: preview.categories.length,
+          preview.loose.length +
+          afterRows(preview.categories).reduce((n, c) => n + afterRows(c.channels).length, 0),
+        roles: afterRows(preview.roles).length,
+        categories: afterRows(preview.categories).length,
       }
     : null;
-  const extras = diffs.length + posts.length + (plan?.notes ? 1 : 0);
+  const extras = diffs.length + posts.length + orders.length + (plan?.notes ? 1 : 0);
   const minutesLeft = plan
     ? Math.max(1, Math.ceil((plan.createdAt.getTime() + QM_PLAN_TTL_MS - now) / 60_000))
     : 0;
@@ -524,6 +536,30 @@ export default async function QuartermasterPage({
                       </dl>
                     </div>
                   ) : null}
+                  {orders.length ? (
+                    <div className="qm-settings">
+                      <h3 className="g-label">New order</h3>
+                      <dl className="qm-settings__list">
+                        {orders.map((o, i) => (
+                          <div key={o.key}>
+                            <dt>{o.where}</dt>
+                            <dd>
+                              <ol className="qm-order">
+                                {o.names.map((n, j) => (
+                                  // biome-ignore lint/suspicious/noArrayIndexKey: names can repeat; the place is the identity
+                                  <li key={j}>{n}</li>
+                                ))}
+                              </ol>
+                            </dd>
+                            {removeForm({ order: String(i) }, "Remove")}
+                          </div>
+                        ))}
+                      </dl>
+                      <p className="g-help">
+                        Top to bottom. Only what's listed moves, among the places it holds now.
+                      </p>
+                    </div>
+                  ) : null}
                   {posts.length ? (
                     <div className="qm-settings">
                       <h3 className="g-label">Posts</h3>
@@ -564,6 +600,9 @@ export default async function QuartermasterPage({
                     <span className="qm-plan__edit">~{diffs.length} settings</span>
                   ) : null}
                   {posts.length ? <span>{plural(posts.length, "post")}</span> : null}
+                  {orders.length ? (
+                    <span className="qm-plan__edit">↕{preview?.moved ?? orders.length} moved</span>
+                  ) : null}
                 </span>
                 <form action={requestAction}>
                   <input type="hidden" name="guildId" value={guild.id} />
@@ -582,9 +621,10 @@ export default async function QuartermasterPage({
             ) : null}
             {plan ? (
               <p className="qm-plan__rules">
-                Only adds channels and roles; nothing you have is edited or deleted. Settings use
-                the same checks as their pages. Undo removes what was made and puts settings back;
-                posts stay.
+                Adds channels and roles and can put them in a new order; nothing you have is
+                renamed, edited or deleted. Staff and bot roles never move. Settings use the same
+                checks as their pages. Undo removes what was made and puts settings and the order
+                back; posts stay.
               </p>
             ) : null}
           </aside>
@@ -633,7 +673,8 @@ export default async function QuartermasterPage({
                         <input type="hidden" name="version" value={b.version} />
                         <p className="g-help">
                           Deletes the channels and roles it made, with any messages posted in them
-                          since, and puts its settings back. Posts stay. Nothing else is touched.
+                          since, and puts its settings and any order it changed back. Posts stay.
+                          Nothing else is touched.
                         </p>
                         <button type="submit" className="g-btn g-btn--danger g-btn--sm">
                           Yes, undo it

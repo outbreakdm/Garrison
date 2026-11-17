@@ -26,6 +26,7 @@ import {
   type QmBuild,
   type QmCreated,
   type QmOperation,
+  type QmOrder,
   type QmPost,
   type QmRolePermission,
   type QmSettingChange,
@@ -54,7 +55,14 @@ import { DANGEROUS_PERMISSIONS } from "../gatehouse/nuke.js";
 import { invalidateLedgerSettings } from "../ledger/service.js";
 import { invalidateRanksSettings } from "../ranks/service.js";
 import { invalidateVoiceRooms } from "../voice/service.js";
-import { MAX_OPERATIONS, rollbackOrder, type ServerSnapshot, validatePlan } from "./plan.js";
+import {
+  MAX_OPERATIONS,
+  orderPositions,
+  roleCrossing,
+  rollbackOrder,
+  type ServerSnapshot,
+  validatePlan,
+} from "./plan.js";
 import {
   DEFAULT_MODEL,
   type DraftPlan,
@@ -87,6 +95,20 @@ export const PLAN_TTL_MS = QM_PLAN_TTL_MS;
 export const REQUEST_MAX = 500;
 
 const P = PermissionFlagsBits;
+/**
+ * Powers that make a role staff. A new order never moves such a role or lets another role
+ * pass it: staff can only moderate members whose top role is lower than theirs.
+ */
+const STAFF_POWERS =
+  DANGEROUS_PERMISSIONS |
+  P.ModerateMembers |
+  P.ManageMessages |
+  P.ManageNicknames |
+  P.MuteMembers |
+  P.DeafenMembers |
+  P.MoveMembers |
+  P.ManageEvents |
+  P.ManageGuildExpressions;
 /** What a private channel's roles may do. Nothing that moderates or manages. */
 const CHANNEL_ACCESS = [P.ViewChannel, P.SendMessages, P.ReadMessageHistory, P.Connect, P.Speak];
 /** Seeing a channel without posting or speaking in it. */
@@ -154,30 +176,59 @@ export function snapshot(guild: Guild): {
   server: ServerSnapshot;
   channels: PlannerInput["channels"];
 } {
-  const channels = [...guild.channels.cache.values()];
+  // In Discord's own order: categories top to bottom, the channels in each (text above voice),
+  // roles from the top of the list down.
+  const position = (c: { rawPosition?: number; position?: number }) =>
+    c.rawPosition ?? c.position ?? 0;
+  const isVoice = (t: ChannelType) =>
+    t === ChannelType.GuildVoice || t === ChannelType.GuildStageVoice;
+  const all = [...guild.channels.cache.values()].filter((c) => !c.isThread());
+  const categories = all
+    .filter((c) => c.type === ChannelType.GuildCategory)
+    .sort((a, b) => position(a) - position(b));
+  const rank = new Map(categories.map((c, i) => [c.id, i]));
+  const channels = all
+    .filter((c) => c.type !== ChannelType.GuildCategory)
+    .sort(
+      (a, b) =>
+        (rank.get(a.parentId ?? "") ?? -1) - (rank.get(b.parentId ?? "") ?? -1) ||
+        Number(isVoice(a.type)) - Number(isVoice(b.type)) ||
+        position(a) - position(b),
+    );
+  const me = guild.members.me;
+  const top = me?.roles.highest.position ?? 0;
+  const roles = [...guild.roles.cache.values()].sort((a, b) => b.position - a.position);
   return {
     server: {
       everyoneId: guild.roles.everyone.id,
-      categories: channels
-        .filter((c) => c.type === ChannelType.GuildCategory)
-        .map((c) => ({ id: c.id, name: c.name })),
-      roles: guild.roles.cache.map((r) => ({ id: r.id, name: r.name, managed: r.managed })),
-      channelCount: channels.length,
+      categories: categories.map((c) => ({ id: c.id, name: c.name })),
+      roles: roles.map((r) => ({
+        id: r.id,
+        name: r.name,
+        managed: r.managed,
+        // Ordering never touches staff powers, integrations, or anything Garrison can't manage.
+        movable:
+          r.id !== guild.roles.everyone.id &&
+          !roleFixed(r, top) &&
+          Boolean(me?.permissions.has(P.ManageRoles)),
+      })),
+      channels: channels.map((c) => ({ id: c.id, name: c.name, parentId: c.parentId ?? null })),
+      channelCount: all.length,
       roleCount: guild.roles.cache.size,
       grantable: grantableBy(guild.members.me),
     },
-    channels: channels
-      .filter((c) => c.type !== ChannelType.GuildCategory)
-      .map((c) => ({
-        name: c.name,
-        type:
-          c.type === ChannelType.GuildText
-            ? ("text" as const)
-            : c.type === ChannelType.GuildVoice
-              ? ("voice" as const)
-              : ("other" as const),
-        category: "parent" in c && c.parent ? c.parent.name : null,
-      })),
+    channels: channels.map((c) => ({
+      id: c.id,
+      name: c.name,
+      type:
+        c.type === ChannelType.GuildText
+          ? ("text" as const)
+          : c.type === ChannelType.GuildVoice
+            ? ("voice" as const)
+            : ("other" as const),
+      category: "parent" in c && c.parent ? c.parent.name : null,
+      categoryId: c.parentId ?? null,
+    })),
   };
 }
 
@@ -256,9 +307,14 @@ export async function continuationFor(
         item_id: x.itemId,
         channel: x.channel,
       })),
+      order: (build.orders ?? []).map((o) => ({
+        scope: o.scope,
+        parent: o.parent,
+        items: o.items,
+      })),
     };
   const built = build.created.flatMap((c) =>
-    c.kind === "setting" || c.kind === "post"
+    c.kind === "setting" || c.kind === "post" || c.kind === "order"
       ? []
       : (c.kind === "role" ? guild.roles.cache.has(c.id) : guild.channels.cache.has(c.id))
         ? [{ kind: c.kind, id: c.id, name: c.name }]
@@ -284,6 +340,7 @@ export async function storePlan(
     notes: string;
     settings?: QmSettingChange[];
     posts?: QmPost[];
+    orders?: QmOrder[];
   },
   model: string,
   line: { continues: QmBuild | null; replacing: QmBuild | null },
@@ -295,7 +352,10 @@ export async function storePlan(
     exceptId: line.replacing?.id,
   });
   const changes =
-    checked.operations.length + (checked.settings?.length ?? 0) + (checked.posts?.length ?? 0);
+    checked.operations.length +
+    (checked.settings?.length ?? 0) +
+    (checked.posts?.length ?? 0) +
+    (checked.orders?.length ?? 0);
   if (changes > now.suppliesLeft)
     return {
       ok: false,
@@ -310,6 +370,7 @@ export async function storePlan(
     plan: checked.operations,
     settings: checked.settings ?? [],
     posts: checked.posts ?? [],
+    orders: checked.orders ?? [],
     notes: checked.notes || null,
     continuesId: line.continues?.id ?? null,
     model,
@@ -387,6 +448,7 @@ export async function checkDraft(
       notes: string;
       settings: QmSettingChange[];
       posts: QmPost[];
+      orders: QmOrder[];
     }
   | { ok: false; errors: string[] }
 > {
@@ -405,7 +467,11 @@ export async function checkDraft(
       ok: false,
       errors: [...(settings.ok ? [] : settings.errors), ...(posts.ok ? [] : posts.errors)],
     };
-  const total = structure.operations.length + settings.changes.length + posts.posts.length;
+  const total =
+    structure.operations.length +
+    structure.orders.length +
+    settings.changes.length +
+    posts.posts.length;
   if (!total) return { ok: false, errors: ["Everything in that plan is already set that way."] };
   if (total > maxOperations)
     return {
@@ -691,6 +757,13 @@ async function runBuild(ctx: BotContext, guild: Guild, build: QmBuild): Promise<
     await transitionQmBuild(ctx.db, build.id, "applied", "failed", { error: failed });
     return { ok: true, build: claimed, created, failed };
   }
+  if (build.orders?.length) {
+    const failed = await applyPlanOrders(ctx, guild, build, ids, created);
+    if (failed) {
+      await transitionQmBuild(ctx.db, build.id, "applied", "failed", { error: failed });
+      return { ok: true, build: claimed, created, failed };
+    }
+  }
   if (ent) {
     const failed = await applyPlanSettings(ctx, guild, build, ids, ent, created);
     if (failed) {
@@ -706,6 +779,104 @@ async function runBuild(ctx: BotContext, guild: Guild, build: QmBuild): Promise<
     }
   }
   return { ok: true, build: claimed, created, failed: null };
+}
+
+/** An order's key in the build's record: "roles", "categories" or "channels:<category id>". */
+const orderKey = (scope: QmOrder["scope"], parent: string | null) =>
+  scope === "channels" ? `channels:${parent}` : scope;
+
+/**
+ * Put items in a new order, top to bottom: they swap among the places they hold now, so
+ * nothing outside the list moves. Roles are checked again here (Discord's word on what
+ * Garrison may move, at this moment), including that none passes a staff or bot role.
+ * Returns the order the items were in before. (Discord keeps no audit reason for moves.)
+ */
+async function setOrder(
+  guild: Guild,
+  scope: QmOrder["scope"],
+  parent: string | null,
+  ids: string[],
+): Promise<string[]> {
+  if (scope === "roles") {
+    const me = guild.members.me ?? (await guild.members.fetchMe());
+    const top = me.roles.highest.position;
+    const roles = ids.map((id) => guild.roles.cache.get(id)).filter((r) => r !== undefined);
+    for (const r of roles)
+      if (roleFixed(r, top)) throw new Error(`@${r.name} can't be moved by Garrison`);
+    const ladder = [...guild.roles.cache.values()]
+      .filter((r) => r.id !== guild.roles.everyone.id)
+      .sort((a, b) => b.position - a.position)
+      .map((r) => ({ id: r.id, fixed: roleFixed(r, top) }));
+    const crossing = roleCrossing(ladder, ids);
+    if (crossing)
+      throw new Error(`@${guild.roles.cache.get(crossing)?.name} would pass a staff or bot role`);
+    const before = [...roles].sort((a, b) => b.position - a.position).map((r) => r.id);
+    const moves = orderPositions(
+      roles.map((r) => ({ id: r.id, position: r.position })),
+      ids,
+      true,
+    );
+    await guild.roles.setPositions(moves.map((m) => ({ role: m.id, position: m.position })));
+    return before;
+  }
+  const at = (c: { rawPosition?: number }) => c.rawPosition ?? 0;
+  // Every sibling, numbered top to bottom: Discord's raw positions can repeat, and two
+  // items sharing one would keep their order whatever was asked.
+  const siblings = [...guild.channels.cache.values()]
+    .filter((c) => !c.isThread())
+    .filter((c) =>
+      scope === "categories"
+        ? c.type === ChannelType.GuildCategory
+        : c.type !== ChannelType.GuildCategory && c.parentId === parent,
+    )
+    .sort((a, b) => at(a) - at(b) || a.id.localeCompare(b.id));
+  const listed = new Set(ids);
+  const before = siblings.filter((c) => listed.has(c.id)).map((c) => c.id);
+  const numbered = siblings.map((c, i) => ({ id: c.id, position: i }));
+  const moved = new Map(orderPositions(numbered, ids, false).map((m) => [m.id, m.position]));
+  await guild.channels.setPositions(
+    numbered.map((c) => ({ channel: c.id, position: moved.get(c.id) ?? c.position })),
+  );
+  return before;
+}
+
+/**
+ * A role no order may move or let another pass: it has staff powers, belongs to an app, or
+ * sits at or above Garrison's own role (`top`).
+ */
+function roleFixed(
+  r: { managed: boolean; position: number; permissions: { any(bits: bigint): boolean } },
+  top: number,
+) {
+  return r.managed || r.position >= top || r.permissions.any(STAFF_POWERS);
+}
+
+/** A build's new orders, once what they name exists. Returns why it stopped, or null. */
+async function applyPlanOrders(
+  ctx: BotContext,
+  guild: Guild,
+  build: QmBuild,
+  ids: Map<string, string>,
+  created: QmCreated[],
+): Promise<string | null> {
+  const resolve = (refOrId: string) => ids.get(refOrId) ?? refOrId;
+  for (const order of build.orders ?? []) {
+    const parent = order.parent ? resolve(order.parent) : null;
+    try {
+      const before = await setOrder(guild, order.scope, parent, order.items.map(resolve));
+      const item: QmCreated = {
+        kind: "order",
+        id: orderKey(order.scope, parent),
+        name: JSON.stringify(before),
+      };
+      created.push(item);
+      await recordQmCreated(ctx.db, build.id, item);
+    } catch (error) {
+      ctx.logger.warn("Quartermaster order failed", { guildId: guild.id, error });
+      return `Discord wouldn't put the ${order.scope} in the new order, so I stopped. Use Undo to put things back.`;
+    }
+  }
+  return null;
 }
 
 /**
@@ -904,6 +1075,18 @@ export async function undoBuild(
     } catch (error) {
       failed++;
       ctx.logger.warn("Quartermaster settings undo failed", { guildId: guild.id, id, error });
+    }
+  }
+  // Orders first, newest first, while the things they name still exist.
+  for (const item of [...claimed.created].reverse().filter((c) => c.kind === "order")) {
+    try {
+      const previous = JSON.parse(item.name) as string[];
+      const [scope, parent] = item.id.split(":") as [QmOrder["scope"], string | undefined];
+      await setOrder(guild, scope, parent ?? null, previous);
+      removed++;
+    } catch (error) {
+      failed++;
+      ctx.logger.warn("Quartermaster order undo failed", { guildId: guild.id, error });
     }
   }
   for (const item of rollbackOrder(claimed.created)) {

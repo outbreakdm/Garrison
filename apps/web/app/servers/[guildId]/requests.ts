@@ -577,6 +577,7 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       const ref = field(form, "ref");
       const setting = field(form, "setting");
       const post = field(form, "post");
+      const order = field(form, "order");
       // Exactly one thing, and it must be in this draft.
       if (ref && b.plan.some((o) => o.ref === ref))
         return { ok: true, input: { kind, payload: { id: b.id, ref } } };
@@ -585,6 +586,9 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       const n = Number(post);
       if (post && Number.isInteger(n) && n >= 0 && n < (b.posts ?? []).length)
         return { ok: true, input: { kind, payload: { id: b.id, post: n } } };
+      const o = Number(order);
+      if (order && Number.isInteger(o) && o >= 0 && o < (b.orders ?? []).length)
+        return { ok: true, input: { kind, payload: { id: b.id, order: o } } };
       return { ok: false, error: "invalid" };
     }
     default:

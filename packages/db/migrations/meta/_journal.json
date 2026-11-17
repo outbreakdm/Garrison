@@ -505,6 +505,13 @@
       "when": 1794871820122,
       "tag": "0071_economy",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1794890755080,
+      "tag": "0072_qm_orders",
+      "breakpoints": true
     }
   ]
 }

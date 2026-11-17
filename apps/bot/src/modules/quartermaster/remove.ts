@@ -1,4 +1,4 @@
-import type { QmBuild, QmOperation, QmPost, QmSettingChange } from "@garrison/db";
+import type { QmBuild, QmOperation, QmOrder, QmPost, QmSettingChange } from "@garrison/db";
 
 export interface RemoveTarget {
   /** A channel, category or role the draft makes. */
@@ -7,12 +7,15 @@ export interface RemoveTarget {
   setting?: string;
   /** A post, by its place in the list. */
   post?: number;
+  /** A new order, by its place in the list. */
+  order?: number;
 }
 
 export interface Trimmed {
   plan: QmOperation[];
   settings: QmSettingChange[];
   posts: QmPost[];
+  orders: QmOrder[];
   /** Names of everything taken out, the asked-for item first. */
   removed: string[];
 }
@@ -25,30 +28,43 @@ const mentions = (value: unknown, refs: Set<string>): boolean =>
       ? value.some((v) => mentions(v, refs))
       : false;
 
+/** Where an order puts things, in words: "the new order of the roles". */
+export function orderName(o: QmOrder) {
+  return o.scope === "channels" ? "the new channel order" : `the new order of the ${o.scope}`;
+}
+
 /**
  * A draft without one item, and without whatever only made sense with it: the channels in
  * a removed category, channels private to nothing but removed roles, settings and posts that
- * point at removed items. Other channels lose a removed role from their lists. Only ever
- * takes away, so what's left is as safe as the draft was.
+ * point at removed items, and removed items in a new order (the order goes once fewer than
+ * two are left, or its category goes). Other channels lose a removed role from their lists.
+ * Only ever takes away, so what's left is as safe as the draft was.
  */
 export function withoutItem(
-  build: Pick<QmBuild, "plan" | "settings" | "posts">,
+  build: Pick<QmBuild, "plan" | "settings" | "posts"> & Partial<Pick<QmBuild, "orders">>,
   target: RemoveTarget,
 ): Trimmed {
   let settings = build.settings ?? [];
   let posts = build.posts ?? [];
+  let orders = build.orders ?? [];
   const removed: string[] = [];
   if (target.setting) {
     const hit = settings.find((c) => `${c.module}.${c.field}` === target.setting);
     settings = settings.filter((c) => `${c.module}.${c.field}` !== target.setting);
     if (hit) removed.push(`${hit.module} ${hit.field}`);
-    return { plan: build.plan, settings, posts, removed };
+    return { plan: build.plan, settings, posts, orders, removed };
   }
   if (target.post !== undefined) {
     const hit = posts[target.post];
     posts = posts.filter((_, i) => i !== target.post);
     if (hit) removed.push(hit.name);
-    return { plan: build.plan, settings, posts, removed };
+    return { plan: build.plan, settings, posts, orders, removed };
+  }
+  if (target.order !== undefined) {
+    const hit = orders[target.order];
+    orders = orders.filter((_, i) => i !== target.order);
+    if (hit) removed.push(orderName(hit));
+    return { plan: build.plan, settings, posts, orders, removed };
   }
   const gone = new Set<string>();
   if (target.ref && build.plan.some((o) => o.ref === target.ref)) gone.add(target.ref);
@@ -80,5 +96,15 @@ export function withoutItem(
     }));
   settings = settings.filter((c) => !mentions(c.to, gone));
   posts = posts.filter((p) => !gone.has(p.channel));
-  return { plan, settings, posts, removed };
+  orders = orders.flatMap((o) => {
+    if (o.parent && gone.has(o.parent)) return [];
+    const keep = o.items
+      .map((id, i) => [id, o.names[i] ?? id] as const)
+      .filter(([id]) => !gone.has(id));
+    if (keep.length === o.items.length) return [o];
+    return keep.length < 2
+      ? []
+      : [{ ...o, items: keep.map(([id]) => id), names: keep.map(([, n]) => n) }];
+  });
+  return { plan, settings, posts, orders, removed };
 }

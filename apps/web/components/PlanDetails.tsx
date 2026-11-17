@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import {
+  afterRows,
   detailId,
   type PermRow,
   type PreviewChannel,
@@ -212,13 +213,17 @@ export function PlanDetails({
   preview: ServerPreview;
   remove: (ref: string) => ReactNode;
 }) {
-  const channels = [...preview.loose, ...preview.categories.flatMap((c) => c.channels)];
+  // A moved row's old place is only drawn in the preview's Now view; it has no details.
+  const channels = [
+    ...preview.loose,
+    ...afterRows(preview.categories).flatMap((c) => afterRows(c.channels)),
+  ];
   return (
     <>
       {channels.map((c) => (
         <ChannelDetail c={c} key={c.key} remove={c.ref ? remove(c.ref) : null} />
       ))}
-      {preview.roles.map((r) => (
+      {afterRows(preview.roles).map((r) => (
         <RoleDetail r={r} key={r.key} remove={r.ref ? remove(r.ref) : null} />
       ))}
     </>

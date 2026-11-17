@@ -772,6 +772,21 @@ export interface QmOperation {
 }
 
 /**
+ * A new order a plan sets, top to bottom: the server's categories, the channels inside one
+ * category, or roles. Items are ids, or refs of things the same plan creates. They swap
+ * among the places they already hold, so nothing outside the list moves: roles with admin or
+ * moderation powers, managed roles and roles above Garrison's own are never in it.
+ */
+export interface QmOrder {
+  scope: "categories" | "channels" | "roles";
+  /** For "channels": the category (an id, or a ref this plan creates). */
+  parent: string | null;
+  items: string[];
+  /** The items' names when the plan was drafted, for the preview. */
+  names: string[];
+}
+
+/**
  * One setting a plan changes: one field of one module (qm-settings.ts), as the admin saw it.
  * `to` may name items the same plan creates by their ref; they become ids when it's built.
  */
@@ -800,7 +815,8 @@ export interface QmPost {
  * named "module.field". A post is the channel it went to; posts aren't undone.
  */
 export interface QmCreated {
-  kind: "category" | "channel" | "role" | "setting" | "post";
+  /** An order: id is its scope ("roles", "categories", "channels:<id>"), name the order before. */
+  kind: "category" | "channel" | "role" | "setting" | "post" | "order";
   id: string;
   name: string;
 }
@@ -866,6 +882,8 @@ export const qmBuilds = pgTable(
     settings: jsonb("settings").$type<QmSettingChange[]>().notNull().default([]),
     /** Saved items it posts, last, once its channels exist. Each is one change. */
     posts: jsonb("posts").$type<QmPost[]>().notNull().default([]),
+    /** New orders it sets (categories, channels in a category, roles), after the structure. */
+    orders: jsonb("orders").$type<QmOrder[]>().notNull().default([]),
     /** What the model left out or would add next, shown with the plan and used to continue it. */
     notes: text("notes"),
     /** The build this one continues: a revised plan, or more added onto a built one. */
@@ -1206,6 +1224,7 @@ export interface QmRemovePayload {
   ref?: string;
   setting?: string;
   post?: number;
+  order?: number;
 }
 export const dashboardActionStatus = pgEnum("dashboard_action_status", [
   "pending",

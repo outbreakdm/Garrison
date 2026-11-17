@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   type AiPlan,
   channelName,
+  describeOrders,
   describePlan,
   displayName,
+  orderPositions,
+  roleCrossing,
   rollbackOrder,
   type ServerSnapshot,
   validatePlan,
@@ -218,5 +221,187 @@ describe("rollbackOrder", () => {
       { kind: "channel", id: "ch", name: "ch" },
     ]);
     expect(order.map((o) => o.kind)).toEqual(["channel", "category", "role"]);
+  });
+});
+
+describe("orders", () => {
+  // Top to bottom: a staff role splits the plain roles into two sides.
+  const laddered: ServerSnapshot = {
+    everyoneId: "g",
+    categories: [
+      { id: "100000000000000001", name: "General" },
+      { id: "100000000000000002", name: "Games" },
+      { id: "100000000000000003", name: "Start here" },
+    ],
+    roles: [
+      { id: "200000000000000010", name: "Owner", managed: false, movable: false },
+      { id: "200000000000000011", name: "Pings", managed: false, movable: true },
+      { id: "200000000000000012", name: "VIP", managed: false, movable: true },
+      { id: "200000000000000013", name: "Mods", managed: false, movable: false },
+      { id: "200000000000000014", name: "Members", managed: false, movable: true },
+      { id: "200000000000000015", name: "Pronouns", managed: false, movable: true },
+      { id: "g", name: "@everyone", managed: false, movable: false },
+    ],
+    channels: [
+      { id: "300000000000000001", name: "chat", parentId: "100000000000000001" },
+      { id: "300000000000000002", name: "rules", parentId: "100000000000000001" },
+      { id: "300000000000000003", name: "lfg", parentId: "100000000000000002" },
+    ],
+    channelCount: 6,
+    roleCount: 7,
+  };
+  const withOrder = (order: AiPlan["order"], operations: Op[] = []) => ({
+    ...plan(operations),
+    order,
+  });
+
+  it("puts categories, a category's channels and roles in a new order", () => {
+    const r = validatePlan(
+      withOrder([
+        {
+          scope: "categories",
+          parent: null,
+          items: ["100000000000000003", "100000000000000001", "100000000000000002"],
+        },
+        {
+          scope: "channels",
+          parent: "100000000000000001",
+          items: ["300000000000000002", "300000000000000001"],
+        },
+        { scope: "roles", parent: null, items: ["200000000000000012", "200000000000000011"] },
+      ]),
+      laddered,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.orders.map((o) => o.names)).toEqual([
+      ["Start here", "General", "Games"],
+      ["rules", "chat"],
+      ["VIP", "Pings"],
+    ]);
+  });
+
+  it("orders what the plan makes by ref, in its own category", () => {
+    const r = validatePlan(
+      withOrder(
+        [
+          { scope: "categories", parent: null, items: ["Info", "100000000000000001"] },
+          { scope: "channels", parent: "info", items: ["verify", "welcome"] },
+        ],
+        [
+          op({ kind: "create_category", ref: "info", name: "Info" }),
+          op({ kind: "create_text_channel", ref: "welcome", name: "welcome", parent: "info" }),
+          op({ kind: "create_text_channel", ref: "verify", name: "verify", parent: "info" }),
+        ],
+      ),
+      laddered,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.orders[0]?.items).toEqual(["info", "100000000000000001"]);
+    expect(r.orders[1]).toMatchObject({ parent: "info", names: ["verify", "welcome"] });
+    // Each order is one change.
+    expect(describeOrders(r.orders, r.operations, laddered)).toEqual([
+      "↕ Categories: Info, General",
+      "↕ Channels in Info: verify, welcome",
+    ]);
+  });
+
+  it("never moves a staff or bot role, or lets a role pass one", () => {
+    const fixed = validatePlan(
+      withOrder([
+        { scope: "roles", parent: null, items: ["200000000000000013", "200000000000000014"] },
+      ]),
+      laddered,
+    );
+    expect(fixed.ok).toBe(false);
+    if (!fixed.ok) expect(fixed.errors.join(" ")).toMatch(/admin or moderation powers/);
+    // Pings sits above Mods and Members below: swapping them would lift Members over staff.
+    const past = validatePlan(
+      withOrder([
+        { scope: "roles", parent: null, items: ["200000000000000014", "200000000000000011"] },
+      ]),
+      laddered,
+    );
+    expect(past.ok).toBe(false);
+    if (!past.ok) expect(past.errors.join(" ")).toMatch(/@Members would pass a staff or bot role/);
+    // A new role starts at the bottom, below Mods, so it can't jump above them either.
+    const fresh = validatePlan(
+      withOrder(
+        [{ scope: "roles", parent: null, items: ["gold", "200000000000000012"] }],
+        [op({ kind: "create_role", ref: "gold", name: "Gold" })],
+      ),
+      laddered,
+    );
+    expect(fresh.ok).toBe(false);
+  });
+
+  it("rejects orders across lists, with one item, or with repeats", () => {
+    const r = validatePlan(
+      withOrder([
+        // lfg is in Games, not General.
+        {
+          scope: "channels",
+          parent: "100000000000000001",
+          items: ["300000000000000003", "300000000000000001"],
+        },
+        { scope: "categories", parent: null, items: ["100000000000000001"] },
+        {
+          scope: "categories",
+          parent: null,
+          items: ["100000000000000001", "100000000000000001", "100000000000000002"],
+        },
+        { scope: "channels", parent: "nowhere", items: ["a", "b"] },
+      ]),
+      laddered,
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    const all = r.errors.join(" ");
+    expect(all).toMatch(/isn't one of the channels it can order/);
+    expect(all).toMatch(/needs two or more categories/);
+    expect(all).toMatch(/"General" is listed twice/);
+    expect(all).toMatch(/"nowhere" isn't a category/);
+  });
+
+  it("swaps items among the places they hold now", () => {
+    const roles = [
+      { id: "a", position: 9 },
+      { id: "b", position: 5 },
+      { id: "c", position: 2 },
+    ];
+    // Roles: a higher number is higher up.
+    expect(orderPositions(roles, ["c", "a", "b"], true)).toEqual([
+      { id: "c", position: 9 },
+      { id: "a", position: 5 },
+      { id: "b", position: 2 },
+    ]);
+    // Channels: a lower number is higher up; unknown ids are skipped.
+    expect(
+      orderPositions(
+        [
+          { id: "x", position: 0 },
+          { id: "y", position: 4 },
+        ],
+        ["y", "zz", "x"],
+        false,
+      ),
+    ).toEqual([
+      { id: "y", position: 0 },
+      { id: "x", position: 4 },
+    ]);
+  });
+
+  it("finds the first role that would cross a fixed one", () => {
+    const ladder = [
+      { id: "top", fixed: true },
+      { id: "a", fixed: false },
+      { id: "mod", fixed: true },
+      { id: "b", fixed: false },
+      { id: "c", fixed: false },
+    ];
+    expect(roleCrossing(ladder, ["c", "b"])).toBeNull();
+    expect(roleCrossing(ladder, ["b", "a"])).toBe("b");
+    expect(roleCrossing(ladder, ["a", "c", "b"])).toBeNull();
   });
 });

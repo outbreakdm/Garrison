@@ -11,7 +11,7 @@ import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { ButtonHandler, Command } from "../../commands/types.js";
 import { type Card, cardEdit, cardMessage, cardReply, ts } from "../../lib/card.js";
 import { safeText } from "../../lib/text.js";
-import { describePlan, type ServerSnapshot } from "./plan.js";
+import { describeOrders, describePlan, type ServerSnapshot } from "./plan.js";
 import {
   applyBuild,
   PLAN_TTL_MS,
@@ -35,7 +35,10 @@ export function planCard(
   notes: string,
   suppliesLeft?: number,
 ): Card {
-  const lines = describePlan(build.plan, server).map((l) => safeText(l));
+  const lines = [
+    ...describePlan(build.plan, server),
+    ...describeOrders(build.orders ?? [], build.plan, server),
+  ].map((l) => safeText(l));
   const expires = new Date(build.createdAt.getTime() + PLAN_TTL_MS);
   return {
     tone: "intel",
@@ -46,7 +49,7 @@ export function planCard(
       { text: `\`\`\`diff\n${lines.join("\n").replaceAll("```", "'''")}\n\`\`\`` },
       ...(notes ? [{ text: `**Notes:** ${safeText(notes)}` }] : []),
       {
-        text: `-# New roles get only member permissions. Nothing that exists is changed. Expires ${ts(expires)}.`,
+        text: `-# New roles get only member permissions. Nothing that exists is changed${(build.orders ?? []).length ? ", only put in a new order" : ""}. Expires ${ts(expires)}.`,
       },
     ],
     actions: [

@@ -1,7 +1,15 @@
-import type { QmOperation } from "@garrison/db";
+import type { QmOperation, QmOrder } from "@garrison/db";
 import { describe, expect, it } from "vitest";
 import type { ServerLayout } from "./discord";
-import { addedText, planLines, previewServer, settingDiffs } from "./qm-preview";
+import {
+  addedText,
+  afterRows,
+  orderLines,
+  planLines,
+  previewServer,
+  reorderRows,
+  settingDiffs,
+} from "./qm-preview";
 
 const op = (o: Partial<QmOperation> & Pick<QmOperation, "kind" | "ref" | "name">): QmOperation => ({
   parent: null,
@@ -140,5 +148,58 @@ describe("settingDiffs", () => {
         to: "none",
       },
     ]);
+  });
+});
+
+describe("a plan's new order", () => {
+  const orders: QmOrder[] = [
+    { scope: "categories", parent: null, items: ["val", "cat2", "cat1"], names: [] },
+    { scope: "channels", parent: "cat1", items: ["clips", "c1"], names: [] },
+    { scope: "roles", parent: null, items: ["gold", "r1"], names: [] },
+  ];
+  const p = previewServer(layout, plan, "", orders);
+  const names = (l: { name: string }[]) => l.map((x) => x.name);
+  const now = <T extends { isNew: boolean; moved?: string }>(l: T[]) =>
+    l.filter((x) => !x.isNew && x.moved !== "to");
+
+  it("shows the new order, and the old one for Now", () => {
+    const after = afterRows(p.categories);
+    expect(names(after)).toEqual(["Valorant", "Staff", "Town Square"]);
+    expect(names(now(p.categories))).toEqual(["Town Square", "Staff"]);
+    const square = after.find((c) => c.key === "cat1");
+    // Text above voice whatever the order says; the new channel moves up.
+    expect(names(afterRows(square?.channels ?? []))).toEqual(["clips", "general", "Voice"]);
+    expect(names(now(square?.channels ?? []))).toEqual(["general", "Voice"]);
+    expect(square?.touched).toBe(true);
+  });
+
+  it("numbers roles as they'll be, a moved new role included", () => {
+    expect(afterRows(p.roles).map((r) => [r.name, r.position])).toEqual([
+      ["Gold+", 1],
+      ["Mods", 2],
+    ]);
+    expect(p.moved).toBeGreaterThan(0);
+  });
+
+  it("leaves rows alone for an order of one or of unknown items", () => {
+    const list = [
+      { key: "a", isNew: false },
+      { key: "b", isNew: false },
+    ];
+    expect(reorderRows(list, ["a", "zz"]).rows).toBe(list);
+    expect(reorderRows(list, ["a", "b"]).moved).toBe(0);
+  });
+
+  it("says each order in words", () => {
+    expect(
+      orderLines(
+        [
+          { scope: "channels", parent: "val", items: ["a", "b"], names: ["ranked", "Stack"] },
+          { scope: "roles", parent: null, items: ["x", "y"], names: ["VIP", "Pings"] },
+        ],
+        plan,
+        layout,
+      ).map((o) => `${o.where}: ${o.names.join(", ")}`),
+    ).toEqual(["Channels in Valorant: ranked, Stack", "Roles: @VIP, @Pings"]);
   });
 });

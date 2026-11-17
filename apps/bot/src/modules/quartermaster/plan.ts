@@ -4,6 +4,7 @@ import {
   QM_ROLE_PERMISSIONS,
   type QmCreated,
   type QmOperation,
+  type QmOrder,
   type QmRolePermission,
   type QmSettingChange,
   qmSettingLabel,
@@ -62,14 +63,38 @@ export const AiPlanSchema = z.object({
     }),
   ),
   notes: z.string().describe("Anything you could not or would not do, and why. Empty if none."),
+  order: z
+    .array(
+      z.object({
+        scope: z.enum(["categories", "channels", "roles"]),
+        parent: z
+          .string()
+          .nullable()
+          .describe(
+            'For "channels": the category id, or a category ref from this plan. Else null.',
+          ),
+        items: z
+          .array(z.string())
+          .describe("Ids or refs from this plan, top to bottom as they should show in Discord."),
+      }),
+    )
+    .describe(
+      "New orders, top to bottom: the categories, the channels inside one category, or roles. Empty when the order doesn't change.",
+    ),
 });
-export type AiPlan = z.infer<typeof AiPlanSchema>;
+type AiPlanOutput = z.infer<typeof AiPlanSchema>;
+/** A plan as the model writes it; older plans and tests may leave out the order. */
+export type AiPlan = Omit<AiPlanOutput, "order"> & { order?: AiPlanOutput["order"] };
+export type AiPlanInput = AiPlan;
 
 /** What the plan may refer to that already exists. Built from the server, never from model output. */
 export interface ServerSnapshot {
   everyoneId: string;
   categories: { id: string; name: string }[];
-  roles: { id: string; name: string; managed: boolean }[];
+  /** Top to bottom. `movable`: Garrison may put it in a new order (see QmOrder). */
+  roles: { id: string; name: string; managed: boolean; movable?: boolean }[];
+  /** Channels in each category, top to bottom, for orders. Missing: none known (tests). */
+  channels?: { id: string; name: string; parentId: string | null }[];
   channelCount: number;
   roleCount: number;
   /** Role permissions Garrison holds, so can give. Missing: all of them (tests). */
@@ -106,15 +131,18 @@ export function displayName(raw: string, max = 90) {
 }
 
 export type ValidationResult =
-  | { ok: true; summary: string; operations: QmOperation[]; notes: string }
+  | { ok: true; summary: string; operations: QmOperation[]; orders: QmOrder[]; notes: string }
   | { ok: false; errors: string[] };
+
+/** The most orders one plan sets (all categories, a few categories' channels, the roles). */
+export const MAX_ORDERS = 6;
 
 /**
  * Turn model output into a plan Garrison will run, or explain why not. A plan
  * with any problem is rejected whole: half a build is worse than none.
  */
 export function validatePlan(
-  raw: AiPlan,
+  raw: AiPlanInput,
   server: ServerSnapshot,
   /** The most changes this plan may make: 20, or fewer when the day's allowance is short. */
   maxOperations = MAX_OPERATIONS,
@@ -129,7 +157,7 @@ export function validatePlan(
     server.roles.filter((r) => !r.managed && r.id !== server.everyoneId).map((r) => r.id),
   );
 
-  const total = raw.operations.length + settingsCount;
+  const total = raw.operations.length + (raw.order?.length ?? 0) + settingsCount;
   if (!total) errors.push("The plan has no changes.");
   if (total > maxOperations)
     errors.push(
@@ -243,13 +271,161 @@ export function validatePlan(
   if (server.roleCount + newRoles > DISCORD_ROLE_LIMIT)
     errors.push("This would pass Discord's limit of 250 roles.");
 
+  const orders = validateOrders(raw.order ?? [], server, ops, errors);
+
   if (errors.length) return { ok: false, errors };
   return {
     ok: true,
     summary: displayName(raw.summary, 200) || "Server changes",
     operations: ops,
+    orders,
     notes: displayName(raw.notes, 500),
   };
+}
+
+/**
+ * New orders, checked against the server: every item is something that exists (or this plan
+ * makes) in that list, at least two, none twice. Roles are only those Garrison may move
+ * (no admin or moderation powers, not managed, below its own role), so an order can never
+ * change who outranks whom among staff.
+ */
+function validateOrders(
+  raw: AiPlanOutput["order"],
+  server: ServerSnapshot,
+  ops: QmOperation[],
+  errors: string[],
+): QmOrder[] {
+  const out: QmOrder[] = [];
+  if (raw.length > MAX_ORDERS) errors.push(`A plan can set ${MAX_ORDERS} orders at most.`);
+  const made = new Map(ops.map((o) => [o.ref, o]));
+  const categories = new Map(server.categories.map((c) => [c.id, c.name]));
+  const roles = new Map(server.roles.filter((r) => r.movable).map((r) => [r.id, r.name]));
+  const fixedRoles = new Set(server.roles.filter((r) => !r.movable).map((r) => r.id));
+  // Every role top to bottom; a new role starts at the bottom, just above @everyone.
+  const ladder = [
+    ...server.roles
+      .filter((r) => r.id !== server.everyoneId)
+      .map((r) => ({ id: r.id, fixed: !r.movable })),
+    ...ops.filter((o) => o.kind === "create_role").map((o) => ({ id: o.ref, fixed: false })),
+  ];
+  const channels = server.channels ?? [];
+  raw.slice(0, MAX_ORDERS).forEach((o, i) => {
+    const n = `Order ${i + 1}`;
+    let parent: string | null = null;
+    if (o.scope === "channels") {
+      const p = (o.parent ?? "").trim();
+      if (made.get(p.toLowerCase())?.kind === "create_category") parent = p.toLowerCase();
+      else if (categories.has(p)) parent = p;
+      else {
+        errors.push(`${n}: "${p.slice(0, 40)}" isn't a category in this plan or the server.`);
+        return;
+      }
+    }
+    const items: string[] = [];
+    const names: string[] = [];
+    for (const raw of o.items) {
+      const t = raw.trim();
+      const op = made.get(t.toLowerCase());
+      let name: string | undefined;
+      if (o.scope === "categories") {
+        name = op?.kind === "create_category" ? op.name : categories.get(t);
+      } else if (o.scope === "roles") {
+        name = op?.kind === "create_role" ? op.name : roles.get(t);
+        if (!name && fixedRoles.has(t)) {
+          errors.push(
+            `${n}: a role with admin or moderation powers, a managed role, or one above Garrison's own stays where it is.`,
+          );
+          continue;
+        }
+      } else {
+        const isChannel = op?.kind === "create_text_channel" || op?.kind === "create_voice_channel";
+        if (isChannel && op.parent === parent) name = op.name;
+        else {
+          const ch = channels.find((c) => c.id === t);
+          if (ch && ch.parentId === parent) name = ch.name;
+        }
+      }
+      if (!name) {
+        errors.push(`${n}: "${t.slice(0, 40)}" isn't one of the ${o.scope} it can order.`);
+        continue;
+      }
+      const id = op ? t.toLowerCase() : t;
+      if (items.includes(id)) {
+        errors.push(`${n}: "${name}" is listed twice.`);
+        continue;
+      }
+      items.push(id);
+      names.push(name);
+    }
+    if (items.length < 2) {
+      errors.push(`${n}: an order needs two or more ${o.scope}.`);
+      return;
+    }
+    const crossing = o.scope === "roles" ? roleCrossing(ladder, items) : null;
+    if (crossing) {
+      errors.push(
+        `${n}: @${names[items.indexOf(crossing)]} would pass a staff or bot role. Other roles keep to their side of those, so staff can still moderate everyone below them.`,
+      );
+      return;
+    }
+    out.push({ scope: o.scope, parent, items, names });
+  });
+  return out;
+}
+
+/**
+ * Where each item goes: the items swap among the places they hold now, top place to the
+ * first item. `places` are their current positions; for roles a higher number is higher up,
+ * for channels a lower number is. Pure, so the bot and tests agree.
+ */
+export function orderPositions(
+  items: { id: string; position: number }[],
+  order: string[],
+  higherIsUp: boolean,
+): { id: string; position: number }[] {
+  const here = items.filter((i) => order.includes(i.id));
+  const places = here.map((i) => i.position).sort((a, b) => (higherIsUp ? b - a : a - b));
+  const ranked = order.filter((id) => here.some((i) => i.id === id));
+  return ranked.map((id, i) => ({ id, position: places[i] ?? 0 }));
+}
+
+/**
+ * Would an order lift a role past a fixed one (staff, bot, or above Garrison), or drop one
+ * below it? `ladder` is every role top to bottom. Staff can only moderate members whose top
+ * role is lower than theirs, so plain roles keep to their side of every fixed role. Returns
+ * the first role that would cross, or null.
+ */
+export function roleCrossing(
+  ladder: { id: string; fixed: boolean }[],
+  order: string[],
+): string | null {
+  const band = new Map<string, number>();
+  let b = 0;
+  for (const r of ladder) {
+    if (r.fixed) b++;
+    else band.set(r.id, b);
+  }
+  const listed = order.filter((id, i) => band.has(id) && order.indexOf(id) === i);
+  const slots = ladder.filter((r) => listed.includes(r.id)).map((r) => band.get(r.id));
+  return listed.find((id, i) => band.get(id) !== slots[i]) ?? null;
+}
+
+/** Lines for the preview of a plan's orders: "↕ Categories: Info, Games, Voice". */
+export function describeOrders(orders: QmOrder[], ops: QmOperation[], server: ServerSnapshot) {
+  const names = new Map<string, string>([
+    ...ops.map((o) => [o.ref, o.name] as [string, string]),
+    ...server.categories.map((c) => [c.id, c.name] as [string, string]),
+  ]);
+  return orders.map((o) => {
+    const where =
+      o.scope === "categories"
+        ? "Categories"
+        : o.scope === "roles"
+          ? "Roles"
+          : `Channels in ${names.get(o.parent ?? "") ?? "a category"}`;
+    const list = o.scope === "roles" ? o.names.map((x) => `@${x}`) : o.names;
+    return `↕ ${where}: ${list.join(", ")}`;
+  });
 }
 
 /** Lines for the preview: exactly what Apply will create. */
@@ -295,7 +471,7 @@ export function describePlan(ops: QmOperation[], server: ServerSnapshot) {
 export function rollbackOrder(created: QmCreated[]) {
   const rank = { channel: 0, category: 1, role: 2 } as const;
   return created
-    .filter((c): c is QmCreated & { kind: keyof typeof rank } => c.kind !== "setting")
+    .filter((c): c is QmCreated & { kind: keyof typeof rank } => c.kind in rank)
     .sort((a, b) => rank[a.kind] - rank[b.kind]);
 }
 

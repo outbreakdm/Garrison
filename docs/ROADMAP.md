@@ -7,6 +7,13 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
+- **Follow-ups (2026-11-17), built, not deployed:** Server Stats lists every counter as an
+  option to tick; an "@" picker in template boxes (stats names, welcome card, messages, voice
+  room names, Rally wording) inserts `{count}`, `{user}` and the rest, and mentions in
+  messages; the AI assistant can put categories, a category's channels and roles in a new
+  order and knows Discord's layout and role-hierarchy rules. **Before deploying:** apply
+  migration `0072_qm_orders` in production (one column on `qm_builds`) and record its row.
+  Still to try on a test server: "tidy my server" with the AI assistant, Apply, then Undo.
 - **Community requests (2026-11-17):** all eight are **deployed** (`3f76d1b`, runs 43981846349,
   44015846630 and 44016955567; migrations 0065 to 0071 applied and recorded, 72 rows; 33 slash
   commands registered). Still to check on a test server: the list in `docs/COMMUNITY_REQUESTS.md`
@@ -1090,3 +1097,12 @@ Decided (2026-11-12, owner):
   stuck, the timers start at once, and the heartbeat has its own timer. Back at 04:26:44, first
   sweep done in 5 seconds. Which step stalled isn't known: the Cloudflare container logs for
   23:44 to 04:26 would say ("Sweep step is stuck" appears only from 3f76d1b on).
+- 2026-11-17: Follow-ups from the owner. The AI request that "failed to respond" at 02:19 was the
+  outage above (it expired at 04:26 unanswered). Server Stats now lists all counters as options.
+  An "@" picker (`TemplateField`) inserts placeholders in every template box. The AI assistant
+  gained orders: a plan can reorder categories, the channels in one category, and roles, by
+  swapping the listed items among the places they hold now. Roles with staff powers, app roles
+  and roles at or above Garrison's never move, and no role may pass one (checked in the plan and
+  again against Discord at apply time); Undo restores the old order; removing an item from a
+  draft keeps its orders. Its instructions now cover Discord's sidebar order, text above voice,
+  the role hierarchy and permission overwrites. Migration 0072 (local only). Not deployed.

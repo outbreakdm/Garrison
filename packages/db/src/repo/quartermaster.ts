@@ -6,6 +6,7 @@ import {
   type QmCreated,
   type QmMessage,
   type QmOperation,
+  type QmOrder,
   type QmPost,
   type QmSettingChange,
   qmBuilds,
@@ -23,6 +24,8 @@ export interface CreatePlanInput {
   settings?: QmSettingChange[];
   /** Saved items it posts. */
   posts?: QmPost[];
+  /** New orders it sets. */
+  orders?: QmOrder[];
   model: string;
   notes?: string | null;
   continuesId?: string | null;
@@ -39,19 +42,21 @@ export const QM_PLAN_TTL_MS = 15 * 60_000;
  * leaves out waiting plans: only what reached the server.
  */
 const changesCounted = (now: Date, settled: boolean) => sql<number>`coalesce(sum(case
-  when ${qmBuilds.status} = 'applied' then jsonb_array_length(${qmBuilds.plan}) + jsonb_array_length(${qmBuilds.settings}) + jsonb_array_length(${qmBuilds.posts})
+  when ${qmBuilds.status} = 'applied' then jsonb_array_length(${qmBuilds.plan}) + jsonb_array_length(${qmBuilds.settings}) + jsonb_array_length(${qmBuilds.posts}) + jsonb_array_length(${qmBuilds.orders})
   when ${qmBuilds.status} in ('failed', 'rolled_back') then jsonb_array_length(${qmBuilds.created})
-  when ${qmBuilds.status} = 'pending' and ${settled ? sql`false` : sql`${qmBuilds.createdAt} > ${new Date(now.getTime() - QM_PLAN_TTL_MS).toISOString()}::timestamptz`} then jsonb_array_length(${qmBuilds.plan}) + jsonb_array_length(${qmBuilds.settings}) + jsonb_array_length(${qmBuilds.posts})
+  when ${qmBuilds.status} = 'pending' and ${settled ? sql`false` : sql`${qmBuilds.createdAt} > ${new Date(now.getTime() - QM_PLAN_TTL_MS).toISOString()}::timestamptz`} then jsonb_array_length(${qmBuilds.plan}) + jsonb_array_length(${qmBuilds.settings}) + jsonb_array_length(${qmBuilds.posts}) + jsonb_array_length(${qmBuilds.orders})
   else 0 end - ${qmBuilds.packSupplies}), 0)::int`;
 
 /** What a built (or partly built) plan counts: everything, or what it made before stopping. */
 export const qmChangesMade = (
-  b: Pick<QmBuild, "status" | "plan" | "settings" | "posts" | "created">,
+  b: Pick<QmBuild, "status" | "plan" | "settings" | "posts" | "created"> &
+    Partial<Pick<QmBuild, "orders">>,
 ) => (b.status === "applied" ? qmChangeCount(b) : b.created.length);
 
 /** A build's changes: its structure, each settings field, and each post. */
-export const qmChangeCount = (b: Pick<QmBuild, "plan" | "settings" | "posts">) =>
-  b.plan.length + (b.settings?.length ?? 0) + (b.posts?.length ?? 0);
+export const qmChangeCount = (
+  b: Pick<QmBuild, "plan" | "settings" | "posts"> & Partial<Pick<QmBuild, "orders">>,
+) => b.plan.length + (b.settings?.length ?? 0) + (b.posts?.length ?? 0) + (b.orders?.length ?? 0);
 
 /** Builds on a server that is on Free right now (no Pro row). */
 const onFreeServer = sql`not exists (select 1 from ${guildPlans} where ${guildPlans.guildId} = ${qmBuilds.guildId} and ${guildPlans.plan} = 'pro')`;

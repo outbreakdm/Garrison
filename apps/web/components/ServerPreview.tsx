@@ -1,4 +1,22 @@
-import { detailId, type ServerPreview as Preview, type PreviewChannel } from "@/lib/qm-preview";
+import {
+  afterRows,
+  detailId,
+  type Moved,
+  type ServerPreview as Preview,
+  type PreviewChannel,
+} from "@/lib/qm-preview";
+
+/** A row's classes: new, or moved (its new place) / was (its old place, shown in Now). */
+const rowClass = (base: string, isNew: boolean, moved?: Moved) =>
+  [base, isNew ? "is-new" : "", moved === "to" ? "is-moved" : "", moved === "from" ? "is-was" : ""]
+    .filter(Boolean)
+    .join(" ");
+
+/** The tag on a row: New, or Moved where a plan's order puts it. */
+function Tag({ isNew, moved }: { isNew: boolean; moved?: Moved }) {
+  if (isNew) return <span className="sp-new">New</span>;
+  return moved === "to" ? <span className="sp-new sp-new--moved">Moved</span> : null;
+}
 
 /** In the plan panel each row opens its details (a :target section the panel shows). */
 function Open({ id, name }: { id: string; name: string }) {
@@ -53,7 +71,7 @@ function Glyph({ kind, locked }: { kind: PreviewChannel["kind"]; locked: boolean
 function Channel({ c, linked }: { c: PreviewChannel; linked?: boolean }) {
   const what = `${c.kind === "voice" ? "Voice channel" : "Channel"}${c.locked ? ", private" : ""}`;
   return (
-    <li className={`sp-row ${c.isNew ? "is-new" : ""}`}>
+    <li className={rowClass("sp-row", c.isNew, c.moved)}>
       <Glyph kind={c.kind} locked={c.locked} />
       <span className="sp-row__main">
         <span className="sp-row__name">
@@ -62,8 +80,8 @@ function Channel({ c, linked }: { c: PreviewChannel; linked?: boolean }) {
         </span>
         {c.details.length ? <span className="sp-row__detail">{c.details.join(" · ")}</span> : null}
       </span>
-      {c.isNew ? <span className="sp-new">New</span> : null}
-      {linked ? <Open id={c.key} name={c.name} /> : null}
+      <Tag isNew={c.isNew} moved={c.moved} />
+      {linked && c.moved !== "from" ? <Open id={c.key} name={c.name} /> : null}
     </li>
   );
 }
@@ -82,7 +100,8 @@ export function ServerPreview({
   linked?: boolean;
 }) {
   const total =
-    preview.loose.length + preview.categories.reduce((n, c) => n + c.channels.length, 0);
+    preview.loose.length +
+    afterRows(preview.categories).reduce((n, c) => n + afterRows(c.channels).length, 0);
   // With a plan, untouched categories fold away so the changes are what you see.
   const openAll = !planned && total <= 60;
   return (
@@ -96,7 +115,7 @@ export function ServerPreview({
             <span className="sp__name">{name}</span>
             <span className="sp__meta">
               {total - preview.added.channels} channels ·{" "}
-              {preview.roles.filter((r) => !r.isNew).length} roles
+              {afterRows(preview.roles).filter((r) => !r.isNew).length} roles
             </span>
           </span>
         </span>
@@ -128,14 +147,14 @@ export function ServerPreview({
           ) : null}
           {preview.categories.map((cat) => (
             <details
-              className={`sp-cat ${cat.isNew ? "is-new" : ""}`}
-              key={cat.key}
+              className={rowClass("sp-cat", cat.isNew, cat.moved)}
+              key={`${cat.moved ?? ""}${cat.key}`}
               open={openAll || cat.touched}
             >
               <summary>
                 <span className="sp-cat__name">{cat.name}</span>
-                {cat.isNew ? (
-                  <span className="sp-new">New</span>
+                {cat.isNew || cat.moved === "to" ? (
+                  <Tag isNew={cat.isNew} moved={cat.moved} />
                 ) : (
                   <span className="sp-cat__count">
                     {cat.channels.filter((c) => !c.isNew).length}
@@ -145,7 +164,7 @@ export function ServerPreview({
               {cat.channels.length ? (
                 <ul className="sp-list">
                   {cat.channels.map((c) => (
-                    <Channel c={c} key={c.key} linked={linked} />
+                    <Channel c={c} key={`${c.moved ?? ""}${c.key}`} linked={linked} />
                   ))}
                 </ul>
               ) : (
@@ -161,7 +180,7 @@ export function ServerPreview({
           <div className="g-label sp__title">Roles</div>
           <ul className="sp-list">
             {preview.roles.map((r) => (
-              <li className={`sp-row ${r.isNew ? "is-new" : ""}`} key={r.key}>
+              <li className={rowClass("sp-row", r.isNew, r.moved)} key={`${r.moved ?? ""}${r.key}`}>
                 <svg
                   className="sp-dot"
                   viewBox="0 0 10 10"
@@ -194,8 +213,8 @@ export function ServerPreview({
                     <span className="sp-row__detail">{r.details.join(" · ")}</span>
                   ) : null}
                 </span>
-                {r.isNew ? <span className="sp-new">New</span> : null}
-                {linked ? <Open id={r.key} name={r.name} /> : null}
+                <Tag isNew={r.isNew} moved={r.moved} />
+                {linked && r.moved !== "from" ? <Open id={r.key} name={r.name} /> : null}
               </li>
             ))}
             <li className="sp-row sp-row--quiet">

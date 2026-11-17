@@ -103,6 +103,7 @@ export type {
   QmBuild,
   QmCreated,
   QmOperation,
+  QmOrder,
   QmPost,
   QmRemovePayload,
   QmSettingChange,
