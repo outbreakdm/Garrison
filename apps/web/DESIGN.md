@@ -170,12 +170,15 @@ The rules from docs/LAYOUT_PROPOSAL.md, as built. One meaning per column, one te
 - **The head:** title, section tag and state on one line; the intro is one sentence of about 90 characters at most, with anything more under "How this works". A problem is said once, as the Needs-you strip across the foot of the head.
 - **Page tabs** split a module with several jobs (Moderation: Cases, Automod, Escalation and appeals). Each tab is its own address (`?tab=`), switches in place, and a `#section` link opens the tab it's on. Every tab stays on the page, hidden, so the head switch and the settings form always work.
 - **Templates.** Each tab or small page uses one:
-  - *Activity* (cases, the queue, the board, events): the live list in the wide column, quick tools and small facts in a 300 to 360px side column from 1100px; below that the list comes first.
+  - *Activity* (cases, the queue, the board, events): the live list in the wide column, quick tools and small facts in a 300 to 360px side column from 1100px; below that the list comes first. A wide table (Logs' events) takes the full width, its small facts under it.
   - *Setup* (configuration): one column of panels; from 1280px an "On this page" index beside it jumps to each panel and shows its save state.
   - *Library* (role menus, messages, stream alerts, ticket panels): a grid of tiles, at least 260px wide, with a dashed "new" tile last. A tile opens its editor on a page of its own (`?edit=<id>`), full width with its preview and a link back to the tile.
   - *Compact* (Starboard, Suggestions, Voice rooms, Invites): settings at 60% beside the live list at 40% from 1100px; on phones the list comes first when it has items.
 - **The Overview** is four bands on 12 columns: attention (or "All clear", with the health check), the pulse (four numbers), activity (the messages chart with top channels, 8, beside recent cases, 4), modules (tiles of 3 or 4). A band's tiles share one height.
 - **Fields have a width for what they hold:** numbers up to 160px, pickers up to 360px, text up to 640px. Repeating rows show what's set plus one spare, with an Add button for the next.
+- **A rule reads as a sentence** with its numbers in place: "Remove messages when someone sends more than [6] messages within [8] seconds", "It's a raid when [10] or more people join within [30] seconds".
+- **Help text stays at two lines;** anything more sits under "How this works". A warning the reader needs (what's sent to OpenAI, that claimed accounts count) stays in the visible part.
+- **"Needs you" carries its fix:** a setting jumps to its panel; a missing permission is a button to Discord's page for giving it ("Give Move Members").
 - **Panels stack with 16 to 24px gaps.** Editors put fields and a 320 to 460px preview side by side from 1100px; below that the preview comes first.
 - **AI assistant:** chat beside a 340 to 400px plan panel from 1100px; the chat fills the screen height and scrolls inside.
 

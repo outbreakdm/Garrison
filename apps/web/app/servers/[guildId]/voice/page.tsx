@@ -17,6 +17,7 @@ import { CheckList, SettingsNotice } from "@/components/settings";
 import { TemplateField } from "@/components/TemplateField";
 import { getDb } from "@/lib/db";
 import { botPermissions, getServerLayout, memberNames } from "@/lib/discord";
+import { fixPermissionsUrl } from "@/lib/fix-permissions";
 import { contentKey, readFlash } from "@/lib/flash";
 import { pageStatus } from "@/lib/module-states";
 import { requireGuildAccess } from "@/lib/session";
@@ -84,11 +85,18 @@ export default async function VoiceRoomsPage({
           form="settings-form"
           defaultChecked={config.enabled}
         />
-        {status.state === "blocked" ? (
+        {/* A problem is said once, here, with its fix: a permission, or a setting. */}
+        {!canMove ? (
+          <HeadNote
+            reason="Garrison can't move members: it needs Move Members."
+            href={fixPermissionsUrl(guild.id) ?? "/servers"}
+            action="Give Move Members"
+          />
+        ) : status.state === "blocked" ? (
           <HeadNote
             reason={status.reason ?? "Something it needs is missing."}
-            href={status.reason?.includes("Move Members") ? undefined : "#settings"}
-            action={"Pick one"}
+            href="#settings"
+            action="Pick one"
           />
         ) : null}
       </div>
@@ -103,13 +111,6 @@ export default async function VoiceRoomsPage({
         </div>
       ) : null}
       <SettingsNotice query={query} />
-      {/* Said once: when the head already says it (on but can't work), no banner too. */}
-      {!canMove && status.state !== "blocked" ? (
-        <div className="notice" role="alert">
-          Garrison can't move members yet: give its role the Move Members permission (Server
-          Settings, Roles), or add Garrison again from the server list to accept the new permission.
-        </div>
-      ) : null}
 
       <CompactLayout
         liveFirst={rooms.length > 0}

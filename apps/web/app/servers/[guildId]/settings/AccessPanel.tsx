@@ -1,4 +1,5 @@
 import type { AccessGrant, DashboardRole } from "@garrison/db";
+import { HowItWorks } from "@/components/HowItWorks";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { formAction } from "@/lib/autosave";
 import type { GuildRole, MemberCard } from "@/lib/discord";
@@ -53,12 +54,15 @@ export function AccessPanel({
         </h2>
       </div>
       <p className="g-help">
-        Anyone with Manage Server already runs this dashboard. Give others a way in:{" "}
-        <strong>Viewers</strong> see every page, logs, cases and tickets included, and change
-        nothing; <strong>Editors</strong> change settings and post, including which roles Garrison
-        hands out. Moderation, backups, the plan and this list stay with Manage Server. Leaving the
-        server, or losing the role, ends their access at once.
+        Anyone with Manage Server already runs this dashboard. Give others a way in as a{" "}
+        <strong>Viewer</strong> or an <strong>Editor</strong>.
       </p>
+      <HowItWorks>
+        Viewers see every page, logs, cases and tickets included, and change nothing. Editors change
+        settings and post, including which roles Garrison hands out. Moderation, backups, the plan
+        and this list stay with Manage Server. Leaving the server, or losing the role, ends their
+        access at once.
+      </HowItWorks>
 
       {grants.length ? (
         <ul className="access-list">

@@ -276,9 +276,8 @@ export default async function SettingsPage({
             need="manager"
           >
             <p className="g-help">
-              Everyone in the server can sign in and see their own space here: groups and raids, and
-              the pages below that are on. They only ever see and change themselves.{" "}
-              <a href={`/play/${guild.id}/you`}>See it as a member</a>.
+              Members can sign in to their own space: groups, raids and the pages turned on below.
+              Each sees only themselves. <a href={`/play/${guild.id}/you`}>See it as a member</a>.
             </p>
             <Switch
               name="showYou"

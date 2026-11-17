@@ -13,6 +13,7 @@ import { AutoSaveCard } from "@/components/AutoSave";
 import { BackgroundChip } from "@/components/cards/BackgroundChip";
 import { ProTag } from "@/components/cards/CardEditor";
 import { HeadNote, HeadStatus } from "@/components/ModuleHead";
+import { SetupLayout } from "@/components/PageLayouts";
 import { PageTabs, TabPanel } from "@/components/PageTabs";
 import { getDb } from "@/lib/db";
 import { botTopPosition, listGuildRoles, listTextChannels } from "@/lib/discord";
@@ -123,65 +124,9 @@ export default async function WelcomePage({ params }: { params: Promise<{ guildI
       ) : null}
 
       <TabPanel id="join" tabs={WELCOME_TABS}>
-        {part("join", { enabled: w.joinEnabled, channelId: w.joinChannelId, card: w.joinCard })}
-
-        <div className="split-2">
-          <AutoSaveCard
-            id="roles"
-            title="Roles on join"
-            action={saveJoinRoles}
-            undo={undoChange}
-            guildId={guild.id}
-            stamp={contentKey(w.joinRoleIds)}
-            saveLabel="Save roles on join"
-            aside={
-              <span className="count">
-                {w.joinRoleIds.length} of {roleLimit}
-              </span>
-            }
-          >
-            <p className="g-help">
-              Given as soon as someone joins, before the welcome card. Roles with moderation or
-              admin powers never are.
-              {plan === "free"
-                ? ` Free servers give ${roleLimit} role; Pro gives up to ${JOIN_ROLES_MAX}.`
-                : ""}
-            </p>
-            {Array.from({ length: roleSlots }, (_, i) => {
-              const current = w.joinRoleIds[i] ?? "";
-              const role = roles.find((r) => r.id === current);
-              return (
-                // biome-ignore lint/suspicious/noArrayIndexKey: fixed slots
-                <label className="g-field" key={i}>
-                  <span>
-                    {roleSlots === 1 ? "Role" : `Role ${i + 1}`}
-                    {i >= roleLimit ? " (paused: Pro)" : ""}
-                  </span>
-                  <select className="g-input" name="joinRoleIds" defaultValue={current}>
-                    <option value="">None</option>
-                    {give.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        @{r.name}
-                        {botTop !== null && r.position >= botTop ? " (above Garrison)" : ""}
-                      </option>
-                    ))}
-                  </select>
-                  {role && botTop !== null && role.position >= botTop ? (
-                    <span className="g-help g-help--warn">
-                      Garrison's role sits below @{role.name}. Drag Garrison above it in Server
-                      Settings → Roles.
-                    </span>
-                  ) : null}
-                </label>
-              );
-            })}
-            {verifyRole ? (
-              <p className="g-help g-help--warn">
-                Verification is on (it gives @{verifyRole.name}). Roles on join are given before
-                someone verifies, so pick roles that don't open the channels verification guards.
-              </p>
-            ) : null}
-          </AutoSaveCard>
+        {/* One column: the card, the image drawn under it, then the roles given on join. */}
+        <SetupLayout>
+          {part("join", { enabled: w.joinEnabled, channelId: w.joinChannelId, card: w.joinCard })}
 
           <AutoSaveCard
             id="image"
@@ -245,7 +190,63 @@ export default async function WelcomePage({ params }: { params: Promise<{ guildI
               </span>
             </label>
           </AutoSaveCard>
-        </div>
+          <AutoSaveCard
+            id="roles"
+            title="Roles on join"
+            action={saveJoinRoles}
+            undo={undoChange}
+            guildId={guild.id}
+            stamp={contentKey(w.joinRoleIds)}
+            saveLabel="Save roles on join"
+            aside={
+              <span className="count">
+                {w.joinRoleIds.length} of {roleLimit}
+              </span>
+            }
+          >
+            <p className="g-help">
+              Given as soon as someone joins, before the welcome card. Roles with moderation or
+              admin powers never are.
+              {plan === "free"
+                ? ` Free servers give ${roleLimit} role; Pro gives up to ${JOIN_ROLES_MAX}.`
+                : ""}
+            </p>
+            {Array.from({ length: roleSlots }, (_, i) => {
+              const current = w.joinRoleIds[i] ?? "";
+              const role = roles.find((r) => r.id === current);
+              return (
+                // biome-ignore lint/suspicious/noArrayIndexKey: fixed slots
+                <label className="g-field" key={i}>
+                  <span>
+                    {roleSlots === 1 ? "Role" : `Role ${i + 1}`}
+                    {i >= roleLimit ? " (paused: Pro)" : ""}
+                  </span>
+                  <select className="g-input" name="joinRoleIds" defaultValue={current}>
+                    <option value="">None</option>
+                    {give.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        @{r.name}
+                        {botTop !== null && r.position >= botTop ? " (above Garrison)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {role && botTop !== null && role.position >= botTop ? (
+                    <span className="g-help g-help--warn">
+                      Garrison's role sits below @{role.name}. Drag Garrison above it in Server
+                      Settings → Roles.
+                    </span>
+                  ) : null}
+                </label>
+              );
+            })}
+            {verifyRole ? (
+              <p className="g-help g-help--warn">
+                Verification is on (it gives @{verifyRole.name}). Roles on join are given before
+                someone verifies, so pick roles that don't open the channels verification guards.
+              </p>
+            ) : null}
+          </AutoSaveCard>
+        </SetupLayout>
       </TabPanel>
       <TabPanel id="leave" tabs={WELCOME_TABS}>
         {part("leave", { enabled: w.leaveEnabled, channelId: w.leaveChannelId, card: w.leaveCard })}

@@ -152,11 +152,14 @@ export default async function BarracksPage({ params }: { params: Promise<{ guild
             >
               <input type="hidden" name="guildId" value={guild.id} />
               <p className="g-help">
-                Members get the role while an account they share here meets the rule, and lose it
-                when none does (or they stop sharing). Checked every 30 minutes and whenever someone
-                links. Claimed accounts count too, so use these for flair, not for access.
+                Members get the role while an account they share here meets the rule. Claimed
+                accounts count too, so use these for flair, not for access.
                 {rules.length && !ent["barracks.statRoles"] ? " Saved on Pro, paused on Free." : ""}
               </p>
+              <HowItWorks>
+                They lose it when none does, or when they stop sharing. Checked every 30 minutes and
+                whenever someone links.
+              </HowItWorks>
               <div className="boost-rows" id="stat-rows">
                 {Array.from({ length: Math.min(STAT_ROLES_MAX, rules.length + 2) }, (_, i) => {
                   const r = rules[i];

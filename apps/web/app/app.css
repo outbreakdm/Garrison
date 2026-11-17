@@ -3779,8 +3779,9 @@ form[data-pending] [aria-busy="true"]::after {
   background: color-mix(in srgb, var(--accent) 12%, var(--surface));
   color: var(--accent-strong);
 }
-/* A held reading measure: card copy stops at 68 characters. */
-.g-card p:not(.queue__empty),
+/* A held reading measure: card copy stops at 68 characters (a rule sentence holds fields, so
+   it runs the panel's width). */
+.g-card p:not(.queue__empty, .rule-line),
 .g-card .g-help,
 .card-sub {
   max-width: 68ch;

@@ -20,6 +20,7 @@ import {
 import { useLayoutEffect, useRef, useState } from "react";
 import { AutoSaveCard, useSaveSignal } from "@/components/AutoSave";
 import { HexInput, move, ProNotice, ProTag, RowTools } from "@/components/cards/CardEditor";
+import { HowItWorks } from "@/components/HowItWorks";
 import type { AutoResult } from "@/lib/autosave";
 
 type Action = (form: FormData) => Promise<AutoResult>;
@@ -215,10 +216,12 @@ function RankCardFields({ saved, ent, sampleName, planHref }: Props) {
             Details on the card <ProTag on={ent["ranks.cards"]} />
           </legend>
           <p className="g-help">
-            Up to {RANK_CARD_LIMITS.fields} short lines under the name. Each has a label, and its
-            value is either typed by the member (with <code>/rankcard</code> or on their Account
-            page) or read from a game account they share with this server, so it stays up to date.
+            Up to {RANK_CARD_LIMITS.fields} short lines under the name, each a label and a value.
           </p>
+          <HowItWorks>
+            A value is typed by the member (with <code>/rankcard</code> or on their Account page) or
+            read from a game account they share with this server, so it stays up to date.
+          </HowItWorks>
           <div className="detail-list">
             {style.fields.map((f, i) => (
               <div className="detail-row" key={f.id}>

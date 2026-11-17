@@ -117,6 +117,12 @@ export const SEARCH_INDEX: SearchEntry[] = [
     "ai assistant builder chat channels roles settings post undo quartermaster",
   ),
   page(
+    "/quartermaster?tab=templates",
+    "Server templates",
+    "AI assistant",
+    "server templates layout copy save clone another server",
+  ),
+  page(
     "/settings",
     "Settings",
     null,

@@ -9,7 +9,8 @@ then updates **Status** and the **Log** before stopping.
 
 - **Layout (2026-11-17), built, not deployed:** `docs/LAYOUT_PROPOSAL.md`, every
   recommendation accepted. All four phases are committed: A (`b5a5996`), B (`356e9cc`),
-  C (`0a4fe77`) and D. Deploy the dashboard when the owner asks; no migration.
+  C (`0a4fe77`), D (`3d4393f`), and a last pass for what the proposal asked that those had
+  left out. No migration.
   - A: the menu scrolls on its own (server card and plan card stay put), Needs you is one strip
     under the page head, fields sized to what they hold, repeating rows show one spare with Add.
   - B: page tabs (`components/PageTabs.tsx`) on Moderation, Security, Settings, Welcome,
@@ -1173,3 +1174,10 @@ Decided (2026-11-12, owner):
   DESIGN.md updated. Checked every page at 1440 and 390 (no sideways scroll), key pages at
   1000 and 600, and in Chrome: folding kept across a reload, the search icon, the section tag
   on each page. 101 web tests pass; lint at 36 warnings.
+- 2026-11-17: Layout, the rest of the proposal: Logs' events table full width (inviters and the
+  download under it); AI assistant's Server templates is a tab; Economy's Activity tab puts Give
+  or take beside the lists; Welcome's Join tab is one column (card, image, roles on join); spam
+  and raid rules read as sentences; eleven help texts cut to two lines with "How this works";
+  Voice rooms and Server stats say a missing permission in the head with a "Give …" button to
+  Discord, not a banner. Checked at 1440 and 390 and in Chrome; production build passes; 101
+  web tests pass; lint at 36 warnings.

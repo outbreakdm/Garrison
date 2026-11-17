@@ -24,6 +24,7 @@ import { ProTag } from "@/components/cards/CardEditor";
 import { LevelCards, Segmented } from "@/components/choices";
 import { EmptyState } from "@/components/EmptyState";
 import { ActionBadge, formatDuration, formatTime, plainMentions } from "@/components/format";
+import { HowItWorks } from "@/components/HowItWorks";
 import { ListField } from "@/components/ListField";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { HeadNote, HeadSwitch } from "@/components/ModuleHead";
@@ -617,9 +618,11 @@ export default async function WatchPage({
                 },
               ]}
             />
-            <div className="field-row field-row--3">
-              <label className="g-field" htmlFor="spamCount">
-                <span>More than (messages)</span>
+            {/* Each rule reads as a sentence, its numbers in place (docs/LAYOUT_PROPOSAL.md §7). */}
+            <p className="rule-line">
+              Remove messages when someone sends more than{" "}
+              <label className="rule-line__num">
+                <span className="sr-only">Messages, more than</span>
                 <input
                   className="g-input"
                   id="spamCount"
@@ -629,9 +632,10 @@ export default async function WatchPage({
                   max={AUTOMOD_LIMITS.spamCount}
                   defaultValue={am.spamCount}
                 />
-              </label>
-              <label className="g-field" htmlFor="spamSeconds">
-                <span>Within (seconds)</span>
+              </label>{" "}
+              messages within{" "}
+              <label className="rule-line__num">
+                <span className="sr-only">Within seconds</span>
                 <input
                   className="g-input"
                   id="spamSeconds"
@@ -641,9 +645,13 @@ export default async function WatchPage({
                   max={AUTOMOD_LIMITS.spamSeconds}
                   defaultValue={am.spamSeconds}
                 />
-              </label>
-              <label className="g-field" htmlFor="mentionLimit">
-                <span>Most mentions</span>
+              </label>{" "}
+              seconds.
+            </p>
+            <p className="rule-line">
+              Remove a message that mentions more than{" "}
+              <label className="rule-line__num">
+                <span className="sr-only">Mentions, more than</span>
                 <input
                   className="g-input"
                   id="mentionLimit"
@@ -653,10 +661,10 @@ export default async function WatchPage({
                   max={AUTOMOD_LIMITS.mentionLimit}
                   defaultValue={am.mentionLimit}
                 />
-                <RecValue field="mentionLimit" value={5} />
-              </label>
-            </div>
-            <span className="g-help">0 turns a check off. Mentions count users and roles.</span>
+              </label>{" "}
+              people or roles. <RecValue field="mentionLimit" value={5} />
+            </p>
+            <span className="g-help">0 turns a rule off.</span>
             <Segmented
               name="action"
               label="After removing the message"
@@ -744,11 +752,14 @@ export default async function WatchPage({
             footer={<PatternTester formId="patterns-form" />}
           >
             <p className="g-help">
-              Regular expressions Discord's own AutoMod checks: a matching message is blocked before
-              anyone sees it, and Garrison records a case and does what Automod does after removing
-              a message. Any case matches. People with Manage Server, and the roles and channels
-              Automod skips, are never checked.
+              Regular expressions Discord's own AutoMod checks: a match is blocked before anyone
+              sees it.
             </p>
+            <HowItWorks>
+              Garrison records a case and does what Automod does after removing a message. Any case
+              matches. People with Manage Server, and the roles and channels Automod skips, are
+              never checked.
+            </HowItWorks>
             <div className="mono-list">
               <ListField
                 name="regexPatterns"
@@ -806,10 +817,10 @@ export default async function WatchPage({
             }
           >
             <p className="g-help">
-              Reads messages for what word lists can't catch. Message text is sent to OpenAI's
-              moderation model to be scored and isn't kept by Garrison. Runs once Garrison's host
-              has an OpenAI key.
+              Reads messages for what word lists can't catch. Their text is scored by OpenAI's
+              moderation model and isn't kept by Garrison.
             </p>
+            <HowItWorks>It runs once Garrison's host has an OpenAI key.</HowItWorks>
             <fieldset className="choice" disabled={!ent["automod.ai"] && !am.aiEnabled}>
               <legend className="choice__legend">Look for</legend>
               <div className="chip-row">

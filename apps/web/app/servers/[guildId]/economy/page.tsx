@@ -12,7 +12,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { formatTime } from "@/components/format";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { HeadSwitch } from "@/components/ModuleHead";
-import { SetupLayout } from "@/components/PageLayouts";
+import { ActivityLayout, SetupLayout } from "@/components/PageLayouts";
 import { PageTabs, TabPanel } from "@/components/PageTabs";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { SettingsNotice } from "@/components/settings";
@@ -124,214 +124,223 @@ export default async function EconomyPage({
       />
 
       <TabPanel id="activity" tabs={ECONOMY_TABS}>
-        {waiting.length ? (
-          <section className="g-card card-col" id="waiting" aria-labelledby="waiting-title">
-            <div className="row-between">
-              <h2 className="card-title" id="waiting-title">
-                Waiting for staff <span className="count">{waiting.length}</span>
-              </h2>
-            </div>
-            <ul className="answers-list">
-              {waiting.map((p) => (
-                <li className="answers-list__item" data-status="waiting" key={p.id}>
-                  <div className="answers-list__head">
-                    <strong>{p.itemName}</strong>
-                    <span className="muted">
-                      {p.username} · {money(config.currency, p.price)} · {formatTime(p.createdAt)}
-                    </span>
+        {/* Activity: purchases waiting, who holds the most and every coin that moved; giving
+            or taking coins is the tool beside them. */}
+        <ActivityLayout
+          main={
+            <>
+              {waiting.length ? (
+                <section className="g-card card-col" id="waiting" aria-labelledby="waiting-title">
+                  <div className="row-between">
+                    <h2 className="card-title" id="waiting-title">
+                      Waiting for staff <span className="count">{waiting.length}</span>
+                    </h2>
                   </div>
-                  {manager ? (
-                    <div className="answers-list__actions">
-                      {(["done", "refund"] as const).map((op) => (
-                        <form action={requestAction} key={op}>
-                          <Hidden guildId={guild.id} kind="economy_purchase" />
-                          <input type="hidden" name="id" value={p.id} />
-                          <input type="hidden" name="op" value={op} />
-                          <button
-                            type="submit"
-                            className={
-                              op === "done"
-                                ? "g-btn g-btn--secondary g-btn--sm"
-                                : "g-btn g-btn--ghost g-btn--sm"
-                            }
-                          >
-                            {op === "done" ? "Handed over" : "Refund"}
-                          </button>
-                        </form>
-                      ))}
-                    </div>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
-        <div className="insights-grid">
-          <section className="g-card table-card" aria-labelledby="richest-title">
-            <div className="table-card__head">
-              <h2 className="card-title" id="richest-title">
-                Richest
-              </h2>
-            </div>
-            {top.length ? (
-              <ol className="rich-list">
-                {top.map((w, i) => (
-                  <li key={w.userId}>
-                    <span className="rich-list__place">{i + 1}</span>
-                    <span className="rich-list__name">{names.get(w.userId) ?? "A member"}</span>
-                    <span className="rich-list__amount">{money(config.currency, w.balance)}</span>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <EmptyState compact mark="leaderboard" title="Nobody has any yet">
-                Members start earning once the economy is on.
-              </EmptyState>
-            )}
-          </section>
-
-          <section className="g-card card-col" id="adjust" aria-labelledby="adjust-title">
-            <h2 className="card-title" id="adjust-title">
-              Give or take
-            </h2>
-            {manager ? (
-              <>
-                <search>
-                  <form className="side-search" method="get" action="#adjust">
-                    <label className="sr-only" htmlFor="economy-find">
-                      Member name or user ID
-                    </label>
-                    <input
-                      id="economy-find"
-                      className="g-input"
-                      name="find"
-                      type="search"
-                      maxLength={32}
-                      required
-                      placeholder="Name or user ID"
-                      defaultValue={find}
-                    />
-                    <button type="submit" className="g-btn g-btn--secondary">
-                      Find
-                    </button>
-                  </form>
-                </search>
-                {find ? (
-                  found === null ? (
-                    <span className="notice" role="alert">
-                      Discord didn't answer. Try again in a moment.
-                    </span>
-                  ) : found.filter((m) => !m.bot).length ? (
-                    <ul className="adjust-list">
-                      {found
-                        .filter((m) => !m.bot)
-                        .slice(0, 5)
-                        .map((m) => (
-                          <li key={m.id}>
-                            <span className="adjust-list__who">
-                              <MemberAvatar name={m.name} src={m.avatar} />
-                              {m.name}
-                            </span>
-                            <form action={requestAction} className="adjust-list__form">
-                              <Hidden guildId={guild.id} kind="economy_adjust" />
-                              <input type="hidden" name="userId" value={m.id} />
-                              <select
-                                className="g-input g-input--sm"
-                                name="op"
-                                aria-label="Give or take"
-                              >
-                                <option value="give">Give</option>
-                                <option value="take">Take</option>
-                              </select>
-                              <input
-                                className="g-input g-input--sm"
-                                name="amount"
-                                inputMode="numeric"
-                                required
-                                placeholder="Amount"
-                                aria-label="Amount"
-                              />
-                              <input
-                                className="g-input g-input--sm"
-                                name="reason"
-                                required
-                                maxLength={200}
-                                placeholder="Why"
-                                aria-label="Reason"
-                              />
-                              <button type="submit" className="g-btn g-btn--primary g-btn--sm">
-                                Do it
-                              </button>
-                            </form>
-                          </li>
-                        ))}
-                    </ul>
-                  ) : (
-                    <p className="muted">Nobody's name starts with “{find}”.</p>
-                  )
-                ) : (
-                  <p className="g-help">
-                    Find a member, then give or take with a reason. It's on the ledger, like /money.
-                  </p>
-                )}
-              </>
-            ) : (
-              <p className="g-help">Only someone with Manage Server can give or take.</p>
-            )}
-          </section>
-        </div>
-
-        <section className="g-card table-card" aria-labelledby="ledger-title">
-          <div className="table-card__head">
-            <h2 className="card-title" id="ledger-title">
-              Ledger
-            </h2>
-            <span className="g-help">Chatting and voice add up into one line a day.</span>
-          </div>
-          {ledger.length ? (
-            <div className="table-wrap">
-              <table className="g-table">
-                <thead>
-                  <tr>
-                    {["When", "Member", "What", "Amount", "After"].map((h) => (
-                      <th key={h} scope="col">
-                        <span className="g-label">{h}</span>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {ledger.map((l) => (
-                    <tr key={l.id}>
-                      <td className="mono">{formatTime(l.at)}</td>
-                      <td>{names.get(l.userId) ?? "A member"}</td>
-                      <td>
-                        {SOURCE[l.source] ?? l.source}
-                        {l.actorName && (l.source === "pay_in" || l.source === "pay_out")
-                          ? ` ${l.actorName}`
-                          : ""}
-                        {l.reason ? <span className="muted"> · {l.reason}</span> : null}
-                        {l.actorName && (l.source === "give" || l.source === "take") ? (
-                          <span className="muted"> · by {l.actorName}</span>
+                  <ul className="answers-list">
+                    {waiting.map((p) => (
+                      <li className="answers-list__item" data-status="waiting" key={p.id}>
+                        <div className="answers-list__head">
+                          <strong>{p.itemName}</strong>
+                          <span className="muted">
+                            {p.username} · {money(config.currency, p.price)} ·{" "}
+                            {formatTime(p.createdAt)}
+                          </span>
+                        </div>
+                        {manager ? (
+                          <div className="answers-list__actions">
+                            {(["done", "refund"] as const).map((op) => (
+                              <form action={requestAction} key={op}>
+                                <Hidden guildId={guild.id} kind="economy_purchase" />
+                                <input type="hidden" name="id" value={p.id} />
+                                <input type="hidden" name="op" value={op} />
+                                <button
+                                  type="submit"
+                                  className={
+                                    op === "done"
+                                      ? "g-btn g-btn--secondary g-btn--sm"
+                                      : "g-btn g-btn--ghost g-btn--sm"
+                                  }
+                                >
+                                  {op === "done" ? "Handed over" : "Refund"}
+                                </button>
+                              </form>
+                            ))}
+                          </div>
                         ) : null}
-                      </td>
-                      <td className={`mono ${l.amount > 0 ? "tone-go" : "tone-caution"}`}>
-                        {l.amount > 0 ? "+" : "−"}
-                        {money(config.currency, Math.abs(l.amount))}
-                      </td>
-                      <td className="mono">{money(config.currency, l.balanceAfter)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <EmptyState compact mark="log" title="Nothing has moved yet">
-              Every coin earned, paid, spent, given or taken shows here.
-            </EmptyState>
-          )}
-        </section>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+              <section className="g-card table-card" aria-labelledby="richest-title">
+                <div className="table-card__head">
+                  <h2 className="card-title" id="richest-title">
+                    Richest
+                  </h2>
+                </div>
+                {top.length ? (
+                  <ol className="rich-list">
+                    {top.map((w, i) => (
+                      <li key={w.userId}>
+                        <span className="rich-list__place">{i + 1}</span>
+                        <span className="rich-list__name">{names.get(w.userId) ?? "A member"}</span>
+                        <span className="rich-list__amount">
+                          {money(config.currency, w.balance)}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <EmptyState compact mark="leaderboard" title="Nobody has any yet">
+                    Members start earning once the economy is on.
+                  </EmptyState>
+                )}
+              </section>
+              <section className="g-card table-card" aria-labelledby="ledger-title">
+                <div className="table-card__head">
+                  <h2 className="card-title" id="ledger-title">
+                    Ledger
+                  </h2>
+                  <span className="g-help">Chatting and voice add up into one line a day.</span>
+                </div>
+                {ledger.length ? (
+                  <div className="table-wrap">
+                    <table className="g-table">
+                      <thead>
+                        <tr>
+                          {["When", "Member", "What", "Amount", "After"].map((h) => (
+                            <th key={h} scope="col">
+                              <span className="g-label">{h}</span>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ledger.map((l) => (
+                          <tr key={l.id}>
+                            <td className="mono">{formatTime(l.at)}</td>
+                            <td>{names.get(l.userId) ?? "A member"}</td>
+                            <td>
+                              {SOURCE[l.source] ?? l.source}
+                              {l.actorName && (l.source === "pay_in" || l.source === "pay_out")
+                                ? ` ${l.actorName}`
+                                : ""}
+                              {l.reason ? <span className="muted"> · {l.reason}</span> : null}
+                              {l.actorName && (l.source === "give" || l.source === "take") ? (
+                                <span className="muted"> · by {l.actorName}</span>
+                              ) : null}
+                            </td>
+                            <td className={`mono ${l.amount > 0 ? "tone-go" : "tone-caution"}`}>
+                              {l.amount > 0 ? "+" : "−"}
+                              {money(config.currency, Math.abs(l.amount))}
+                            </td>
+                            <td className="mono">{money(config.currency, l.balanceAfter)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <EmptyState compact mark="log" title="Nothing has moved yet">
+                    Every coin earned, paid, spent, given or taken shows here.
+                  </EmptyState>
+                )}
+              </section>
+            </>
+          }
+          side={
+            <section className="g-card card-col" id="adjust" aria-labelledby="adjust-title">
+              <h2 className="card-title" id="adjust-title">
+                Give or take
+              </h2>
+              {manager ? (
+                <>
+                  <search>
+                    <form className="side-search" method="get" action="#adjust">
+                      <label className="sr-only" htmlFor="economy-find">
+                        Member name or user ID
+                      </label>
+                      <input
+                        id="economy-find"
+                        className="g-input"
+                        name="find"
+                        type="search"
+                        maxLength={32}
+                        required
+                        placeholder="Name or user ID"
+                        defaultValue={find}
+                      />
+                      <button type="submit" className="g-btn g-btn--secondary">
+                        Find
+                      </button>
+                    </form>
+                  </search>
+                  {find ? (
+                    found === null ? (
+                      <span className="notice" role="alert">
+                        Discord didn't answer. Try again in a moment.
+                      </span>
+                    ) : found.filter((m) => !m.bot).length ? (
+                      <ul className="adjust-list">
+                        {found
+                          .filter((m) => !m.bot)
+                          .slice(0, 5)
+                          .map((m) => (
+                            <li key={m.id}>
+                              <span className="adjust-list__who">
+                                <MemberAvatar name={m.name} src={m.avatar} />
+                                {m.name}
+                              </span>
+                              <form action={requestAction} className="adjust-list__form">
+                                <Hidden guildId={guild.id} kind="economy_adjust" />
+                                <input type="hidden" name="userId" value={m.id} />
+                                <select
+                                  className="g-input g-input--sm"
+                                  name="op"
+                                  aria-label="Give or take"
+                                >
+                                  <option value="give">Give</option>
+                                  <option value="take">Take</option>
+                                </select>
+                                <input
+                                  className="g-input g-input--sm"
+                                  name="amount"
+                                  inputMode="numeric"
+                                  required
+                                  placeholder="Amount"
+                                  aria-label="Amount"
+                                />
+                                <input
+                                  className="g-input g-input--sm"
+                                  name="reason"
+                                  required
+                                  maxLength={200}
+                                  placeholder="Why"
+                                  aria-label="Reason"
+                                />
+                                <button type="submit" className="g-btn g-btn--primary g-btn--sm">
+                                  Do it
+                                </button>
+                              </form>
+                            </li>
+                          ))}
+                      </ul>
+                    ) : (
+                      <p className="muted">Nobody's name starts with “{find}”.</p>
+                    )
+                  ) : (
+                    <p className="g-help">
+                      Find a member, then give or take with a reason. It's on the ledger, like
+                      /money.
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="g-help">Only someone with Manage Server can give or take.</p>
+              )}
+            </section>
+          }
+        />
       </TabPanel>
       <TabPanel id="setup" tabs={ECONOMY_TABS}>
         <SetupLayout>

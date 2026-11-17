@@ -11,6 +11,7 @@ import { HeadNote, HeadSwitch } from "@/components/ModuleHead";
 import { SettingsNotice } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { botPermissions, getServerLayout, guildCounts } from "@/lib/discord";
+import { fixPermissionsUrl } from "@/lib/fix-permissions";
 import { contentKey, readFlash } from "@/lib/flash";
 import { pageStatus } from "@/lib/module-states";
 import { requireGuildAccess } from "@/lib/session";
@@ -78,10 +79,17 @@ export default async function ServerStatsPage({
           form="settings-form"
           defaultChecked={config.enabled}
         />
-        {status.state === "blocked" ? (
+        {/* A problem is said once, here, with its fix: a permission, or a setting. */}
+        {!canManage ? (
+          <HeadNote
+            reason="Garrison can't make channels: it needs Manage Channels."
+            href={fixPermissionsUrl(guild.id) ?? "/servers"}
+            action="Give Manage Channels"
+          />
+        ) : status.state === "blocked" ? (
           <HeadNote
             reason={status.reason ?? "Something it needs is missing."}
-            href={status.reason?.includes("Manage Channels") ? undefined : "#settings"}
+            href="#settings"
             action="Add one"
           />
         ) : null}
@@ -97,13 +105,6 @@ export default async function ServerStatsPage({
         </div>
       ) : null}
       <SettingsNotice query={query} />
-      {/* Said once: when the head already says it (on but can't work), no banner too. */}
-      {!canManage && status.state !== "blocked" ? (
-        <div className="notice" role="alert">
-          Garrison can't make channels yet: give its role the Manage Channels permission (Server
-          Settings, Roles), or add Garrison again from the server list to accept it.
-        </div>
-      ) : null}
 
       <StatsEditor
         guildId={guild.id}

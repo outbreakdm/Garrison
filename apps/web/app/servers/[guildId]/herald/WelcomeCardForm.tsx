@@ -173,7 +173,7 @@ function WelcomeCardFields({
           }}
         />
         <p className="g-help">
-          Type @ in the title or text to add one:{" "}
+          Type @ to add:{" "}
           {WELCOME_PLACEHOLDERS.filter((p) => part !== "leave" || p.token !== "{user}").map(
             (p, i) => (
               <span key={p.token}>

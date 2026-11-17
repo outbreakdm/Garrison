@@ -778,9 +778,7 @@ export default async function OverviewPage({
             </Link>
           </div>
           <div className="readout__value">{o.openGroups}</div>
-          <div className="g-help">
-            LFG posts players can join right now, from Discord or from the Groups and raids page.
-          </div>
+          <div className="g-help">LFG posts players can join right now.</div>
         </section>
       </div>
     </>

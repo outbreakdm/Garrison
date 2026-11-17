@@ -716,10 +716,13 @@ export default async function RallyPage({
             </h2>
           </div>
           <p className="g-help">
-            Garrison counts someone as there if they're in any voice channel in this server from 10
-            minutes before a raid or group starts to 45 minutes after. Anyone not seen by then is a
-            no-show. Bench players and people who left before the start don't count.
+            Anyone in a voice channel here from 10 minutes before the start to 45 after counts as
+            there.
           </p>
+          <HowItWorks>
+            That's for raids and groups alike. Anyone not seen by then is a no-show. Bench players
+            and people who left before the start don't count.
+          </HowItWorks>
           <form action={saveAttendance} className="row-between">
             <input type="hidden" name="guildId" value={guild.id} />
             <label className="switch">
@@ -870,11 +873,14 @@ export default async function RallyPage({
             {feedUrl ? (
               <>
                 <p className="g-help">
-                  Add this link in Google Calendar (Other calendars → From URL), Outlook or Apple
-                  Calendar, and raids show up there. Anyone with the link sees raid names, times and
-                  notes, not who signed up. Members see it on the{" "}
-                  <a href={`/play/${guild.id}`}>player page</a>.
+                  Add this link in Google Calendar, Outlook or Apple Calendar, and raids show up
+                  there.
                 </p>
+                <HowItWorks>
+                  In Google Calendar it's Other calendars, then From URL. Anyone with the link sees
+                  raid names, times and notes, not who signed up. Members see it on the{" "}
+                  <a href={`/play/${guild.id}`}>player page</a>.
+                </HowItWorks>
                 <input
                   className="g-input mono"
                   readOnly

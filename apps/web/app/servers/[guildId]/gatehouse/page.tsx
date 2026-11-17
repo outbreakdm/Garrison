@@ -14,6 +14,7 @@ import { ProTag } from "@/components/cards/CardEditor";
 import { PresetCards } from "@/components/choices";
 import { DurationBar, untilText } from "@/components/DurationBar";
 import { formatTime } from "@/components/format";
+import { HowItWorks } from "@/components/HowItWorks";
 import { ListField } from "@/components/ListField";
 import { HeadSwitch } from "@/components/ModuleHead";
 import { ActivityLayout, SetupLayout } from "@/components/PageLayouts";
@@ -280,10 +281,13 @@ export default async function GatehousePage({
                 footer={
                   <>
                     <p className="g-help">
-                      Roles, categories, channels and their permissions. Restoring recreates only
-                      what's missing, so it's safe after a nuke. Garrison keeps {backupsKept(ent)}{" "}
-                      {backupsKept(ent) === 1 ? "backup" : "backups"}; only the owner can restore.
+                      Roles, channels and their permissions. A restore adds only what's missing.
                     </p>
+                    <HowItWorks>
+                      Categories are saved too. Restoring recreates only what's missing, so it's
+                      safe after a nuke. Garrison keeps {backupsKept(ent)}{" "}
+                      {backupsKept(ent) === 1 ? "backup" : "backups"}; only the owner can restore.
+                    </HowItWorks>
                     <form action={requestAction}>
                       <Hidden guildId={guild.id} kind="backup_create" />
                       <button type="submit" className="g-btn g-btn--secondary">
@@ -397,9 +401,11 @@ export default async function GatehousePage({
                 },
               ]}
             />
-            <div className="field-row">
-              <label className="g-field" htmlFor="raidJoinCount">
-                <span>Joins</span>
+            {/* The rule reads as a sentence, its numbers in place (docs/LAYOUT_PROPOSAL.md §7). */}
+            <p className="rule-line">
+              It's a raid when{" "}
+              <label className="rule-line__num">
+                <span className="sr-only">Joins</span>
                 <input
                   className="g-input"
                   id="raidJoinCount"
@@ -409,9 +415,10 @@ export default async function GatehousePage({
                   max={200}
                   defaultValue={g?.raidJoinCount ?? 10}
                 />
-              </label>
-              <label className="g-field" htmlFor="raidWindowSeconds">
-                <span>Within (seconds)</span>
+              </label>{" "}
+              or more people join within{" "}
+              <label className="rule-line__num">
+                <span className="sr-only">Within seconds</span>
                 <input
                   className="g-input"
                   id="raidWindowSeconds"
@@ -421,8 +428,9 @@ export default async function GatehousePage({
                   max={600}
                   defaultValue={g?.raidWindowSeconds ?? 30}
                 />
-              </label>
-            </div>
+              </label>{" "}
+              seconds.
+            </p>
             <PresetCards
               name="raidResponse"
               label="On a raid"
