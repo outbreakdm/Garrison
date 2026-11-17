@@ -7,11 +7,13 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **Landing recordings (2026-11-17), built, not deployed:** the three "Watch it work" GIFs are
-  now 1080p60 MP4 clips (about 2 MB each) in rows beside their text, loading near the screen
-  and playing only in view, with a pause button and a still for less motion. The pointer and
-  camera are drawn from a timeline after recording, so nothing skips. The recorder lives in
-  the session scratchpad (`film/`): `film.mjs <scene>` then `render.mjs <scene> <name>`.
+- **Landing clips (2026-11-17), built, not deployed:** "Watch it work" shows three 1080p60
+  clips (about 2.8 MB each) made in HyperFrames: the dashboard rebuilt with its real labels on a
+  lime-lit stage, a 3D settle, a turning rim light and sheen, a drawn pointer, and steps a screen
+  recording can't show (the channel list open). Rows beside their text, loading near the screen
+  and playing only in view, with a pause button and a still for less motion. Source lives outside
+  git in `promo/landing/` (`node build.mjs`, then `hyperframes render --fps 60 --crf 21` in each
+  clip folder, with Shotcut's ffmpeg on the PATH).
 - **Follow-ups (2026-11-17), deployed** (`eba3caf`, run 44022932381; migration 0072 applied
   and recorded, 73 rows; bot back at 05:19:44 UTC): Server Stats lists every counter as an
   option to tick; an "@" picker in template boxes (stats names, welcome card, messages, voice
@@ -1119,3 +1121,6 @@ Decided (2026-11-12, owner):
   per frame from a timeline, then encoded with x264. Shown the way PeakBot does it, in our own
   style: a row per clip, video beside the copy, alternating sides, lazy and play-in-view. Not
   deployed.
+- 2026-11-17: Landing clips remade in HyperFrames in the style of the promo ads (PeakBot-like
+  glow, sheen and camera, Garrison's colours). Same file names, posters from each end state;
+  the frame lost its fake browser bar. Not deployed.

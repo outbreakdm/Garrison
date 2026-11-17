@@ -269,13 +269,12 @@ const DEMO_COMMANDS: [name: string, what: string][] = [
 ];
 
 /**
- * Recordings of the real dashboard on a test server, for "Watch it work": 1080p MP4s with
- * the pointer and camera drawn from a timeline, and a poster of where each one ends.
+ * "Watch it work": three short 1080p60 clips of the dashboard's real screens, labels and steps,
+ * made in HyperFrames, each with a poster of where it ends.
  */
 const WATCH: {
   id: string;
   tab: string;
-  path: string;
   title: string;
   line: string;
   video: string;
@@ -285,17 +284,15 @@ const WATCH: {
   {
     id: "fix",
     tab: "Fix what needs you",
-    path: "Overview",
     title: "See what needs you, and fix it there.",
     line: "The Overview lists what's switched on but can't work, and why. One click to the page, one pick, and its light turns green.",
     video: "/media/garrison-fix-it.mp4",
     poster: "/media/garrison-fix-it.webp",
-    alt: "The Overview lists Suggestions as on but unable to work. The pointer opens it with Fix it, picks a channel, the warning clears, its light in the menu turns green and a toast offers Undo.",
+    alt: "The Overview lists Suggestions as on but unable to work. Fix it opens Suggestions; the pointer picks #suggestions from the channel list, it saves, the warning clears, its light in the menu turns green and a toast offers Undo.",
   },
   {
     id: "preview",
     tab: "Write it, see it",
-    path: "Welcome",
     title: "Write it here, see it in Discord.",
     line: "Every card has its Discord preview beside it, changing as you type. Type @ to add the member's name or the server's, and it saves itself when you pause.",
     video: "/media/garrison-live-preview.mp4",
@@ -305,7 +302,6 @@ const WATCH: {
   {
     id: "saves",
     tab: "It saves itself",
-    path: "Moderation",
     title: "Pick a level. It saves itself.",
     line: "Presets fill in the numbers, Garrison's recommendation is one click away, and every change can be undone.",
     video: "/media/garrison-saves-itself.mp4",
@@ -698,7 +694,7 @@ export default async function Home() {
             <h2 className="lp-h2" id="lp-watch">
               Watch it work
             </h2>
-            <p>Recorded in the dashboard as it is today, on a test server.</p>
+            <p>The dashboard's own screens and steps, up close, on a test server.</p>
           </div>
           <div className="lp-watch__list">
             {WATCH.map((w, i) => (
@@ -714,19 +710,7 @@ export default async function Home() {
                   <h3>{w.title}</h3>
                   <p className="lp-watch__line">{w.line}</p>
                 </div>
-                <div className="lp-win lp-watch__win">
-                  <div className="lp-win__bar" aria-hidden="true">
-                    <span className="lp-win__dots">
-                      <i />
-                      <i />
-                      <i />
-                    </span>
-                    <span className="lp-win__url">
-                      <span className="lp-win__host">dash.garrisonbot.com · </span>
-                      {w.path}
-                    </span>
-                    <span className="lp-win__tag">Test server</span>
-                  </div>
+                <div className="lp-watch__win">
                   <DemoClip
                     src={w.video}
                     poster={w.poster}
