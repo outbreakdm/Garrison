@@ -132,64 +132,95 @@ let drainActions: () => Promise<void> = async () => {};
 let actionsTimer: NodeJS.Timeout | undefined;
 const HEALTH_EVERY_MS = 30 * 60_000;
 let lastHealthSnapshot = 0;
+let flushTimer: NodeJS.Timeout | undefined;
+
+/** The longest one sweep step may hold up the others; it keeps running on its own after. */
+const STEP_LIMIT_MS = 45_000;
+/** Steps still running from an earlier sweep: not started again until they finish. */
+const inFlight = new Set<string>();
+
+/**
+ * One sweep step, never longer than STEP_LIMIT_MS for the sweep: a call that never answers
+ * (Discord, a game API) is logged by name and left to finish on its own, so the rest of the
+ * sweep, the next sweeps and the heartbeat carry on.
+ */
+async function step(name: string, run: () => Promise<unknown>) {
+  if (inFlight.has(name)) {
+    logger.warn("Sweep step still running from before; skipped", { step: name });
+    return;
+  }
+  inFlight.add(name);
+  const started = Date.now();
+  const work = run()
+    .catch((error: unknown) => logger.error(`${name} failed`, { error }))
+    .finally(() => {
+      inFlight.delete(name);
+      const ms = Date.now() - started;
+      if (ms > 20_000) logger.warn("Sweep step was slow", { step: name, ms });
+    });
+  let timer: NodeJS.Timeout | undefined;
+  const late = new Promise<"late">((resolve) => {
+    timer = setTimeout(() => resolve("late"), STEP_LIMIT_MS);
+  });
+  const result = await Promise.race([work.then(() => "done" as const), late]);
+  clearTimeout(timer);
+  if (result === "late")
+    logger.error("Sweep step is stuck; moving on without it", { step: name, ms: STEP_LIMIT_MS });
+}
 
 client.once(Events.ClientReady, async (ready) => {
   logger.info(`Online as ${ready.user.tag} in ${ready.guilds.cache.size} servers`);
-  await loadOpenTickets(ctx).catch((error) => logger.error("Could not load tickets", { error }));
+  // The heartbeat (and the metrics it carries) on its own timer: it says the bot is up even
+  // while a slow sweep step is still waiting on someone else.
+  flushTimer = setInterval(
+    () =>
+      void ctx.metrics
+        ?.flush(ctx)
+        .catch((error) => logger.error("Metrics flush failed", { error })),
+    SWEEP_INTERVAL_MS,
+  );
+  await step("Load tickets", () => loadOpenTickets(ctx));
   for (const guild of ready.guilds.cache.values()) {
-    await ensureGuild(ctx, guild).catch((error) =>
-      logger.error("Could not register guild", { guildId: guild.id, error }),
-    );
-    await primeInvites(guild).catch(() => null);
+    await step("Register guild", () => ensureGuild(ctx, guild));
+    await step("Prime invites", () => primeInvites(guild));
   }
   // Lift lockdowns whose time is up, including any that expired while we were offline.
+  let sweeping = false;
   const sweep = async () => {
-    await sweepExpiredLockdowns(ctx, ready).catch((error) =>
-      logger.error("Lockdown sweep failed", { error }),
-    );
-    await sweepRally(ctx, ready).catch((error) => logger.error("Rally sweep failed", { error }));
-    await sweepOps(ctx, ready).catch((error) => logger.error("Ops sweep failed", { error }));
-    await sweepVoiceXp(ctx, ready).catch((error) => logger.error("Voice XP failed", { error }));
-    await sweepVoiceRooms(ctx, ready).catch((error) =>
-      logger.error("Voice rooms sweep failed", { error }),
-    );
-    await sweepStatRoles(ctx, ready).catch((error) => logger.error("Stat roles failed", { error }));
-    // Runs on its own: a rename Discord makes wait mustn't hold up the other sweeps.
-    sweepServerStats(ctx, ready);
-    sweepPatterns(ctx, ready);
-    sweepEconomy(ctx, ready);
-    await sweepMessages(ctx, ready).catch((error) =>
-      logger.error("Scheduled messages failed", { error }),
-    );
-    await sweepAlerts(ctx, ready, alertKeys).catch((error) =>
-      logger.error("Alert sweep failed", { error }),
-    );
-    await sweepWeeklyBackups(ctx, ready).catch((error) =>
-      logger.error("Weekly backups failed", { error }),
-    );
-    await liftExpiredBans(ctx, ready).catch((error) =>
-      logger.error("Temporary ban sweep failed", { error }),
-    );
-    await sweepGiveaways(ctx, ready).catch((error) =>
-      logger.error("Giveaway sweep failed", { error }),
-    );
-    await sweepTickets(ctx, ready).catch((error) => logger.error("Ticket sweep failed", { error }));
-    await maybePruneLedger(ctx).catch((error) => logger.error("Ledger prune failed", { error }));
-    await maybePruneAnswers(ctx).catch((error) =>
-      logger.error("Verification answers prune failed", { error }),
-    );
-    await maybePruneInsights(ctx).catch((error) =>
-      logger.error("Insights prune failed", { error }),
-    );
-    await refreshOsrs(ctx).catch((error) => logger.error("OSRS refresh failed", { error }));
-    await ctx.metrics?.flush(ctx).catch((error) => logger.error("Metrics flush failed", { error }));
-    if (Date.now() - lastHealthSnapshot > HEALTH_EVERY_MS) {
-      lastHealthSnapshot = Date.now();
-      await snapshotAllHealth(ctx, ready.guilds.cache.values());
+    if (sweeping) return;
+    sweeping = true;
+    try {
+      await step("Lockdown sweep", () => sweepExpiredLockdowns(ctx, ready));
+      await step("Rally sweep", () => sweepRally(ctx, ready));
+      await step("Ops sweep", () => sweepOps(ctx, ready));
+      await step("Voice XP", () => sweepVoiceXp(ctx, ready));
+      await step("Voice rooms sweep", () => sweepVoiceRooms(ctx, ready));
+      await step("Stat roles", () => sweepStatRoles(ctx, ready));
+      // Run on their own: a rename or a rule Discord makes wait mustn't hold up the rest.
+      sweepServerStats(ctx, ready);
+      sweepPatterns(ctx, ready);
+      sweepEconomy(ctx, ready);
+      await step("Scheduled messages", () => sweepMessages(ctx, ready));
+      await step("Alert sweep", () => sweepAlerts(ctx, ready, alertKeys));
+      await step("Weekly backups", () => sweepWeeklyBackups(ctx, ready));
+      await step("Temporary ban sweep", () => liftExpiredBans(ctx, ready));
+      await step("Giveaway sweep", () => sweepGiveaways(ctx, ready));
+      await step("Ticket sweep", () => sweepTickets(ctx, ready));
+      await step("Ledger prune", () => maybePruneLedger(ctx));
+      await step("Verification answers prune", () => maybePruneAnswers(ctx));
+      await step("Insights prune", () => maybePruneInsights(ctx));
+      await step("OSRS refresh", () => refreshOsrs(ctx));
+      if (Date.now() - lastHealthSnapshot > HEALTH_EVERY_MS) {
+        lastHealthSnapshot = Date.now();
+        await step("Health snapshot", () => snapshotAllHealth(ctx, ready.guilds.cache.values()));
+      }
+    } finally {
+      sweeping = false;
     }
   };
-  await sweep();
-  sweepTimer = setInterval(sweep, SWEEP_INTERVAL_MS);
+  // Timers first: the first sweep runs alongside, never in front of, everything else.
+  sweepTimer = setInterval(() => void sweep(), SWEEP_INTERVAL_MS);
+  void sweep();
   // Dashboard requests: the dashboard pokes Garrison the moment it queues one; the
   // timer is the fallback when a poke is lost.
   let running = false;
@@ -345,6 +376,7 @@ async function shutdown(signal: string) {
   logger.info(`Received ${signal}, shutting down`);
   clearInterval(sweepTimer);
   clearInterval(actionsTimer);
+  clearInterval(flushTimer);
   health?.close();
   await client.destroy();
   await close();
