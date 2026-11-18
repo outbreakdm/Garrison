@@ -174,9 +174,34 @@ export async function listDashboardActions(db: Db, guildId: string, limit = 10) 
 /**
  * Bot side. Expire requests that waited too long (or were left running by a
  * crash), then claim up to `limit` pending ones. A claimed request is never
- * claimed again, so each one runs at most once.
+ * claimed again, so each one runs at most once. `expire: false` skips the first
+ * step: the bot claims every few seconds but only needs to expire once a minute.
  */
-export async function claimDashboardActions(db: Db, limit = 10, now = new Date()) {
+export async function claimDashboardActions(
+  db: Db,
+  limit = 10,
+  now = new Date(),
+  { expire = true }: { expire?: boolean } = {},
+) {
+  if (expire) await expireDashboardActions(db, now);
+  // Never one past its time, even between expiry sweeps: the next sweep fails it instead.
+  const stale = new Date(now.getTime() - ACTION_TTL_MS);
+  return db
+    .update(dashboardActions)
+    .set({ status: "running" })
+    .where(
+      inArray(
+        dashboardActions.id,
+        sql`(SELECT id FROM ${dashboardActions} WHERE ${dashboardActions.status} = 'pending'
+             AND ${dashboardActions.createdAt} >= ${stale}
+             ORDER BY ${dashboardActions.createdAt} LIMIT ${limit} FOR UPDATE SKIP LOCKED)`,
+      ),
+    )
+    .returning();
+}
+
+/** Fail requests that waited past ACTION_TTL_MS, or were left running by a crash. */
+export async function expireDashboardActions(db: Db, now = new Date()) {
   const stale = new Date(now.getTime() - ACTION_TTL_MS);
   await db
     .update(dashboardActions)
@@ -191,17 +216,6 @@ export async function claimDashboardActions(db: Db, limit = 10, now = new Date()
         lt(dashboardActions.createdAt, stale),
       ),
     );
-  return db
-    .update(dashboardActions)
-    .set({ status: "running" })
-    .where(
-      inArray(
-        dashboardActions.id,
-        sql`(SELECT id FROM ${dashboardActions} WHERE ${dashboardActions.status} = 'pending'
-             ORDER BY ${dashboardActions.createdAt} LIMIT ${limit} FOR UPDATE SKIP LOCKED)`,
-      ),
-    )
-    .returning();
 }
 
 export async function finishDashboardAction(

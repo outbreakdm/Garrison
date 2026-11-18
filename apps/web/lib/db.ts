@@ -27,8 +27,10 @@ const perRequest = cache(async (): Promise<Db> => {
   const url = (await hyperdriveUrl()) ?? process.env.WEB_DATABASE_URL;
   if (!url) throw new Error("No database: bind HYPERDRIVE or set WEB_DATABASE_URL.");
   // Five, as Cloudflare advises for postgres-js behind Hyperdrive: with one, a page's
-  // Promise.all of queries ran one after another on the same connection.
-  return createDb(url, { max: 5 }).db;
+  // Promise.all of queries ran one after another on the same connection. No type fetch: each
+  // request's connections are new, and that query ran before every page's first real one
+  // (6,783 times in 12 days, against about 2,000 page loads).
+  return createDb(url, { max: 5, fetchTypes: false }).db;
 });
 
 let roleChecked: Promise<void> | undefined;

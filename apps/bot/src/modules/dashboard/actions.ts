@@ -624,9 +624,16 @@ export function actionLane(action: Pick<DashboardAction, "guildId" | "kind">) {
   return action.kind === "qm_chat" ? `${action.guildId}:ai` : action.guildId;
 }
 
+/** Expiring old requests is a write of its own; once a minute is plenty (they last 10). */
+const EXPIRE_EVERY_MS = 60_000;
+let lastExpiry = 0;
+
 export async function processDashboardActions(ctx: BotContext, client: Client<true>) {
+  const now = new Date();
+  const expire = now.getTime() - lastExpiry >= EXPIRE_EVERY_MS;
+  if (expire) lastExpiry = now.getTime();
   const lanes = new Map<string, DashboardAction[]>();
-  for (const action of await claimDashboardActions(ctx.db, 10)) {
+  for (const action of await claimDashboardActions(ctx.db, 10, now, { expire })) {
     const key = actionLane(action);
     lanes.set(key, [...(lanes.get(key) ?? []), action]);
   }

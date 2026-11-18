@@ -111,4 +111,18 @@ describe("dashboard actions outbox", () => {
     expect(rows.filter((r) => r.status === "running")).toHaveLength(0);
     expect(rows.filter((r) => r.status === "failed").length).toBe(4);
   });
+
+  it("never claims one past its time, even between expiry sweeps", async () => {
+    await as("garrison_web");
+    expect(
+      await queueDashboardAction(db, G, { id: "3", name: "other" }, call("late")),
+    ).toMatchObject({ ok: true });
+    await as("garrison_bot");
+    const later = new Date(Date.now() + ACTION_TTL_MS + 60_000);
+    expect(await claimDashboardActions(db, 10, later, { expire: false })).toHaveLength(0);
+    await as("garrison_web");
+    // Left for the next sweep to fail, not run late.
+    const rows = await listDashboardActions(db, G);
+    expect(rows.filter((r) => r.status === "pending")).toHaveLength(1);
+  });
 });

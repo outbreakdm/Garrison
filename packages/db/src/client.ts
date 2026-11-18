@@ -9,6 +9,14 @@ export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 export interface CreateDbOptions {
   /** Max pool size. Keep small when connecting through Supabase's pooler. */
   max?: number;
+  /**
+   * Ask Postgres for its array types when a connection opens (postgres-js's default). Off
+   * saves a round trip on every new connection, which matters where each request opens its
+   * own (the dashboard on Workers, behind Hyperdrive). Columns read through Drizzle parse
+   * the same either way; only raw `sql` that returns an array would come back as text
+   * ("{a,b}"), and nothing the dashboard runs does (checked 2026-11-18).
+   */
+  fetchTypes?: boolean;
 }
 
 /** Give up on opening a connection after this long, instead of postgres-js's 30 s. */
@@ -30,6 +38,7 @@ export function createDb(url: string, options: CreateDbOptions = {}) {
     prepare: false,
     connect_timeout: DB_CONNECT_TIMEOUT_S,
     idle_timeout: DB_IDLE_TIMEOUT_S,
+    fetch_types: options.fetchTypes ?? true,
   });
   const db = drizzle(sql, { schema });
   return { db: db as unknown as Db, close: () => sql.end({ timeout: 5 }) };

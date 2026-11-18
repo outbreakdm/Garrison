@@ -393,8 +393,19 @@ client.on(Events.Error, (error) => logger.error("Discord client error", { error 
 
 // A bot whose database stopped answering can do nothing useful, and nothing else notices:
 // Discord stays connected. Say so on /healthz, then exit so the host starts a fresh one.
+/** A round trip slower than this is worth a log line (once per 10 min): it slows every sweep. */
+const SLOW_PING_MS = 300;
+let lastSlowLog = 0;
 const database = watchDatabase(
-  () => pingDb(db),
+  async () => {
+    const started = Date.now();
+    await pingDb(db);
+    const ms = Date.now() - started;
+    if (ms > SLOW_PING_MS && started - lastSlowLog > 10 * 60_000) {
+      lastSlowLog = started;
+      logger.warn("The database is slow to answer", { ms });
+    }
+  },
   (silentMs) => {
     logger.error("The database hasn't answered in minutes; restarting the bot", { silentMs });
     void shutdown("database watchdog", 1);

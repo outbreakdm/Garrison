@@ -1226,3 +1226,13 @@ Decided (2026-11-12, owner):
   reply until the request expires, and refreshes less often the longer it waits.
 - 2026-11-18: The CSP allows exactly `style="display:none"` by hash (`style-src-attr`): React
   puts streamed chart parts in such a holder inside SVGs, which was blocked on Insights.
+- 2026-11-18: Speed pass on connections. The dashboard's per-request database clients no
+  longer ask Postgres for its array types first (`fetchTypes: false`): that query ran before
+  every page's first real one, about 6,800 times in 12 days; Drizzle-mapped columns parse the
+  same, and no raw query the dashboard runs returns an array. The bot expires old dashboard
+  requests once a minute instead of on every 5 s claim (the queue was ~90% of the bot's
+  queries), and the claim never takes one past its 10 minutes. The bot logs when a database
+  round trip takes over 300 ms. Checked and left as they are: Claude (every logged call ok,
+  replies ~22 s, nearly all of it output; caching reads within a conversation), OpenAI
+  moderation, Twitch, YouTube, OSRS, Battle.net, Turnstile and rank-card images (all with
+  timeouts), and the per-message handlers (settings cached, nothing read for modules that are off).
