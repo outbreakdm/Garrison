@@ -1244,5 +1244,8 @@ Decided (2026-11-12, owner):
   and never runs two at once. Voice XP is one upsert per server (`awardVoiceXpMany`, same cooldown
   and level-up claim). Health snapshots run three servers at a time. `shards: "auto"` (one shard
   today). Four foreign-key indexes and `operations_prune()` (dashboard requests after 30 days,
-  reply times after 90; never a pending one), called hourly: **migration 0073, not yet applied
-  in production**: run `pnpm db:migrate` (safe to re-run) before or right after deploying.
+  reply times after 90; never a pending one), called hourly: migration 0073, applied in production
+  by hand in the SQL editor (the next `pnpm db:migrate` re-runs it harmlessly).
+- 2026-11-18: Deployed branch `claude/garrison-dashboard-errors-c0gcd3` (run #50, `everything`,
+  no command registration). The bot came back at 18:03 UTC after 14 hours silent and checks in
+  every minute; Hyperdrive's origin connection limit is 12 (was 60).

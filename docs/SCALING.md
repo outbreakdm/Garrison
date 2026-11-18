@@ -5,9 +5,9 @@ many. It lists every limit between a member and the database, what happens at ea
 grows, and what to change at each stage, so the work happens before anyone notices, not after.
 
 **Done on 2026-11-18** (branch `claude/garrison-dashboard-errors-c0gcd3`): Stage 1 steps 1 to 6,
-Stage 2 step 3 for the health snapshot, and Stage 3 step 1 (`shards: "auto"`). Still open: Stage 0
-step 1 (Hyperdrive, in the Cloudflare dashboard), migration `0073_retention` on production, and
-everything that waits on real traffic (compute, pool sizes, Discord read cache, AI budget).
+Stage 2 step 3 for the health snapshot, and Stage 3 step 1 (`shards: "auto"`). Also done: Hyperdrive set to 12, and migration `0073_retention` applied in production (SQL
+editor, 2026-11-18; drizzle's record doesn't list it, so the next `pnpm db:migrate` re-runs it
+harmlessly). Deployed 2026-11-18 (run #50). Still open: everything that waits on real traffic (compute, pool sizes, Discord read cache, AI budget).
 
 Whoever picks this up: check the "Signals" queries first. The stages are triggered by what those
 show, not by a date. The server counts in each stage are estimates (see "How the estimates were
