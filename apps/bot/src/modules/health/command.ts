@@ -9,6 +9,7 @@ import {
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { BotContext, Command } from "../../commands/types.js";
 import { type Card, cardMessage } from "../../lib/card.js";
+import { forEachLimit } from "../../lib/concurrency.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import {
   ALL_REQUIRED,
@@ -119,12 +120,15 @@ export const health: Command = {
 };
 
 /** Refresh every server's health snapshot for the dashboard. Uses cached data only: no extra Discord calls. */
+/** Three servers at a time: a pass over every server fits its sweep step as servers grow. */
+const SNAPSHOT_CONCURRENCY = 3;
+
 export async function snapshotAllHealth(ctx: BotContext, guilds: Iterable<Guild>) {
-  for (const guild of guilds) {
+  await forEachLimit(guilds, SNAPSHOT_CONCURRENCY, async (guild) => {
     try {
       await saveHealthSnapshot(ctx.db, guild.id, await healthFor(ctx, guild));
     } catch (error) {
       ctx.logger.warn("Health snapshot failed", { guildId: guild.id, error });
     }
-  }
+  });
 }

@@ -15,7 +15,7 @@ import { ensureGuild, forgetGuild } from "./lib/guild-registry.js";
 import { startHealthServer } from "./lib/health.js";
 import { watchDatabase } from "./lib/liveness.js";
 import { createLogger } from "./lib/logger.js";
-import { Metrics } from "./lib/metrics.js";
+import { Metrics, maybePruneOperations } from "./lib/metrics.js";
 import { sweepAlerts } from "./modules/alerts/service.js";
 import { refreshOsrs } from "./modules/barracks/refresh.js";
 import { sweepStatRoles } from "./modules/barracks/stat-roles.js";
@@ -98,6 +98,10 @@ if (!alertKeys.twitch)
 // audit-log stream anti-nuke watches. Message Content is privileged too: ticket
 // transcripts, Ledger's deleted and edited text, and the starboard read it.
 const client = new Client({
+  // As many shards as Discord recommends (one per ~1,000 servers), all in this process.
+  // Discord refuses a single-shard bot at 2,500 servers; with this it never is one. Today
+  // that's one shard, as before (docs/SCALING.md, Stage 3).
+  shards: "auto",
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
@@ -224,6 +228,7 @@ client.once(Events.ClientReady, async (ready) => {
       await step("Ledger prune", () => maybePruneLedger(ctx));
       await step("Verification answers prune", () => maybePruneAnswers(ctx));
       await step("Insights prune", () => maybePruneInsights(ctx));
+      await step("Operations prune", () => maybePruneOperations(ctx));
       await step("OSRS refresh", () => refreshOsrs(ctx));
       if (Date.now() - lastHealthSnapshot > HEALTH_EVERY_MS) {
         lastHealthSnapshot = Date.now();

@@ -1239,3 +1239,10 @@ Decided (2026-11-12, owner):
 - 2026-11-18: `docs/SCALING.md`: every connection limit from Discord to Postgres with today's
   values, what breaks first as servers grow and what to change at each stage (now: lower
   Hyperdrive's connection limit from 60 to 12), and the queries and log lines to watch.
+- 2026-11-18: Scaling, first pass (docs/SCALING.md). The bot's minute flush writes the heartbeat
+  first and every table in one multi-row upsert (was one round trip per server and per member),
+  and never runs two at once. Voice XP is one upsert per server (`awardVoiceXpMany`, same cooldown
+  and level-up claim). Health snapshots run three servers at a time. `shards: "auto"` (one shard
+  today). Four foreign-key indexes and `operations_prune()` (dashboard requests after 30 days,
+  reply times after 90; never a pending one), called hourly: **migration 0073, not yet applied
+  in production**: run `pnpm db:migrate` (safe to re-run) before or right after deploying.

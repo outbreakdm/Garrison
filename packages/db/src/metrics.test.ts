@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "./client";
 import { upsertGuild } from "./repo/guilds";
@@ -9,11 +10,13 @@ import {
   getLatency,
   heartbeat,
   markSeen,
+  markSeenMany,
   saveHealthSnapshot,
   saveLatencyHour,
+  saveLatencyHours,
   uptimeSummary,
 } from "./repo/metrics";
-import { botStatus, guildActivityDaily } from "./schema";
+import { botStatus, commandLatencyHourly, guildActivityDaily, memberLastSeen } from "./schema";
 import { createTestDb } from "./testing";
 
 let db: Db;
@@ -106,5 +109,49 @@ describe("uptimeSummary", () => {
   });
   it("is null with no data", () => {
     expect(uptimeSummary([], now).uptimePct).toBeNull();
+  });
+});
+
+describe("the bot's batched writes", () => {
+  it("writes many servers and members in a few statements, as garrison_bot", async () => {
+    await exec("RESET ROLE");
+    await exec("SET ROLE garrison_bot");
+    const H = "996";
+    await upsertGuild(db, { id: H, name: "Batch" });
+    await addMessageCounts(db, new Map([[H, 4]]));
+    await addMessageCounts(
+      db,
+      new Map([
+        [H, 6],
+        [G, 1],
+      ]),
+    );
+    const now = new Date();
+    // 600 members: more than one 500-row chunk.
+    const seen = Array.from({ length: 600 }, (_, i) => ({ guildId: H, userId: `m${i}`, at: now }));
+    await markSeenMany(db, seen);
+    // A late write for an earlier message never moves last-seen back.
+    await markSeenMany(db, [{ guildId: H, userId: "m0", at: new Date(now.getTime() - 60_000) }]);
+    const hour = new Date(Math.floor(now.getTime() / 3_600_000) * 3_600_000);
+    await saveLatencyHours(db, [
+      { hour, guildId: H, count: 1, p50Ms: 10, p95Ms: 10 },
+      { hour, guildId: "", count: 2, p50Ms: 20, p95Ms: 30 },
+    ]);
+    await saveLatencyHours(db, [{ hour, guildId: H, count: 5, p50Ms: 40, p95Ms: 90 }]);
+
+    await exec("RESET ROLE");
+    const [day] = await db
+      .select()
+      .from(guildActivityDaily)
+      .where(eq(guildActivityDaily.guildId, H));
+    expect(day?.messages).toBe(10);
+    const rows = await db.select().from(memberLastSeen).where(eq(memberLastSeen.guildId, H));
+    expect(rows).toHaveLength(600);
+    expect(rows.find((r) => r.userId === "m0")?.lastSeenAt.getTime()).toBe(now.getTime());
+    const [lat] = await db
+      .select()
+      .from(commandLatencyHourly)
+      .where(eq(commandLatencyHourly.guildId, H));
+    expect(lat).toMatchObject({ count: 5, p50Ms: 40, p95Ms: 90 });
   });
 });

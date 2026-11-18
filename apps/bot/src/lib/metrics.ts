@@ -1,4 +1,12 @@
-import { addActivity, addMessageCounts, heartbeat, markSeen, saveLatencyHour } from "@garrison/db";
+import {
+  addActivity,
+  addMessageCounts,
+  heartbeat,
+  type LatencyHour,
+  markSeenMany,
+  pruneOperations,
+  saveLatencyHours,
+} from "@garrison/db";
 import type { BotContext } from "../commands/types.js";
 
 /** Nearest-rank percentile of a sample, 0 for none. */
@@ -56,30 +64,58 @@ export class Metrics {
     }
   }
 
-  async flush(ctx: BotContext, now = Date.now()) {
-    const counts = this.messages;
-    this.messages = new Map();
-    const seen = [...this.pendingSeen.values()];
-    this.pendingSeen.clear();
-    await addMessageCounts(ctx.db, counts);
-    const activity = { channels: this.channels, hours: this.hours, members: this.members };
-    this.channels = new Map();
-    this.hours = new Map();
-    this.members = new Map();
-    await addActivity(ctx.db, activity);
-    for (const s of seen) await markSeen(ctx.db, s.guildId, s.userId, s.at);
+  private flushing = false;
 
-    for (const [hour, byGuild] of this.latency) {
-      for (const [guildId, samples] of byGuild) {
-        await saveLatencyHour(ctx.db, new Date(hour), guildId, {
-          count: samples.length,
-          p50Ms: percentile(samples, 50),
-          p95Ms: percentile(samples, 95),
-        });
+  /**
+   * Once a minute. The heartbeat goes first, so a slow flush never makes the bot look down,
+   * and each table is one multi-row write (not one per server or member). A flush still
+   * running when the next is due makes that one skip: two would share the same connections.
+   */
+  async flush(ctx: BotContext, now = Date.now()) {
+    if (this.flushing) return;
+    this.flushing = true;
+    try {
+      await heartbeat(ctx.db, this.startedAt);
+      const counts = this.messages;
+      this.messages = new Map();
+      const seen = [...this.pendingSeen.values()];
+      this.pendingSeen.clear();
+      await addMessageCounts(ctx.db, counts);
+      const activity = { channels: this.channels, hours: this.hours, members: this.members };
+      this.channels = new Map();
+      this.hours = new Map();
+      this.members = new Map();
+      await addActivity(ctx.db, activity);
+      await markSeenMany(ctx.db, seen);
+
+      const rows: LatencyHour[] = [];
+      for (const [hour, byGuild] of this.latency) {
+        for (const [guildId, samples] of byGuild)
+          rows.push({
+            hour: new Date(hour),
+            guildId,
+            count: samples.length,
+            p50Ms: percentile(samples, 50),
+            p95Ms: percentile(samples, 95),
+          });
       }
+      await saveLatencyHours(ctx.db, rows);
       // Keep the current hour's samples so its percentiles stay exact; drop finished hours.
-      if (hour < Math.floor(now / 3_600_000) * 3_600_000) this.latency.delete(hour);
+      const thisHour = Math.floor(now / 3_600_000) * 3_600_000;
+      for (const hour of this.latency.keys()) if (hour < thisHour) this.latency.delete(hour);
+    } finally {
+      this.flushing = false;
     }
-    await heartbeat(ctx.db, this.startedAt);
   }
+}
+
+const PRUNE_EVERY_MS = 3_600_000;
+let lastOperationsPrune = 0;
+
+/** Old dashboard requests and reply times, at most hourly. The database decides what's old. */
+export async function maybePruneOperations(ctx: BotContext) {
+  if (Date.now() - lastOperationsPrune < PRUNE_EVERY_MS) return;
+  lastOperationsPrune = Date.now();
+  const removed = await pruneOperations(ctx.db);
+  if (removed) ctx.logger.info("Pruned old dashboard requests and reply times", { removed });
 }

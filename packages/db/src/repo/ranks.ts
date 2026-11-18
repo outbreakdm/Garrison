@@ -62,6 +62,69 @@ export type AwardResult =
  * part of the same statement, so it holds across bot processes and restarts.
  * A level-up is claimed with a conditional update, so it's announced once.
  */
+/**
+ * Voice XP for many members of one server in one statement, with the same rules as awardXp:
+ * each member's own gain, the shared cooldown (a member who earned within `cooldownMs` gets
+ * nothing), and level-ups claimed once. Returns the members who were awarded, by user ID.
+ * One round trip per server a minute instead of one per person in voice.
+ */
+export async function awardVoiceXpMany(
+  db: Db,
+  guildId: string,
+  members: { id: string; username: string; gain: number }[],
+  cooldownMs: number,
+  now = new Date(),
+): Promise<Map<string, Extract<AwardResult, { awarded: true }>>> {
+  const out = new Map<string, Extract<AwardResult, { awarded: true }>>();
+  // One row per member: Postgres refuses a statement that updates the same row twice.
+  const unique = [...new Map(members.filter((m) => m.gain > 0).map((m) => [m.id, m])).values()];
+  if (!unique.length) return out;
+  const cutoff = new Date(now.getTime() - cooldownMs);
+  const rows = await db
+    .insert(memberXp)
+    .values(
+      unique.map((m) => ({
+        guildId,
+        userId: m.id,
+        username: m.username,
+        xp: m.gain,
+        messages: 0,
+        voiceMinutes: 1,
+        lastXpAt: now,
+      })),
+    )
+    .onConflictDoUpdate({
+      target: [memberXp.guildId, memberXp.userId],
+      set: {
+        xp: sql`${memberXp.xp} + excluded.xp`,
+        voiceMinutes: sql`${memberXp.voiceMinutes} + 1`,
+        lastXpAt: now,
+      },
+      setWhere: lt(memberXp.lastXpAt, cutoff),
+    })
+    .returning();
+  for (const row of rows) {
+    const { level } = levelForXp(row.xp);
+    let leveledUpTo: number | null = null;
+    if (level > row.level) {
+      const [claimed] = await db
+        .update(memberXp)
+        .set({ level })
+        .where(
+          and(
+            eq(memberXp.guildId, guildId),
+            eq(memberXp.userId, row.userId),
+            lt(memberXp.level, level),
+          ),
+        )
+        .returning({ level: memberXp.level });
+      leveledUpTo = claimed ? claimed.level : null;
+    }
+    out.set(row.userId, { awarded: true, xp: row.xp, level, leveledUpTo });
+  }
+  return out;
+}
+
 export async function awardXp(
   db: Db,
   guildId: string,

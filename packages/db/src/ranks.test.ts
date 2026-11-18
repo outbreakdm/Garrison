@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "./client";
 import { upsertGuild } from "./repo/guilds";
 import {
+  awardVoiceXpMany,
   awardXp,
   getLeaderboard,
   getMemberRank,
@@ -115,5 +116,43 @@ describe("ranks, as garrison_bot", () => {
       (e: Error & { cause?: Error }) => `${e.message} ${e.cause?.message}`,
     );
     expect(err).toMatch(/permission denied/);
+  });
+});
+
+describe("voice XP for a whole server at once", () => {
+  const V = "961";
+  it("gives each member their own gain, once a cooldown, and claims level-ups once", async () => {
+    await upsertGuild(db, { id: V, name: "Voice" });
+    const t0 = new Date("2026-11-18T12:00:00Z");
+    const first = xpForNextLevel(0);
+    // "near" is one point short of level 1 already; "new" has no row yet.
+    await awardXp(db, V, { id: "near", username: "near" }, first - 1, 60_000, t0);
+    const t1 = new Date(t0.getTime() + 120_000);
+    const got = await awardVoiceXpMany(
+      db,
+      V,
+      [
+        { id: "near", username: "near", gain: 10 },
+        { id: "new", username: "new", gain: 15 },
+        { id: "new", username: "new", gain: 15 }, // a duplicate is counted once
+        { id: "zero", username: "zero", gain: 0 }, // nothing to give
+      ],
+      55_000,
+      t1,
+    );
+    expect([...got.keys()].sort()).toEqual(["near", "new"]);
+    expect(got.get("near")).toMatchObject({ xp: first + 9, level: 1, leveledUpTo: 1 });
+    expect(got.get("new")).toMatchObject({ xp: 15, leveledUpTo: null });
+
+    // Within the cooldown: nobody earns again.
+    const again = await awardVoiceXpMany(
+      db,
+      V,
+      [{ id: "near", username: "near", gain: 10 }],
+      55_000,
+      new Date(t1.getTime() + 30_000),
+    );
+    expect(again.size).toBe(0);
+    expect(await getMemberRank(db, V, "near")).toMatchObject({ xp: first + 9, voiceMinutes: 1 });
   });
 });

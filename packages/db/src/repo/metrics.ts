@@ -28,27 +28,58 @@ export async function saveHealthSnapshot(
     });
 }
 
-/** Add message counts for today: { guildId: count }. */
+/**
+ * Rows per statement for the bot's once-a-minute writes. One multi-row upsert per chunk instead
+ * of one round trip per row: the flush used to cost a round trip per server and per member.
+ * Each caller's rows are unique on the conflict target (Postgres refuses a statement that
+ * updates the same row twice).
+ */
+const CHUNK = 500;
+async function chunked<T>(rows: T[], write: (part: T[]) => Promise<unknown>) {
+  for (let i = 0; i < rows.length; i += CHUNK) await write(rows.slice(i, i + CHUNK));
+}
+
+/** Add message counts for today: { guildId: count }. One upsert per 500 servers. */
 export async function addMessageCounts(db: Db, counts: Map<string, number>, now = new Date()) {
-  for (const [guildId, n] of counts) {
-    await db
+  const day = today(now);
+  const rows = [...counts].map(([guildId, messages]) => ({ guildId, day, messages }));
+  await chunked(rows, (values) =>
+    db
       .insert(guildActivityDaily)
-      .values({ guildId, day: today(now), messages: n })
+      .values(values)
       .onConflictDoUpdate({
         target: [guildActivityDaily.guildId, guildActivityDaily.day],
-        set: { messages: sql`${guildActivityDaily.messages} + ${n}` },
-      });
-  }
+        set: { messages: sql`${guildActivityDaily.messages} + excluded.messages` },
+      }),
+  );
 }
 
 export async function markSeen(db: Db, guildId: string, userId: string, at = new Date()) {
-  await db
-    .insert(memberLastSeen)
-    .values({ guildId, userId, lastSeenAt: at })
-    .onConflictDoUpdate({
-      target: [memberLastSeen.guildId, memberLastSeen.userId],
-      set: { lastSeenAt: at },
-    });
+  await markSeenMany(db, [{ guildId, userId, at }]);
+}
+
+/** When each member last posted. One upsert per 500 members; one row per member. */
+export async function markSeenMany(db: Db, seen: { guildId: string; userId: string; at: Date }[]) {
+  const rows = seen.map(({ guildId, userId, at }) => ({ guildId, userId, lastSeenAt: at }));
+  await chunked(rows, (values) =>
+    db
+      .insert(memberLastSeen)
+      .values(values)
+      .onConflictDoUpdate({
+        target: [memberLastSeen.guildId, memberLastSeen.userId],
+        // Never move it back: a late write for an earlier message keeps the later time.
+        set: { lastSeenAt: sql`greatest(${memberLastSeen.lastSeenAt}, excluded.last_seen_at)` },
+      }),
+  );
+}
+
+export interface LatencyHour {
+  hour: Date;
+  /** '' for all servers together. */
+  guildId: string;
+  count: number;
+  p50Ms: number;
+  p95Ms: number;
 }
 
 export async function saveLatencyHour(
@@ -57,13 +88,36 @@ export async function saveLatencyHour(
   guildId: string,
   stats: { count: number; p50Ms: number; p95Ms: number },
 ) {
-  await db
-    .insert(commandLatencyHourly)
-    .values({ hour, guildId, ...stats })
-    .onConflictDoUpdate({
-      target: [commandLatencyHourly.hour, commandLatencyHourly.guildId],
-      set: stats,
-    });
+  await saveLatencyHours(db, [{ hour, guildId, ...stats }]);
+}
+
+/** Reply-time percentiles per hour and server. One upsert per 500; one row per hour and server. */
+export async function saveLatencyHours(db: Db, rows: LatencyHour[]) {
+  await chunked(rows, (values) =>
+    db
+      .insert(commandLatencyHourly)
+      .values(values)
+      .onConflictDoUpdate({
+        target: [commandLatencyHourly.hour, commandLatencyHourly.guildId],
+        set: {
+          count: sql`excluded.count`,
+          p50Ms: sql`excluded.p50_ms`,
+          p95Ms: sql`excluded.p95_ms`,
+        },
+      }),
+  );
+}
+
+/**
+ * Remove old dashboard requests (30 days) and hourly reply times (90 days). The database
+ * function decides what's old; the bot can't delete anything newer (migration 0073).
+ */
+export async function pruneOperations(db: Db): Promise<number> {
+  const rows = (await db.execute(sql`select operations_prune() as removed`)) as unknown as
+    | { removed: number }[]
+    | { rows: { removed: number }[] };
+  const row = Array.isArray(rows) ? rows[0] : rows.rows[0];
+  return Number(row?.removed ?? 0);
 }
 
 /** One heartbeat a minute: refreshes bot_status and counts the minute toward today's uptime. */

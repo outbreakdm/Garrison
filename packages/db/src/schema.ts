@@ -904,6 +904,8 @@ export const qmBuilds = pgTable(
   (t) => [
     uniqueIndex("qm_builds_guild_version").on(t.guildId, t.version),
     index("qm_builds_guild_created").on(t.guildId, t.createdAt),
+    // For the continues_id foreign key (Supabase performance advisor).
+    index("qm_builds_continues").on(t.continuesId),
   ],
 ).enableRLS();
 
@@ -937,6 +939,7 @@ export const qmMessages = pgTable(
   (t) => [
     index("qm_messages_thread").on(t.guildId, t.threadId, t.createdAt),
     index("qm_messages_author").on(t.guildId, t.authorId, t.createdAt),
+    index("qm_messages_build").on(t.buildId),
   ],
 ).enableRLS();
 
@@ -1494,29 +1497,34 @@ export const planBundles = pgTable(
  * dashboard can write here: billing (the database owner) changes paid plans,
  * and staff give or remove free Pro only through plan_set_comp().
  */
-export const guildPlans = pgTable("guild_plans", {
-  guildId: text("guild_id")
-    .primaryKey()
-    .references(() => guilds.id, { onDelete: "cascade" }),
-  plan: guildPlan("plan").notNull().default("free"),
-  source: planSource("source").notNull().default("stripe"),
-  /** Staff member (Discord user ID) who gave a complimentary plan. */
-  grantedBy: text("granted_by"),
-  /** Why a complimentary plan was given, for the staff page. */
-  note: text("note"),
-  /** The Agency plan whose seat this server takes (source `bundle`). Freed if it ends. */
-  bundleId: uuid("bundle_id").references(() => planBundles.id, { onDelete: "cascade" }),
-  /** Stripe, when paid: the customer, the subscription and where it stands. */
-  stripeCustomerId: text("stripe_customer_id"),
-  stripeSubscriptionId: text("stripe_subscription_id"),
-  /** Stripe's subscription status: active, trialing, past_due... */
-  stripeStatus: text("stripe_status"),
-  currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
-  cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
-  /** Discord user ID of whoever pays. */
-  paidBy: text("paid_by"),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}).enableRLS();
+export const guildPlans = pgTable(
+  "guild_plans",
+  {
+    guildId: text("guild_id")
+      .primaryKey()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    plan: guildPlan("plan").notNull().default("free"),
+    source: planSource("source").notNull().default("stripe"),
+    /** Staff member (Discord user ID) who gave a complimentary plan. */
+    grantedBy: text("granted_by"),
+    /** Why a complimentary plan was given, for the staff page. */
+    note: text("note"),
+    /** The Agency plan whose seat this server takes (source `bundle`). Freed if it ends. */
+    bundleId: uuid("bundle_id").references(() => planBundles.id, { onDelete: "cascade" }),
+    /** Stripe, when paid: the customer, the subscription and where it stands. */
+    stripeCustomerId: text("stripe_customer_id"),
+    stripeSubscriptionId: text("stripe_subscription_id"),
+    /** Stripe's subscription status: active, trialing, past_due... */
+    stripeStatus: text("stripe_status"),
+    currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+    cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+    /** Discord user ID of whoever pays. */
+    paidBy: text("paid_by"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  // For the bundle_id foreign key: freeing an Agency plan's seats looks rows up by it.
+  (t) => [index("guild_plans_bundle").on(t.bundleId)],
+).enableRLS();
 
 /**
  * Every Stripe event the webhook has applied, by Stripe's event ID, so a retried event is
@@ -1852,6 +1860,7 @@ export const ticketNotes = pgTable(
   },
   (t) => [
     index("ticket_notes_ticket").on(t.ticketId, t.id),
+    index("ticket_notes_guild").on(t.guildId),
     check("ticket_notes_length", sql`length(${t.body}) BETWEEN 1 AND 2000`),
   ],
 ).enableRLS();

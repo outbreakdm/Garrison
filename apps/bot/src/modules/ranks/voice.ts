@@ -1,4 +1,4 @@
-import { awardXp, VOICE_XP } from "@garrison/db";
+import { awardVoiceXpMany, VOICE_XP } from "@garrison/db";
 import type { Client, VoiceState } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
 import { XP_COOLDOWN_MS } from "./rules.js";
@@ -30,6 +30,8 @@ export async function sweepVoiceXp(ctx: BotContext, client: Client<true>) {
     if (guild.voiceStates.cache.size < 2) continue;
     const settings = await cachedRanksSettings(ctx, guild.id);
     if (!settings.enabled || !settings.voiceXp) continue;
+    // Everyone earning in this server, then one write for all of them.
+    const earning = [];
     for (const state of earningVoice(guild.voiceStates.cache.values(), guild.afkChannelId)) {
       const member = state.member;
       const channel = state.channel;
@@ -37,17 +39,18 @@ export async function sweepVoiceXp(ctx: BotContext, client: Client<true>) {
       const gain = Math.round(
         VOICE_XP * (await boostAt(ctx, member, { id: channel.id, parentId: channel.parentId })),
       );
-      if (gain <= 0) continue;
-      const result = await awardXp(
-        ctx.db,
-        guild.id,
-        { id: member.id, username: member.user.username },
-        gain,
-        VOICE_COOLDOWN_MS,
-        new Date(),
-        "voice",
-      );
-      if (result.awarded && result.leveledUpTo)
+      if (gain > 0) earning.push({ member, channel, gain });
+    }
+    if (!earning.length) continue;
+    const results = await awardVoiceXpMany(
+      ctx.db,
+      guild.id,
+      earning.map(({ member, gain }) => ({ id: member.id, username: member.user.username, gain })),
+      VOICE_COOLDOWN_MS,
+    );
+    for (const { member, channel } of earning) {
+      const result = results.get(member.id);
+      if (result?.leveledUpTo)
         await celebrateLevel(ctx, guild, member, member.id, result.leveledUpTo, settings, channel);
     }
   }
