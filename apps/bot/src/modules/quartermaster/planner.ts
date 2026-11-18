@@ -346,16 +346,24 @@ function apiError(error: unknown): { ok: false; error: string } {
   throw error;
 }
 
+/** The longest one chat message may take with Claude, every round and retry included. */
+export const CHAT_DEADLINE_MS = 150_000;
+export const CHAT_TOO_SLOW =
+  "Claude took too long to answer. Try again, or ask for a smaller piece at a time.";
+
 export class ClaudePlanner implements Planner {
   private client: Anthropic;
+  private chatDeadlineMs: number;
 
   constructor(
     apiKey: string,
     readonly model = DEFAULT_MODEL,
-    /** For tests: a fake `fetch` in place of the API. */
-    options: { fetch?: typeof fetch } = {},
+    /** For tests: a fake `fetch` in place of the API, and a shorter chat deadline. */
+    options: { fetch?: typeof fetch; chatDeadlineMs?: number } = {},
   ) {
-    this.client = new Anthropic({ apiKey, maxRetries: 2, timeout: 90_000, ...options });
+    const { chatDeadlineMs, ...sdk } = options;
+    this.chatDeadlineMs = chatDeadlineMs ?? CHAT_DEADLINE_MS;
+    this.client = new Anthropic({ apiKey, maxRetries: 2, timeout: 90_000, ...sdk });
   }
 
   private base(maxTokens?: number) {
@@ -413,26 +421,32 @@ export class ClaudePlanner implements Planner {
     const reads: string[] = [];
     // Every round is a model call; the cost is the sum of them.
     let usage: PlannerUsage | undefined;
+    // All rounds, retries included, end inside the bot's request pass (3 min), so a slow
+    // answer is a clear "took too long" instead of a request that expires unanswered.
+    const deadline = AbortSignal.timeout(this.chatDeadlineMs);
     try {
       for (let round = 1; ; round++) {
         // The last round must answer, so a message never ends on a look.
         const lastRound =
           !read || round >= Math.min(QM_CHAT_ROUNDS, input.rounds ?? QM_CHAT_ROUNDS);
-        const response = await this.client.beta.messages.parse({
-          ...this.base(input.maxTokens),
-          output_config: { effort: "medium", format: betaZodOutputFormat(AiChatSchema) },
-          system: CHAT_SYSTEM_BLOCKS,
-          ...(read
-            ? {
-                tools: READ_TOOLS,
-                tool_choice: lastRound ? { type: "none" as const } : { type: "auto" as const },
-                // With looks, the conversation so far is cached too, so a later round re-reads
-                // the earlier ones from the cache rather than paying for them again.
-                cache_control: { type: "ephemeral" as const },
-              }
-            : {}),
-          messages,
-        });
+        const response = await this.client.beta.messages.parse(
+          {
+            ...this.base(input.maxTokens),
+            output_config: { effort: "medium", format: betaZodOutputFormat(AiChatSchema) },
+            system: CHAT_SYSTEM_BLOCKS,
+            ...(read
+              ? {
+                  tools: READ_TOOLS,
+                  tool_choice: lastRound ? { type: "none" as const } : { type: "auto" as const },
+                  // With looks, the conversation so far is cached too, so a later round re-reads
+                  // the earlier ones from the cache rather than paying for them again.
+                  cache_control: { type: "ephemeral" as const },
+                }
+              : {}),
+            messages,
+          },
+          { signal: deadline },
+        );
         usage = addUsage(usage, usageOf(response));
         const stopped = stopError(response.stop_reason);
         if (stopped) return { ok: false, error: stopped, usage };
@@ -495,7 +509,9 @@ export class ClaudePlanner implements Planner {
       }
     } catch (error) {
       // A call that failed after earlier rounds still cost those rounds.
-      const failed = apiError(error);
+      const failed = deadline.aborted
+        ? { ok: false as const, error: CHAT_TOO_SLOW }
+        : apiError(error);
       return usage ? { ...failed, usage } : failed;
     }
   }

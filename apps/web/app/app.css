@@ -4552,3 +4552,25 @@ button.list-rows__remove:focus-visible {
     line-height: 32px;
   }
 }
+
+/* A page that failed to render (components/LoadError.tsx). */
+.load-error {
+  max-width: 480px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-6) auto;
+}
+.load-error h1 {
+  font-size: 22px;
+}
+.load-error__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.load-error__ref {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}

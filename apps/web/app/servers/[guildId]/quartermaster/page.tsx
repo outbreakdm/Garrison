@@ -19,7 +19,7 @@ import {
   TEMPLATES_PER_USER,
 } from "@garrison/db";
 import type { Metadata } from "next";
-import { AutoRefresh } from "@/components/AutoRefresh";
+import { WaitingForBot } from "@/components/BotOffline";
 import { ProTag } from "@/components/cards/CardEditor";
 import { FeaturesPanel } from "@/components/FeaturesPanel";
 import { formatTime } from "@/components/format";
@@ -216,6 +216,8 @@ export default async function QuartermasterPage({
     .map((a) => String((a.payload as { message?: string }).message ?? ""))
     .reverse();
   const thinking = myChat.length > 0;
+  // A reply that looks at settings first can take a minute or two; say so after one.
+  const slow = myChat.some((a) => now - a.createdAt.getTime() > 60_000);
   const lastBot = [...messages].reverse().find((m) => m.role === "assistant");
   const choices = thinking
     ? []
@@ -266,7 +268,6 @@ export default async function QuartermasterPage({
         <div className="qm-stack">
           <div className="qm-work">
             <section className="g-card qm-chat" id="describe" aria-labelledby="qm-chat-title">
-              {thinking ? <AutoRefresh every={2000} forMs={90_000} /> : null}
               <div className="qm-chat__head">
                 <h2 className="qm-chat__title" id="qm-chat-title">
                   Chat
@@ -347,10 +348,17 @@ export default async function QuartermasterPage({
                         <i />
                       </span>
                       <span className="sr-only">Garrison is replying</span>
+                      {slow ? (
+                        <span className="qm-msg__cost">
+                          Still working on it. Replies that look at your settings take longer.
+                        </span>
+                      ) : null}
                     </div>
                   </li>
                 ) : null}
               </ol>
+              {/* Until the 10-minute request expiry, so a slow reply still shows up by itself. */}
+              {thinking ? <WaitingForBot every={2000} forMs={10 * 60_000} /> : null}
               <ScrollToEnd marker={`${messages.length}:${queued.length}:${thinking}`} />
               {choices.length ? (
                 <form action={requestAction} className="qm-chat__choices">

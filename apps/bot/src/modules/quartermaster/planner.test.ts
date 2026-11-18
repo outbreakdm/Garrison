@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type ChatInput, ClaudePlanner } from "./planner.js";
+import { CHAT_TOO_SLOW, type ChatInput, ClaudePlanner } from "./planner.js";
 import type { ReadTool } from "./tools.js";
 
 type Body = {
@@ -159,5 +159,23 @@ describe("the AI assistant chat's read tools", () => {
     const { planner, sent } = fakeApi([answer("Hi.")]);
     expect(await planner.chat(input())).toMatchObject({ ok: true, reply: "Hi." });
     expect(sent[0]?.tools).toBeUndefined();
+  });
+});
+
+describe("chat deadline", () => {
+  it("ends a reply that never comes with a plain 'took too long'", async () => {
+    // Claude never answers: the request only ends when it's aborted.
+    const fetch = ((_url: unknown, init?: { signal?: AbortSignal }) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () =>
+          reject(init.signal?.reason ?? new Error("aborted")),
+        );
+      })) as typeof globalThis.fetch;
+    const planner = new ClaudePlanner("test-key", "claude-haiku-5-5", {
+      fetch,
+      chatDeadlineMs: 50,
+    });
+    const result = await planner.chat(input());
+    expect(result).toMatchObject({ ok: false, error: CHAT_TOO_SLOW });
   });
 });

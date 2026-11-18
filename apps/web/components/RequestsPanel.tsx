@@ -1,7 +1,7 @@
 import { listDashboardActions } from "@garrison/db";
 import { getDb } from "@/lib/db";
 import { ACTION_KIND, ACTION_STATUS } from "@/lib/rally-schema";
-import { AutoRefresh } from "./AutoRefresh";
+import { WaitingForBot } from "./BotOffline";
 import { formatTime } from "./format";
 
 const ERRORS: Record<string, string> = {
@@ -63,11 +63,15 @@ export async function RequestsPanel({
   if (!actions.length && !queued && !error) return null;
   return (
     <section id="requests" className="g-card table-card" aria-label="Requests">
-      {working ? <AutoRefresh /> : null}
       <div className="table-card__head row-between">
         <h2 className="card-title">Requests</h2>
         <span className="g-help">Garrison does these in Discord, usually within seconds.</span>
       </div>
+      {working ? (
+        <div className="table-card__head">
+          <WaitingForBot />
+        </div>
+      ) : null}
       {queued && !error ? (
         <div className="table-card__head">
           <span className="notice notice--ok" role="status">

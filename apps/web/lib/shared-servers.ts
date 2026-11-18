@@ -27,7 +27,10 @@ export async function listSharedGuilds(session: Session) {
     .slice(0, 25);
   if (!candidates.length) return [];
   const guilds = await listActiveGuilds(db, candidates);
-  const roles = await Promise.all(guilds.map((g) => dashboardRole(g.id, session.userId)));
+  // One server Discord can't answer for right now is left out, not the whole list.
+  const roles = await Promise.all(
+    guilds.map((g) => dashboardRole(g.id, session.userId).catch(() => null)),
+  );
   return guilds.flatMap((g, i) => {
     const role = roles[i];
     return role && role !== "manager" ? [{ ...g, level: role as AccessLevel }] : [];

@@ -17,6 +17,11 @@ export async function describeDbRole(db: Db): Promise<DbRoleCheck> {
   return row;
 }
 
+/** The smallest round trip: resolves once the database answers. For liveness checks. */
+export async function pingDb(db: Db): Promise<void> {
+  await db.execute(sql`SELECT 1`);
+}
+
 /**
  * Garrison's security model rests on the bot connecting as garrison_bot:
  * column grants and row-level security stop a compromised bot from editing

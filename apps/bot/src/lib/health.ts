@@ -3,7 +3,8 @@ import { createServer, type Server } from "node:http";
 /**
  * A tiny health endpoint for hosts that check one (Fly, Railway, Docker).
  * Off unless HEALTH_PORT is set. Answers GET /healthz, with no details: 200 once
- * Garrison is connected to Discord, 503 before that or if it drops. POST /poke
+ * Garrison is connected to Discord and its database is answering, 503 before that or if
+ * either stops (lib/liveness.ts). POST /poke
  * says a dashboard request is waiting: it only makes Garrison look at its queue
  * now instead of on the next tick, so it's harmless if anyone else calls it.
  */
@@ -24,7 +25,7 @@ export function startHealthServer(
     }
     const ok = isHealthy();
     res.writeHead(ok ? 200 : 503, { "content-type": "text/plain", "cache-control": "no-store" });
-    res.end(ok ? "ok" : "starting");
+    res.end(ok ? "ok" : "not ready");
   });
   server.listen(port, "0.0.0.0");
   return server;

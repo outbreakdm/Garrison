@@ -26,6 +26,10 @@ export function proxy(request: NextRequest) {
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}`,
     `style-src 'self' 'nonce-${nonce}'`,
+    // React streams some parts of a page in a hidden holder before moving them into place;
+    // inside an SVG (the Insights charts) that holder is <svg style="display:none">. This
+    // allows exactly that one attribute value, by hash, and no other inline style.
+    "style-src-attr 'unsafe-hashes' 'sha256-aqNNdDLnnrDOnTNdkJpYlAxKVJtLt9CtFLklmInuUAE='",
     "img-src 'self' data: https://cdn.discordapp.com",
     "font-src 'self'",
     "connect-src 'self'",

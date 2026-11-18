@@ -20,22 +20,67 @@ export function authorizeUrl(state: string, codeChallenge: string, scope: string
   return `https://discord.com/oauth2/authorize?${params}`;
 }
 
+/** The longest a page waits on one Discord read, retry included. */
+const DISCORD_BUDGET_MS = 10_000;
+/** A rate limit longer than this isn't waited out: the page says to try again instead. */
+const MAX_RETRY_WAIT_MS = 2_000;
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * How long to wait before asking again, or null to give up. One retry, for answers that
+ * mean "not right now": a rate limit (Discord says how long), or a 5xx or no answer at all
+ * on a read. A write isn't repeated after a 5xx: it may have gone through (an OAuth code
+ * can be used once).
+ */
+export function retryDelay(status: number, retryAfter: string | null, isRead: boolean) {
+  if (status === 429) {
+    const seconds = retryAfter === null ? Number.NaN : Number(retryAfter);
+    const ms = Number.isFinite(seconds) && seconds >= 0 ? Math.ceil(seconds * 1000) : 1000;
+    return ms <= MAX_RETRY_WAIT_MS ? ms : null;
+  }
+  if (isRead && (status === 0 || status >= 500)) return 300;
+  return null;
+}
+
 async function discord<T>(path: string, init: RequestInit): Promise<T> {
-  const res = await fetch(`${env().DISCORD_API_BASE}${path}`, {
-    ...init,
-    cache: "no-store",
-    signal: AbortSignal.timeout(8000),
-  });
-  if (!res.ok) throw new DiscordError(res.status, path);
-  return (await res.json()) as T;
+  const started = Date.now();
+  const isRead = (init.method ?? "GET") === "GET";
+  for (let attempt = 0; ; attempt++) {
+    const left = DISCORD_BUDGET_MS - (Date.now() - started);
+    let status = 0;
+    let retryAfter: string | null = null;
+    try {
+      const res = await fetch(`${env().DISCORD_API_BASE}${path}`, {
+        ...init,
+        cache: "no-store",
+        signal: AbortSignal.timeout(attempt === 0 ? Math.min(6_000, left) : left),
+      });
+      if (res.ok) return (await res.json()) as T;
+      status = res.status;
+      // Discord sends seconds with a fraction here; Retry-After is whole seconds.
+      retryAfter = res.headers.get("x-ratelimit-reset-after") ?? res.headers.get("retry-after");
+      await res.body?.cancel().catch(() => {});
+    } catch {
+      // No answer: a timeout or a dropped connection. Status 0 says so.
+    }
+    const delay = attempt === 0 ? retryDelay(status, retryAfter, isRead) : null;
+    if (delay === null || Date.now() - started + delay > DISCORD_BUDGET_MS - 1_000)
+      throw new DiscordError(status, path);
+    await wait(delay);
+  }
 }
 
 export class DiscordError extends Error {
   constructor(
+    /** Discord's HTTP status, or 0 when it didn't answer in time. */
     readonly status: number,
     path: string,
   ) {
-    super(`Discord returned ${status} for ${path.split("?")[0]}`);
+    super(
+      status
+        ? `Discord returned ${status} for ${path.split("?")[0]}`
+        : `Discord didn't answer for ${path.split("?")[0]}`,
+    );
   }
 }
 
@@ -200,8 +245,13 @@ export function memberNow(guildId: string, userId: string): Promise<MemberNow | 
       };
       const roleIds = Array.isArray(member.roles) ? member.roles.map(String) : [];
       return { manage: canManage(memberPermissions(snapshot, userId, roleIds)), roleIds };
-    } catch {
-      return null;
+    } catch (error) {
+      // Discord said this person isn't there (or Garrison can't see the server): no access.
+      if (error instanceof DiscordError && (error.status === 404 || error.status === 403))
+        return null;
+      // Discord didn't say (rate limited, down, slow). Still no access, but as an error the
+      // page shows with "Try again", not as "this page doesn't exist" to its own manager.
+      throw error;
     }
   });
 }

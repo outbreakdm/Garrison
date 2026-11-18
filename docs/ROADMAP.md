@@ -1205,3 +1205,24 @@ Decided (2026-11-12, owner):
   prefetch (a pending bar shows while their page loads). The bot's request loop had also
   stalled since a pass hung on a database call that never answered (a 16-hour-old bot query
   was still open); a pass now gets 3 minutes before the next tick starts a fresh one.
+- 2026-11-18: Fix: the bot went silent for 11 hours (last heartbeat 03:51 UTC) and the AI
+  assistant never replied. Its database pool hung on connections that stopped answering; every
+  query, the heartbeat included, waited behind them forever, while `/healthz` kept saying ok
+  because Discord was still connected, so nothing restarted it. Now the pool has a connect
+  timeout and drops idle connections after a minute, a `select 1` probe runs every 30 s, and
+  `/healthz` says 503 after 2 minutes without an answer. After 5 the bot exits and the
+  Cloudflare cron starts a fresh one (`apps/bot/src/lib/liveness.ts`).
+- 2026-11-18: Fix: dashboard pages said "Nothing here … you don't have Manage Server" when
+  Discord rate limited or failed the access check. Discord reads retry once (a 429 waits
+  Discord's `retry-after`, up to 2 s; 5xx and no answer on reads only). Only Discord saying the
+  person isn't in the server is "no access"; anything else is an error, still fail-closed.
+- 2026-11-18: Every page has an error boundary (`components/LoadError.tsx`) instead of Next's
+  blank "This page couldn't load": the menu stays, it retries once by itself, then offers Try
+  again, with the error's reference for the logs.
+- 2026-11-18: AI assistant: a chat message ends within 150 s with "Claude took too long" (all
+  rounds and retries), and requests run in a lane per server with AI chat in its own, so a slow
+  reply never holds up another server's or the same server's other requests. The page says when
+  the bot isn't running instead of showing the typing dots forever, keeps watching for the
+  reply until the request expires, and refreshes less often the longer it waits.
+- 2026-11-18: The CSP allows exactly `style="display:none"` by hash (`style-src-attr`): React
+  puts streamed chart parts in such a holder inside SVGs, which was blocked on Insights.

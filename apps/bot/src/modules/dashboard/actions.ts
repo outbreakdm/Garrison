@@ -615,22 +615,47 @@ export async function runDashboardAction(
   }
 }
 
+/**
+ * Which requests must wait for each other: a server's requests run in order, and its AI
+ * assistant messages in a lane of their own, because a reply can take a minute or more.
+ * Different servers never wait for each other.
+ */
+export function actionLane(action: Pick<DashboardAction, "guildId" | "kind">) {
+  return action.kind === "qm_chat" ? `${action.guildId}:ai` : action.guildId;
+}
+
 export async function processDashboardActions(ctx: BotContext, client: Client<true>) {
+  const lanes = new Map<string, DashboardAction[]>();
   for (const action of await claimDashboardActions(ctx.db, 10)) {
-    let outcome: Outcome;
-    try {
-      outcome = await runDashboardAction(ctx, client, action);
-    } catch (error) {
-      ctx.logger.error("Dashboard action failed", {
-        actionId: action.id,
-        kind: action.kind,
-        error,
-      });
-      outcome = fail("Something went wrong. Try again.");
-    }
-    await finishDashboardAction(ctx.db, action.id, {
-      ok: outcome.ok,
-      message: plainOutcome(outcome.message),
-    });
+    const key = actionLane(action);
+    lanes.set(key, [...(lanes.get(key) ?? []), action]);
   }
+  await Promise.all(
+    [...lanes.values()].map(async (lane) => {
+      for (const action of lane) await runAndFinish(ctx, client, action);
+    }),
+  );
+}
+
+async function runAndFinish(ctx: BotContext, client: Client<true>, action: DashboardAction) {
+  let outcome: Outcome;
+  try {
+    outcome = await runDashboardAction(ctx, client, action);
+  } catch (error) {
+    ctx.logger.error("Dashboard action failed", {
+      actionId: action.id,
+      kind: action.kind,
+      error,
+    });
+    outcome = fail("Something went wrong. Try again.");
+  }
+  await finishDashboardAction(ctx.db, action.id, {
+    ok: outcome.ok,
+    message: plainOutcome(outcome.message),
+  }).catch((error: unknown) =>
+    ctx.logger.error("Couldn't record a dashboard request's outcome", {
+      actionId: action.id,
+      error,
+    }),
+  );
 }

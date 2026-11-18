@@ -56,7 +56,8 @@ export async function requireSession(next = "/servers") {
 /**
  * What this user may do on this server's dashboard right now: "manager" with Manage Server
  * (or as owner), else the level a manager gave them or one of their roles (viewer or
- * editor), else null. Asked of Discord live, membership included; fails closed.
+ * editor), else null. Asked of Discord live, membership included; fails closed. Throws when
+ * Discord can't answer right now, so a rate limit never reads as "not yours".
  */
 export const dashboardRole = cache(
   async (guildId: string, userId: string): Promise<DashboardRole | null> => {
@@ -69,8 +70,8 @@ export const dashboardRole = cache(
 
 /**
  * May the current session do `need` on this server right now? Checks the session, the ID's
- * shape, that Garrison is in the server, and the user's live role there. Returns null on any
- * failure. Server Actions call this directly: they are public POST endpoints, so page checks
+ * shape, that Garrison is in the server, and the user's live role there. Returns null when
+ * any of that says no, and throws when Discord can't answer (never grants access either way). Server Actions call this directly: they are public POST endpoints, so page checks
  * don't cover them. The default is "editor": a change needs at least an editor, so an action
  * that forgets to say what it needs is still closed to viewers.
  */
@@ -89,8 +90,8 @@ export const checkGuildAccess = cache(async (guildId: string, need: DashboardRol
 
 /**
  * The gate for every server page: anyone with access, viewers included. Signed-out users go
- * to login; everything else that fails is a 404, so the dashboard never confirms which
- * servers exist.
+ * to login; a "no" is a 404, so the dashboard never confirms which servers exist. Discord not
+ * answering is an error instead, shown with "Try again" by error.tsx.
  */
 export const requireGuildAccess = cache(async (guildId: string) => {
   await requireSession(`/servers/${isSnowflake(guildId) ? guildId : ""}`);

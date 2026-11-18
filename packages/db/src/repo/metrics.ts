@@ -124,6 +124,15 @@ export async function getLatency(db: Db, guildId = "", hours = 24, now = new Dat
   return { count, p95Ms };
 }
 
+/** When the bot last checked in (once a minute while it's running), or null if it never has. */
+export async function getBotLastBeat(db: Db): Promise<Date | null> {
+  const [row] = await db
+    .select({ at: botStatus.lastBeatAt })
+    .from(botStatus)
+    .where(eq(botStatus.id, 1));
+  return row?.at ?? null;
+}
+
 export async function getBotStatus(db: Db, days = 30, now = new Date()) {
   const [status] = await db.select().from(botStatus).where(eq(botStatus.id, 1));
   const since = today(new Date(now.getTime() - (days - 1) * 86_400_000));

@@ -18,7 +18,7 @@ import { type Client, Collection, PermissionFlagsBits } from "discord.js";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { BotContext } from "../../commands/types.js";
 import { createLogger } from "../../lib/logger.js";
-import { plainOutcome, processDashboardActions } from "./actions.js";
+import { actionLane, plainOutcome, processDashboardActions } from "./actions.js";
 
 const G = "980000000000000001";
 const CH = "980000000000000002";
@@ -401,5 +401,19 @@ describe("dashboard actions from someone with editor access", () => {
     });
     await as("garrison_bot");
     expect(await run(EDITOR, raid(CH, "No longer"))).toMatchObject({ status: "failed" });
+  });
+});
+
+describe("actionLane", () => {
+  it("keeps a server's requests in order, AI replies apart, and servers apart", () => {
+    expect(actionLane({ guildId: "1", kind: "mod_action" })).toBe(
+      actionLane({ guildId: "1", kind: "lfg_join" }),
+    );
+    expect(actionLane({ guildId: "1", kind: "qm_chat" })).not.toBe(
+      actionLane({ guildId: "1", kind: "qm_apply" }),
+    );
+    expect(actionLane({ guildId: "1", kind: "mod_action" })).not.toBe(
+      actionLane({ guildId: "2", kind: "mod_action" }),
+    );
   });
 });

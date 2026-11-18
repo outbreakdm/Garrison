@@ -1,4 +1,11 @@
-import { createDb, describeDbRole, markGuildLeft, roleProblem, upsertGuild } from "@garrison/db";
+import {
+  createDb,
+  describeDbRole,
+  markGuildLeft,
+  pingDb,
+  roleProblem,
+  upsertGuild,
+} from "@garrison/db";
 import { Client, Events, GatewayIntentBits, Partials } from "discord.js";
 import type { BotContext } from "./commands/types.js";
 import { loadEnv } from "./env.js";
@@ -6,6 +13,7 @@ import { handleInteraction } from "./interactions.js";
 
 import { ensureGuild, forgetGuild } from "./lib/guild-registry.js";
 import { startHealthServer } from "./lib/health.js";
+import { watchDatabase } from "./lib/liveness.js";
 import { createLogger } from "./lib/logger.js";
 import { Metrics } from "./lib/metrics.js";
 import { sweepAlerts } from "./modules/alerts/service.js";
@@ -383,23 +391,39 @@ client.on(Events.GuildDelete, async (guild) => {
 client.on(Events.InteractionCreate, (interaction) => handleInteraction(interaction, ctx));
 client.on(Events.Error, (error) => logger.error("Discord client error", { error }));
 
+// A bot whose database stopped answering can do nothing useful, and nothing else notices:
+// Discord stays connected. Say so on /healthz, then exit so the host starts a fresh one.
+const database = watchDatabase(
+  () => pingDb(db),
+  (silentMs) => {
+    logger.error("The database hasn't answered in minutes; restarting the bot", { silentMs });
+    void shutdown("database watchdog", 1);
+  },
+);
+
 const health = env.HEALTH_PORT
   ? startHealthServer(
       env.HEALTH_PORT,
-      () => client.isReady() && client.ws.ping >= 0,
+      () => client.isReady() && client.ws.ping >= 0 && database.healthy(),
       () => void drainActions(),
     )
   : undefined;
 
-async function shutdown(signal: string) {
-  logger.info(`Received ${signal}, shutting down`);
+let stopping = false;
+async function shutdown(reason: string, code = 0) {
+  if (stopping) return;
+  stopping = true;
+  logger.info(`Shutting down: ${reason}`);
+  // A wedged pool or gateway mustn't hold the exit: go anyway after 10 s.
+  setTimeout(() => process.exit(code), 10_000).unref();
   clearInterval(sweepTimer);
   clearInterval(actionsTimer);
   clearInterval(flushTimer);
+  database.stop();
   health?.close();
-  await client.destroy();
-  await close();
-  process.exit(0);
+  await client.destroy().catch(() => {});
+  await close().catch(() => {});
+  process.exit(code);
 }
 process.once("SIGINT", () => void shutdown("SIGINT"));
 process.once("SIGTERM", () => void shutdown("SIGTERM"));
