@@ -1236,3 +1236,6 @@ Decided (2026-11-12, owner):
   replies ~22 s, nearly all of it output; caching reads within a conversation), OpenAI
   moderation, Twitch, YouTube, OSRS, Battle.net, Turnstile and rank-card images (all with
   timeouts), and the per-message handlers (settings cached, nothing read for modules that are off).
+- 2026-11-18: `docs/SCALING.md`: every connection limit from Discord to Postgres with today's
+  values, what breaks first as servers grow and what to change at each stage (now: lower
+  Hyperdrive's connection limit from 60 to 12), and the queries and log lines to watch.
