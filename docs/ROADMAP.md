@@ -7,7 +7,7 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **AI assistant v2 (planned 2026-11-19), next up:** `docs/AI_ASSISTANT.md`, "Assistant v2". Owner chose Haiku (Fast) and Sonnet (Smart, Pro and Agency only), supplies at each model's real cost, every coverage gap (writing, more modules, insight, how-to help), and a "Your server" workspace with hand edits (rename, drag to reorder) and an Apply build button. Phase 1 first: a message's hold assumes 12,000 input tokens a round but nothing enforces it, so a big server can cost more than it held. **Phase 1 done** (not deployed, no migration); phase 2, the Your server workspace, is next.
+- **AI assistant v2 (planned 2026-11-19), next up:** `docs/AI_ASSISTANT.md`, "Assistant v2". Owner chose Haiku (Fast) and Sonnet (Smart, Pro and Agency only), supplies at each model's real cost, every coverage gap (writing, more modules, insight, how-to help), and a "Your server" workspace with hand edits (rename, drag to reorder) and an Apply build button. Phase 1 first: a message's hold assumes 12,000 input tokens a round but nothing enforces it, so a big server can cost more than it held. **Phases 1 and 2 done** (not deployed; phase 2 needs migration 0076); phase 3, the model picker, is next.
 - **Optimize and polish (2026-11-17):** 15 fewer database queries on every dashboard page (the
   menu's module settings in one query), faster AI assistant paint, no layout shift on Settings,
   24 px targets, unused CSS removed (see the Log). To run the Worker beside the database, set the
@@ -1276,3 +1276,14 @@ Decided (2026-11-12, owner):
   worst case, the SDK's own retries are off (the planner retries only 429/529/5xx), each
   round is priced at the model that ran it (Sonnet's cache reads at its real 0.05x), and an
   unpriced `QM_MODEL` stops the bot at start. 710 tests pass. Not deployed.
+- 2026-11-19: AI assistant v2, phase 2: the Your server workspace. The right panel is always
+  Your server, with Apply N changes (then "Building X of N") and Discard at its top right.
+  Rename any channel, category or role in place, drag to reorder categories, a category's
+  channels and roles below Garrison, drag a channel onto another category to move it, or use
+  Move up / Move down. Each hand change goes to the bot as a `qm_edit` request, is checked
+  against the server, lands in the person's draft as the next version (or starts one), costs
+  no supplies, and survives an AI redraft. The tree shows renames (old name in Now), moves and
+  deletions in place; a change Discord overtook is listed with Keep and Drop, and Apply waits.
+  Build history and the requests list moved to a History tab. Fixed: "Remove from plan" lost
+  a draft's edits. Migration **0076**. 732 tests pass and the dashboard builds; not checked in
+  a browser (needs the local Docker stack). Not deployed.

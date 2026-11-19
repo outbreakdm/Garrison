@@ -810,6 +810,11 @@ export interface QmEdit {
   mentionable?: boolean;
   /** Roles: the member-level permissions from QM_ROLE_PERMISSIONS it should have. */
   permissions?: string[];
+  /**
+   * "admin": made by hand in the Your server panel, not by the AI. It costs no supplies, and
+   * an AI redraft keeps it.
+   */
+  by?: "admin";
 }
 
 /**
@@ -825,6 +830,8 @@ export interface QmOrder {
   items: string[];
   /** The items' names when the plan was drafted, for the preview. */
   names: string[];
+  /** "admin": set by hand (dragged or moved), like QmEdit's. */
+  by?: "admin";
 }
 
 /**
@@ -864,6 +871,8 @@ export interface QmCreated {
   kind: "category" | "channel" | "role" | "setting" | "post" | "order" | "edit" | "deleted";
   id: string;
   name: string;
+  /** Made from a hand change (QmEdit "by"): it costs no supplies. */
+  by?: "admin";
 }
 
 /**
@@ -1259,6 +1268,7 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "suggestion_status",
   "qm_chat",
   "qm_remove",
+  "qm_edit",
   "verify_decide",
   "economy_adjust",
   "economy_buy",
@@ -1269,12 +1279,30 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
  * Take one item out of a waiting AI assistant draft: a channel, category or role it makes
  * (by ref), a setting it changes ("module.field") or a post (by its place in the list).
  */
+/**
+ * One hand change in the AI assistant's Your server panel, into the person's waiting draft
+ * (`id`), or a new draft when they have none. `target` is an existing item's id or the ref of
+ * one the draft makes.
+ */
+export type QmEditPayload = { id?: string } & (
+  | { change: "rename"; target: string; name: string }
+  | { change: "move"; target: string; parent: string | null }
+  | {
+      change: "order";
+      scope: "categories" | "channels" | "roles";
+      parent: string | null;
+      items: string[];
+    }
+);
+
 export interface QmRemovePayload {
   id: string;
   ref?: string;
   setting?: string;
   post?: number;
   order?: number;
+  /** A change to something that exists, by the item's id. */
+  edit?: string;
 }
 export const dashboardActionStatus = pgEnum("dashboard_action_status", [
   "pending",

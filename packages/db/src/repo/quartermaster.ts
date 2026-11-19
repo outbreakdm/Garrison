@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, max, ne, type SQL, sql } from "drizzle-orm";
+import { and, count, desc, eq, gt, gte, max, ne, type SQL, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import {
   guildPlans,
@@ -37,6 +37,13 @@ export interface CreatePlanInput {
 /** How long a plan waits to be built before it expires, as the bot enforces. */
 export const QM_PLAN_TTL_MS = 15 * 60_000;
 
+/** A list's entries that cost a supply: all but hand changes (`by` "admin"). */
+const charged = (
+  column: typeof qmBuilds.edits | typeof qmBuilds.orders | typeof qmBuilds.created,
+) =>
+  sql`(select count(*) from jsonb_array_elements(${column}) x where x->>'by' is distinct from 'admin')::int`;
+const allCharged = sql`jsonb_array_length(${qmBuilds.plan}) + jsonb_array_length(${qmBuilds.settings}) + jsonb_array_length(${qmBuilds.posts}) + ${charged(qmBuilds.orders)} + ${charged(qmBuilds.edits)}`;
+
 /**
  * Changes a build counts against the day: what it built (all of a built plan, what got
  * made before a failure or an undo), or what a waiting plan holds until it expires.
@@ -45,16 +52,27 @@ export const QM_PLAN_TTL_MS = 15 * 60_000;
  * leaves out waiting plans: only what reached the server.
  */
 const changesCounted = (now: Date, settled: boolean) => sql<number>`coalesce(sum(case
-  when ${qmBuilds.status} = 'applied' then jsonb_array_length(${qmBuilds.plan}) + jsonb_array_length(${qmBuilds.settings}) + jsonb_array_length(${qmBuilds.posts}) + jsonb_array_length(${qmBuilds.orders}) + jsonb_array_length(${qmBuilds.edits})
-  when ${qmBuilds.status} in ('failed', 'rolled_back') then jsonb_array_length(${qmBuilds.created})
-  when ${qmBuilds.status} = 'pending' and ${settled ? sql`false` : sql`${qmBuilds.createdAt} > ${new Date(now.getTime() - QM_PLAN_TTL_MS).toISOString()}::timestamptz`} then jsonb_array_length(${qmBuilds.plan}) + jsonb_array_length(${qmBuilds.settings}) + jsonb_array_length(${qmBuilds.posts}) + jsonb_array_length(${qmBuilds.orders}) + jsonb_array_length(${qmBuilds.edits})
+  when ${qmBuilds.status} = 'applied' then ${allCharged}
+  when ${qmBuilds.status} in ('failed', 'rolled_back') then ${charged(qmBuilds.created)}
+  when ${qmBuilds.status} = 'pending' and ${settled ? sql`false` : sql`${qmBuilds.createdAt} > ${new Date(now.getTime() - QM_PLAN_TTL_MS).toISOString()}::timestamptz`} then ${allCharged}
   else 0 end - ${qmBuilds.packSupplies}), 0)::int`;
 
-/** What a built (or partly built) plan counts: everything, or what it made before stopping. */
+/** What a built (or partly built) plan is charged: everything, or what it made before stopping. Hand changes are free. */
 export const qmChangesMade = (
   b: Pick<QmBuild, "status" | "plan" | "settings" | "posts" | "created"> &
     Partial<Pick<QmBuild, "orders" | "edits">>,
-) => (b.status === "applied" ? qmChangeCount(b) : b.created.length);
+) =>
+  b.status === "applied" ? qmChargedChanges(b) : b.created.filter((x) => x.by !== "admin").length;
+
+/** A build's changes that cost a supply: all but the ones made by hand. */
+export const qmChargedChanges = (
+  b: Pick<QmBuild, "plan" | "settings" | "posts"> & Partial<Pick<QmBuild, "orders" | "edits">>,
+) =>
+  qmChangeCount({
+    ...b,
+    orders: (b.orders ?? []).filter((x) => x.by !== "admin"),
+    edits: (b.edits ?? []).filter((x) => x.by !== "admin"),
+  });
 
 /** A build's changes: its structure, each settings field, and each post. */
 export const qmChangeCount = (
@@ -135,6 +153,29 @@ export async function listQmBuilds(db: Db, guildId: string, limit = 20) {
     .where(eq(qmBuilds.guildId, guildId))
     .orderBy(desc(qmBuilds.version))
     .limit(limit);
+}
+
+/** A person's newest draft still waiting to be built on a server, or null. */
+export async function latestWaitingQmBuild(
+  db: Db,
+  guildId: string,
+  personId: string,
+  now = new Date(),
+) {
+  const [row] = await db
+    .select()
+    .from(qmBuilds)
+    .where(
+      and(
+        eq(qmBuilds.guildId, guildId),
+        eq(qmBuilds.requestedById, personId),
+        eq(qmBuilds.status, "pending"),
+        gt(qmBuilds.createdAt, new Date(now.getTime() - QM_PLAN_TTL_MS)),
+      ),
+    )
+    .orderBy(desc(qmBuilds.version))
+    .limit(1);
+  return row ?? null;
 }
 
 /** Builds started in a server since `since`, for the hourly limit. */

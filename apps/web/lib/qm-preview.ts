@@ -1,5 +1,6 @@
 import {
   QM_ROLE_PERMISSIONS,
+  type QmEdit,
   type QmOperation,
   type QmOrder,
   type QmPost,
@@ -14,8 +15,9 @@ import type { LayoutChannel, ServerLayout } from "./discord";
 /**
  * The server as it would look after a Quartermaster plan is built: today's
  * categories, channels and roles with the plan's additions slotted in where
- * Discord will put them, in the plan's new order. Pure, so it's unit tested. A plan only
- * adds and reorders.
+ * Discord will put them, in the plan's new order, with its edits shown in place: renamed
+ * (with the old name for Now), moved to another category, or deleted. Pure, so it's unit
+ * tested.
  */
 
 /**
@@ -47,11 +49,17 @@ export interface PreviewChannel {
   /** A new channel's ref in the plan, so it can be taken out of it. */
   ref?: string;
   moved?: Moved;
+  /** Renamed by the plan: its name now, for the Now view. */
+  was?: string;
+  /** The plan deletes it. */
+  gone?: boolean;
 }
 export interface PreviewCategory {
   key: string;
   name: string;
   isNew: boolean;
+  was?: string;
+  gone?: boolean;
   /** An existing category the plan adds channels to. */
   touched: boolean;
   channels: PreviewChannel[];
@@ -70,6 +78,8 @@ export interface PreviewRole {
   position?: number | null;
   ref?: string;
   moved?: Moved;
+  was?: string;
+  gone?: boolean;
 }
 export interface ServerPreview {
   loose: PreviewChannel[];
@@ -181,7 +191,29 @@ export function previewServer(
   plan: QmOperation[],
   everyoneId = "",
   orders: QmOrder[] = [],
+  edits: QmEdit[] = [],
 ): ServerPreview {
+  // What the plan's edits do to what exists: new names, deletions, channels moved elsewhere.
+  const renamed = new Map(
+    edits
+      .filter((e) => e.name && !e.kind.startsWith("delete_"))
+      .map((e) => [e.id, e.name as string]),
+  );
+  const deleting = new Set(edits.filter((e) => e.kind.startsWith("delete_")).map((e) => e.id));
+  const movedTo = new Map(
+    edits
+      .filter((e) => e.kind === "edit_channel" && e.parent !== undefined)
+      .map((e) => [e.id, e.parent ?? null]),
+  );
+  /** A row as the edits leave it. */
+  const edited = <T extends { key: string; name: string }>(row: T): T => {
+    const name = renamed.get(row.key);
+    return {
+      ...row,
+      ...(name && name !== row.name ? { name, was: row.name } : {}),
+      ...(deleting.has(row.key) ? { gone: true } : {}),
+    };
+  };
   const roleName = new Map<string, string>([
     ...layout.roles.map((r) => [r.id, r.name] as [string, string]),
     ...plan.filter((o) => o.kind === "create_role").map((o) => [o.ref, o.name] as [string, string]),
@@ -198,24 +230,25 @@ export function previewServer(
     ...rows.filter((x) => x.who === "@everyone"),
     ...rows.filter((x) => x.who !== "@everyone"),
   ];
-  const existing = (c: LayoutChannel): PreviewChannel => ({
-    key: c.id,
-    name: c.name,
-    kind: c.kind,
-    locked: c.locked,
-    isNew: false,
-    details: [],
-    topic: c.topic ?? null,
-    perms: everyoneFirst(
-      (c.overwrites ?? []).map((o) => ({
-        key: o.id,
-        who: who(o.id),
-        color: roleColor.get(o.id) ?? 0,
-        allowed: permLabels(bits(o.allow)),
-        denied: permLabels(bits(o.deny)),
-      })),
-    ),
-  });
+  const existing = (c: LayoutChannel): PreviewChannel =>
+    edited({
+      key: c.id,
+      name: c.name,
+      kind: c.kind,
+      locked: c.locked,
+      isNew: false,
+      details: [],
+      topic: c.topic ?? null,
+      perms: everyoneFirst(
+        (c.overwrites ?? []).map((o) => ({
+          key: o.id,
+          who: who(o.id),
+          color: roleColor.get(o.id) ?? 0,
+          allowed: permLabels(bits(o.allow)),
+          denied: permLabels(bits(o.deny)),
+        })),
+      ),
+    });
   /** A new channel's overwrites as Garrison will make them (service.ts channelOverwrites). */
   const madePerms = (o: QmOperation): PermRow[] => {
     const voice = o.kind === "create_voice_channel";
@@ -281,6 +314,34 @@ export function previewServer(
     ...newCategories.map((o) => o.ref),
   ]);
   const into = (parent: string) => channels.filter((o) => o.parent === parent).map(made);
+  // Existing channels an edit moves to another category: where each one lands, by list key.
+  const listKey = (parent: string | null) =>
+    parent === null
+      ? ""
+      : layout.categories.some((c) => c.id === parent)
+        ? parent
+        : `new:${parent}`;
+  const arriving = new Map<string, PreviewChannel[]>();
+  const homeOf = new Map<string, string>([
+    ...layout.loose.map((c) => [c.id, ""] as [string, string]),
+    ...layout.categories.flatMap((cat) =>
+      cat.channels.map((c) => [c.id, cat.id] as [string, string]),
+    ),
+  ]);
+  for (const c of [...layout.loose, ...layout.categories.flatMap((x) => x.channels)]) {
+    const to = movedTo.get(c.id);
+    if (to === undefined || listKey(to) === homeOf.get(c.id)) continue;
+    const key = listKey(to);
+    arriving.set(key, [...(arriving.get(key) ?? []), { ...existing(c), moved: "to" }]);
+  }
+  /** A list's existing channels: one moved away stays as its old place, for Now. */
+  const staying = (list: LayoutChannel[], key: string) =>
+    list.map((c): PreviewChannel => {
+      const to = movedTo.get(c.id);
+      return to !== undefined && listKey(to) !== key
+        ? { ...existing(c), moved: "from" }
+        : existing(c);
+    });
   // Discord lists text channels above voice ones, so a new text channel lands above the voice rooms.
   const voiceLast = (list: PreviewChannel[]) => [
     ...list.filter((c) => c.kind !== "voice"),
@@ -322,19 +383,22 @@ export function previewServer(
   const preview: ServerPreview = {
     // A channel with no category, or whose category has since gone, sits at the top.
     loose: voiceLast([
-      ...layout.loose.map(existing),
+      ...staying(layout.loose, ""),
       ...channels.filter((o) => !o.parent || !homes.has(o.parent)).map(made),
+      ...(arriving.get("") ?? []),
     ]),
     categories: [
       ...layout.categories.map((c) => {
-        const added = into(c.id);
-        return {
+        const added = [...into(c.id), ...(arriving.get(c.id) ?? [])];
+        const list = voiceLast([...staying(c.channels, c.id), ...added]);
+        return edited({
           key: c.id,
           name: c.name,
           isNew: false,
-          touched: added.length > 0,
-          channels: inOrder(c.id, voiceLast([...c.channels.map(existing), ...added])),
-        };
+          // Opened when the plan changes anything in it.
+          touched: added.length > 0 || list.some((x) => x.moved || x.was || x.gone),
+          channels: inOrder(c.id, list),
+        });
       }),
       // Discord puts new categories at the bottom.
       ...newCategories.map((o) => ({
@@ -342,20 +406,25 @@ export function previewServer(
         name: o.name,
         isNew: true,
         touched: true,
-        channels: inOrder(`new:${o.ref}`, voiceLast(into(o.ref))),
+        channels: inOrder(
+          `new:${o.ref}`,
+          voiceLast([...into(o.ref), ...(arriving.get(`new:${o.ref}`) ?? [])]),
+        ),
       })),
     ],
     roles: [
-      ...layout.roles.map((r, i) => ({
-        key: r.id,
-        name: r.name,
-        color: r.color,
-        isNew: false,
-        details: r.managed ? ["Managed by an app"] : [],
-        power: rolePower(bits(r.permissions)),
-        perms: permLabels(bits(r.permissions)),
-        position: i + 1,
-      })),
+      ...layout.roles.map((r, i) =>
+        edited({
+          key: r.id,
+          name: r.name,
+          color: r.color,
+          isNew: false,
+          details: r.managed ? ["Managed by an app"] : [],
+          power: rolePower(bits(r.permissions)),
+          perms: permLabels(bits(r.permissions)),
+          position: i + 1,
+        }),
+      ),
       // New roles start at the bottom, with no permissions.
       ...plan
         .filter((o) => o.kind === "create_role")
@@ -384,7 +453,7 @@ export function previewServer(
       channels: channels.length,
       roles: plan.filter((o) => o.kind === "create_role").length,
     },
-    moved: 0,
+    moved: [...arriving.values()].reduce((n, l) => n + l.length, 0),
   };
   if (!orders.length) return preview;
   preview.categories = ordered(preview.categories, "categories", categoryIds).map((c) =>
@@ -401,7 +470,7 @@ export function previewServer(
       return r.isNew && !r.moved ? r : { ...r, position: at };
     });
   }
-  preview.moved = moved;
+  preview.moved = (preview.moved ?? 0) + moved;
   return preview;
 }
 

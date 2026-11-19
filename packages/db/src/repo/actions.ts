@@ -21,6 +21,7 @@ import {
   type PostTicketPanelPayload,
   type PurgePayload,
   type QmChatPayload,
+  type QmEditPayload,
   type QmPlanPayload,
   type QmRemovePayload,
   type RaidSignupPayload,
@@ -57,6 +58,7 @@ export type QueueInput =
   | { kind: "qm_apply"; payload: IdPayload }
   | { kind: "qm_cancel"; payload: IdPayload }
   | { kind: "qm_remove"; payload: QmRemovePayload }
+  | { kind: "qm_edit"; payload: QmEditPayload }
   | { kind: "post_role_menu"; payload: PostRoleMenuPayload }
   | { kind: "bot_profile"; payload: BotProfilePayload }
   | { kind: "post_message"; payload: PostMessagePayload }
@@ -88,6 +90,13 @@ export type QueueInput =
 export const MAX_PENDING_PER_GUILD = 10;
 /** Per member: at most this many requests a minute. */
 export const MAX_PER_USER_PER_MINUTE = 5;
+/**
+ * Hand changes in the AI assistant's Your server panel (renames, drags) come quickly, cost
+ * nothing and only change a draft, so they have their own, larger allowance, and don't use up
+ * the one above.
+ */
+export const HAND_EDITS_PENDING = 20;
+export const HAND_EDITS_PER_MINUTE = 30;
 /** One call for signups per raid per hour, so the dashboard can't be used to spam a channel. */
 export const CALL_SIGNUPS_COOLDOWN_MS = 60 * 60_000;
 /** A request nobody picked up in this long is dropped rather than done late. */
@@ -107,6 +116,11 @@ export async function queueDashboardAction(
 ): Promise<QueueResult> {
   return db.transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`garrison:actions:${guildId}`}))`);
+    // Hand edits count among themselves; every other request among the others.
+    const hand = input.kind === "qm_edit";
+    const sameClass = hand
+      ? eq(dashboardActions.kind, "qm_edit")
+      : sql`${dashboardActions.kind} <> 'qm_edit'`;
     const [pending] = await tx
       .select({ n: count() })
       .from(dashboardActions)
@@ -114,9 +128,11 @@ export async function queueDashboardAction(
         and(
           eq(dashboardActions.guildId, guildId),
           inArray(dashboardActions.status, ["pending", "running"]),
+          sameClass,
         ),
       );
-    if ((pending?.n ?? 0) >= MAX_PENDING_PER_GUILD) return { ok: false, reason: "busy" };
+    if ((pending?.n ?? 0) >= (hand ? HAND_EDITS_PENDING : MAX_PENDING_PER_GUILD))
+      return { ok: false, reason: "busy" };
     const [recent] = await tx
       .select({ n: count() })
       .from(dashboardActions)
@@ -125,9 +141,11 @@ export async function queueDashboardAction(
           eq(dashboardActions.guildId, guildId),
           eq(dashboardActions.requestedById, user.id),
           gte(dashboardActions.createdAt, new Date(now.getTime() - 60_000)),
+          sameClass,
         ),
       );
-    if ((recent?.n ?? 0) >= MAX_PER_USER_PER_MINUTE) return { ok: false, reason: "too_fast" };
+    if ((recent?.n ?? 0) >= (hand ? HAND_EDITS_PER_MINUTE : MAX_PER_USER_PER_MINUTE))
+      return { ok: false, reason: "too_fast" };
     if (input.kind === "call_signups") {
       const [call] = await tx
         .select({ n: count() })

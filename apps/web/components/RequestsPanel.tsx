@@ -4,7 +4,7 @@ import { ACTION_KIND, ACTION_STATUS } from "@/lib/rally-schema";
 import { WaitingForBot } from "./BotOffline";
 import { formatTime } from "./format";
 
-const ERRORS: Record<string, string> = {
+export const REQUEST_ERRORS: Record<string, string> = {
   invalid: "Some values weren't valid. Nothing was queued.",
   not_found: "That has changed since the page loaded. Refresh and try again.",
   channel: "Pick a channel, thread or forum from this server.",
@@ -59,7 +59,7 @@ export async function RequestsPanel({
   const actions = all.filter((a) => kinds.includes(a.kind)).slice(0, 6);
   const working = actions.some((a) => a.status === "pending" || a.status === "running");
   const queued = typeof query.queued === "string" && kinds.includes(query.queued);
-  const error = typeof query.error === "string" ? ERRORS[query.error] : undefined;
+  const error = typeof query.error === "string" ? REQUEST_ERRORS[query.error] : undefined;
   if (!actions.length && !queued && !error) return null;
   return (
     <section id="requests" className="g-card table-card" aria-label="Requests">

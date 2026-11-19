@@ -14,6 +14,7 @@ import {
   QM_SETTINGS_MODULES,
   type QmBuild,
   qmChangeCount,
+  qmChargedChanges,
   qmHoldSupplies,
   readSettings,
   TEMPLATE_NAME_MAX,
@@ -26,13 +27,15 @@ import { FeaturesPanel } from "@/components/FeaturesPanel";
 import { formatTime } from "@/components/format";
 import { PageTabs, TabPanel } from "@/components/PageTabs";
 import { PlanDetails } from "@/components/PlanDetails";
-import { RequestsPanel } from "@/components/RequestsPanel";
+import { REQUEST_ERRORS, RequestsPanel } from "@/components/RequestsPanel";
 import { ScrollToEnd } from "@/components/ScrollToEnd";
-import { ServerPreview } from "@/components/ServerPreview";
+import { type PreviewEdit, ServerPreview } from "@/components/ServerPreview";
+import { HandButton } from "@/components/WorkspaceEdit";
 import { cleanPrompt } from "@/lib/build-prompt";
 import { getDb } from "@/lib/db";
 import { getServerLayout, guildOwnerId } from "@/lib/discord";
 import { readFlash } from "@/lib/flash";
+import { isDangerousRole } from "@/lib/permissions";
 import {
   addedText,
   afterRows,
@@ -82,7 +85,11 @@ const CAN_DO = [
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 /** The assistant's tabs: the conversation and its plan, then saved server layouts. */
-const AI_TABS = ["chat", "templates"] as const;
+const AI_TABS = ["chat", "history", "templates"] as const;
+/** Requests the Your server panel reports on: building, discarding and changing the draft. */
+const DRAFT_KINDS = new Set(["qm_apply", "qm_cancel", "qm_remove", "qm_edit"]);
+/** How long the panel shows how the last of those went. */
+const OUTCOME_MS = 2 * 60_000;
 
 export default async function QuartermasterPage({
   params,
@@ -93,7 +100,7 @@ export default async function QuartermasterPage({
 }) {
   const { guildId } = await params;
   const query = await searchParams;
-  const { guild, session } = await requireGuildAccess(guildId);
+  const { guild, session, role } = await requireGuildAccess(guildId);
   const db = await getDb();
   const fresh = query.fresh === "1";
   const [builds, actions, layout, templates, guildPlan, ownerId, flash, allowance, threadId] =
@@ -154,8 +161,71 @@ export default async function QuartermasterPage({
       )
     : false;
   const preview = layout
-    ? previewServer(layout, plan?.plan ?? [], guild.id, plan?.orders ?? [])
+    ? previewServer(layout, plan?.plan ?? [], guild.id, plan?.orders ?? [], plan?.edits ?? [])
     : null;
+  // The Your server panel: what you asked of the draft, and how the last request went.
+  const draftRequests = actions.filter(
+    (a) => DRAFT_KINDS.has(a.kind) && a.requestedById === session.userId,
+  );
+  const saving = draftRequests.some(
+    (a) => a.kind === "qm_edit" && (a.status === "pending" || a.status === "running"),
+  );
+  const lastDraftRequest = draftRequests[0];
+  // A failure says why; a hand change that worked shows in the tree, so it needs no notice.
+  const outcome =
+    lastDraftRequest &&
+    now - lastDraftRequest.createdAt.getTime() < OUTCOME_MS &&
+    (lastDraftRequest.status === "failed" ||
+      (lastDraftRequest.status === "done" && lastDraftRequest.kind !== "qm_edit"))
+      ? lastDraftRequest
+      : null;
+  const requestError = typeof query.error === "string" ? REQUEST_ERRORS[query.error] : undefined;
+  // Changes Discord overtook while the draft waited: the item was renamed or deleted there.
+  // Apply waits until each is kept (made against the name it has now) or dropped.
+  const liveName = new Map<string, string>(
+    layout
+      ? [
+          ...[...layout.loose, ...layout.categories.flatMap((c) => c.channels)].map(
+            (c) => [c.id, c.name] as [string, string],
+          ),
+          ...layout.categories.map((c) => [c.id, c.name] as [string, string]),
+          ...layout.roles.map((r) => [r.id, r.name] as [string, string]),
+        ]
+      : [],
+  );
+  const conflicts = layout
+    ? (plan?.edits ?? []).flatMap((e): { id: string; text: string; keep: string | null }[] => {
+        const now = liveName.get(e.id);
+        if (now === undefined)
+          return [{ id: e.id, text: `${e.was} isn't in the server anymore.`, keep: null }];
+        if (now === e.was) return [];
+        return [
+          {
+            id: e.id,
+            text: `${e.was} was renamed to ${now} in Discord since this was drafted.`,
+            keep: e.name ? e.name : now,
+          },
+        ];
+      })
+    : [];
+  // Hand changes: managers, on their own draft (or none yet), while nothing is being built.
+  const canEdit = role === "manager" && (!plan || mine) && !applying && Boolean(layout);
+  const edit: PreviewEdit | undefined =
+    canEdit && layout
+      ? {
+          guildId: guild.id,
+          version: `${plan?.id ?? "none"}:${saving}`,
+          locked: Object.fromEntries(
+            layout.roles.flatMap((r) =>
+              r.managed
+                ? [[r.id, "Belongs to an app, so only Discord changes it."]]
+                : isDangerousRole(r.permissions ?? "0")
+                  ? [[r.id, "Has staff powers: change it in Server Settings → Roles."]]
+                  : [],
+            ),
+          ),
+        }
+      : undefined;
   // Taking one item out of the draft: the bot stores the rest as the next version.
   const removeForm = (what: Record<string, string>, label = "Remove from plan") =>
     plan && mine ? (
@@ -199,6 +269,9 @@ export default async function QuartermasterPage({
     : [];
   const deleting = edits.filter((e) => e.gone).length;
   const changes = plan ? qmChangeCount(plan) : 0;
+  // What the draft costs: hand changes are free.
+  const charged = plan ? qmChargedChanges(plan) : 0;
+  const built = plan?.created.length ?? 0;
   // What applying does, in one sentence: "Adds 2 channels, changes 1 setting and posts 1 item."
   const doing = [
     plan?.plan.length && preview ? `adds ${addedText(preview.added)}` : null,
@@ -283,6 +356,7 @@ export default async function QuartermasterPage({
         label="AI assistant"
         tabs={[
           { id: "chat", label: "Chat" },
+          { id: "history", label: "History", count: history.length },
           { id: "templates", label: "Server templates", count: templates.length },
         ]}
       />
@@ -470,7 +544,7 @@ export default async function QuartermasterPage({
                 </span>
                 <div className="qm-plan__heading">
                   <h2 className="qm-plan__title" id="qm-plan-title">
-                    {plan ? "Draft" : "Your server"}
+                    Your server
                   </h2>
                   {counts ? (
                     <span className="qm-plan__counts">
@@ -479,31 +553,112 @@ export default async function QuartermasterPage({
                     </span>
                   ) : null}
                 </div>
+                {saving ? (
+                  <span className="qm-plan__saving" role="status">
+                    Saving…
+                  </span>
+                ) : null}
                 {plan && mine ? (
-                  <form action={requestAction}>
-                    <input type="hidden" name="guildId" value={guild.id} />
-                    <input type="hidden" name="page" value="quartermaster" />
-                    <input type="hidden" name="kind" value="qm_apply" />
-                    <input type="hidden" name="id" value={plan.id} />
-                    <button type="submit" className="g-btn g-btn--primary" disabled={applying}>
-                      {applying ? "Applying…" : "Apply build"}
-                    </button>
-                  </form>
+                  <div className="qm-plan__actions">
+                    {applying ? null : (
+                      <form action={requestAction}>
+                        <input type="hidden" name="guildId" value={guild.id} />
+                        <input type="hidden" name="page" value="quartermaster" />
+                        <input type="hidden" name="kind" value="qm_cancel" />
+                        <input type="hidden" name="id" value={plan.id} />
+                        <button type="submit" className="g-btn g-btn--ghost g-btn--sm">
+                          Discard
+                        </button>
+                      </form>
+                    )}
+                    <form action={requestAction}>
+                      <input type="hidden" name="guildId" value={guild.id} />
+                      <input type="hidden" name="page" value="quartermaster" />
+                      <input type="hidden" name="kind" value="qm_apply" />
+                      <input type="hidden" name="id" value={plan.id} />
+                      <button
+                        type="submit"
+                        className="g-btn g-btn--primary"
+                        disabled={applying || saving || conflicts.length > 0}
+                        title={
+                          saving
+                            ? "Wait for your last changes to save"
+                            : conflicts.length
+                              ? "Keep or drop the changes Discord overtook first"
+                              : undefined
+                        }
+                      >
+                        {applying
+                          ? `Building ${Math.min(built, changes)} of ${changes}…`
+                          : `Apply ${plural(changes, "change")}`}
+                      </button>
+                    </form>
+                  </div>
                 ) : null}
               </header>
+              {saving || applying ? <WaitingForBot every={1500} forMs={5 * 60_000} /> : null}
+              {requestError ? (
+                <div className="notice qm-plan__status" role="alert">
+                  {requestError}
+                </div>
+              ) : outcome ? (
+                <div
+                  className={`notice qm-plan__status${outcome.status === "done" ? " notice--ok" : ""}`}
+                  role={outcome.status === "done" ? "status" : "alert"}
+                >
+                  {outcome.message ?? (outcome.status === "done" ? "Done." : "That didn't work.")}
+                </div>
+              ) : null}
+              {plan && mine && conflicts.length ? (
+                <div className="notice qm-plan__status qm-conflicts" role="alert">
+                  <p className="qm-conflicts__lead">
+                    Some of this draft changed in Discord while it waited:
+                  </p>
+                  <ul className="qm-conflicts__list">
+                    {conflicts.map((c) => (
+                      <li className="qm-conflicts__row" key={c.id}>
+                        <span>{c.text}</span>
+                        <span className="qm-conflicts__do">
+                          {c.keep ? (
+                            <HandButton
+                              guildId={guild.id}
+                              change={{ change: "rename", target: c.id, name: c.keep }}
+                            >
+                              Keep
+                            </HandButton>
+                          ) : null}
+                          <form action={requestAction}>
+                            <input type="hidden" name="guildId" value={guild.id} />
+                            <input type="hidden" name="page" value="quartermaster" />
+                            <input type="hidden" name="kind" value="qm_remove" />
+                            <input type="hidden" name="id" value={plan.id} />
+                            <input type="hidden" name="edit" value={c.id} />
+                            <button type="submit" className="g-btn g-btn--ghost g-btn--sm">
+                              Drop
+                            </button>
+                          </form>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
               {plan ? (
                 <div className="qm-plan__summary">
                   <p className="qm-plan__what">{plan.summary}</p>
                   <p className="g-help">
                     {sentence ? `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)}. ` : ""}
-                    Uses {plural(changes, "supply", "supplies")}, held for {minutesLeft} more min.
+                    Uses {plural(charged, "supply", "supplies")}
+                    {charged < changes ? ` (${plural(changes - charged, "hand change")} free)` : ""}
+                    , held for {minutesLeft} more min.
                     {mine ? "" : ` Only ${plan.requestedByTag} can apply it.`}
                   </p>
                 </div>
               ) : (
                 <p className="qm-plan__empty">
-                  No draft yet. As Garrison drafts changes in the chat, they show up here, marked
-                  New, before anything happens in Discord.
+                  {canEdit
+                    ? "Nothing waiting. Rename or drag anything below, or ask in the chat: every change shows up here, marked, before anything happens in Discord."
+                    : "Nothing waiting. As Garrison drafts changes in the chat, they show up here, marked, before anything happens in Discord."}
                 </p>
               )}
               <fieldset className="qm-tabs">
@@ -559,6 +714,7 @@ export default async function QuartermasterPage({
                     preview={preview}
                     planned={Boolean(plan)}
                     linked
+                    edit={edit}
                   />
                 ) : (
                   <p className="qm-plan__empty">
@@ -687,32 +843,21 @@ export default async function QuartermasterPage({
                     ) : null}
                     {deleting ? <span className="qm-plan__gone">−{deleting} deleted</span> : null}
                   </span>
-                  <form action={requestAction}>
-                    <input type="hidden" name="guildId" value={guild.id} />
-                    <input type="hidden" name="page" value="quartermaster" />
-                    <input type="hidden" name="kind" value="qm_cancel" />
-                    <input type="hidden" name="id" value={plan.id} />
-                    <button
-                      type="submit"
-                      className="g-btn g-btn--ghost g-btn--sm"
-                      disabled={applying}
-                    >
-                      Discard
-                    </button>
-                  </form>
                 </footer>
               ) : null}
               {plan ? (
                 <p className="qm-plan__rules">
-                  Adds channels and roles and can put them in a new order; nothing you have is
-                  renamed, edited or deleted. Staff and bot roles never move. Settings use the same
-                  checks as their pages. Undo removes what was made and puts settings and the order
-                  back; posts stay.
+                  Nothing happens in Discord until you apply. Changes made by hand cost no supplies.
+                  Undo removes what was made and puts names, settings, access and the order back;
+                  posts stay, and deletions can't be undone. Staff and bot roles never change.
                 </p>
               ) : null}
             </aside>
           </div>
-
+        </div>
+      </TabPanel>
+      <TabPanel id="history" tabs={AI_TABS}>
+        <div className="qm-stack">
           <RequestsPanel
             guildId={guild.id}
             kinds={[
@@ -727,7 +872,7 @@ export default async function QuartermasterPage({
           />
 
           {history.length ? (
-            <details className="g-card qm-history">
+            <details className="g-card qm-history" open>
               <summary className="qm-history__toggle">
                 <span>Build history</span>
                 <span className="muted">{plural(history.length, "build")}</span>
@@ -770,6 +915,9 @@ export default async function QuartermasterPage({
               </ol>
             </details>
           ) : null}
+          {history.length ? null : (
+            <p className="g-help">Nothing built yet. Builds you apply show here, each with Undo.</p>
+          )}
         </div>
       </TabPanel>
       <TabPanel id="templates" tabs={AI_TABS}>

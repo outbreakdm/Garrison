@@ -66,6 +66,7 @@ import {
   doQmApply,
   doQmCancel,
   doQmChat,
+  doQmEdit,
   doQmPlan,
   doQmRemove,
   doRaidSignup,
@@ -582,6 +583,8 @@ export async function runDashboardAction(
       return doQmCancel(ctx, guild, action.payload);
     case "qm_remove":
       return doQmRemove(ctx, guild, member, action.payload);
+    case "qm_edit":
+      return doQmEdit(ctx, guild, member, action.payload);
     case "post_role_menu":
       return doPostRoleMenu(ctx, guild, member, action.payload);
     case "bot_profile":

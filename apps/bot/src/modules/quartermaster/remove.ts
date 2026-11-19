@@ -1,4 +1,4 @@
-import type { QmBuild, QmOperation, QmOrder, QmPost, QmSettingChange } from "@garrison/db";
+import type { QmBuild, QmEdit, QmOperation, QmOrder, QmPost, QmSettingChange } from "@garrison/db";
 
 export interface RemoveTarget {
   /** A channel, category or role the draft makes. */
@@ -9,6 +9,8 @@ export interface RemoveTarget {
   post?: number;
   /** A new order, by its place in the list. */
   order?: number;
+  /** A change to something that exists (or its deletion), by the item's id. */
+  edit?: string;
 }
 
 export interface Trimmed {
@@ -16,6 +18,7 @@ export interface Trimmed {
   settings: QmSettingChange[];
   posts: QmPost[];
   orders: QmOrder[];
+  edits: QmEdit[];
   /** Names of everything taken out, the asked-for item first. */
   removed: string[];
 }
@@ -41,30 +44,40 @@ export function orderName(o: QmOrder) {
  * Only ever takes away, so what's left is as safe as the draft was.
  */
 export function withoutItem(
-  build: Pick<QmBuild, "plan" | "settings" | "posts"> & Partial<Pick<QmBuild, "orders">>,
+  build: Pick<QmBuild, "plan" | "settings" | "posts"> & Partial<Pick<QmBuild, "orders" | "edits">>,
   target: RemoveTarget,
 ): Trimmed {
   let settings = build.settings ?? [];
   let posts = build.posts ?? [];
   let orders = build.orders ?? [];
+  let edits = build.edits ?? [];
   const removed: string[] = [];
+  if (target.edit) {
+    const hit = edits.find((e) => e.id === target.edit);
+    edits = edits.filter((e) => e.id !== target.edit);
+    if (hit)
+      removed.push(
+        hit.kind.startsWith("delete_") ? `deleting ${hit.was}` : `the change to ${hit.was}`,
+      );
+    return { plan: build.plan, settings, posts, orders, edits, removed };
+  }
   if (target.setting) {
     const hit = settings.find((c) => `${c.module}.${c.field}` === target.setting);
     settings = settings.filter((c) => `${c.module}.${c.field}` !== target.setting);
     if (hit) removed.push(`${hit.module} ${hit.field}`);
-    return { plan: build.plan, settings, posts, orders, removed };
+    return { plan: build.plan, settings, posts, orders, edits, removed };
   }
   if (target.post !== undefined) {
     const hit = posts[target.post];
     posts = posts.filter((_, i) => i !== target.post);
     if (hit) removed.push(hit.name);
-    return { plan: build.plan, settings, posts, orders, removed };
+    return { plan: build.plan, settings, posts, orders, edits, removed };
   }
   if (target.order !== undefined) {
     const hit = orders[target.order];
     orders = orders.filter((_, i) => i !== target.order);
     if (hit) removed.push(orderName(hit));
-    return { plan: build.plan, settings, posts, orders, removed };
+    return { plan: build.plan, settings, posts, orders, edits, removed };
   }
   const gone = new Set<string>();
   if (target.ref && build.plan.some((o) => o.ref === target.ref)) gone.add(target.ref);
@@ -106,5 +119,25 @@ export function withoutItem(
       ? []
       : [{ ...o, items: keep.map(([id]) => id), names: keep.map(([, n]) => n) }];
   });
-  return { plan, settings, posts, orders, removed };
+  // A change to something that exists can't lean on what's gone: a move into a removed
+  // category goes, and removed roles leave its access lists.
+  edits = edits.flatMap((e) => {
+    if (e.parent && gone.has(e.parent)) {
+      const { parent: _, ...rest } = e;
+      return Object.keys(rest).some((k) => !["kind", "id", "was", "by"].includes(k)) ? [rest] : [];
+    }
+    if (!e.access) return [e];
+    const strip = (l: string[]) => l.filter((r) => !gone.has(r));
+    return [
+      {
+        ...e,
+        access: {
+          ...e.access,
+          privateTo: strip(e.access.privateTo),
+          posters: strip(e.access.posters),
+        },
+      },
+    ];
+  });
+  return { plan, settings, posts, orders, edits, removed };
 }

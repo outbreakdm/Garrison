@@ -34,6 +34,7 @@ import {
   type QmSettingChange,
   type QmSettingProposal,
   type QmSettingsLookup,
+  qmChargedChanges,
   qmHoldSupplies,
   readSettings,
   recordQmCreated,
@@ -64,6 +65,7 @@ import { invalidateLedgerSettings } from "../ledger/service.js";
 import { invalidateRanksSettings } from "../ranks/service.js";
 import { invalidateVoiceRooms } from "../voice/service.js";
 import { asAiEdits, type ChannelKind, deletedIds } from "./edits.js";
+import { keepHandChanges } from "./hand.js";
 import {
   MAX_OPERATIONS,
   orderPositions,
@@ -541,12 +543,22 @@ export async function storePlan(
   const now = await aiAllowance(ctx.db, guildId, requester.id, {
     exceptId: line.replacing?.id,
   });
-  const changes =
-    checked.operations.length +
-    (checked.settings?.length ?? 0) +
-    (checked.posts?.length ?? 0) +
-    (checked.orders?.length ?? 0) +
-    (checked.edits?.length ?? 0);
+  // A redraft keeps what the admin changed by hand in the draft it replaces.
+  const kept = line.replacing
+    ? keepHandChanges(
+        { edits: line.replacing.edits ?? [], orders: line.replacing.orders ?? [] },
+        { plan: checked.operations, edits: checked.edits ?? [], orders: checked.orders ?? [] },
+      )
+    : { edits: checked.edits ?? [], orders: checked.orders ?? [] };
+  checked = { ...checked, ...kept };
+  // Hand changes cost nothing.
+  const changes = qmChargedChanges({
+    plan: checked.operations,
+    settings: checked.settings ?? [],
+    posts: checked.posts ?? [],
+    orders: kept.orders,
+    edits: kept.edits,
+  });
   if (changes > now.suppliesLeft)
     return {
       ok: false,
@@ -1289,6 +1301,7 @@ async function applyPlanEdits(
           return `@${role.name} has staff powers or sits above Garrison now, so I left it and stopped.`;
         const record: QmCreated = {
           kind: "edit",
+          ...(e.by ? { by: e.by } : {}),
           id: role.id,
           name: JSON.stringify({
             t: "role",
@@ -1339,6 +1352,7 @@ async function applyPlanEdits(
           : [];
       const record: QmCreated = {
         kind: "edit",
+        ...(e.by ? { by: e.by } : {}),
         id: ch.id,
         name: JSON.stringify({
           t: "channel",
@@ -1409,7 +1423,12 @@ async function applyPlanDeletes(
         if (why) return `I didn't delete ${ch.name}: ${why}`;
         await ch.delete(reason);
       }
-      const item: QmCreated = { kind: "deleted", id: e.id, name: e.was };
+      const item: QmCreated = {
+        kind: "deleted",
+        id: e.id,
+        name: e.was,
+        ...(e.by ? { by: e.by } : {}),
+      };
       created.push(item);
       await recordQmCreated(ctx.db, build.id, item);
     } catch (error) {
@@ -1435,6 +1454,7 @@ async function applyPlanOrders(
       const before = await setOrder(guild, order.scope, parent, order.items.map(resolve));
       const item: QmCreated = {
         kind: "order",
+        ...(order.by ? { by: order.by } : {}),
         id: orderKey(order.scope, parent),
         name: JSON.stringify(before),
       };

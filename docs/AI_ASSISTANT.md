@@ -271,7 +271,22 @@ On Sonnet that's 20x the money.
    results, then snapshot detail. A model that isn't in `MODEL_PRICES` is refused instead of
    priced as Opus. Price Sonnet's cache reads at its real 0.05x. Tests: a message can never
    be charged more than it held, on either model or any server size. *Medium.*
-2. **The Your server workspace.** The right panel is always "Your server": the live server,
+2. **The Your server workspace.** *Done 2026-11-19, not deployed: needs migration **0076**
+   (`qm_edit` request kind).* Built as below, with these differences: the requests list moved
+   to the History tab instead of going away (the panel shows a draft's own requests: Saving…,
+   and how the last apply, discard or removal went); "Use as template" isn't on history rows,
+   since a template copies a whole server, not one build; conflicts show as a list in the
+   panel with Keep and Drop, not on each row. Also fixed: "Remove from plan" used to drop all
+   of a draft's edits. How it works: `apps/bot/src/modules/quartermaster/hand.ts` (each change
+   checked against the server; `keepHandChanges` for redrafts), `doQmEdit` in
+   `dashboard/more.ts` (onto the person's newest waiting draft when it runs, so quick edits
+   chain), `handEdit` in the page's `actions.ts`, `components/WorkspaceEdit.tsx` (rename in
+   place, drag, Move up / down, shown at once and confirmed by the bot), and hand edits'
+   own queue allowance (30 a minute, 20 waiting). Hand changes are marked `by: "admin"` and
+   left out of the supplies count in SQL. Not checked in a browser yet: the local stack needs
+   Docker. Known gap: an AI redraft that lands while a hand edit is replacing the same draft
+   leaves two drafts waiting; the page shows the conversation's.
+   The plan as written: the right panel is always "Your server": the live server,
    with every pending change marked in place (new, changed, moved, deleted), whether the
    assistant drafted it or the admin made it by hand. Owner's request (2026-11-19).
    - **Apply build**, top right of the panel's head, appears once anything is pending and

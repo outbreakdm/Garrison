@@ -1100,3 +1100,110 @@ describe("AI assistant chat", () => {
     expect(await suppliesUsed(ctx.db, { guildId: "q20" })).toBe(0);
   });
 });
+
+describe("hand changes from the Your server panel", () => {
+  it("saves each one into the person's draft as the next version, free of supplies", async () => {
+    const { doQmEdit } = await import("../dashboard/more.js");
+    const { aiAllowance, getQmBuild, latestWaitingQmBuild } = await import("@garrison/db");
+    const f = fakeGuild("q41");
+    const add = (cid: string, name: string, type: ChannelType, parentId: string | null) =>
+      f.channels.set(cid, {
+        id: cid,
+        name,
+        type,
+        isThread: () => false,
+        rawPosition: 0,
+        parentId,
+        delete: async () => {},
+      });
+    add("123456789012345201", "Info", ChannelType.GuildCategory, null);
+    add("123456789012345202", "Games", ChannelType.GuildCategory, null);
+    add("123456789012345203", "general", ChannelType.GuildText, "123456789012345201");
+    const a = asker(f);
+    const me = { id: a.id, user: { username: a.tag } } as unknown as GuildMember;
+    const before = (await aiAllowance(ctx.db, "q41", a.id)).suppliesLeft;
+
+    // No draft yet: a rename starts one.
+    const renamed = await doQmEdit(ctx, f.guild, me, {
+      change: "rename",
+      target: "123456789012345203",
+      name: "The Lounge",
+    });
+    expect(renamed).toMatchObject({ ok: true });
+    const v1 = await latestWaitingQmBuild(ctx.db, "q41", a.id);
+    expect(v1?.model).toBe("hand");
+    expect(v1?.edits).toEqual([
+      {
+        kind: "edit_channel",
+        id: "123456789012345203",
+        was: "general",
+        by: "admin",
+        name: "the-lounge",
+      },
+    ]);
+
+    // The next one goes onto the newest version, and retires the one before it.
+    expect(
+      await doQmEdit(ctx, f.guild, me, {
+        change: "move",
+        target: "123456789012345203",
+        parent: "123456789012345202",
+      }),
+    ).toMatchObject({ ok: true });
+    const v2 = await latestWaitingQmBuild(ctx.db, "q41", a.id);
+    expect(v2?.version).toBe((v1?.version ?? 0) + 1);
+    expect(v2?.edits[0]).toMatchObject({ name: "the-lounge", parent: "123456789012345202" });
+    expect((await getQmBuild(ctx.db, "q41", v1?.id ?? ""))?.status).toBe("cancelled");
+
+    // Hand changes hold no supplies while they wait.
+    expect((await aiAllowance(ctx.db, "q41", a.id)).suppliesLeft).toBe(before);
+
+    // Someone else's draft isn't theirs to change.
+    const other = { id: "98888", user: { username: "x" } } as unknown as GuildMember;
+    expect(
+      await doQmEdit(ctx, f.guild, other, {
+        id: v2?.id,
+        change: "rename",
+        target: "123456789012345201",
+        name: "Start",
+      }),
+    ).toMatchObject({ ok: false });
+  });
+
+  it("keeps a removed edit's neighbours when an item is taken out of a draft", async () => {
+    const { doQmEdit, doQmRemove } = await import("../dashboard/more.js");
+    const { latestWaitingQmBuild } = await import("@garrison/db");
+    const f = fakeGuild("q42");
+    for (const [cid, name] of [
+      ["123456789012345301", "Info"],
+      ["123456789012345302", "Games"],
+    ] as const)
+      f.channels.set(cid, {
+        id: cid,
+        name,
+        type: ChannelType.GuildCategory,
+        isThread: () => false,
+        rawPosition: 0,
+        parentId: null,
+        delete: async () => {},
+      });
+    const a = asker(f);
+    const me = { id: a.id, user: { username: a.tag } } as unknown as GuildMember;
+    await doQmEdit(ctx, f.guild, me, {
+      change: "rename",
+      target: "123456789012345301",
+      name: "Start",
+    });
+    await doQmEdit(ctx, f.guild, me, {
+      change: "rename",
+      target: "123456789012345302",
+      name: "Play",
+    });
+    const draft = await latestWaitingQmBuild(ctx.db, "q42", a.id);
+    expect(draft?.edits).toHaveLength(2);
+    // Taking one edit out leaves the other: edits used to be lost here.
+    await doQmRemove(ctx, f.guild, me, { id: draft?.id, edit: "123456789012345301" });
+    const next = await latestWaitingQmBuild(ctx.db, "q42", a.id);
+    expect(next?.edits.map((e) => e.name)).toEqual(["Play"]);
+  });
+});

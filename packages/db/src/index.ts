@@ -104,6 +104,7 @@ export type {
   QmBuild,
   QmCreated,
   QmEdit,
+  QmEditPayload,
   QmOperation,
   QmOrder,
   QmPost,

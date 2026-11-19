@@ -203,3 +203,34 @@ describe("a plan's new order", () => {
     ).toEqual(["Channels in Valorant: ranked, Stack", "Roles: @VIP, @Pings"]);
   });
 });
+
+describe("a plan's edits, shown in place", () => {
+  const edits = [
+    { kind: "edit_channel" as const, id: "c1", was: "general", name: "lounge" },
+    { kind: "edit_channel" as const, id: "c3", was: "mods", parent: "cat1" },
+    { kind: "edit_category" as const, id: "cat2", was: "Staff", name: "Team" },
+    { kind: "delete_role" as const, id: "r1", was: "Mods" },
+  ];
+  const p = previewServer(layout, [], "g", [], edits);
+  const town = p.categories.find((c) => c.key === "cat1");
+  const staff = p.categories.find((c) => c.key === "cat2");
+
+  it("shows a rename with the old name kept for Now", () => {
+    expect(town?.channels.find((c) => c.key === "c1")).toMatchObject({
+      name: "lounge",
+      was: "general",
+    });
+    expect(staff).toMatchObject({ name: "Team", was: "Staff" });
+  });
+
+  it("moves a channel to its new category, leaving its old place for Now", () => {
+    expect(town?.channels.find((c) => c.key === "c3")).toMatchObject({ moved: "to" });
+    expect(staff?.channels.find((c) => c.key === "c3")).toMatchObject({ moved: "from" });
+    expect(town?.touched).toBe(true);
+    expect(p.moved).toBe(1);
+  });
+
+  it("marks what the plan deletes", () => {
+    expect(p.roles.find((r) => r.key === "r1")).toMatchObject({ gone: true });
+  });
+});

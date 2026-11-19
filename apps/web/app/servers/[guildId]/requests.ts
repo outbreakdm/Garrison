@@ -589,6 +589,9 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       const o = Number(order);
       if (order && Number.isInteger(o) && o >= 0 && o < (b.orders ?? []).length)
         return { ok: true, input: { kind, payload: { id: b.id, order: o } } };
+      const edit = field(form, "edit");
+      if (edit && (b.edits ?? []).some((e) => e.id === edit))
+        return { ok: true, input: { kind, payload: { id: b.id, edit } } };
       return { ok: false, error: "invalid" };
     }
     default:
@@ -607,8 +610,16 @@ export async function requestAction(form: FormData) {
   // holds powers an editor may not have in Discord.
   if (MANAGER_REQUEST_KINDS.has(field(form, "kind")) && access.role !== "manager")
     redirect(`${base}?${new URLSearchParams({ error: "manager_only" })}#requests`);
+  // On the AI assistant, a draft's requests report in the Your server panel.
+  const kind = field(form, "kind");
+  const where =
+    page === "quartermaster" && kind === "qm_chat"
+      ? "#describe"
+      : page === "quartermaster" && ["qm_apply", "qm_cancel", "qm_remove"].includes(kind)
+        ? "#qm-plan"
+        : "#requests";
   const built = await build(form, guild.id, session.userId);
-  if (!built.ok) redirect(`${base}?${new URLSearchParams({ error: built.error })}#requests`);
+  if (!built.ok) redirect(`${base}?${new URLSearchParams({ error: built.error })}${where}`);
   const result = await queueDashboardAction(
     await getDb(),
     guild.id,
@@ -616,8 +627,7 @@ export async function requestAction(form: FormData) {
     built.input,
   );
   wakeBot();
-  if (!result.ok) redirect(`${base}?${new URLSearchParams({ error: result.reason })}#requests`);
-  // A chat message stays in the chat; other requests show their progress in the list.
-  const anchor = built.input.kind === "qm_chat" ? "#describe" : "#requests";
-  redirect(`${base}?${new URLSearchParams({ queued: built.input.kind })}${anchor}`);
+  if (!result.ok) redirect(`${base}?${new URLSearchParams({ error: result.reason })}${where}`);
+  // A chat message stays in the chat; other requests show their progress where they report.
+  redirect(`${base}?${new URLSearchParams({ queued: built.input.kind })}${where}`);
 }

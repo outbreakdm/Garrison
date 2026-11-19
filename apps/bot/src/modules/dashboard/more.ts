@@ -5,6 +5,7 @@ import {
   getOpsEvent,
   getQmBuild,
   joinLfg,
+  latestWaitingQmBuild,
   leaveLfg,
   listActiveMembers,
   QM_PLAN_TTL_MS,
@@ -23,8 +24,9 @@ import { formatDuration, MAX_TIMEOUT_SECONDS } from "../../lib/duration.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { announcePromotion, refreshOpsCard } from "../ops/service.js";
 import { chatTurn } from "../quartermaster/chat.js";
+import { applyHandChange } from "../quartermaster/hand.js";
 import { withoutItem } from "../quartermaster/remove.js";
-import { applyBuild, planBuild, REQUEST_MAX } from "../quartermaster/service.js";
+import { applyBuild, planBuild, REQUEST_MAX, snapshot } from "../quartermaster/service.js";
 import { lfgCard } from "../rally/card.js";
 import { notifyTemplateRole } from "../rally/commands.js";
 import { LIFETIME_AFTER_START_MS, matchSlot, parseSlots, parseStart } from "../rally/parse.js";
@@ -413,6 +415,10 @@ const removeOne = z.object({
   setting: z.string().min(3).max(60).optional(),
   post: z.number().int().min(0).max(20).optional(),
   order: z.number().int().min(0).max(20).optional(),
+  edit: z
+    .string()
+    .regex(/^\d{17,20}$/)
+    .optional(),
 });
 
 /**
@@ -428,14 +434,20 @@ export async function doQmRemove(ctx: BotContext, guild: Guild, member: GuildMem
     return fail("That draft isn't waiting anymore.");
   if (build.requestedById !== member.id)
     return fail("Only the person who asked for this draft can change it.");
-  const { ref, setting, post, order } = p.data;
-  const t = withoutItem(build, { ref, setting, post, order });
+  const { ref, setting, post, order, edit } = p.data;
+  const t = withoutItem(build, { ref, setting, post, order, edit });
   if (!t.removed.length) return fail("That isn't in the draft anymore.");
   const what =
     t.removed.length > 1
       ? `${t.removed[0]} and ${t.removed.length - 1} more that depended on it`
       : (t.removed[0] as string);
-  if (!t.plan.length && !t.settings.length && !t.posts.length && !t.orders.length) {
+  if (
+    !t.plan.length &&
+    !t.settings.length &&
+    !t.posts.length &&
+    !t.orders.length &&
+    !t.edits.length
+  ) {
     await transitionQmBuild(ctx.db, build.id, "pending", "cancelled");
     return { ok: true, message: `Removed ${what}. Nothing was left, so the draft is discarded.` };
   }
@@ -449,6 +461,7 @@ export async function doQmRemove(ctx: BotContext, guild: Guild, member: GuildMem
     settings: t.settings,
     posts: t.posts,
     orders: t.orders,
+    edits: t.edits,
     notes: build.notes,
     continuesId: build.id,
     model: build.model,
@@ -462,6 +475,89 @@ export async function doQmRemove(ctx: BotContext, guild: Guild, member: GuildMem
     return fail("That draft changed while removing. Try again.");
   }
   return { ok: true, message: `Removed ${what} from the draft.` };
+}
+
+const snowflakeOrRef = z.string().min(1).max(40);
+const handChange = z.intersection(
+  z.object({ id: uuid.optional() }),
+  z.discriminatedUnion("change", [
+    z.object({
+      change: z.literal("rename"),
+      target: snowflakeOrRef,
+      name: z.string().min(1).max(100),
+    }),
+    z.object({
+      change: z.literal("move"),
+      target: snowflakeOrRef,
+      parent: snowflakeOrRef.nullable(),
+    }),
+    z.object({
+      change: z.literal("order"),
+      scope: z.enum(["categories", "channels", "roles"]),
+      parent: snowflakeOrRef.nullable(),
+      items: z.array(snowflakeOrRef).min(2).max(260),
+    }),
+  ]),
+);
+
+/**
+ * A hand change from the Your server panel (rename, move, order) into the person's waiting
+ * draft, or a new draft when they have none. No AI runs and it costs no supplies. Stored as
+ * the next version, like taking an item out; the old version is retired.
+ */
+export async function doQmEdit(ctx: BotContext, guild: Guild, member: GuildMember, raw: unknown) {
+  const p = handChange.safeParse(raw);
+  if (!p.success) return fail("That request wasn't valid.");
+  await ensureGuild(ctx, guild);
+  // Without an id, the person's newest waiting draft when this runs: quick edits queue one
+  // after another, each onto the version the one before it left.
+  const build = p.data.id
+    ? await getQmBuild(ctx.db, guild.id, p.data.id)
+    : await latestWaitingQmBuild(ctx.db, guild.id, member.id);
+  if (p.data.id) {
+    if (build?.status !== "pending" || Date.now() - build.createdAt.getTime() > QM_PLAN_TTL_MS)
+      return fail("That draft isn't waiting anymore. Make the change again.");
+    if (build.requestedById !== member.id)
+      return fail("Only the person who asked for this draft can change it.");
+  }
+  const t = applyHandChange(
+    { plan: build?.plan ?? [], edits: build?.edits ?? [], orders: build?.orders ?? [] },
+    p.data,
+    snapshot(guild).server,
+  );
+  if (!t.ok) return fail(t.error);
+  const settings = build?.settings ?? [];
+  const posts = build?.posts ?? [];
+  if (!t.plan.length && !t.edits.length && !t.orders.length && !settings.length && !posts.length) {
+    if (build) await transitionQmBuild(ctx.db, build.id, "pending", "cancelled");
+    return { ok: true, message: `${t.message} Nothing is left to change, so the draft is gone.` };
+  }
+  const next = await createQmPlan(ctx.db, {
+    guildId: guild.id,
+    requestedById: member.id,
+    requestedByTag: build?.requestedByTag ?? member.user.username,
+    prompt: build?.prompt ?? "Changes made in Your server",
+    summary: build?.summary ?? "Your changes",
+    plan: t.plan,
+    settings,
+    posts,
+    orders: t.orders,
+    edits: t.edits,
+    notes: build?.notes ?? null,
+    continuesId: build?.id ?? null,
+    model: build?.model ?? "hand",
+  });
+  if (build) {
+    const replaced = await transitionQmBuild(ctx.db, build.id, "pending", "cancelled", {
+      error: `Replaced by v${next.version}.`,
+    });
+    if (!replaced) {
+      // Applied or discarded in the meantime: the new copy must not linger.
+      await transitionQmBuild(ctx.db, next.id, "pending", "cancelled");
+      return fail("That draft changed while saving. Make the change again.");
+    }
+  }
+  return { ok: true, message: t.message };
 }
 
 export async function doQmCancel(ctx: BotContext, guild: Guild, raw: unknown) {

@@ -109,6 +109,7 @@ export const MANAGER_REQUEST_KINDS: ReadonlySet<string> = new Set([
   "template_save",
   "template_apply",
   "qm_apply",
+  "qm_edit",
   "undo_build",
   "season_start",
   // Approving verification answers gives a role.
