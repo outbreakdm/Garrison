@@ -1,8 +1,10 @@
 import { CARD_LIMITS, type CardBlock, type CustomCard, parseCard } from "./cards";
 import type { Db } from "./client";
+import { checkGiveaway, GIVEAWAY_DURATIONS } from "./giveaways";
 import { checkMessages, MESSAGE_LIMITS, readMessages, type SavedMessage } from "./messages";
 import type { Entitlements } from "./plans";
 import type { QmSettingsLookup } from "./qm-settings";
+import { countRunningGiveaways } from "./repo/giveaways";
 import { readSettings } from "./repo/settings";
 import {
   checkRoleMenus,
@@ -17,7 +19,8 @@ import { readWelcome } from "./welcome";
 /**
  * Text the AI assistant writes into a plan (docs/AI_ASSISTANT.md, phases 7 and 8B): the
  * welcome, leave and DM cards, new saved messages and rewrites of existing ones, and new role
- * menus and ticket panels (a card with roles, or with topics). Each write is checked
+ * menus and ticket panels (a card with roles, or with topics), and new giveaways (started when
+ * the plan is applied, through the dashboard's own request). Each write is checked
  * by the dashboard's own rules (parseCard, checkMessages), shown in full before it's applied,
  * applied through Settings history (so Undo puts the old text back), and costs one change.
  * The model writes a title and a body; the rest of a card's look stays as it is.
@@ -33,6 +36,7 @@ export const QM_WRITE_TARGETS = [
   "edit_message",
   "new_role_menu",
   "new_ticket_panel",
+  "new_giveaway",
 ] as const;
 export type QmWriteTarget = (typeof QM_WRITE_TARGETS)[number];
 
@@ -49,7 +53,7 @@ const WELCOME_NAME = {
 
 /** One write, checked, as a plan stores it. */
 export interface QmWrite {
-  kind: "welcome" | "message" | "role_menu" | "ticket_panel";
+  kind: "welcome" | "message" | "role_menu" | "ticket_panel" | "giveaway";
   /** Welcome: which card. */
   field?: "joinCard" | "leaveCard" | "dmCard";
   /** Message: the saved message's id; for a new one, made when the plan is drafted. */
@@ -69,6 +73,14 @@ export interface QmWrite {
   panel?: TicketPanel;
   /** Ticket panels: staff roles to add to the server's ticket staff, ids or refs. */
   staffRoleIds?: string[];
+  /** A new giveaway: where it's posted (an id or a ref), and its draw. The card is its prize. */
+  giveaway?: {
+    channel: string;
+    prize: string;
+    description: string | null;
+    winners: number;
+    durationMinutes: number;
+  };
 }
 
 /** A write as the model proposes it. */
@@ -86,6 +98,11 @@ export interface QmWriteProposal {
   items?: { role: string; label: string; emoji: string }[];
   /** new_ticket_panel: roles that see and answer its tickets, ids or refs. */
   staffRoles?: string[];
+  /** new_giveaway: the text channel it's posted in, an id or a ref. */
+  channel?: string;
+  /** new_giveaway: how many win, and minutes until the draw. */
+  winners?: number | null;
+  durationMinutes?: number | null;
 }
 
 const BLANK: CustomCard = {
@@ -160,6 +177,14 @@ export async function checkQmWrites(
   const welcome = readWelcome(welcomeRow);
   const before = readMessages(messagesRow?.messages ?? []);
   const wantsMenu = proposals.some((p) => p.target === "new_role_menu");
+  const giveaways = proposals.filter((p) => p.target === "new_giveaway").length;
+  if (giveaways) {
+    const running = await countRunningGiveaways(db, guildId);
+    if (running + giveaways > ent["giveaways.running"])
+      errors.push(
+        `This server can run ${ent["giveaways.running"]} giveaways at once and has ${running} running.`,
+      );
+  }
   const wantsPanel = proposals.some((p) => p.target === "new_ticket_panel");
   const [menusRow, ticketsRow] = await Promise.all([
     wantsMenu ? readSettings(db, guildId, "roles") : null,
@@ -357,6 +382,45 @@ export async function checkQmWrites(
       });
       continue;
     }
+    if (target === "new_giveaway") {
+      const channel = String(p.channel ?? "").trim();
+      const made = lookup?.created(channel.toLowerCase());
+      const isText = isRef(channel) ? made === "text" : lookup?.channel(channel) === "text";
+      if (!isText) {
+        errors.push("A giveaway needs a text channel in this server or this plan.");
+        continue;
+      }
+      const checked = checkGiveaway(
+        {
+          channelId: isRef(channel) ? standIn(channel.toLowerCase()) : channel,
+          prize: p.title,
+          description: p.body,
+          winners: p.winners ?? 1,
+          durationMinutes: p.durationMinutes ?? 1440,
+        },
+        ent,
+      );
+      if (!checked.ok) {
+        errors.push(`The giveaway: ${checked.error}`);
+        continue;
+      }
+      const g = checked.value;
+      writes.push({
+        kind: "giveaway",
+        isNew: true,
+        name: g.prize,
+        card: withText(BLANK, g.prize, g.description ?? ""),
+        was: null,
+        giveaway: {
+          channel: isRef(channel) ? channel.toLowerCase() : channel,
+          prize: g.prize,
+          description: g.description,
+          winners: g.winners,
+          durationMinutes: g.durationMinutes,
+        },
+      });
+      continue;
+    }
     // A new saved message: given an id now, so a post in the same plan can name it.
     if (!name) {
       errors.push("A new message needs a name.");
@@ -411,6 +475,10 @@ export async function checkQmWrites(
   }
   return { ok: true, writes };
 }
+
+/** How long a giveaway runs, in words: "1 day". */
+export const giveawayLength = (minutes: number) =>
+  GIVEAWAY_DURATIONS.find((d) => d.minutes === minutes)?.label ?? `${minutes} minutes`;
 
 /** The id a write's item has, for posting it: a message's, a menu's or a panel's. */
 export const qmWriteItemId = (w: QmWrite) => w.messageId ?? w.menu?.id ?? w.panel?.id;

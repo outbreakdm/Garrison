@@ -1,4 +1,4 @@
-import type { CustomCard, QmWrite } from "@garrison/db";
+import { type CustomCard, giveawayLength, type QmWrite } from "@garrison/db";
 import type { ReactNode } from "react";
 import { DiscordMarkdown, type MentionNames } from "./cards/markdown";
 
@@ -46,7 +46,10 @@ export function WritePreview({
       <h3 className="g-label">Writes</h3>
       <ul className="qm-writes">
         {writes.map((w, i) => (
-          <li className="qm-write" key={`${w.kind}:${w.field ?? w.messageId}`}>
+          <li
+            className="qm-write"
+            key={`${w.kind}:${w.field ?? w.messageId ?? w.menu?.id ?? w.panel?.id ?? i}`}
+          >
             <div className="qm-write__head">
               <span>
                 <strong>{w.name}</strong>
@@ -58,9 +61,11 @@ export function WritePreview({
                       ? `· a new role menu (${w.menu?.style === "dropdown" ? "dropdown" : "buttons"})`
                       : w.kind === "ticket_panel"
                         ? "· a new ticket panel"
-                        : w.isNew
-                          ? "· a new saved message"
-                          : "· a new version of this saved message"}
+                        : w.kind === "giveaway"
+                          ? "· a new giveaway"
+                          : w.isNew
+                            ? "· a new saved message"
+                            : "· a new version of this saved message"}
                 </span>
               </span>
               {remove(i)}
@@ -96,6 +101,14 @@ export function WritePreview({
                   </li>
                 ) : null}
               </ul>
+            ) : null}
+            {w.giveaway ? (
+              <p className="muted">
+                {w.giveaway.winners} winner{w.giveaway.winners === 1 ? "" : "s"}, drawn after{" "}
+                {giveawayLength(w.giveaway.durationMinutes)}, in{" "}
+                <strong>#{names.channels.get(w.giveaway.channel) ?? w.giveaway.channel}</strong>. It
+                starts when you apply, and Undo won't end it.
+              </p>
             ) : null}
             {w.was ? (
               <details className="qm-write__was">

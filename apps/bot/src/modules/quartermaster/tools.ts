@@ -219,11 +219,27 @@ export function settingsReader(db: Db, guild: Guild, allowance: AiAllowance): Re
           return { text: `Unknown module. Use one of: ${MODULES.join(", ")}.`, error: true };
         const m = module as ReadableModule;
         const values = await readSettings(db, guild.id, m);
+        // Invite labels name the server's invites, so the model sees which there are.
+        const invites =
+          m === "invites"
+            ? await guild.invites
+                .fetch()
+                .then((list) =>
+                  [...list.values()].slice(0, 25).map((i) => ({
+                    code: i.code,
+                    channel: i.channelId ? named(i.channelId) : null,
+                    uses: i.uses ?? 0,
+                    by: i.inviter?.username ?? null,
+                  })),
+                )
+                .catch(() => "Garrison can't list invites without Manage Server.")
+            : undefined;
         return {
           text: cut({
             module: m,
             page: MODULE_GUIDE[m].page,
             settings: values ? resolve(values) : null,
+            ...(invites !== undefined ? { server_invites: invites } : {}),
           }),
           error: false,
         };

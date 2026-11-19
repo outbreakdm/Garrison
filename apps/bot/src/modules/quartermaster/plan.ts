@@ -522,8 +522,9 @@ export function describeSettings(
     const channel = channelName(v);
     return channel ? `#${channel}` : "a deleted channel";
   };
-  return changes.map(
-    (c) =>
-      `~ ${qmSettingLabel(c.module, c.field)}: ${qmSettingValueText(c.module, c.field, c.from, name)} → ${qmSettingValueText(c.module, c.field, c.to, name)}`,
-  );
+  return changes.map((c) => {
+    const from = qmSettingValueText(c.module, c.field, c.from, name);
+    const to = qmSettingValueText(c.module, c.field, c.to, name);
+    return `~ ${qmSettingLabel(c.module, c.field)}: ${from ? `${from} → ${to}` : to}`;
+  });
 }

@@ -1623,3 +1623,176 @@ describe("role menus and ticket panels the AI assistant makes", () => {
     expect(out.ok && out.reply).toMatch(/moderation or admin powers/);
   });
 });
+
+describe("alerts, counters and giveaways the AI assistant sets up", () => {
+  const bot = (settings: unknown[], writes: unknown[] = []): Planner => ({
+    model: "claude-haiku-5-5",
+    plan: async () => ({ ok: false, error: "not used" }),
+    chat: async () => ({
+      ok: true,
+      reply: "This plan adds an alert, a counter and a giveaway.",
+      choices: [],
+      model: "claude-haiku-5-5",
+      usage: TYPICAL,
+      plan: {
+        summary: "Extras",
+        notes: "",
+        operations: [op({ kind: "create_text_channel", ref: "streams", name: "streams" })],
+        settings: settings as never,
+        posts: [],
+        writes: writes as never,
+      },
+    }),
+  });
+
+  it("adds to the saved lists when applied, and Undo puts them back", async () => {
+    const { applySettingsChange, readSettings, getQmBuild } = await import("@garrison/db");
+    const f = fakeGuild("q95");
+    // Discord gives new channels snowflake ids, which an alert requires.
+    Object.assign(f.guild.channels, {
+      create: async (o: { name: string }) => {
+        const c = {
+          id: "123456789012345699",
+          name: o.name,
+          type: ChannelType.GuildText,
+          isThread: () => false,
+          rawPosition: 0,
+          parentId: null,
+          delete: async () => {},
+        };
+        f.channels.set(c.id, c);
+        return c;
+      },
+    });
+    f.channels.set("123456789012345601", {
+      id: "123456789012345601",
+      name: "general",
+      type: ChannelType.GuildText,
+      isThread: () => false,
+      rawPosition: 0,
+      parentId: null,
+      delete: async () => {},
+    });
+    const a = asker(f);
+    await upsertGuild(ctx.db, { id: "q95", name: "q95" });
+    const saved = {
+      id: "feed000001",
+      provider: "youtube",
+      handle: "@garrison",
+      channelId: "123456789012345601",
+      roleId: null,
+      message: null,
+      accent: null,
+    };
+    await applySettingsChange(ctx.db, {
+      guildId: "q95",
+      module: "alerts",
+      patch: { feeds: [saved] },
+      userId: a.id,
+      username: "owner",
+    });
+    const out = await chatTurn(
+      ctx,
+      bot(
+        [
+          {
+            module: "alerts",
+            field: "feeds",
+            value: [{ provider: "twitch", handle: "shroud", channelId: "streams", roleId: null }],
+          },
+          { module: "stats", field: "enabled", value: true },
+          {
+            module: "stats",
+            field: "counters",
+            value: [{ kind: "humans", roleId: null, template: "" }],
+          },
+        ],
+        [
+          {
+            target: "new_giveaway",
+            messageId: "",
+            name: "",
+            title: "Nitro for a month",
+            body: "Enter before Friday.",
+            items: [],
+            staffRoles: [],
+            channel: "streams",
+            winners: 2,
+            durationMinutes: 4320,
+          },
+        ],
+      ),
+      f.guild,
+      a,
+      {
+        message:
+          "Twitch alerts for shroud in a new #streams, a people counter, and a Nitro giveaway",
+      },
+    );
+    if (!out.ok || !out.build) throw new Error(out.ok ? "no draft" : out.error);
+    const draft = out.build;
+    // Only what's new is in the draft.
+    expect(draft.settings.find((c) => c.field === "feeds")).toMatchObject({
+      from: null,
+      to: [{ handle: "shroud", channelId: "streams" }],
+    });
+    expect(draft.writes[0]).toMatchObject({
+      kind: "giveaway",
+      giveaway: {
+        channel: "streams",
+        prize: "Nitro for a month",
+        winners: 2,
+        durationMinutes: 4320,
+      },
+    });
+
+    // Applied without the giveaway (starting one needs Discord), the saved alert stays.
+    const applied = await applyBuild(ctx, f.guild, { ...draft, writes: [] });
+    expect(applied).toMatchObject({ ok: true, failed: null });
+    const feeds = (await readSettings(ctx.db, "q95", "alerts"))?.feeds as {
+      handle: string;
+      channelId: string;
+    }[];
+    expect(feeds.map((x) => [x.handle, x.channelId])).toEqual([
+      ["@garrison", "123456789012345601"],
+      ["shroud", "123456789012345699"],
+    ]);
+    expect(await readSettings(ctx.db, "q95", "stats")).toMatchObject({
+      enabled: true,
+      counters: [{ kind: "humans", template: "People: {count}" }],
+    });
+    const built = await getQmBuild(ctx.db, "q95", draft.id);
+    if (!built) throw new Error("gone");
+    await undoBuild(ctx, f.guild, built, a.id);
+    expect((await readSettings(ctx.db, "q95", "alerts"))?.feeds).toEqual([saved]);
+  });
+
+  it("won't start more giveaways than the plan runs at once", async () => {
+    const f = fakeGuild("q96");
+    f.channels.set("123456789012345701", {
+      id: "123456789012345701",
+      name: "giveaways",
+      type: ChannelType.GuildText,
+      isThread: () => false,
+      rawPosition: 0,
+      parentId: null,
+      delete: async () => {},
+    });
+    const g = (title: string) => ({
+      target: "new_giveaway",
+      messageId: "",
+      name: "",
+      title,
+      body: "",
+      items: [],
+      staffRoles: [],
+      channel: "123456789012345701",
+      winners: 1,
+      durationMinutes: 60,
+    });
+    const out = await chatTurn(ctx, bot([], [g("One"), g("Two"), g("Three")]), f.guild, asker(f), {
+      message: "Three giveaways",
+    });
+    expect(JSON.stringify(out)).toMatch(/can run 2 giveaways at once/);
+  });
+});

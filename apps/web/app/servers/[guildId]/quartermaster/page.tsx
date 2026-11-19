@@ -279,11 +279,15 @@ export default async function QuartermasterPage({
         .filter((o) => o.kind === "create_role")
         .map((o) => [o.ref, o.name] as [string, string]),
     ]),
-    channels: new Map(
-      [...(layout?.loose ?? []), ...(layout?.categories ?? []).flatMap((c) => c.channels)].map(
+    channels: new Map([
+      ...[...(layout?.loose ?? []), ...(layout?.categories ?? []).flatMap((c) => c.channels)].map(
         (c) => [c.id, c.name] as [string, string],
       ),
-    ),
+      // And its new channels by ref, so a giveaway names where it goes.
+      ...(plan?.plan ?? [])
+        .filter((o) => o.kind === "create_text_channel")
+        .map((o) => [o.ref, o.name] as [string, string]),
+    ]),
   };
   const orders = plan ? orderLines(plan.orders ?? [], plan.plan, layout) : [];
   // Changes to what exists, and deletions, as the bot describes them ("~ #general: renamed …").
@@ -833,9 +837,13 @@ export default async function QuartermasterPage({
                             <div key={d.key}>
                               <dt>{d.label}</dt>
                               <dd>
-                                <span className="qm-settings__from">{d.from}</span>
-                                <span aria-hidden="true"> → </span>
-                                <span className="sr-only"> becomes </span>
+                                {d.from ? (
+                                  <>
+                                    <span className="qm-settings__from">{d.from}</span>
+                                    <span aria-hidden="true"> → </span>
+                                    <span className="sr-only"> becomes </span>
+                                  </>
+                                ) : null}
                                 <strong>{d.to}</strong>
                               </dd>
                               {removeForm({ setting: d.key }, "Remove")}

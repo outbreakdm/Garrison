@@ -928,13 +928,167 @@ export const CASES: EvalCase[] = [
     ),
   },
 
+  // New items in modules that keep lists: only what's new, checked like their pages.
+  {
+    id: "alerts-twitch",
+    category: "settings",
+    ask: "Post an alert in #clips when shroud goes live on Twitch.",
+    draft: "yes",
+    check: (a) => {
+      const feeds = settingsOf(a).find((x) => x.module === "alerts" && x.field === "feeds");
+      const list = (Array.isArray(feeds?.value) ? feeds.value : []) as {
+        provider?: string;
+        handle?: string;
+        channelId?: string;
+      }[];
+      return need(
+        list.some(
+          (f) =>
+            f.provider === "twitch" && /shroud/i.test(f.handle ?? "") && f.channelId === ID.clips,
+        ),
+        "no Twitch alert for shroud in #clips",
+      );
+    },
+    reference: reply(
+      "This plan posts in #clips when shroud goes live.",
+      plan({
+        settings: [
+          {
+            module: "alerts",
+            field: "feeds",
+            value: [{ provider: "twitch", handle: "shroud", channelId: ID.clips, roleId: null }],
+          },
+        ],
+      }),
+    ),
+  },
+  {
+    id: "lfg-apex-trios",
+    category: "settings",
+    ask: "Add an LFG template for Apex trios that can only be posted in #apex.",
+    draft: "yes",
+    check: (a) => {
+      const t = settingsOf(a).find((x) => x.module === "rally" && x.field === "templates");
+      const list = (Array.isArray(t?.value) ? t.value : []) as {
+        size?: number | null;
+        roles?: string | null;
+        channelIds?: string[];
+      }[];
+      return all(
+        need(list.length > 0, "no new template"),
+        need(Boolean(list[0]?.channelIds?.includes(ID.apex)), "not limited to #apex"),
+        need(list[0]?.size === 3 || /3/.test(list[0]?.roles ?? ""), "not for three players"),
+      );
+    },
+    reference: reply(
+      "This plan adds an Apex trios template for #apex.",
+      plan({
+        settings: [
+          {
+            module: "rally",
+            field: "templates",
+            value: [
+              {
+                name: "Apex trios",
+                game: "Apex Legends",
+                roles: null,
+                size: 3,
+                group: "squad",
+                lifetimeHours: 3,
+                voice: true,
+                channelIds: [ID.apex],
+              },
+            ],
+          },
+        ],
+      }),
+    ),
+  },
+  {
+    id: "stats-member-count",
+    category: "settings",
+    ask: "Add a member count channel at the top of the server.",
+    draft: "yes",
+    check: (a) => {
+      const s = settingsOf(a).filter((x) => x.module === "stats");
+      return all(
+        need(
+          s.some((x) => x.field === "enabled" && x.value === true),
+          "server stats not turned on",
+        ),
+        need(
+          s.some(
+            (x) =>
+              x.field === "counters" &&
+              Array.isArray(x.value) &&
+              x.value.some((c: { kind?: string }) => c.kind === "members" || c.kind === "humans"),
+          ),
+          "no member counter",
+        ),
+      );
+    },
+    reference: reply(
+      "This plan adds a Members counter in a Server stats category at the top.",
+      plan({
+        settings: [
+          { module: "stats", field: "enabled", value: true },
+          {
+            module: "stats",
+            field: "counters",
+            value: [{ kind: "members", roleId: null, template: "" }],
+          },
+        ],
+      }),
+    ),
+  },
+  {
+    id: "giveaway-nitro",
+    category: "posts",
+    ask: "Run a giveaway for a month of Nitro in #announcements, one winner, ending in 3 days.",
+    draft: "yes",
+    check: (a) => {
+      const w = writesOf(a).find((x) => x.target === "new_giveaway");
+      return all(
+        need(Boolean(w), "no new giveaway"),
+        need(w?.channel === ID.announcements, "not in #announcements"),
+        need(w?.winners === 1, "not one winner"),
+        need(w?.durationMinutes === 4320, "doesn't run 3 days"),
+      );
+    },
+    reference: reply(
+      "This plan starts a Nitro giveaway in #announcements, drawn in 3 days.",
+      plan({
+        writes: [
+          {
+            target: "new_giveaway",
+            messageId: "",
+            name: "",
+            title: "A month of Nitro",
+            body: "Press Enter for a chance to win. One winner.",
+            items: [],
+            staffRoles: [],
+            channel: ID.announcements,
+            winners: 1,
+            durationMinutes: 4320,
+          },
+        ],
+      }),
+    ),
+  },
+
   // How Garrison works: point at the right page, draft nothing.
   {
     id: "howto-stream-alerts",
     category: "howto",
     ask: "How do I set up Twitch live alerts?",
-    draft: "no",
-    check: (a) => need(says(a, "stream alerts"), "doesn't point to Stream alerts"),
+    // It can set one up now, or say where; either answers the question.
+    draft: "either",
+    check: (a) =>
+      need(
+        says(a, "stream alerts") ||
+          settingsOf(a).some((x) => x.module === "alerts" && x.field === "feeds"),
+        "neither sets one up nor points to Stream alerts",
+      ),
     reference: reply(
       "Open Stream alerts in the menu, add the Twitch channel and pick where alerts go.",
     ),

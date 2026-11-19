@@ -1,10 +1,22 @@
+import {
+  ALERT_PROVIDERS,
+  type AlertFeed,
+  checkAlertFeeds,
+  normalizeHandle,
+  readAlertFeeds,
+} from "./alerts";
 import { AUTOMOD_LIMITS, checkAutomod, readAutomod } from "./automod";
 import type { Db } from "./client";
+import { checkEconomy, readEconomy } from "./economy";
+import { newId } from "./ids";
+import { checkInviteLabels, type InviteLabel, inviteCode, readInviteLabels } from "./invite-labels";
 import { readMessages } from "./messages";
-import type { Entitlements } from "./plans";
+import { type Entitlements, FEATURES } from "./plans";
+import { checkTemplates, DEFAULT_WORDING } from "./rally";
 import { readSettings } from "./repo/settings";
 import { readRoleMenus } from "./role-menus";
 import type { QmPost, QmSettingChange, SettingsModule } from "./schema";
+import { checkServerStats, readServerStats, STAT_KINDS } from "./server-stats";
 import { checkStarboard, readStarboard, STARBOARD_LIMITS } from "./starboard";
 import { checkSuggestions, readSuggestions } from "./suggestions";
 import { readTicketPanels } from "./tickets";
@@ -32,7 +44,13 @@ type Kind =
   | "roles"
   | "ladder"
   | "rewards"
-  | "timezone";
+  | "timezone"
+  | "currency"
+  | "alertFeeds"
+  | "shopItems"
+  | "lfgTemplates"
+  | "inviteLabels"
+  | "statCounters";
 
 interface FieldSpec {
   label: string;
@@ -58,6 +76,8 @@ export const QM_LADDER = {
   durations: [600, 3600, 21600, 86400, 604800, 2419200],
 } as const;
 const REWARDS_MAX = 10;
+/** The most new items one field adds in one plan (alerts, shop items, templates, labels, counters). */
+export const QM_ADD_MAX = 5;
 
 export const QM_SETTINGS = {
   suggestions: {
@@ -361,6 +381,76 @@ export const QM_SETTINGS = {
       },
     },
   },
+  alerts: {
+    label: "Stream alerts",
+    fields: {
+      feeds: {
+        label: "New alerts",
+        kind: "alertFeeds",
+        about: `alerts to add (the saved ones stay): up to ${QM_ADD_MAX} of { provider twitch|youtube, handle (a Twitch username, or a YouTube @handle or UC… channel id), channelId (text channel), roleId (a role to ping, or null) }; a post when the channel goes live or uploads`,
+      },
+    },
+  },
+  economy: {
+    label: "Economy",
+    fields: {
+      enabled: on(
+        "members earn the server currency by chatting and the daily claim, and spend it in the shop",
+      ),
+      currency: {
+        label: "Currency",
+        kind: "currency",
+        about:
+          "{ name (plural, like Crowns), singular (Crown), icon (one emoji) }, 24 characters each at most",
+      },
+      shop: {
+        label: "New shop items",
+        kind: "shopItems",
+        about: `items to add (the saved ones stay): up to ${QM_ADD_MAX} of { name (40 characters), description or null, emoji or empty, price 1-1000000000, kind role|staff, roleId (role: the role it gives, never one with staff powers; staff: null) }; staff items are handed out by staff, so they need staffChannelId`,
+      },
+      staffChannelId: {
+        label: "Staff channel",
+        kind: "textChannel",
+        about: "where purchases of staff-handled items go",
+      },
+    },
+  },
+  rally: {
+    label: "LFG templates",
+    fields: {
+      templates: {
+        label: "New LFG templates",
+        kind: "lfgTemplates",
+        about: `templates to add for /lfg (the saved ones stay): up to ${QM_ADD_MAX} of { name (letters, numbers, spaces, up to 32: "Mythic+", "Raid night"), game or null, roles (like "Tank 2, Healer 2, DPS 6"; up to 4 roles, 2-40 players in all) or null, size (2-40 players when roles is null, else null), group (what a group is called: squad, party, fireteam, raid), lifetimeHours 1-12, voice (true: a members-only voice channel opens when it fills), channelIds (text channels it can be posted in; empty: any) }`,
+      },
+    },
+  },
+  invites: {
+    label: "Invite tracker",
+    fields: {
+      labels: {
+        label: "New invite labels",
+        kind: "inviteLabels",
+        about: `labels to add to this server's invites (module_settings invites lists them as server_invites): up to ${QM_ADD_MAX} of { code, name (40 characters), category (Socials, Partners, Ads, Listings, Staff or your own) or null, roleId (given to everyone who joins with it, never one with staff powers) or null }`,
+      },
+    },
+  },
+  stats: {
+    label: "Server stats",
+    fields: {
+      enabled: on("voice channels nobody can join show live counts; needs counters"),
+      counters: {
+        label: "New counters",
+        kind: "statCounters",
+        about: `counters to add (the saved ones stay): up to ${QM_ADD_MAX} of { kind ${Object.keys(STAT_KINDS).join("|")}, roleId (for role: whose members are counted; else null), template (the channel's name with {count}, and {role} for role; empty: the standard, like "Members: {count}") }; Garrison makes the channels`,
+      },
+      categoryId: {
+        label: "Category",
+        kind: "category",
+        about: "where the counter channels go; null: a Server stats category at the top",
+      },
+    },
+  },
 } as const satisfies Partial<Record<SettingsModule, ModuleSpec>>;
 
 export type QmSettingsModule = keyof typeof QM_SETTINGS;
@@ -412,7 +502,31 @@ const KIND_TEXT: Record<Kind, string> = {
   ladder: "list of ladder steps (see the field)",
   rewards: "list of { level, roleId }",
   timezone: "an IANA time zone name",
+  currency: "{ name, singular, icon }",
+  alertFeeds: "list of new alerts (see the field)",
+  shopItems: "list of new shop items (see the field)",
+  lfgTemplates: "list of new templates (see the field)",
+  inviteLabels: "list of new invite labels (see the field)",
+  statCounters: "list of new counters (see the field)",
 };
+
+/**
+ * Fields that add to a saved list rather than replace it, and what names each item. A change
+ * holds only the new items (from: null); applying it adds them to the list as it is then.
+ */
+const ADDS: Partial<Record<Kind, string>> = {
+  alertFeeds: "id",
+  shopItems: "id",
+  lfgTemplates: "id",
+  inviteLabels: "code",
+  statCounters: "key",
+};
+const addKey = (module: string, field: string) => {
+  const kind = spec(module)?.fields[field]?.kind;
+  return kind ? ADDS[kind] : undefined;
+};
+/** Whether a field adds items to a saved list (its change holds only the new ones). */
+export const qmSettingAdds = (module: string, field: string) => !!addKey(module, field);
 
 type IdTarget = "text" | "voice" | "category" | "role";
 const TARGETS: Partial<Record<Kind, IdTarget>> = {
@@ -432,6 +546,8 @@ export interface QmSettingsLookup {
   role(id: string): { name: string; status: "ok" | "dangerous" | "fixed" } | null;
   /** What the plan creates under this ref, if anything. */
   created(ref: string): IdTarget | null;
+  /** Whether an invite code opens this server. Absent: the invites couldn't be read. */
+  invite?(code: string): boolean;
 }
 
 export interface QmSettingProposal {
@@ -552,6 +668,40 @@ const MODULES: Record<
     read: (row) => ({ rewards: Array.isArray(row?.rewards) ? row.rewards : [] }),
     check: (b, p) => ({ ok: true, value: { ...b, ...p } }),
   },
+  alerts: {
+    read: (row) => ({ feeds: readAlertFeeds(row?.feeds ?? []) }),
+    check: (b, p, e) => {
+      const r = checkAlertFeeds(p.feeds ?? b.feeds, e, b.feeds as AlertFeed[]);
+      return r.ok ? { ok: true, value: { feeds: r.value } } : r;
+    },
+  },
+  economy: {
+    read: (row) => ({ ...readEconomy(row) }),
+    check: (b, p, e) => widen(checkEconomy({ ...b, ...p }, e, readEconomy(b))),
+  },
+  rally: {
+    read: (row) => {
+      // The saved list with the widest rules, so a server back on Free can still add within its limit.
+      const t = checkTemplates(row?.templates ?? [], "pro");
+      return { templates: t.ok ? t.value : [] };
+    },
+    check: (b, p, e) => {
+      const plan = e["rally.templates"] > FEATURES["rally.templates"].free ? "pro" : "free";
+      const r = checkTemplates(p.templates ?? b.templates, plan);
+      return r.ok ? { ok: true, value: { templates: r.value } } : r;
+    },
+  },
+  invites: {
+    read: (row) => ({ labels: readInviteLabels(row?.labels ?? []) }),
+    check: (b, p, e) => {
+      const r = checkInviteLabels(p.labels ?? b.labels, e, b.labels as InviteLabel[]);
+      return r.ok ? { ok: true, value: { labels: r.value } } : r;
+    },
+  },
+  stats: {
+    read: (row) => ({ ...readServerStats(row) }),
+    check: (b, p, e) => widen(checkServerStats({ ...b, ...p }, e, readServerStats(b))),
+  },
 };
 
 function widen<T extends object>(
@@ -586,7 +736,15 @@ export async function checkQmSettings(
   proposals: QmSettingProposal[],
   lookup: QmSettingsLookup,
   ent: Entitlements,
-): Promise<{ ok: true; changes: QmSettingChange[] } | { ok: false; errors: string[] }> {
+): Promise<
+  | {
+      ok: true;
+      changes: QmSettingChange[];
+      /** Each changed module's values in full, as checked: what applying an added list saves. */
+      full: Partial<Record<string, Values>>;
+    }
+  | { ok: false; errors: string[] }
+> {
   const errors: string[] = [];
   const byModule = new Map<QmSettingsModule, Values>();
   // Refs stand in as fake ids while the dashboard's checks run, which only accept ids.
@@ -634,6 +792,7 @@ export async function checkQmSettings(
   if (errors.length) return { ok: false, errors };
 
   const changes: QmSettingChange[] = [];
+  const full: Partial<Record<string, Values>> = {};
   const restore = (v: unknown): unknown =>
     typeof v === "string"
       ? (back.get(v) ?? v)
@@ -645,19 +804,159 @@ export async function checkQmSettings(
   for (const [module, patch] of byModule) {
     const run = MODULES[module];
     const before = run.read(await readSettings(db, guildId, module));
-    const checked = run.check(before, patch, ent);
+    // An added list goes after the saved one, and is checked whole.
+    const merged: Values = { ...patch };
+    for (const field of Object.keys(patch))
+      if (addKey(module, field))
+        merged[field] = [
+          ...(Array.isArray(before[field]) ? (before[field] as unknown[]) : []),
+          ...(patch[field] as unknown[]),
+        ];
+    const checked = run.check(before, merged, ent);
     if (!checked.ok) {
       errors.push(`${QM_SETTINGS[module].label}: ${checked.error}`);
       continue;
     }
+    full[module] = restore(checked.value) as Values;
     for (const field of Object.keys(QM_SETTINGS[module].fields)) {
       if (!(field in checked.value)) continue;
+      const key = addKey(module, field);
+      if (key) {
+        if (!(field in patch)) continue;
+        const had = new Set(
+          (Array.isArray(before[field]) ? (before[field] as Values[]) : []).map((x) => x[key]),
+        );
+        const added = (checked.value[field] as Values[]).filter((x) => !had.has(x[key]));
+        if (added.length) changes.push({ module, field, from: null, to: restore(added) });
+        continue;
+      }
       const to = restore(checked.value[field]);
       if (sameSetting(before[field], to)) continue;
       changes.push({ module, field, from: before[field] ?? null, to: to ?? null });
     }
   }
-  return errors.length ? { ok: false, errors } : { ok: true, changes };
+  return errors.length ? { ok: false, errors } : { ok: true, changes, full };
+}
+
+/** A proposed list of new items, or why it isn't one. */
+function items(value: unknown, name: string): Values[] | string {
+  if (!Array.isArray(value) || !value.length) return `${name}: a list of at least one.`;
+  if (value.length > QM_ADD_MAX) return `${name}: up to ${QM_ADD_MAX} at once.`;
+  return value.map((v) => (v && typeof v === "object" ? (v as Values) : {}));
+}
+const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+const ITEM_ID = /^[a-z0-9]{6,16}$/;
+/** An item's id: kept when it already has one (a stored draft), else a new one. */
+const itemId = (v: unknown) => (typeof v === "string" && ITEM_ID.test(v) ? v : newId());
+
+/** New items for an added list, with their channel and role refs checked. */
+function shapeItems(
+  f: FieldSpec,
+  value: unknown,
+  name: string,
+  lookup: QmSettingsLookup,
+  standIn: (ref: string) => string,
+): { value: unknown } | string {
+  const list = items(value, name);
+  if (typeof list === "string") return list;
+  const one = (kind: Kind, v: unknown) =>
+    shape({ label: name, kind, about: "" }, v ?? null, name, lookup, standIn);
+  const out: Values[] = [];
+  for (const r of list) {
+    if (f.kind === "alertFeeds") {
+      const provider = r.provider === "twitch" || r.provider === "youtube" ? r.provider : null;
+      if (!provider) return `${name}: each alert is for twitch or youtube.`;
+      const handle = normalizeHandle(provider, str(r.handle));
+      if (!handle)
+        return `${name}: "${str(r.handle).slice(0, 40)}" isn't a ${ALERT_PROVIDERS[provider].example}.`;
+      const channel = one("textChannel", r.channelId);
+      if (typeof channel === "string") return channel;
+      if (!channel.value) return `${name}: each alert needs the channel it posts in.`;
+      const role = one("role", r.roleId || null);
+      if (typeof role === "string") return role;
+      out.push({
+        id: itemId(r.id),
+        provider,
+        handle,
+        channelId: channel.value,
+        roleId: role.value,
+        message: null,
+        accent: null,
+      });
+    } else if (f.kind === "shopItems") {
+      const kind = r.kind === "role" ? "role" : "staff";
+      const role = kind === "role" ? one("role", r.roleId || null) : { value: null };
+      if (typeof role === "string") return role;
+      if (kind === "role" && !role.value) return `${name}: a role item needs the role it gives.`;
+      out.push({
+        id: itemId(r.id),
+        name: str(r.name),
+        description: str(r.description) || null,
+        emoji: str(r.emoji) || null,
+        price: r.price,
+        kind,
+        roleId: role.value,
+        hours: null,
+        stock: null,
+        perMember: null,
+        needsRoleId: null,
+      });
+    } else if (f.kind === "lfgTemplates") {
+      const channels = one("textChannels", Array.isArray(r.channelIds) ? r.channelIds : []);
+      if (typeof channels === "string") return channels;
+      out.push({
+        id: itemId(r.id),
+        name: str(r.name),
+        game: str(r.game) || null,
+        roles: str(r.roles) || null,
+        size: str(r.roles) ? null : (r.size ?? null),
+        wording: { ...DEFAULT_WORDING, group: str(r.group) || DEFAULT_WORDING.group },
+        lifetimeHours: r.lifetimeHours ?? 3,
+        voice: r.voice !== false,
+        channelIds: channels.value,
+        notifyRoleId: null,
+        isDefault: false,
+      });
+    } else if (f.kind === "inviteLabels") {
+      const code = inviteCode(str(r.code));
+      if (!code) return `${name}: "${str(r.code).slice(0, 40)}" isn't an invite code.`;
+      if (!lookup.invite) return `${name}: Garrison couldn't read this server's invites just now.`;
+      if (!lookup.invite(code)) return `${name}: ${code} isn't one of this server's invites.`;
+      const role = one("role", r.roleId || null);
+      if (typeof role === "string") return role;
+      out.push({
+        code,
+        name: str(r.name),
+        color: null,
+        description: null,
+        category: str(r.category) || null,
+        roleId: role.value,
+        partner: null,
+      });
+    } else if (f.kind === "statCounters") {
+      const kind = str(r.kind);
+      if (!(kind in STAT_KINDS))
+        return `${name}: each counter counts one of ${Object.keys(STAT_KINDS).join(", ")}.`;
+      let roleId: string | null = null;
+      if (kind === "role") {
+        // Counting a role's members gives nobody anything, so staff roles are fine here.
+        const id = str(r.roleId);
+        const made = lookup.created(id.toLowerCase());
+        if (made === "role") roleId = standIn(id.toLowerCase());
+        else if (SNOWFLAKE.test(id) && lookup.role(id) && lookup.role(id)?.status !== "fixed")
+          roleId = id;
+        else return `${name}: a role counter needs a role in this server.`;
+      }
+      out.push({
+        key: itemId(r.key),
+        kind,
+        roleId,
+        template: str(r.template),
+        channelId: null,
+      });
+    }
+  }
+  return { value: out };
 }
 
 /** One proposed value in the field's shape, with channel and role refs checked. */
@@ -697,6 +996,11 @@ function shape(
     }
     const unique = [...new Set(out)];
     return { value: MANY.has(f.kind) ? unique : (unique[0] ?? null) };
+  }
+  if (ADDS[f.kind]) return shapeItems(f, value, name, lookup, standIn);
+  if (f.kind === "currency") {
+    const c = (value && typeof value === "object" ? value : {}) as Values;
+    return { value: { name: str(c.name), singular: str(c.singular), icon: str(c.icon) } };
   }
   if (f.kind === "timezone") {
     if (typeof value !== "string") return `${name}: a time zone like America/Chicago.`;
@@ -806,6 +1110,31 @@ export function qmSettingValueText(
   name: (idOrRef: string) => string,
 ): string {
   const kind = spec(module)?.fields[field]?.kind;
+  if (kind && ADDS[kind]) {
+    // An added list has no "before": the saved items stay as they are.
+    if (!Array.isArray(value)) return "";
+    const v = value as Values[];
+    const text = v.map((x) => {
+      if (kind === "alertFeeds")
+        return `${x.provider === "youtube" ? "YouTube" : "Twitch"} ${x.handle} in ${name(String(x.channelId))}${x.roleId ? `, pings ${name(String(x.roleId))}` : ""}`;
+      if (kind === "shopItems")
+        return `${x.name} for ${Number(x.price).toLocaleString("en-US")}${x.roleId ? `, gives ${name(String(x.roleId))}` : ", staff-handled"}`;
+      if (kind === "lfgTemplates")
+        return `${x.name}${x.game ? ` (${x.game})` : ""}: ${x.roles ?? `${x.size ?? 5} players`}`;
+      if (kind === "inviteLabels")
+        return `${x.code} as “${x.name}”${x.roleId ? `, gives ${name(String(x.roleId))}` : ""}`;
+      const template =
+        String(x.template ?? "") ||
+        STAT_KINDS[x.kind as keyof typeof STAT_KINDS]?.template ||
+        "{count}";
+      return `${template.replace("{role}", x.roleId ? name(String(x.roleId)).replace(/^@/, "") : "Role")}`;
+    });
+    return `adds ${text.join("; ")}`;
+  }
+  if (kind === "currency" && value && typeof value === "object") {
+    const c = value as Values;
+    return `${c.icon} ${c.name}`;
+  }
   if (value === null || value === undefined || value === "") return "none";
   if (typeof value === "boolean") return value ? "On" : "Off";
   if (kind === "words" && Array.isArray(value))
@@ -849,6 +1178,17 @@ export function qmSettingValueText(
 /** A change's value with refs swapped for the ids the build made. Only id fields are touched. */
 export function resolveQmSettingRefs(change: QmSettingChange, ids: Map<string, string>): unknown {
   const kind = spec(change.module)?.fields[change.field]?.kind;
+  if (kind && ADDS[kind]) {
+    // Only the id fields: an item's name could match a ref.
+    const ID_KEYS = new Set(["channelId", "roleId", "channelIds"]);
+    const at = (v: unknown): unknown =>
+      typeof v === "string" ? (ids.get(v) ?? v) : Array.isArray(v) ? v.map(at) : v;
+    return Array.isArray(change.to)
+      ? (change.to as Values[]).map((x) =>
+          Object.fromEntries(Object.entries(x).map(([k, v]) => [k, ID_KEYS.has(k) ? at(v) : v])),
+        )
+      : change.to;
+  }
   if (!qmSettingTarget(change.module, change.field) && kind !== "rewards") return change.to;
   const swap = (v: unknown): unknown =>
     typeof v === "string"

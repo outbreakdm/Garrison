@@ -16,6 +16,11 @@ const MODULES: Record<QmSettingsModule, { href: string; on?: string; set?: strin
   ops: { href: "/rally", set: "trackAttendance" },
   escalation: { href: "/watch", set: "rules" },
   rewards: { href: "/ranks", set: "rewards" },
+  alerts: { href: "/beacon", set: "feeds" },
+  economy: { href: "/economy", on: "enabled" },
+  rally: { href: "/rally", set: "templates" },
+  invites: { href: "/invites", set: "labels" },
+  stats: { href: "/stats", on: "enabled" },
 };
 
 const words = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, " ");

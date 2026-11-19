@@ -39,6 +39,7 @@ import {
   type QmWrite,
   qmChargedChanges,
   qmHoldSupplies,
+  qmSettingAdds,
   qmWriteItemId,
   qmWritePatches,
   readSettings,
@@ -518,9 +519,11 @@ export async function continuationFor(
               ? "new_role_menu"
               : w.kind === "ticket_panel"
                 ? "new_ticket_panel"
-                : w.isNew
-                  ? "new_message"
-                  : "edit_message",
+                : w.kind === "giveaway"
+                  ? "new_giveaway"
+                  : w.isNew
+                    ? "new_message"
+                    : "edit_message",
         message_id: w.isNew ? (w.ref ?? "") : (w.messageId ?? ""),
         name: w.isNew ? w.name : "",
         ...cardText(w.card),
@@ -533,6 +536,9 @@ export async function continuationFor(
               emoji: t.emoji ?? "",
             })),
         staff_roles: w.staffRoleIds ?? [],
+        channel: w.giveaway?.channel ?? "",
+        winners: w.giveaway?.winners ?? null,
+        duration_minutes: w.giveaway?.durationMinutes ?? null,
       })),
     };
   const built = build.created.flatMap((c) =>
@@ -669,6 +675,25 @@ export function settingsLookup(guild: Guild, ops: QmOperation[]): QmSettingsLook
   };
 }
 
+/**
+ * The lookup, knowing this server's invite codes when the settings label invites (asked of
+ * Discord only then). Without Manage Server Garrison can't list them, and the check says so.
+ */
+async function withInvites(
+  guild: Guild,
+  lookup: QmSettingsLookup,
+  settings: { module: string }[],
+): Promise<QmSettingsLookup> {
+  if (!settings.some((s) => s.module === "invites")) return lookup;
+  const codes = await guild.invites
+    .fetch()
+    .then(
+      (list) => new Set([...list.keys(), ...(guild.vanityURLCode ? [guild.vanityURLCode] : [])]),
+    )
+    .catch(() => null);
+  return codes ? { ...lookup, invite: (code) => codes.has(code) } : lookup;
+}
+
 const proposalsOf = (changes: QmSettingChange[]): QmSettingProposal[] =>
   changes.map((c) => ({ module: c.module, field: c.field, value: c.to }));
 
@@ -739,7 +764,13 @@ export async function checkDraft(
       })
     : [];
   const [settings, posts] = await Promise.all([
-    checkQmSettings(ctx.db, guild.id, draft.settings, lookup, ent),
+    checkQmSettings(
+      ctx.db,
+      guild.id,
+      draft.settings,
+      await withInvites(guild, lookup, draft.settings),
+      ent,
+    ),
     checkQmPosts(ctx.db, guild.id, draft.posts, lookup, refs),
   ]);
   if (!settings.ok || !posts.ok || !written.ok)
@@ -957,7 +988,7 @@ async function runBuild(ctx: BotContext, guild: Guild, build: QmBuild): Promise<
       ctx.db,
       guild.id,
       proposalsOf(settings),
-      settingsLookup(guild, build.plan),
+      await withInvites(guild, settingsLookup(guild, build.plan), settings),
       ent,
     );
     if (!now.ok)
@@ -1089,7 +1120,7 @@ async function runBuild(ctx: BotContext, guild: Guild, build: QmBuild): Promise<
       return { ok: true, build: claimed, created, failed };
     }
   }
-  if (posts.length) {
+  if (posts.length || build.writes?.some((w) => w.kind === "giveaway")) {
     const failed = await applyPlanPosts(ctx, guild, build, ids, created);
     if (failed) {
       await transitionQmBuild(ctx.db, build.id, "applied", "failed", { error: failed });
@@ -1573,11 +1604,18 @@ async function applyPlanSettings(
       ctx.db,
       guild.id,
       proposalsOf(build.settings ?? []),
-      settingsLookup(guild, build.plan),
+      await withInvites(guild, settingsLookup(guild, build.plan), build.settings ?? []),
       ent,
     );
     if (!checked.ok) throw new SettingsRefused(checked.errors.slice(0, 2).join(" "));
-    const changes = checked.changes.map((c) => ({ ...c, to: resolveQmSettingRefs(c, ids) }));
+    // A field that adds to a list saves the whole list as it is now, with the new items.
+    const changes = checked.changes.map((c) => ({
+      ...c,
+      to: resolveQmSettingRefs(
+        qmSettingAdds(c.module, c.field) ? { ...c, to: checked.full[c.module]?.[c.field] } : c,
+        ids,
+      ),
+    }));
     const modules = [...new Set(changes.map((c) => c.module))];
     for (const module of modules) {
       const patch = Object.fromEntries(
@@ -1674,12 +1712,17 @@ async function applyPlanPosts(
   created: QmCreated[],
 ): Promise<string | null> {
   const posts = build.posts ?? [];
+  const giveaways = (build.writes ?? []).flatMap((w) =>
+    w.kind === "giveaway" && w.giveaway ? [w.giveaway] : [],
+  );
   // Loaded here: the dashboard's request handlers import this file.
-  const [{ doPostRoleMenu }, { postMessageNow }, { doPostTicketPanel }] = await Promise.all([
-    import("../dashboard/actions.js"),
-    import("../dispatch/service.js"),
-    import("../tickets/dashboard.js"),
-  ]);
+  const [{ doPostRoleMenu }, { postMessageNow }, { doPostTicketPanel }, { doStartGiveaway }] =
+    await Promise.all([
+      import("../dashboard/actions.js"),
+      import("../dispatch/service.js"),
+      import("../tickets/dashboard.js"),
+      import("../giveaways/service.js"),
+    ]);
   const handlers: Record<QmPost["kind"], [PostHandler, string]> = {
     role_menu: [doPostRoleMenu, "menuId"],
     ticket_panel: [doPostTicketPanel, "panelId"],
@@ -1701,6 +1744,24 @@ async function applyPlanPosts(
       return `Posted ${done} of ${posts.length}; ${post.name} wasn't posted: ${result.message}`;
     done++;
     const item: QmCreated = { kind: "post", id: channelId, name: `${post.kind}:${post.name}` };
+    created.push(item);
+    await recordQmCreated(ctx.db, build.id, item);
+  }
+  // New giveaways start through the dashboard's own request, so its checks run too.
+  for (const g of giveaways) {
+    const channelId = ids.get(g.channel) ?? g.channel;
+    const result = await doStartGiveaway(ctx, guild, member, {
+      channelId,
+      prize: g.prize,
+      description: g.description,
+      winners: g.winners,
+      durationMinutes: g.durationMinutes,
+    }).catch((error: unknown) => {
+      ctx.logger.warn("Quartermaster giveaway failed", { guildId: guild.id, error });
+      return { ok: false, message: "Discord refused it." };
+    });
+    if (!result.ok) return `The giveaway for ${g.prize} didn't start: ${result.message}`;
+    const item: QmCreated = { kind: "post", id: channelId, name: `giveaway:${g.prize}` };
     created.push(item);
     await recordQmCreated(ctx.db, build.id, item);
   }

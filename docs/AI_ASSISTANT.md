@@ -425,11 +425,28 @@ On Sonnet that's 20x the money.
    moderation powers are refused; Pro parts need Pro. A new text channel can be a forum or,
    on a Community server, an announcement channel (`text_kind`, stored as `textKind`). The
    Features tab lists the new modules. 6 new eval cases, 60 in all.
-   **8B, in progress.** Done: new role menus and new ticket panels as writes
-   (`new_role_menu`, `new_ticket_panel`), checked by `checkRoleMenus` and `checkTicketPanels`,
-   roles by id or by the ref of one the plan makes (never a fixed role; a role with staff powers
-   only as ticket staff), postable by ref in the same plan, undone through Settings history. No
-   migration. Next: stream alerts (`checkAlertFeeds`).
+   **8B, built.** New role menus and new ticket panels are writes (`new_role_menu`,
+   `new_ticket_panel`), checked by `checkRoleMenus` and `checkTicketPanels`: roles by id or by
+   the ref of one the plan makes (never a fixed role; a role with staff powers only as ticket
+   staff), postable by ref in the same plan, undone through Settings history.
+   Stream alerts, the economy (on/off, currency, shop items, staff channel), LFG templates,
+   invite labels and server stats (on/off, counters, category) are settings. Their list fields
+   (`feeds`, `shop`, `templates`, `labels`, `counters`) *add* items: a change holds only the
+   new ones (`from: null`, up to 5), each checked whole with the saved list by the page's own
+   check (`checkAlertFeeds`, `checkEconomy`, `checkTemplates`, `checkInviteLabels`,
+   `checkServerStats`). Applying re-checks against the list as it is then and saves the whole
+   list, so anything added in the meantime stays; Undo puts the old list back. Channel and
+   role refs inside items are swapped for ids by field name only (`channelId`, `roleId`,
+   `channelIds`), never by matching text. Invite labels need a code the server has: the check
+   asks Discord for the invites only when a plan labels one, and `module_settings invites`
+   shows the model `server_invites`. Counting a staff role's members is allowed; shop items,
+   alert pings and invite roles never use one.
+   New giveaways are writes (`new_giveaway`: prize as title, details as body, a channel by id or
+   ref, winners, one of the page's durations), checked by `checkGiveaway` and the running
+   limit, and started last through the dashboard's own `doStartGiveaway`, as the admin who
+   asked. Like posts, Undo doesn't end one (the preview says so). No migration. 4 new eval cases
+   (alerts, an LFG template, a member counter, a giveaway), 64 in all; "how do I set up Twitch
+   alerts" may now set one up or point to the page.
    **8B as planned:** whole new items, each needing its own entry type the way writes have:
    ticket panels and their staff roles, making role menus (today a plan only posts saved
    ones), stream alerts, giveaways, the economy and shop, raid and LFG templates, invite

@@ -5,6 +5,7 @@ import {
   checkQmSettings,
   type QmSettingProposal,
   type QmSettingsLookup,
+  qmSettingValueText,
   resolveQmSettingRefs,
 } from "./qm-settings";
 import { upsertGuild } from "./repo/guilds";
@@ -17,7 +18,7 @@ let exec: (sql: string) => Promise<unknown>;
 let close: () => Promise<void>;
 beforeAll(async () => {
   ({ db, exec, close } = await createTestDb());
-  for (const id of ["s1", "s2", "s3"]) await upsertGuild(db, { id, name: id });
+  for (const id of ["s1", "s2", "s3", "s4"]) await upsertGuild(db, { id, name: id });
   // The bot checks and applies the AI assistant's settings.
   await exec("SET ROLE garrison_bot");
 });
@@ -60,7 +61,7 @@ describe("AI assistant settings", () => {
       lookup({ ideas: "text" }),
       free,
     );
-    expect(out).toEqual({
+    expect(out).toMatchObject({
       ok: true,
       changes: [
         { module: "suggestions", field: "enabled", from: false, to: true },
@@ -127,7 +128,7 @@ describe("AI assistant settings", () => {
       free,
     );
     // Moderation already DMs members; level-ups were "same_channel".
-    expect(out).toEqual({
+    expect(out).toMatchObject({
       ok: true,
       changes: [
         { module: "ranks", field: "enabled", from: false, to: true },
@@ -267,5 +268,181 @@ describe("AI assistant settings for more modules", () => {
       expect.stringMatching(/@Mods has moderation or admin powers/),
       expect.stringMatching(/isn't a time zone/),
     ]);
+  });
+});
+
+describe("AI assistant settings that add items", () => {
+  const invites = {
+    ...lookup({ raiders: "role", lfg: "text" }),
+    invite: (c: string) => c === "abc123",
+  };
+  const pro = entitlements("pro");
+
+  it("adds alerts, shop items, templates, invite labels and counters to what's saved", async () => {
+    // Something already saved stays, and the change holds only what's new.
+    await exec("RESET ROLE");
+    await applySettingsChange(db, {
+      guildId: "s4",
+      module: "alerts",
+      patch: {
+        feeds: [
+          {
+            id: "feed000001",
+            provider: "twitch",
+            handle: "oldstreamer",
+            channelId: TEXT,
+            roleId: null,
+            message: null,
+            accent: null,
+          },
+        ],
+      },
+      userId: "1",
+      username: "owner",
+    });
+    await exec("SET ROLE garrison_bot");
+    const out = await checkQmSettings(
+      db,
+      "s4",
+      [
+        p("alerts", "feeds", [
+          {
+            provider: "twitch",
+            handle: "https://twitch.tv/Shroud",
+            channelId: TEXT,
+            roleId: MEMBERS,
+          },
+        ]),
+        p("economy", "enabled", true),
+        p("economy", "currency", { name: "Crowns", singular: "Crown", icon: "👑" }),
+        p("economy", "shop", [
+          {
+            name: "Raider",
+            price: 500,
+            kind: "role",
+            roleId: "Raiders",
+            emoji: "",
+            description: null,
+          },
+          { name: "Custom color", price: 2000, kind: "staff", roleId: null, emoji: "🎨" },
+        ]),
+        p("economy", "staffChannelId", TEXT),
+        p("rally", "templates", [
+          {
+            name: "Raid night",
+            game: "Destiny 2",
+            roles: null,
+            size: 6,
+            group: "fireteam",
+            lifetimeHours: 3,
+            voice: true,
+            channelIds: ["lfg"],
+          },
+        ]),
+        p("invites", "labels", [
+          { code: "discord.gg/abc123", name: "Reddit", category: "Socials", roleId: null },
+        ]),
+        p("stats", "enabled", true),
+        p("stats", "counters", [
+          { kind: "members", roleId: null, template: "" },
+          { kind: "role", roleId: MODS, template: "{role} online: {count}" },
+        ]),
+      ],
+      invites,
+      pro,
+    );
+    if (!out.ok) throw new Error(out.errors.join(" "));
+    const feeds = out.changes.find((c) => c.field === "feeds");
+    expect(feeds).toMatchObject({
+      from: null,
+      to: [{ provider: "twitch", handle: "shroud", channelId: TEXT, roleId: MEMBERS }],
+    });
+    // The whole list, saved one and new one, is what applying saves.
+    expect(out.full.alerts?.feeds).toHaveLength(2);
+    const shop = out.changes.find((c) => c.field === "shop");
+    expect(shop?.to).toMatchObject([
+      { name: "Raider", price: 500, kind: "role", roleId: "raiders" },
+      { name: "Custom color", kind: "staff", emoji: "🎨" },
+    ]);
+    const ids = new Map([
+      ["raiders", "777777777777777777"],
+      ["lfg", "888888888888888888"],
+    ]);
+    expect(resolveQmSettingRefs(shop as QmSettingChange, ids)).toMatchObject([
+      { roleId: "777777777777777777" },
+      { roleId: null },
+    ]);
+    const templates = out.changes.find((c) => c.field === "templates");
+    expect(templates?.to).toMatchObject([
+      { name: "Raid night", size: 6, wording: { group: "fireteam" }, channelIds: ["lfg"] },
+    ]);
+    expect(resolveQmSettingRefs(templates as QmSettingChange, ids)).toMatchObject([
+      { channelIds: ["888888888888888888"] },
+    ]);
+    expect(out.changes.find((c) => c.field === "labels")?.to).toMatchObject([
+      { code: "abc123", name: "Reddit", category: "Socials" },
+    ]);
+    // Counting a staff role's members is fine: it gives nobody anything.
+    expect(out.changes.find((c) => c.field === "counters")?.to).toMatchObject([
+      { kind: "members", template: "Members: {count}" },
+      { kind: "role", roleId: MODS },
+    ]);
+    const name = (id: string) => (id === TEXT ? "#general" : id === MEMBERS ? "@Members" : id);
+    expect(qmSettingValueText("alerts", "feeds", feeds?.to, name)).toBe(
+      "adds Twitch shroud in #general, pings @Members",
+    );
+    expect(qmSettingValueText("alerts", "feeds", null, name)).toBe("");
+  });
+
+  it("refuses what the pages refuse", async () => {
+    const out = await checkQmSettings(
+      db,
+      "s4",
+      [
+        p("alerts", "feeds", [{ provider: "kick", handle: "x", channelId: TEXT, roleId: null }]),
+        p("economy", "shop", [{ name: "Mod", price: 5, kind: "role", roleId: MODS }]),
+        p("invites", "labels", [
+          { code: "zzz999", name: "Elsewhere", category: null, roleId: null },
+        ]),
+      ],
+      invites,
+      free,
+    );
+    expect(!out.ok && out.errors).toEqual([
+      expect.stringMatching(/twitch or youtube/),
+      expect.stringMatching(/@Mods has moderation or admin powers/),
+      expect.stringMatching(/zzz999 isn't one of this server's invites/),
+    ]);
+    // The page's own check: template names are plain.
+    const badName = await checkQmSettings(
+      db,
+      "s4",
+      [p("rally", "templates", [{ name: "@everyone", roles: null, size: 5, channelIds: [] }])],
+      lookup(),
+      free,
+    );
+    expect(!badName.ok && badName.errors[0]).toMatch(/names use letters/);
+    const noInvites = await checkQmSettings(
+      db,
+      "s4",
+      [p("invites", "labels", [{ code: "abc123", name: "Reddit", category: null, roleId: null }])],
+      lookup(),
+      free,
+    );
+    expect(!noInvites.ok && noInvites.errors[0]).toMatch(/couldn't read this server's invites/);
+    const tooMany = await checkQmSettings(
+      db,
+      "s4",
+      [
+        p(
+          "stats",
+          "counters",
+          Array.from({ length: 4 }, () => ({ kind: "members" })),
+        ),
+      ],
+      lookup(),
+      free,
+    );
+    expect(!tooMany.ok && tooMany.errors[0]).toMatch(/counters on Free/);
   });
 });
