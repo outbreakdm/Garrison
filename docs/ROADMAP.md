@@ -7,6 +7,7 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
+- **AI assistant v2 (planned 2026-11-19), next up:** `docs/AI_ASSISTANT.md`, "Assistant v2". Owner chose Haiku (Fast) and Sonnet (Smart, Pro and Agency only), supplies at each model's real cost, every coverage gap (writing, more modules, insight, how-to help), and a "Your server" workspace with hand edits (rename, drag to reorder) and an Apply build button. Phase 1 first: a message's hold assumes 12,000 input tokens a round but nothing enforces it, so a big server can cost more than it held. Nothing built yet.
 - **Optimize and polish (2026-11-17):** 15 fewer database queries on every dashboard page (the
   menu's module settings in one query), faster AI assistant paint, no layout shift on Settings,
   24 px targets, unused CSS removed (see the Log). To run the Worker beside the database, set the
@@ -1266,3 +1267,4 @@ Decided (2026-11-12, owner):
   time (postgres-js lets a running transaction finish first; checked against Postgres 16). If the
   drops continue, move the bot's DATABASE_URL to the session pooler (port 5432), which Supabase
   recommends for long-running servers.
+- 2026-11-19: Planned AI assistant v2 (`docs/AI_ASSISTANT.md`, "Assistant v2"; analysis in `docs/haiku-sonnet-split.html`). Eight phases: a cost ceiling that holds on any model and server size, the Your server workspace (hand edits, Apply build in the panel, history as a tab), a Fast/Smart model picker (Sonnet on Pro and Agency), an eval set, how-to help, server insight, writing content, more modules. Found: the 12,000-token input limit behind every hold isn't enforced. Nothing built yet.

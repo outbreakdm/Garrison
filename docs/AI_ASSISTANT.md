@@ -229,3 +229,116 @@ then couldn't do (the hidden 6-order cap), and saying wrong things ("bots can't 
 - Still not possible: creating forum, announcement or stage channels; giving a role to a
   specific member; anything with admin or moderation powers; moderation itself.
 
+
+## Assistant v2: model choice, a cost ceiling that holds, wider coverage (planned 2026-11-19)
+
+Owner's goals: a much better assistant, a choice of model for admins, supplies that adjust
+to the model so Garrison can never lose money on AI, and an assistant that can handle the
+whole range of what a Discord community asks. Analysis behind it:
+`docs/haiku-sonnet-split.html` (production usage, 10 calls, 15–18 Nov).
+
+**Owner decisions (2026-11-19):**
+- Models: **Haiku 5.5 ("Fast", the default) and Sonnet 5.5 ("Smart")**. No Opus.
+- Sonnet is **Pro and Agency only**; Free stays on Haiku. Supply packs cover either model.
+- Supplies stay worth $0.001 of AI at the model's real price, so a Sonnet message costs
+  about 15–20x a Haiku one in supplies and the pool's dollar ceiling holds on any model.
+- Close every coverage gap: writing content, setting up more modules, server insight and
+  Garrison how-to help.
+
+**The hole found (fix first):** a message's hold assumes at most 12,000 input tokens a
+round (`QM_MAX_INPUT_TOKENS`), but nothing enforces it. The snapshot (150 channels, every
+role with its details), 16 turns of history and up to 6,000 characters per tool result
+are sent as they are, and a round 2 or 3 re-sends everything before it. One small test
+server already wrote 11,280 tokens to the cache in one message. A big server can cost more
+than its hold, and `finishAiCall` charges the real cost, so a pool can go past its ceiling.
+On Sonnet that's 20x the money.
+
+### Phases
+
+1. **A ceiling that holds.** Count each round's input before sending it (`count_tokens`,
+   free) and price it on the model it will run on. Size the hold from the real input plus
+   the output cap, not from a guess. Before each further round, check that what's left of
+   the hold covers that round's worst case. If it doesn't, answer now (`tool_choice: none`)
+   with `max_tokens` cut to fit. Trim to fit, oldest first: history turns, then tool
+   results, then snapshot detail. A model that isn't in `MODEL_PRICES` is refused instead of
+   priced as Opus. Price Sonnet's cache reads at its real 0.05x. Tests: a message can never
+   be charged more than it held, on either model or any server size. *Medium.*
+2. **The Your server workspace.** The right panel is always "Your server": the live server,
+   with every pending change marked in place (new, changed, moved, deleted), whether the
+   assistant drafted it or the admin made it by hand. Owner's request (2026-11-19).
+   - **Apply build**, top right of the panel's head, appears once anything is pending and
+     says how much ("Apply 7 changes"). Discard sits beside it. While a build runs, the
+     button becomes its progress ("Building 4 of 7"), then "Undo" for a minute after.
+   - **Hand edits, no AI:** rename a channel, category or role in place (click the name or
+     press Enter on it), and drag to reorder channels in a category, move a channel to
+     another category, reorder categories, and reorder roles below Garrison's own. Each
+     row also has Move up and Move down for keyboard and touch. Locked rows (staff and bot
+     roles, roles above Garrison, Discord's own channels) can't be dragged and say why.
+   - Hand edits go into the same pending draft as the assistant's, as `edits` and `order`
+     entries, so they share the checks, the preview, Apply and Undo. They're marked as the
+     admin's and kept when the assistant redrafts; the assistant sees them in
+     <previous_plan> and is told never to drop them. They cost no supplies (no AI ran),
+     with a cap of 50 a build for Discord's rate limits.
+   - Before Apply, Garrison checks the draft against the server as it is now. If someone
+     changed a drafted item in Discord meanwhile, that row shows the conflict, and Apply
+     waits until it's kept or dropped.
+   - **Moved off the page's bottom:** Build history becomes a third page tab (Chat, History,
+     Server templates), each row with Undo and "Use as template". The requests list goes
+     away: a running build shows in the Apply button and in the panel's rows, and a failed
+     request shows as a notice in the panel with Retry.
+   - The panel's footer rules text is updated, since a plan can now rename, edit and delete.
+   *Large.*
+3. **Model picker and chat.** A Fast / Smart switch in the composer. Smart is Pro and
+   Agency only (Free sees it locked, with Upgrade). The model is stored on the message and on
+   `ai_usage`. A thread can switch models, which loses the prompt cache for one message.
+   Sonnet runs at effort `medium` with the server-side fallback; Haiku runs questions at `low`
+   once the eval shows answers hold up. `QM_MODEL` stays as the operator's default. With it,
+   owner's picks of 2026-11-19:
+   - **Price before sending:** the composer shows what the message will hold and its likely
+     cost on the chosen model, and "about N messages left" for that model. Smart asks once
+     before a message that could use more than 100 supplies.
+   - **Progress while it thinks:** each step shows as it happens ("Looking at your
+     settings", "Drafting 12 changes", "Checking it"), written by the bot to the chat
+     request as it goes and read by the page's existing refresh.
+   - **Past conversations:** a list of earlier threads (first message, when, how many
+     drafts) to reopen, beside New conversation.
+   *Medium.*
+4. **An eval set.** Before adding powers: about 40 real-style requests across design, edits
+   and permissions, server questions, settings, posts, how-to, writing, insight, refusals
+   (moderation, admin powers, anti-nuke, billing) and injection in names. Score each on a
+   valid draft first try, doing what was asked, refusing what it must, tokens and seconds.
+   It runs on the stub in CI, and on both real models on request (about $3 a run, needs
+   `ANTHROPIC_API_KEY`). Every later phase must keep or raise its scores. With it (owner's
+   pick): **thumbs up or down on every reply**, with an optional note, stored with the
+   message; a thumbs-down reply can be added to the eval set, so what real admins ask keeps
+   testing the assistant. *Medium.*
+5. **Garrison how-to help.** A `garrison_help` read tool that returns the real help text for
+   a feature (what it does, where it lives, which plan has it, how to set it up), from one
+   help file the dashboard can show too. Replies may run longer and use short lists when the
+   admin asks how something works or asks for written content. *Small.*
+6. **Server insight.** Read tools for what the dashboard already shows: member counts and
+   joins and leaves over time, activity and top channels, mod cases and warnings by week,
+   open tickets, server health checks, leveling top members, giveaways and raids coming up.
+   Totals and lists the dashboard shows only; nothing new about any one member. *Medium.*
+7. **Writing content.** A plan can create and edit saved messages and embeds (Messages),
+   welcome and leave card text, and a rules or info channel's message, written by the model
+   and shown in full before it's applied. Everything goes through the dashboard's own checks.
+   Posting still needs the admin's yes. *Medium.*
+8. **More modules.** Extend `QM_SETTINGS` and the proposal tools to tickets (panels, staff
+   roles), role menus (create, not just post), anti-raid and verification (never anti-nuke),
+   stream alerts, giveaways, economy, raid and LFG templates, the warning ladder, level
+   rewards and invite roles. Create forum and announcement channels. Each module uses its
+   page's own check function. *Large; split by module.*
+
+Each phase ends with typecheck, tests, the eval (from phase 4) and a check on the local
+preview, and is committed before the next starts. Deploys only when the owner says so.
+
+
+### Also proposed, not scheduled (2026-11-19)
+
+The owner scheduled progress, price before sending, past conversations (phase 3) and thumbs
+(phase 4). Still open:
+
+- **Per-item revert** in the workspace: drop one pending change without asking the assistant.
+- **Who may apply.** A setting for whether dashboard members without Manage Server can apply a
+  build or only draft one.

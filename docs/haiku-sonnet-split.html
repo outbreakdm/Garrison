@@ -1,0 +1,240 @@
+<title>Haiku or Sonnet for Drafts</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&display=swap">
+<style>
+/* Layout: one reading column of findings, each finding = claim, then its chart or table, then the caveat. */
+:root{
+  --bg:#f7f8fa; --panel:#ffffff; --ink:#111318; --ink-2:#4a4f5a; --muted:#7a808c; --line:#e2e5eb;
+  --haiku:#2a78d6; --sonnet:#eb6834; --warn:#9a5b00; --warn-bg:#fff4e0; --good:#0f7a43;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121418; --panel:#1b1e24; --ink:#eef0f4; --ink-2:#b9bec8; --muted:#8a909c; --line:#2c3039;
+  --haiku:#3987e5; --sonnet:#d95926; --warn:#f0b450; --warn-bg:#2b2112; --good:#4cc98a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121418; --panel:#1b1e24; --ink:#eef0f4; --ink-2:#b9bec8; --muted:#8a909c; --line:#2c3039;
+  --haiku:#3987e5; --sonnet:#d95926; --warn:#f0b450; --warn-bg:#2b2112; --good:#4cc98a; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:15px/1.6 var(--f-body);margin:0}
+.wrap{max-width:900px;margin:0 auto;padding-block:40px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:40px}
+h1,h2{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.1}
+h2{font-size:22px;line-height:1.25}
+p{margin:0;max-width:68ch;color:var(--ink-2)}
+p strong{color:var(--ink)}
+.eyebrow{font:500 12px/1 var(--f-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+section{display:grid;gap:14px}
+.lede{display:grid;gap:14px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:4px}
+.tile .v{font:600 26px/1.1 var(--f-display);font-variant-numeric:tabular-nums}
+.tile .k{font-size:13px;color:var(--ink-2)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:12px;min-width:0}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:right;padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font:500 12px/1.3 var(--f-mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td.mono{font-family:var(--f-mono);font-size:13px}
+.pill{display:inline-block;font:500 11px/1 var(--f-mono);padding:4px 7px;border-radius:99px;border:1px solid var(--line);color:var(--ink-2)}
+.pill.d{color:var(--sonnet);border-color:currentColor}
+.pill.q{color:var(--haiku);border-color:currentColor}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--ink-2)}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px;background:var(--c)}
+.ctrl{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:14px;color:var(--ink-2)}
+.ctrl input[type=range]{flex:1 1 200px;accent-color:var(--haiku)}
+.ctrl output{font:500 14px var(--f-mono);color:var(--ink);min-width:4ch}
+svg text{fill:var(--ink-2);font:12px var(--f-body)}
+svg .val{fill:var(--ink);font:500 12px var(--f-mono)}
+.note{background:var(--warn-bg);border-radius:10px;padding:12px 14px;font-size:14px;color:var(--ink)}
+.note b{color:var(--warn)}
+ol.opts{margin:0;padding-left:20px;display:grid;gap:10px;max-width:72ch;color:var(--ink-2)}
+ol.opts b{color:var(--ink)}
+#tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);font:12px/1.4 var(--f-mono);padding:6px 8px;border-radius:6px;opacity:0;transition:opacity .1s;max-width:240px;z-index:5}
+.src{font-size:12.5px;color:var(--muted)}
+.src code{font-family:var(--f-mono)}
+:focus-visible{outline:2px solid var(--haiku);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){#tip{transition:none}}
+</style>
+
+<div class="wrap">
+  <header class="lede">
+    <div class="eyebrow">Garrison · AI assistant · 19 Nov 2026</div>
+    <h1>Haiku for questions, Sonnet for drafts</h1>
+    <p>Questions already run on Haiku, because <strong>everything</strong> does today (<code>QM_MODEL</code> defaults to <code>claude-haiku-5-5</code>). So the proposal comes down to one change: <strong>moving drafts to Sonnet</strong>. With the same token counts, a Sonnet draft costs about <strong>20× more</strong> than a Haiku draft. Your supplies system means Garrison's margin stays protected, so admins pay the difference in fewer messages instead. Questions on Haiku also aren't cheaper than drafts: thinking is most of the output either way.</p>
+    <div class="tiles">
+      <div class="tile"><div class="v">$0.0022</div><div class="k">Average Haiku draft in production</div></div>
+      <div class="tile"><div class="v" style="color:var(--sonnet)">$0.043</div><div class="k">The same drafts priced on Sonnet (19.9×)</div></div>
+      <div class="tile"><div class="v">~1,060 → ~100</div><div class="k">Messages in a Pro pool (3,000 supplies) at today's mix</div></div>
+      <div class="tile"><div class="v">9–22 s</div><div class="k">Haiku reply time today, median 19 s</div></div>
+    </div>
+  </header>
+
+  <section>
+    <div class="eyebrow">What production shows</div>
+    <h2>Six chat turns and four one-shot builds, all on Haiku</h2>
+    <p>Every AI call so far, from <code>ai_usage</code> and <code>qm_messages</code> in the Supabase project. Reply time is the gap between the admin's message and the assistant's reply, so it includes the bot's queue as well as the model. Sonnet costs use the same tokens at Sonnet 5.5 list prices.</p>
+    <div class="panel scroll">
+      <table>
+        <thead><tr><th>Chat turn</th><th>Kind</th><th>Input</th><th>Cache read / write</th><th>Output</th><th>Reply time</th><th>Haiku cost</th><th>On Sonnet</th></tr></thead>
+        <tbody id="turns"></tbody>
+      </table>
+    </div>
+    <p class="src">One-shot builds (<code>/qm build</code>): 4 calls, averaging 3,821 input and 2,969 output tokens. Haiku cost $0.0019 each; the same on Sonnet is $0.037. Of the 8 drafts made, 5 were applied and 3 were replaced by a revision. None failed Garrison's checks.</p>
+    <div class="note"><b>Thin data.</b> That's 10 calls, all between 15 and 18 November, almost certainly your own testing. They show the token shape. They don't show what real admins ask, or how often.</div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Cost</div>
+    <h2>What 1,000 chat messages cost under each routing</h2>
+    <p>"Haiku first, then Sonnet" lets Haiku answer, and re-runs the message on Sonnet only when Haiku drafts. That's the simplest way to know a message is a draft, but each draft pays for both models. Move the slider to change how many messages draft a plan (production shows 4 of 6).</p>
+    <div class="panel">
+      <div class="ctrl"><label for="mix">Messages that draft a plan</label><input id="mix" type="range" min="0" max="100" step="1" value="67"><output id="mixv">67%</output></div>
+      <svg id="costChart" viewBox="0 0 640 230" role="img" aria-label="Cost per 1,000 messages by routing"></svg>
+      <div class="legend"><span style="--c:var(--haiku)">Haiku share of the cost</span><span style="--c:var(--sonnet)">Sonnet share of the cost</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Supplies</div>
+    <h2>Admins pay for it in messages</h2>
+    <p>A supply is $0.001 of AI, charged at what the call really cost, so Garrison's margin holds whatever model you use. What changes is how far a pool goes. A Sonnet message also <strong>holds 270 supplies</strong> while it runs (three rounds at the output cap), against 14 on Haiku. That's more than a Free person's whole 200-supply month, so every Free message on Sonnet would drop to two rounds or a short answer.</p>
+    <div class="panel scroll">
+      <table>
+        <thead><tr><th>Routing, at the slider's mix</th><th>Avg supplies a message</th><th>Pro pool (3,000)</th><th>Free pool (200)</th></tr></thead>
+        <tbody id="pool"></tbody>
+      </table>
+    </div>
+    <p class="src">Counts only the AI part of each message. A change a plan makes costs 1 supply on any model, so it's left out. Supply figures use <code>costMicros</code> as coded, which prices cache reads at 0.1× input. Sonnet 5.5 actually bills cache reads at 0.05×, so the code overcharges those slightly.</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">Time</div>
+    <h2>Reply time follows output length, plus a fixed wait</h2>
+    <p>Across the six turns, a straight-line fit gives about <strong>9.4 s that doesn't depend on length</strong> (queue, first token, the bot's own work), plus about <strong>2.6 ms per output token</strong>. Drafts and questions sit on the same line, because thinking tokens count like any others. Sonnet's speed for this prompt <strong>hasn't been measured</strong>. The slider below is an assumption for you to set, not data.</p>
+    <div class="panel">
+      <svg id="latChart" viewBox="0 0 640 260" role="img" aria-label="Reply seconds against output tokens"></svg>
+      <div class="legend"><span style="--c:var(--haiku)">Question</span><span style="--c:var(--sonnet)">Draft</span></div>
+    </div>
+    <div class="panel">
+      <div class="ctrl"><label for="spd">Assumed Sonnet speed vs Haiku (unmeasured)</label><input id="spd" type="range" min="20" max="120" step="5" value="50"><output id="spdv">50%</output></div>
+      <div class="scroll"><table>
+        <thead><tr><th>A typical draft (2,700 output tokens)</th><th>Reply time</th><th>vs today</th></tr></thead>
+        <tbody id="lat"></tbody>
+      </table></div>
+      <p class="src">The fixed 9.4 s is the same on any model. The faster path for questions is a lower reasoning effort: they run at <code>medium</code> today, and one 59-character question wrote 3,708 output tokens and took 19.6 s.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">How a message would be routed</div>
+    <h2>The model decides to draft inside the call</h2>
+    <p>Today one structured call returns a reply and, optionally, a plan (<code>planner.ts</code>, <code>chat()</code>). To use Sonnet only for drafts, Garrison has to know ahead of time, or find out afterwards.</p>
+    <ol class="opts">
+      <li><b>Haiku first, Sonnet on a draft.</b> Questions cost nothing extra. A draft pays for both models and waits for both calls back to back, and the prompt cache doesn't carry over, because caches belong to one model.</li>
+      <li><b>A small routing call.</b> A short, low-effort Haiku call labels the message first. It adds a round trip and a tiny cost to every message, and labels some messages wrong.</li>
+      <li><b>The admin chooses.</b> A "Draft it" button, or a draft mode, sends the message to Sonnet. It costs nothing and adds no wait, but it changes how the chat works.</li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="eyebrow">Recommendation</div>
+    <h2>Keep Haiku for drafts until an eval shows it falling short</h2>
+    <p>Production shows no quality problem with Haiku: no draft failed Garrison's checks, and 5 of 8 were applied. Switching drafts to Sonnet means roughly 13× the AI per message and about a tenth of the messages in a Pro pool, and it probably makes drafts slower. Two cheaper steps come first:</p>
+    <ol class="opts">
+      <li><b>Run questions at low effort on Haiku.</b> It's one setting change, and since output is most of the reply time, it should shorten question replies. It needs a quick check that answers stay good.</li>
+      <li><b>Measure before deciding.</b> Run 20 realistic messages on both models, 3 times each, and record reply time, output tokens, whether the draft passes Garrison's checks, and whether it does what was asked. That's about <b>$2.80</b> of API calls, and needs an Anthropic API key, which this machine doesn't have.</li>
+    </ol>
+  </section>
+
+  <p class="src">Sources: Supabase project "Garrison", tables <code>ai_usage</code>, <code>qm_messages</code> and <code>qm_builds</code>, read 19 Nov 2026. Prices per 1M tokens: Haiku 5.5 $0.10 in / $0.50 out, Sonnet 5.5 $2 in / $10 out, cache writes at 1.25× input, cache reads $0.01 (Haiku) and $0.10 (Sonnet). Pools from <code>docs/AI_SUPPLIES_V2.md</code>.</p>
+</div>
+<div id="tip" role="status" aria-live="polite"></div>
+
+<script>
+const T=[
+ {at:"15 Nov 05:55",d:1,i:4811,cr:0,cw:0,o:3714,s:19.3},
+ {at:"15 Nov 05:56",d:1,i:6146,cr:0,cw:0,o:5193,s:21.7},
+ {at:"15 Nov 18:02",d:1,i:9264,cr:0,cw:0,o:2812,s:18.7},
+ {at:"15 Nov 23:21",d:0,i:6,cr:7815,cw:8823,o:487,s:12.3},
+ {at:"15 Nov 23:22",d:1,i:4,cr:7517,cw:448,o:1189,s:8.9},
+ {at:"18 Nov 00:09",d:0,i:4,cr:0,cw:11280,o:3708,s:19.6}];
+const P={h:{i:.1,o:.5,cw:.125,cr:.01},s:{i:2,o:10,cw:2.5,cr:.1},sc:{i:2,o:10,cw:2.5,cr:.2}};
+const cost=(t,m)=>t.i*P[m].i+t.cr*P[m].cr+t.cw*P[m].cw+t.o*P[m].o; // micros
+const fmt$=m=>"$"+(m/1e6).toFixed(m<1e4?4:3);
+const n=x=>x.toLocaleString("en-US");
+document.getElementById("turns").innerHTML=T.map(t=>`<tr><td class="mono">${t.at}</td><td><span class="pill ${t.d?"d":"q"}">${t.d?"draft":"question"}</span></td><td>${n(t.i)}</td><td>${n(t.cr)} / ${n(t.cw)}</td><td>${n(t.o)}</td><td>${t.s.toFixed(1)} s</td><td>${fmt$(cost(t,"h"))}</td><td>${fmt$(cost(t,"s"))}</td></tr>`).join("");
+
+const avg=(a,f)=>a.reduce((x,t)=>x+f(t),0)/a.length;
+const D=T.filter(t=>t.d),Q=T.filter(t=>!t.d);
+const qH=avg(Q,t=>cost(t,"h")),dH=avg(D,t=>cost(t,"h")),qS=avg(Q,t=>cost(t,"s")),dS=avg(D,t=>cost(t,"s"));
+const sup=(a,m)=>avg(a,t=>Math.ceil(cost(t,m)/1000));
+const qHs=sup(Q,"h"),dHs=sup(D,"h"),qSs=sup(Q,"sc"),dSs=sup(D,"sc");
+const routes=[
+ {name:"All Haiku (today)",h:d=>(1-d)*qH+d*dH,s:()=>0,sup:d=>(1-d)*qHs+d*dHs},
+ {name:"Haiku questions, Sonnet drafts",h:d=>(1-d)*qH,s:d=>d*dS,sup:d=>(1-d)*qHs+d*dSs},
+ {name:"Haiku first, then Sonnet",h:d=>(1-d)*qH+d*dH,s:d=>d*dS,sup:d=>(1-d)*qHs+d*(dHs+dSs)},
+ {name:"All Sonnet",h:()=>0,s:d=>(1-d)*qS+d*dS,sup:d=>(1-d)*qSs+d*dSs}];
+
+const tip=document.getElementById("tip");
+function showTip(e,html){tip.innerHTML=html;tip.style.opacity=1;const x=Math.min(e.clientX+12,innerWidth-250);tip.style.left=x+"px";tip.style.top=(e.clientY+12)+"px"}
+function hideTip(){tip.style.opacity=0}
+const NS="http://www.w3.org/2000/svg";
+function el(tag,attrs,parent,text){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;parent.appendChild(e);return e}
+
+function drawCost(d){
+  const svg=document.getElementById("costChart");svg.innerHTML="";
+  const L=210,R=560,top=14,rowH=50,bh=24;
+  const vals=routes.map(r=>({h:r.h(d)*1000,s:r.s(d)*1000}));
+  const max=Math.max(...vals.map(v=>v.h+v.s),1);
+  const nice=[5,10,20,25,50,100].find(x=>x*1e6>=max)||100;
+  const sx=v=>L+(v/(nice*1e6))*(R-L);
+  for(let k=0;k<=5;k++){const v=nice*k/5;const x=sx(v*1e6);el("line",{x1:x,x2:x,y1:top-4,y2:top+rowH*4-14,stroke:"var(--line)"},svg);el("text",{x,y:top+rowH*4+2,"text-anchor":"middle"},svg,"$"+v)}
+  routes.forEach((r,i)=>{
+    const y=top+i*rowH,v=vals[i];
+    el("text",{x:L-10,y:y+bh/2+4,"text-anchor":"end"},svg,r.name);
+    const w1=Math.max(0,sx(v.h)-L), w2=Math.max(0,sx(v.h+v.s)-sx(v.h));
+    const tipHtml=`${r.name}<br>Haiku ${fmt$(v.h)} · Sonnet ${fmt$(v.s)}<br>Total ${fmt$(v.h+v.s)} per 1,000 messages`;
+    const g=el("g",{tabindex:0},svg);
+    if(w1>0)el("rect",{x:L,y,width:w1,height:bh,rx:3,fill:"var(--haiku)"},g);
+    if(w2>0)el("rect",{x:sx(v.h)+(w1>0?2:0),y,width:Math.max(0,w2-(w1>0?2:0)),height:bh,rx:3,fill:"var(--sonnet)"},g);
+    el("rect",{x:L,y:y-8,width:R-L,height:bh+16,fill:"transparent"},g);
+    g.addEventListener("mousemove",e=>showTip(e,tipHtml));g.addEventListener("mouseleave",hideTip);
+    const tot=v.h+v.s;el("text",{x:sx(tot)+8,y:y+bh/2+4,class:"val"},svg,"$"+(tot/1e6).toFixed(2));
+  });
+  el("text",{x:(L+R)/2,y:top+rowH*4+20,"text-anchor":"middle"},svg,"Cost per 1,000 chat messages (USD)");
+  document.getElementById("pool").innerHTML=routes.map(r=>{const s=r.sup(d);return `<tr><td>${r.name}</td><td>${s.toFixed(1)}</td><td>${n(Math.floor(3000/s))} messages</td><td>${n(Math.floor(200/s))} messages</td></tr>`}).join("");
+}
+const mix=document.getElementById("mix"),mixv=document.getElementById("mixv");
+mix.addEventListener("input",()=>{mixv.textContent=mix.value+"%";drawCost(mix.value/100)});
+drawCost(.67);
+
+// latency scatter + fit
+const mx=avg(T,t=>t.o),my=avg(T,t=>t.s);
+const b=T.reduce((a,t)=>a+(t.o-mx)*(t.s-my),0)/T.reduce((a,t)=>a+(t.o-mx)**2,0),a0=my-b*mx;
+(function(){
+  const svg=document.getElementById("latChart");
+  const L=48,R=620,top=12,B=214,xmax=6000,ymax=25;
+  const sx=v=>L+v/xmax*(R-L),sy=v=>B-v/ymax*(B-top);
+  for(let v=0;v<=25;v+=5){el("line",{x1:L,x2:R,y1:sy(v),y2:sy(v),stroke:"var(--line)"},svg);el("text",{x:L-8,y:sy(v)+4,"text-anchor":"end"},svg,v+" s")}
+  for(let v=0;v<=6000;v+=1000)el("text",{x:sx(v),y:B+18,"text-anchor":"middle"},svg,v?n(v):"0");
+  el("text",{x:(L+R)/2,y:B+38,"text-anchor":"middle"},svg,"Output tokens in the reply, thinking included");
+  el("line",{x1:sx(0),y1:sy(a0),x2:sx(xmax),y2:sy(a0+b*xmax),stroke:"var(--muted)","stroke-width":2,"stroke-dasharray":"5 4"},svg);
+  el("text",{x:sx(4200),y:sy(a0+b*4200)-26,"text-anchor":"middle"},svg,`fit: ${a0.toFixed(1)} s + ${(b*1000).toFixed(1)} ms per token`);
+  T.forEach(t=>{const g=el("g",{tabindex:0},svg);
+    el("circle",{cx:sx(t.o),cy:sy(t.s),r:6,fill:t.d?"var(--sonnet)":"var(--haiku)",stroke:"var(--panel)","stroke-width":2},g);
+    el("circle",{cx:sx(t.o),cy:sy(t.s),r:16,fill:"transparent"},g);
+    const h=`${t.d?"Draft":"Question"} · ${t.at}<br>${n(t.o)} output tokens · ${t.s} s`;
+    g.addEventListener("mousemove",e=>showTip(e,h));g.addEventListener("mouseleave",hideTip);});
+})();
+function drawLat(r){
+  const tok=2700,h=a0+b*tok,s=a0+b*tok/r;
+  const rows=[["Haiku (today, measured fit)",h],["Sonnet",s],["Haiku first, then Sonnet",h+s]];
+  document.getElementById("lat").innerHTML=rows.map(([k,v],i)=>`<tr><td>${k}</td><td>${v.toFixed(1)} s</td><td>${i?"+"+(v-h).toFixed(1)+" s":"—"}</td></tr>`).join("");
+}
+const spd=document.getElementById("spd"),spdv=document.getElementById("spdv");
+spd.addEventListener("input",()=>{spdv.textContent=spd.value+"%";drawLat(spd.value/100)});
+drawLat(.5);
+</script>
