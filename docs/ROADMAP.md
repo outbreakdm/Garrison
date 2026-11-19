@@ -1335,3 +1335,13 @@ Decided (2026-11-12, owner):
   builds; not checked in a browser, and the eval hasn't run on the real models. No migration.
   Not deployed. 8B (whole new items: role menus, ticket panels, alerts, giveaways, economy,
   templates, invite labels, stats counters) is planned in docs/AI_ASSISTANT.md.
+- 2026-11-19: AI assistant v2 checked in a browser (local dashboard against a fresh Postgres with
+  all 80 migrations, which apply cleanly, and the e2e stand-in for Discord; no bot running). The
+  Your server panel, Apply N changes and Discard, renames and moves in place, the announcement
+  channel detail, the write preview, the Smart badge, line breaks, thumbs, the History tab and
+  Help all render. Fixed: the row's details link covered the pencil and Move buttons (clicks
+  opened details instead), the Fast/Smart switch ran under Send, and "Saving…" squeezed the
+  panel head. A rename and a move were queued as `qm_edit` requests with the right payloads; the
+  bot side of them is covered by tests, not run here. The console's inline-style CSP messages
+  come from the Next dev server (they show on the new Help page too); the production-build CSP
+  check is the e2e suite's.

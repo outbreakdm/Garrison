@@ -4278,11 +4278,17 @@ a.item-tile:not([open]) > .panel__summary {
   flex: 1;
 }
 .sp-tools {
+  /* Above the link that opens the row's details. */
+  position: relative;
+  z-index: 1;
   display: flex;
   flex: none;
   gap: 1px;
 }
 .sp-tool {
+  /* Above the link that opens the row's details. */
+  position: relative;
+  z-index: 1;
   display: grid;
   flex: none;
   place-items: center;
@@ -4318,6 +4324,9 @@ a.item-tile:not([open]) > .panel__summary {
   }
 }
 .sp-rename {
+  /* Above the link that opens the row's details. */
+  position: relative;
+  z-index: 1;
   width: 100%;
   min-width: 0;
   height: 24px;

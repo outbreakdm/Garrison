@@ -42,7 +42,7 @@ function Tag({
 /** In the plan panel each row opens its details (a :target section the panel shows). */
 function Open({ id, name }: { id: string; name: string }) {
   return (
-    <a className="sp-row__open" href={`#${detailId(id)}`}>
+    <a className="sp-row__open" href={`#${detailId(id)}`} draggable={false}>
       <span className="sr-only">Details for {name}</span>
     </a>
   );

@@ -38,6 +38,7 @@ function remember() {
 }
 
 export function ModelPicker({
+  form,
   initial,
   smartAllowed,
   fast,
@@ -45,6 +46,8 @@ export function ModelPicker({
   suppliesLeft,
   upgradeHref,
 }: {
+  /** The composer form's id: the switch sits outside it, under the message box. */
+  form: string;
   initial: "fast" | "smart";
   smartAllowed: boolean;
   fast: ModelPrice;
@@ -66,16 +69,16 @@ export function ModelPicker({
 
   // A first Smart message asks before it goes.
   useEffect(() => {
-    const form = root.current?.closest("form");
-    if (!form) return;
+    const composer = document.getElementById(form);
+    if (!(composer instanceof HTMLFormElement)) return;
     const onSubmit = (e: SubmitEvent) => {
       if (model !== "smart" || smart.hold <= ASK_ABOVE || confirmedBefore()) return;
       e.preventDefault();
       setAsking(true);
     };
-    form.addEventListener("submit", onSubmit);
-    return () => form.removeEventListener("submit", onSubmit);
-  }, [model, smart.hold]);
+    composer.addEventListener("submit", onSubmit);
+    return () => composer.removeEventListener("submit", onSubmit);
+  }, [form, model, smart.hold]);
 
   return (
     <fieldset className="qm-model" ref={root}>
@@ -86,6 +89,7 @@ export function ModelPicker({
             className="qm-model__radio"
             type="radio"
             name="model"
+            form={form}
             value="fast"
             checked={model === "fast"}
             onChange={() => setModel("fast")}
@@ -97,6 +101,7 @@ export function ModelPicker({
             className="qm-model__radio"
             type="radio"
             name="model"
+            form={form}
             value="smart"
             checked={model === "smart"}
             disabled={!smartAllowed}
@@ -130,7 +135,8 @@ export function ModelPicker({
               onClick={() => {
                 remember();
                 setAsking(false);
-                root.current?.closest("form")?.requestSubmit();
+                const composer = document.getElementById(form);
+                if (composer instanceof HTMLFormElement) composer.requestSubmit();
               }}
             >
               Send with Smart

@@ -561,6 +561,7 @@ export default async function QuartermasterPage({
                 </form>
               ) : null}
               <form
+                id="qm-composer"
                 action={requestAction}
                 className="qm-chat__composer"
                 key={`${threadId ?? "new"}:${messages.length}`}
@@ -586,15 +587,16 @@ export default async function QuartermasterPage({
                 <button type="submit" className="g-btn g-btn--primary" disabled={blocked !== null}>
                   {blocked ?? "Send"}
                 </button>
-                <ModelPicker
-                  initial={initialModel}
-                  smartAllowed={smartAllowed}
-                  fast={prices.fast}
-                  smart={prices.smart}
-                  suppliesLeft={suppliesLeft}
-                  upgradeHref={`/servers/${guild.id}/plan`}
-                />
               </form>
+              <ModelPicker
+                form="qm-composer"
+                initial={initialModel}
+                smartAllowed={smartAllowed}
+                fast={prices.fast}
+                smart={prices.smart}
+                suppliesLeft={suppliesLeft}
+                upgradeHref={`/servers/${guild.id}/plan`}
+              />
               <div className="qm-usage">
                 <progress
                   className="qm-usage__bar"
@@ -641,18 +643,17 @@ export default async function QuartermasterPage({
                   <h2 className="qm-plan__title" id="qm-plan-title">
                     Your server
                   </h2>
-                  {counts ? (
+                  {saving ? (
+                    <span className="qm-plan__counts" role="status">
+                      Saving your changes…
+                    </span>
+                  ) : counts ? (
                     <span className="qm-plan__counts">
                       <strong>{counts.channels}</strong> channels · <strong>{counts.roles}</strong>{" "}
                       roles · <strong>{counts.categories}</strong> categories
                     </span>
                   ) : null}
                 </div>
-                {saving ? (
-                  <span className="qm-plan__saving" role="status">
-                    Saving…
-                  </span>
-                ) : null}
                 {plan && mine ? (
                   <div className="qm-plan__actions">
                     {applying ? null : (
