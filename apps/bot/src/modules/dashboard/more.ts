@@ -442,6 +442,7 @@ const removeOne = z.object({
   setting: z.string().min(3).max(60).optional(),
   post: z.number().int().min(0).max(20).optional(),
   order: z.number().int().min(0).max(20).optional(),
+  write: z.number().int().min(0).max(10).optional(),
   edit: z
     .string()
     .regex(/^\d{17,20}$/)
@@ -461,8 +462,8 @@ export async function doQmRemove(ctx: BotContext, guild: Guild, member: GuildMem
     return fail("That draft isn't waiting anymore.");
   if (build.requestedById !== member.id)
     return fail("Only the person who asked for this draft can change it.");
-  const { ref, setting, post, order, edit } = p.data;
-  const t = withoutItem(build, { ref, setting, post, order, edit });
+  const { ref, setting, post, order, edit, write } = p.data;
+  const t = withoutItem(build, { ref, setting, post, order, edit, write });
   if (!t.removed.length) return fail("That isn't in the draft anymore.");
   const what =
     t.removed.length > 1
@@ -473,7 +474,8 @@ export async function doQmRemove(ctx: BotContext, guild: Guild, member: GuildMem
     !t.settings.length &&
     !t.posts.length &&
     !t.orders.length &&
-    !t.edits.length
+    !t.edits.length &&
+    !t.writes.length
   ) {
     await transitionQmBuild(ctx.db, build.id, "pending", "cancelled");
     return { ok: true, message: `Removed ${what}. Nothing was left, so the draft is discarded.` };
@@ -489,6 +491,7 @@ export async function doQmRemove(ctx: BotContext, guild: Guild, member: GuildMem
     posts: t.posts,
     orders: t.orders,
     edits: t.edits,
+    writes: t.writes,
     notes: build.notes,
     continuesId: build.id,
     model: build.model,
@@ -555,7 +558,15 @@ export async function doQmEdit(ctx: BotContext, guild: Guild, member: GuildMembe
   if (!t.ok) return fail(t.error);
   const settings = build?.settings ?? [];
   const posts = build?.posts ?? [];
-  if (!t.plan.length && !t.edits.length && !t.orders.length && !settings.length && !posts.length) {
+  const writes = build?.writes ?? [];
+  if (
+    !t.plan.length &&
+    !t.edits.length &&
+    !t.orders.length &&
+    !settings.length &&
+    !posts.length &&
+    !writes.length
+  ) {
     if (build) await transitionQmBuild(ctx.db, build.id, "pending", "cancelled");
     return { ok: true, message: `${t.message} Nothing is left to change, so the draft is gone.` };
   }
@@ -570,6 +581,7 @@ export async function doQmEdit(ctx: BotContext, guild: Guild, member: GuildMembe
     posts,
     orders: t.orders,
     edits: t.edits,
+    writes,
     notes: build?.notes ?? null,
     continuesId: build?.id ?? null,
     model: build?.model ?? "hand",

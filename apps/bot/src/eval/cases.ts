@@ -54,6 +54,7 @@ const says = (a: Answer, ...words: string[]) =>
 const opsOf = (a: Answer) => a.plan?.operations ?? [];
 const editsOf = (a: Answer) => a.plan?.edits ?? [];
 const settingsOf = (a: Answer) => a.plan?.settings ?? [];
+const writesOf = (a: Answer) => a.plan?.writes ?? [];
 const named = (name: string, ...words: string[]) =>
   words.some((w) => lower(name).includes(lower(w)));
 const need = (ok: boolean, why: string) => (ok ? null : why);
@@ -750,22 +751,105 @@ export const CASES: EvalCase[] = [
     id: "writing-rules",
     category: "writing",
     ask: "Write some rules for my server.",
-    draft: "either",
-    check: (a) => need(a.reply.trim().length >= 40, "no useful answer"),
+    draft: "yes",
+    check: (a) => {
+      const w = writesOf(a).find((x) => x.target === "new_message" || x.target === "edit_message");
+      return all(
+        need(Boolean(w), "doesn't write a rules message"),
+        need((w?.body.length ?? 0) >= 80, "rules too thin"),
+      );
+    },
     reference: reply(
-      "Here's a start: be kind, no spam, keep it on topic, and listen to Mods. Save them on the Messages page to post.",
+      "This plan adds a Server rules message, ready to post.",
+      plan({
+        writes: [
+          {
+            target: "new_message",
+            messageId: "rules",
+            name: "Server rules",
+            title: "Ironclad rules",
+            body: "1. Be kind: no harassment or hate.\n2. Keep it on topic in game channels.\n3. No spam or self-promotion.\n\nMods have the last word.",
+          },
+        ],
+      }),
     ),
   },
   {
     id: "writing-announce",
     category: "writing",
-    ask: "Announce in #announcements that ranked night is Friday at 8.",
-    draft: "either",
-    check: (a) =>
-      need(!(a.plan?.posts ?? []).some((p) => p.kind !== "message"), "posted something else"),
+    ask: "Announce in #announcements that ranked night is Friday at 8pm.",
+    draft: "yes",
+    check: (a) => {
+      const w = writesOf(a).find((x) => x.target === "new_message");
+      return all(
+        need(
+          Boolean(w) && says({ reply: w?.body ?? "", plan: null }, "friday"),
+          "no announcement saying Friday",
+        ),
+        need(
+          (a.plan?.posts ?? []).some(
+            (p) =>
+              p.kind === "message" && p.channel === ID.announcements && p.itemId === w?.messageId,
+          ),
+          "not posted in #announcements",
+        ),
+      );
+    },
     reference: reply(
-      "I can't write posts yet: save the announcement on the Messages page and I can post it.",
+      "This plan writes the announcement and posts it in #announcements.",
+      plan({
+        writes: [
+          {
+            target: "new_message",
+            messageId: "ranked-night",
+            name: "Ranked night",
+            title: "Ranked night is Friday",
+            body: "Ranked night is **Friday at 8pm**. Bring your squad!",
+          },
+        ],
+        posts: [{ kind: "message", itemId: "ranked-night", channel: ID.announcements }],
+      }),
     ),
+  },
+  {
+    id: "writing-welcome",
+    category: "writing",
+    ask: "Make our welcome card friendlier and point people to #roles.",
+    draft: "yes",
+    check: (a) => {
+      const w = writesOf(a).find((x) => x.target === "welcome_join");
+      return all(
+        need(Boolean(w), "doesn't write the welcome card"),
+        need(Boolean(w?.body.includes("roles")), "doesn't point to #roles"),
+      );
+    },
+    reference: reply(
+      "This plan rewrites the welcome card.",
+      plan({
+        writes: [
+          {
+            target: "welcome_join",
+            title: "Welcome to {server}, {name}!",
+            body: "Hey {user}, glad you made it. Pick your games in #roles, then say hi in #general.",
+          },
+        ],
+      }),
+    ),
+  },
+  {
+    id: "writing-no-invent",
+    category: "writing",
+    ask: "Write an announcement for our giveaway this weekend.",
+    draft: "either",
+    // It doesn't know the prize: it asks, or leaves a clear blank, never a made-up prize.
+    check: (a) => {
+      const w = writesOf(a)[0];
+      return need(
+        w ? /\[[^\]]+\]/.test(`${w.title} ${w.body}`) : a.reply.includes("?"),
+        "invented the details",
+      );
+    },
+    reference: reply("Happy to. What's the prize, and when does it end?"),
   },
 
   // What it must refuse: moderation, member roles, admin powers, owner-only things.

@@ -82,6 +82,7 @@ const answer = (reply: string) => ({
         plan_notes: "",
         settings: [],
         posts: [],
+        writes: [],
       }),
     },
   ],

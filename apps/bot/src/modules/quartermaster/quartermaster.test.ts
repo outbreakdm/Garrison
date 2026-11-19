@@ -1372,3 +1372,100 @@ describe("how the server is doing, for the AI assistant", () => {
     expect((await read("server_insight", { topic: "everything" })).error).toBe(true);
   });
 });
+
+describe("text the AI assistant writes", () => {
+  it("drafts a welcome card and a rules message in full, applies them, and Undo puts both back", async () => {
+    const { readSettings, readMessages, readWelcome, getQmBuild } = await import("@garrison/db");
+    const f = fakeGuild("q81");
+    const a = asker(f);
+    const bot: Planner = {
+      model: "claude-haiku-5-5",
+      plan: async () => ({ ok: false, error: "not used" }),
+      chat: async () => ({
+        ok: true,
+        reply: "This plan rewrites the welcome card and adds a rules message.",
+        choices: [],
+        model: "claude-haiku-5-5",
+        usage: TYPICAL,
+        plan: {
+          summary: "Welcome and rules",
+          notes: "",
+          operations: [],
+          settings: [],
+          posts: [],
+          writes: [
+            {
+              target: "welcome_join",
+              title: "Welcome to {server}!",
+              body: "Hey {user}, glad you're here.\n\nGrab your roles in #roles.",
+            },
+            {
+              target: "new_message",
+              messageId: "rules",
+              name: "Server rules",
+              title: "Rules",
+              body: "1. Be kind.\n2. No spam.\n\nMods have the last word.",
+            },
+          ],
+        },
+      }),
+    };
+    const out = await chatTurn(ctx, bot, f.guild, a, {
+      message: "Write our welcome and some rules",
+    });
+    if (!out.ok || !out.build) throw new Error(out.ok ? "no draft" : out.error);
+    const draft = out.build;
+    expect(draft.writes.map((w) => w.name)).toEqual(["The welcome card", "Server rules"]);
+    expect(draft.writes[1]?.card.blocks.map((b) => (b.kind === "text" ? b.text : ""))).toEqual([
+      "1. Be kind.\n2. No spam.",
+      "Mods have the last word.",
+    ]);
+    // What the welcome card says now is kept, for the preview and for Undo.
+    expect(draft.writes[0]?.was?.title).toBe(readWelcome(null).joinCard.title);
+
+    const applied = await applyBuild(ctx, f.guild, draft);
+    expect(applied).toMatchObject({ ok: true, failed: null });
+    const messages = readMessages((await readSettings(ctx.db, "q81", "messages"))?.messages ?? []);
+    expect(messages.map((m) => m.name)).toEqual(["Server rules"]);
+    expect(readWelcome(await readSettings(ctx.db, "q81", "welcome")).joinCard.title).toBe(
+      "Welcome to {server}!",
+    );
+
+    const built = await getQmBuild(ctx.db, "q81", draft.id);
+    if (!built) throw new Error("gone");
+    await undoBuild(ctx, f.guild, built, a.id);
+    expect(readMessages((await readSettings(ctx.db, "q81", "messages"))?.messages ?? [])).toEqual(
+      [],
+    );
+    expect(readWelcome(await readSettings(ctx.db, "q81", "welcome")).joinCard.title).toBe(
+      readWelcome(null).joinCard.title,
+    );
+  });
+
+  it("refuses a write the dashboard would refuse", async () => {
+    const f = fakeGuild("q82");
+    const a = asker(f);
+    const long = "x".repeat(2000);
+    const bot: Planner = {
+      model: "claude-haiku-5-5",
+      plan: async () => ({ ok: false, error: "not used" }),
+      chat: async () => ({
+        ok: true,
+        reply: "This plan writes the rules.",
+        choices: [],
+        model: "claude-haiku-5-5",
+        usage: TYPICAL,
+        plan: {
+          summary: "x",
+          notes: "",
+          operations: [],
+          settings: [],
+          posts: [],
+          writes: [{ target: "new_message", name: "Rules", title: "Rules", body: long }],
+        },
+      }),
+    };
+    const out = await chatTurn(ctx, bot, f.guild, a, { message: "rules" });
+    expect(out.ok && out.build).toBeFalsy();
+  });
+});

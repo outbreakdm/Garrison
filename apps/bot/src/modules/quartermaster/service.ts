@@ -7,8 +7,10 @@ import {
   aiAllowance,
   aiDailyBudgetMicros,
   applySettingsChange,
+  cardText,
   checkQmPosts,
   checkQmSettings,
+  checkQmWrites,
   costMicros,
   createQmPlan,
   type Entitlements,
@@ -34,8 +36,10 @@ import {
   type QmSettingChange,
   type QmSettingProposal,
   type QmSettingsLookup,
+  type QmWrite,
   qmChargedChanges,
   qmHoldSupplies,
+  qmWritePatches,
   readSettings,
   recordQmCreated,
   reserveAiCall,
@@ -499,6 +503,21 @@ export async function continuationFor(
         items: o.items,
       })),
       edits: asAiEdits(build.edits ?? []),
+      writes: (build.writes ?? []).map((w) => ({
+        target:
+          w.kind === "welcome"
+            ? w.field === "leaveCard"
+              ? "welcome_leave"
+              : w.field === "dmCard"
+                ? "welcome_dm"
+                : "welcome_join"
+            : w.isNew
+              ? "new_message"
+              : "edit_message",
+        message_id: w.isNew ? (w.ref ?? "") : (w.messageId ?? ""),
+        name: w.isNew ? w.name : "",
+        ...cardText(w.card),
+      })),
     };
   const built = build.created.flatMap((c) =>
     c.kind === "setting" ||
@@ -533,6 +552,7 @@ export async function storePlan(
     posts?: QmPost[];
     orders?: QmOrder[];
     edits?: QmEdit[];
+    writes?: QmWrite[];
   },
   model: string,
   line: { continues: QmBuild | null; replacing: QmBuild | null },
@@ -558,6 +578,7 @@ export async function storePlan(
     posts: checked.posts ?? [],
     orders: kept.orders,
     edits: kept.edits,
+    writes: checked.writes ?? [],
   });
   if (changes > now.suppliesLeft)
     return {
@@ -575,6 +596,7 @@ export async function storePlan(
     posts: checked.posts ?? [],
     orders: checked.orders ?? [],
     edits: checked.edits ?? [],
+    writes: checked.writes ?? [],
     notes: checked.notes || null,
     continuesId: line.continues?.id ?? null,
     model,
@@ -654,16 +676,17 @@ export async function checkDraft(
       posts: QmPost[];
       orders: QmOrder[];
       edits: QmEdit[];
+      writes: QmWrite[];
     }
   | { ok: false; errors: string[] }
 > {
-  const extra = draft.settings.length + draft.posts.length;
+  const extra = draft.settings.length + draft.posts.length + (draft.writes?.length ?? 0);
   // What can't be deleted is only worth reading when the draft deletes something.
   if (deletesAnything(draft.edits))
     server = { ...server, protectedChannels: await protectedChannelsFor(ctx, guild) };
   const structure = validatePlan(draft, server, maxOperations, extra);
   if (!structure.ok) return structure;
-  if (!extra) return { ...structure, settings: [], posts: [] };
+  if (!extra) return { ...structure, settings: [], posts: [], writes: [] };
   // A post or setting can't point at a channel or role the same plan deletes.
   const gone = deletedIds(structure.edits);
   const leaning = [
@@ -677,28 +700,40 @@ export async function checkDraft(
   if (leaning.length) return { ok: false, errors: leaning };
   const lookup = settingsLookup(guild, structure.operations);
   const ent = entitlements(await getGuildPlan(ctx.db, guild.id));
+  const written = await checkQmWrites(ctx.db, guild.id, draft.writes ?? [], ent);
+  // A post may name a message the same plan writes, by its ref.
+  const refs = written.ok
+    ? written.writes.flatMap((w) =>
+        w.isNew && w.ref && w.messageId ? [{ ref: w.ref, id: w.messageId, name: w.name }] : [],
+      )
+    : [];
   const [settings, posts] = await Promise.all([
     checkQmSettings(ctx.db, guild.id, draft.settings, lookup, ent),
-    checkQmPosts(ctx.db, guild.id, draft.posts, lookup),
+    checkQmPosts(ctx.db, guild.id, draft.posts, lookup, refs),
   ]);
-  if (!settings.ok || !posts.ok)
+  if (!settings.ok || !posts.ok || !written.ok)
     return {
       ok: false,
-      errors: [...(settings.ok ? [] : settings.errors), ...(posts.ok ? [] : posts.errors)],
+      errors: [
+        ...(settings.ok ? [] : settings.errors),
+        ...(posts.ok ? [] : posts.errors),
+        ...(written.ok ? [] : written.errors),
+      ],
     };
   const total =
     structure.operations.length +
     structure.orders.length +
     structure.edits.length +
     settings.changes.length +
-    posts.posts.length;
+    posts.posts.length +
+    written.writes.length;
   if (!total) return { ok: false, errors: ["Everything in that plan is already set that way."] };
   if (total > maxOperations)
     return {
       ok: false,
       errors: [`The plan has ${total} changes, but only ${maxOperations} fit in this one.`],
     };
-  return { ...structure, settings: settings.changes, posts: posts.posts };
+  return { ...structure, settings: settings.changes, posts: posts.posts, writes: written.writes };
 }
 
 /**
@@ -997,6 +1032,19 @@ async function runBuild(ctx: BotContext, guild: Guild, build: QmBuild): Promise<
   }
   if (ent) {
     const failed = await applyPlanSettings(ctx, guild, build, ids, ent, created);
+    if (failed) {
+      await transitionQmBuild(ctx.db, build.id, "applied", "failed", { error: failed });
+      return { ok: true, build: claimed, created, failed };
+    }
+  }
+  if (build.writes?.length) {
+    const failed = await applyPlanWrites(
+      ctx,
+      guild,
+      build,
+      ent ?? entitlements(await getGuildPlan(ctx.db, guild.id)),
+      created,
+    );
     if (failed) {
       await transitionQmBuild(ctx.db, build.id, "applied", "failed", { error: failed });
       return { ok: true, build: claimed, created, failed };
@@ -1529,6 +1577,41 @@ async function applyPlanSettings(
       error instanceof SettingsRefused ? `: ${error.message}` : ""
     }. Use Undo to remove what was created.`;
   }
+}
+
+/**
+ * A build's writes: the welcome cards and saved messages it writes, checked again against the
+ * server as it is now and saved through Settings history, so Undo puts the old text back.
+ */
+async function applyPlanWrites(
+  ctx: BotContext,
+  guild: Guild,
+  build: QmBuild,
+  ent: Entitlements,
+  created: QmCreated[],
+): Promise<string | null> {
+  const writes = build.writes ?? [];
+  if (!writes.length) return null;
+  const planned = await qmWritePatches(ctx.db, guild.id, writes, ent);
+  if (!planned.ok) return `The text couldn't be saved: ${planned.error} Use Undo for the rest.`;
+  for (const { module, patch } of planned.patches) {
+    const result = await applySettingsChange(ctx.db, {
+      guildId: guild.id,
+      module,
+      patch,
+      userId: build.requestedById,
+      username: `${build.requestedByTag} (AI assistant v${build.version})`,
+    });
+    if (!result.ok) {
+      if (result.reason === "unchanged") continue;
+      return `The ${module === "welcome" ? "welcome cards" : "messages"} weren't ready to change. Use Undo for the rest.`;
+    }
+    refreshSettings(module, guild.id);
+    const item: QmCreated = { kind: "setting", id: result.change.id, name: `${module}.write` };
+    created.push(item);
+    await recordQmCreated(ctx.db, build.id, item);
+  }
+  return null;
 }
 
 type PostHandler = (

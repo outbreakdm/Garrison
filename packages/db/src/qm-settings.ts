@@ -618,11 +618,25 @@ export async function checkQmPosts(
   guildId: string,
   proposals: QmPostProposal[],
   lookup: QmSettingsLookup,
+  /** Messages the same plan writes, by the ref the model gave them, which it may post too. */
+  written: { ref: string; id: string; name: string }[] = [],
 ): Promise<{ ok: true; posts: QmPost[] } | { ok: false; errors: string[] }> {
   if (!proposals.length) return { ok: true, posts: [] };
   const errors: string[] = [];
   if (proposals.length > QM_POSTS_MAX) errors.push(`A plan posts at most ${QM_POSTS_MAX} things.`);
-  const have = await qmPostables(db, guildId);
+  const saved = await qmPostables(db, guildId);
+  const have = {
+    ...saved,
+    message: [...saved.message, ...written.map(({ id, name }) => ({ id, name }))],
+  };
+  // A message the plan writes is named by its ref; it posts by its id.
+  proposals = proposals.map((p) => {
+    const w =
+      p.kind === "message"
+        ? written.find((x) => x.ref === String(p.itemId).toLowerCase())
+        : undefined;
+    return w ? { ...p, itemId: w.id } : p;
+  });
   const posts: QmPost[] = [];
   const seen = new Set<string>();
   for (const p of proposals.slice(0, QM_POSTS_MAX)) {

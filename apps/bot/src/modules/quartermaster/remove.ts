@@ -1,4 +1,12 @@
-import type { QmBuild, QmEdit, QmOperation, QmOrder, QmPost, QmSettingChange } from "@garrison/db";
+import type {
+  QmBuild,
+  QmEdit,
+  QmOperation,
+  QmOrder,
+  QmPost,
+  QmSettingChange,
+  QmWrite,
+} from "@garrison/db";
 
 export interface RemoveTarget {
   /** A channel, category or role the draft makes. */
@@ -11,6 +19,8 @@ export interface RemoveTarget {
   order?: number;
   /** A change to something that exists (or its deletion), by the item's id. */
   edit?: string;
+  /** Text the plan writes, by its place in the list. */
+  write?: number;
 }
 
 export interface Trimmed {
@@ -19,6 +29,7 @@ export interface Trimmed {
   posts: QmPost[];
   orders: QmOrder[];
   edits: QmEdit[];
+  writes: QmWrite[];
   /** Names of everything taken out, the asked-for item first. */
   removed: string[];
 }
@@ -44,14 +55,24 @@ export function orderName(o: QmOrder) {
  * Only ever takes away, so what's left is as safe as the draft was.
  */
 export function withoutItem(
-  build: Pick<QmBuild, "plan" | "settings" | "posts"> & Partial<Pick<QmBuild, "orders" | "edits">>,
+  build: Pick<QmBuild, "plan" | "settings" | "posts"> &
+    Partial<Pick<QmBuild, "orders" | "edits" | "writes">>,
   target: RemoveTarget,
 ): Trimmed {
   let settings = build.settings ?? [];
   let posts = build.posts ?? [];
   let orders = build.orders ?? [];
   let edits = build.edits ?? [];
+  let writes = build.writes ?? [];
   const removed: string[] = [];
+  if (target.write !== undefined) {
+    const hit = writes[target.write];
+    writes = writes.filter((_, i) => i !== target.write);
+    if (hit) removed.push(hit.name);
+    // A post of a message only this write made goes with it.
+    if (hit?.isNew) posts = posts.filter((p) => p.itemId !== hit.messageId);
+    return { plan: build.plan, settings, posts, orders, edits, writes, removed };
+  }
   if (target.edit) {
     const hit = edits.find((e) => e.id === target.edit);
     edits = edits.filter((e) => e.id !== target.edit);
@@ -59,25 +80,25 @@ export function withoutItem(
       removed.push(
         hit.kind.startsWith("delete_") ? `deleting ${hit.was}` : `the change to ${hit.was}`,
       );
-    return { plan: build.plan, settings, posts, orders, edits, removed };
+    return { plan: build.plan, settings, posts, orders, edits, writes, removed };
   }
   if (target.setting) {
     const hit = settings.find((c) => `${c.module}.${c.field}` === target.setting);
     settings = settings.filter((c) => `${c.module}.${c.field}` !== target.setting);
     if (hit) removed.push(`${hit.module} ${hit.field}`);
-    return { plan: build.plan, settings, posts, orders, edits, removed };
+    return { plan: build.plan, settings, posts, orders, edits, writes, removed };
   }
   if (target.post !== undefined) {
     const hit = posts[target.post];
     posts = posts.filter((_, i) => i !== target.post);
     if (hit) removed.push(hit.name);
-    return { plan: build.plan, settings, posts, orders, edits, removed };
+    return { plan: build.plan, settings, posts, orders, edits, writes, removed };
   }
   if (target.order !== undefined) {
     const hit = orders[target.order];
     orders = orders.filter((_, i) => i !== target.order);
     if (hit) removed.push(orderName(hit));
-    return { plan: build.plan, settings, posts, orders, edits, removed };
+    return { plan: build.plan, settings, posts, orders, edits, writes, removed };
   }
   const gone = new Set<string>();
   if (target.ref && build.plan.some((o) => o.ref === target.ref)) gone.add(target.ref);
@@ -139,5 +160,5 @@ export function withoutItem(
       },
     ];
   });
-  return { plan, settings, posts, orders, edits, removed };
+  return { plan, settings, posts, orders, edits, writes, removed };
 }

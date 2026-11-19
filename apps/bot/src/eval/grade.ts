@@ -1,4 +1,4 @@
-import { QM_SETTINGS } from "@garrison/db";
+import { CARD_LIMITS, QM_SETTINGS, QM_WRITE_TARGETS, QM_WRITES_MAX } from "@garrison/db";
 import { MAX_OPERATIONS, validatePlan } from "../modules/quartermaster/plan.js";
 import type { Answer, EvalCase } from "./cases.js";
 import { SERVER } from "./fixture.js";
@@ -29,7 +29,7 @@ export function grade(c: EvalCase, a: Answer): Grade {
 
   let valid: boolean | null = null;
   if (a.plan) {
-    const extra = a.plan.settings.length + a.plan.posts.length;
+    const extra = a.plan.settings.length + a.plan.posts.length + (a.plan.writes?.length ?? 0);
     const checked = validatePlan(a.plan, SERVER, MAX_OPERATIONS, extra);
     valid = checked.ok;
     if (!checked.ok) reasons.push(`Garrison would refuse it: ${checked.errors[0] ?? "invalid"}`);
@@ -41,6 +41,23 @@ export function grade(c: EvalCase, a: Answer): Grade {
       }
     }
   }
+
+  // Writes: what the dashboard's card rules would refuse.
+  const writes = a.plan?.writes ?? [];
+  if (writes.length > QM_WRITES_MAX) {
+    valid = false;
+    reasons.push(`writes ${writes.length} texts; a plan writes at most ${QM_WRITES_MAX}`);
+  }
+  for (const w of writes)
+    if (
+      !(QM_WRITE_TARGETS as readonly string[]).includes(w.target) ||
+      !w.title.trim() ||
+      w.title.length > CARD_LIMITS.title ||
+      w.body.length > CARD_LIMITS.text
+    ) {
+      valid = false;
+      reasons.push(`a write the card rules would refuse: ${w.target}`);
+    }
 
   const why = c.check ? c.check(a) : null;
   const onTask = why === null;

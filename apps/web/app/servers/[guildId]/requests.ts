@@ -597,6 +597,10 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       const edit = field(form, "edit");
       if (edit && (b.edits ?? []).some((e) => e.id === edit))
         return { ok: true, input: { kind, payload: { id: b.id, edit } } };
+      const write = field(form, "write");
+      const w = Number(write);
+      if (write && Number.isInteger(w) && w >= 0 && w < (b.writes ?? []).length)
+        return { ok: true, input: { kind, payload: { id: b.id, write: w } } };
       return { ok: false, error: "invalid" };
     }
     default:

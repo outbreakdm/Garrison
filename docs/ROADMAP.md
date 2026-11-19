@@ -7,7 +7,7 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **AI assistant v2 (planned 2026-11-19), next up:** `docs/AI_ASSISTANT.md`, "Assistant v2". Owner chose Haiku (Fast) and Sonnet (Smart, Pro and Agency only), supplies at each model's real cost, every coverage gap (writing, more modules, insight, how-to help), and a "Your server" workspace with hand edits (rename, drag to reorder) and an Apply build button. Phase 1 first: a message's hold assumes 12,000 input tokens a round but nothing enforces it, so a big server can cost more than it held. **Phases 1 to 6 built** (not deployed; migrations 0076, 0077 and 0078). The eval has never run on the real models: it needs `ANTHROPIC_API_KEY` and the owner's yes (about $6.20 for both models, 3 runs). Phases 5 (how-to help) and 6 (server insight) are done too; phase 7, writing content, is next.
+- **AI assistant v2 (planned 2026-11-19), next up:** `docs/AI_ASSISTANT.md`, "Assistant v2". Owner chose Haiku (Fast) and Sonnet (Smart, Pro and Agency only), supplies at each model's real cost, every coverage gap (writing, more modules, insight, how-to help), and a "Your server" workspace with hand edits (rename, drag to reorder) and an Apply build button. Phase 1 first: a message's hold assumes 12,000 input tokens a round but nothing enforces it, so a big server can cost more than it held. **Phases 1 to 7 built** (not deployed; migrations 0076 to 0079). The eval has never run on the real models: it needs `ANTHROPIC_API_KEY` and the owner's yes (about $6.20 for both models, 3 runs). Phases 5 to 7 (how-to help, server insight, writing) are done too; phase 8, more modules, is next.
 - **Optimize and polish (2026-11-17):** 15 fewer database queries on every dashboard page (the
   menu's module settings in one query), faster AI assistant paint, no layout shift on Settings,
   24 px targets, unused CSS removed (see the Log). To run the Worker beside the database, set the
@@ -1320,3 +1320,10 @@ Decided (2026-11-12, owner):
   upcoming raids, giveaways and open groups. Answers give the number and its period and never
   guess. 8 new eval cases (53 in all). 748 tests pass and the dashboard builds; the eval hasn't
   run on the real models. No migration. Not deployed.
+- 2026-11-19: AI assistant v2, phase 7: writing. A plan can write the welcome, leave and DM
+  cards and new or rewritten saved messages (at most 3 texts), shown in full in Your server as
+  Discord renders them, with what each replaces. They're checked by the card and Messages rules,
+  saved through Settings history (Undo puts the old text back), and a plan can post a message it
+  writes. It writes in the server's voice and leaves [blanks] instead of inventing facts.
+  Migration **0079**. 754 tests pass and the dashboard builds; not checked in a browser, and the
+  eval hasn't run on the real models. Not deployed.

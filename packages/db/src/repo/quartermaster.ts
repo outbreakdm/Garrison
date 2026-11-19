@@ -1,5 +1,6 @@
 import { and, count, desc, eq, gt, gte, max, ne, type SQL, sql } from "drizzle-orm";
 import type { Db } from "../client";
+import type { QmWrite } from "../qm-writes";
 import {
   guildPlans,
   type QmBuild,
@@ -29,6 +30,8 @@ export interface CreatePlanInput {
   orders?: QmOrder[];
   /** Changes to existing items and deletions. */
   edits?: QmEdit[];
+  /** Text it writes. */
+  writes?: QmWrite[];
   model: string;
   notes?: string | null;
   continuesId?: string | null;
@@ -42,7 +45,7 @@ const charged = (
   column: typeof qmBuilds.edits | typeof qmBuilds.orders | typeof qmBuilds.created,
 ) =>
   sql`(select count(*) from jsonb_array_elements(${column}) x where x->>'by' is distinct from 'admin')::int`;
-const allCharged = sql`jsonb_array_length(${qmBuilds.plan}) + jsonb_array_length(${qmBuilds.settings}) + jsonb_array_length(${qmBuilds.posts}) + ${charged(qmBuilds.orders)} + ${charged(qmBuilds.edits)}`;
+const allCharged = sql`jsonb_array_length(${qmBuilds.plan}) + jsonb_array_length(${qmBuilds.settings}) + jsonb_array_length(${qmBuilds.posts}) + jsonb_array_length(${qmBuilds.writes}) + ${charged(qmBuilds.orders)} + ${charged(qmBuilds.edits)}`;
 
 /**
  * Changes a build counts against the day: what it built (all of a built plan, what got
@@ -60,13 +63,14 @@ const changesCounted = (now: Date, settled: boolean) => sql<number>`coalesce(sum
 /** What a built (or partly built) plan is charged: everything, or what it made before stopping. Hand changes are free. */
 export const qmChangesMade = (
   b: Pick<QmBuild, "status" | "plan" | "settings" | "posts" | "created"> &
-    Partial<Pick<QmBuild, "orders" | "edits">>,
+    Partial<Pick<QmBuild, "orders" | "edits" | "writes">>,
 ) =>
   b.status === "applied" ? qmChargedChanges(b) : b.created.filter((x) => x.by !== "admin").length;
 
 /** A build's changes that cost a supply: all but the ones made by hand. */
 export const qmChargedChanges = (
-  b: Pick<QmBuild, "plan" | "settings" | "posts"> & Partial<Pick<QmBuild, "orders" | "edits">>,
+  b: Pick<QmBuild, "plan" | "settings" | "posts"> &
+    Partial<Pick<QmBuild, "orders" | "edits" | "writes">>,
 ) =>
   qmChangeCount({
     ...b,
@@ -76,13 +80,15 @@ export const qmChargedChanges = (
 
 /** A build's changes: its structure, each settings field, and each post. */
 export const qmChangeCount = (
-  b: Pick<QmBuild, "plan" | "settings" | "posts"> & Partial<Pick<QmBuild, "orders" | "edits">>,
+  b: Pick<QmBuild, "plan" | "settings" | "posts"> &
+    Partial<Pick<QmBuild, "orders" | "edits" | "writes">>,
 ) =>
   b.plan.length +
   (b.settings?.length ?? 0) +
   (b.posts?.length ?? 0) +
   (b.orders?.length ?? 0) +
-  (b.edits?.length ?? 0);
+  (b.edits?.length ?? 0) +
+  (b.writes?.length ?? 0);
 
 /** Builds on a server that is on Free right now (no Pro row). */
 const onFreeServer = sql`not exists (select 1 from ${guildPlans} where ${guildPlans.guildId} = ${qmBuilds.guildId} and ${guildPlans.plan} = 'pro')`;

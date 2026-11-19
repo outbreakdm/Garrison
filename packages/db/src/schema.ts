@@ -27,6 +27,7 @@ import type { BonusRole } from "./giveaways";
 import type { InviteLabel } from "./invite-labels";
 import type { SavedMessage } from "./messages";
 import type { GuildPlan } from "./plans";
+import type { QmWrite } from "./qm-writes";
 import type { RallyTemplate, RallyWording } from "./rally";
 import type { RankBoost } from "./rank-boosts";
 import type { RankCardStyle } from "./rank-cards";
@@ -941,6 +942,8 @@ export const qmBuilds = pgTable(
     orders: jsonb("orders").$type<QmOrder[]>().notNull().default([]),
     /** Changes to what already exists and deletions, after the structure (QmEdit). */
     edits: jsonb("edits").$type<QmEdit[]>().notNull().default([]),
+    /** Text it writes: welcome cards and saved messages (qm-writes.ts), before its posts. */
+    writes: jsonb("writes").$type<QmWrite[]>().notNull().default([]),
     /** What the model left out or would add next, shown with the plan and used to continue it. */
     notes: text("notes"),
     /** The build this one continues: a revised plan, or more added onto a built one. */
@@ -1311,6 +1314,8 @@ export interface QmRemovePayload {
   order?: number;
   /** A change to something that exists, by the item's id. */
   edit?: string;
+  /** Text it writes, by its place in the list. */
+  write?: number;
 }
 export const dashboardActionStatus = pgEnum("dashboard_action_status", [
   "pending",

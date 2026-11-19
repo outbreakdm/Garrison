@@ -396,7 +396,21 @@ On Sonnet that's 20x the money.
    joins and leaves over time, activity and top channels, mod cases and warnings by week,
    open tickets, server health checks, leveling top members, giveaways and raids coming up.
    Totals and lists the dashboard shows only; nothing new about any one member. *Medium.*
-7. **Writing content.** A plan can create and edit saved messages and embeds (Messages),
+7. **Writing content.** *Done 2026-11-19, not deployed: needs migration **0079**
+   (`qm_builds.writes`).* A plan's `writes` (at most 3, one change each): the welcome card,
+   the leave card, the welcome DM (Pro), a new saved message, or a new version of a saved
+   one. The model gives a title and a body in Discord markdown; paragraphs become the card's
+   text blocks and the rest of its look stays (`withText` in `packages/db/src/qm-writes.ts`).
+   Checked by `parseCard` and `checkMessages` with the plan's entitlements; a new message gets
+   its id when drafted, so a post in the same plan can name it by its ref. The Your server
+   panel shows every write in full, as Discord renders it, with what it replaces folded under
+   it and a Remove button. Applied after settings and before posts, through Settings history,
+   so Undo puts the old text back (a new message is removed). The instructions say to write
+   in the server's voice and never invent facts (a date, a prize, a link): ask, or leave a
+   [blank]. Differences from the plan: a rules or info post is a saved message (post it with
+   the same plan); embeds' Pro look (color, images) isn't written. 4 writing cases in the
+   eval (55 in all). The eval hasn't run on the real models.
+   The plan as written: a plan can create and edit saved messages and embeds (Messages),
    welcome and leave card text, and a rules or info channel's message, written by the model
    and shown in full before it's applied. Everything goes through the dashboard's own checks.
    Posting still needs the admin's yes. *Medium.*

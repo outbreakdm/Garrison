@@ -4658,3 +4658,55 @@ a.item-tile:not([open]) > .panel__summary {
 .qm-msg__text {
   white-space: pre-line;
 }
+
+/* Text a draft writes, shown in full before Apply. */
+.qm-writes {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.qm-write {
+  display: grid;
+  gap: var(--space-2);
+}
+.qm-write__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: 13px;
+}
+.qm-write__card {
+  display: grid;
+  gap: 6px;
+  padding: var(--space-3);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  font-size: 14px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+.qm-write__title {
+  margin: 0;
+  font-weight: 650;
+}
+.qm-write__text {
+  margin: 0;
+}
+.qm-write__rule {
+  width: 100%;
+  margin: 2px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+.qm-write__was {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.qm-write__was > .qm-write__card {
+  margin-top: var(--space-2);
+  opacity: 0.8;
+}

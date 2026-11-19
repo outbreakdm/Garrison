@@ -11,8 +11,11 @@ import {
   QM_POSTS_MAX,
   QM_ROLE_PERMISSION_KEYS,
   QM_SETTINGS_MODULES,
+  QM_WRITE_TARGETS,
+  QM_WRITES_MAX,
   type QmPostProposal,
   type QmSettingProposal,
+  type QmWriteProposal,
   qmSettingsGuide,
   roundWorstMicros,
 } from "@garrison/db";
@@ -59,6 +62,8 @@ export type PlannerContinuation =
       posts?: { kind: string; item_id: string; channel: string }[];
       /** The new orders it sets. */
       order?: { scope: string; parent: string | null; items: string[] }[];
+      /** What it writes, as the model writes it. */
+      writes?: { target: string; message_id: string; name: string; title: string; body: string }[];
       /** Its changes to existing items and deletions, as the model writes them. */
       edits?: AiEdit[];
     }
@@ -147,7 +152,12 @@ export interface ChatInput extends Omit<PlannerInput, "request"> {
 }
 
 /** A plan drafted in the chat: structure, and settings it changes (unchecked). */
-export type DraftPlan = AiPlan & { settings: QmSettingProposal[]; posts: QmPostProposal[] };
+export type DraftPlan = AiPlan & {
+  settings: QmSettingProposal[];
+  posts: QmPostProposal[];
+  /** Text it writes; absent on plans from before 2026-11-19. */
+  writes?: QmWriteProposal[];
+};
 
 export type ChatResult = (
   | {
@@ -205,6 +215,29 @@ export const AiChatSchema = z.object({
       }),
     )
     .describe(`Saved items the plan posts, at most ${QM_POSTS_MAX}. Empty when it posts none.`),
+  writes: z
+    .array(
+      z.object({
+        target: z.enum(QM_WRITE_TARGETS),
+        message_id: z
+          .string()
+          .describe(
+            "edit_message: the saved message's id from server_overview. new_message: a short ref (like 'rules') a post in this plan can use as its item_id. Else empty.",
+          ),
+        name: z
+          .string()
+          .describe(
+            "new_message: its name on the Messages page (40 characters at most). Else empty.",
+          ),
+        title: z.string().describe("The card's title: one line, 150 characters at most."),
+        body: z
+          .string()
+          .describe(
+            "The card's text in Discord markdown, paragraphs separated by a blank line, 3000 characters at most. Welcome cards can use {user}, {name}, {server} and {count}.",
+          ),
+      }),
+    )
+    .describe(`Text the plan writes, at most ${QM_WRITES_MAX}. Empty when it writes nothing.`),
 });
 
 /**
@@ -303,7 +336,9 @@ Garrison's settings:
 - You can look at how Garrison is set up on this server: server_overview for everything at a glance, module_settings for one module in full. Look when the admin asks about their setup ("is anti-raid on?", "what does my welcome say?"), asks what's missing or what you'd recommend, and before you change a module, so you know what's set now. Don't look when the request doesn't need it, and never ask the admin something a look would tell you.
 - In this chat a plan can also change settings, in the modules listed in <settings_you_can_change>, as entries in settings: one per field, with the new value as JSON in value_json. Each field is one change, like a channel or a role, and counts toward the plan's limit. Only change what the admin asked for or agreed to, and set everything a change needs (turning Suggestions on needs its channel).
 - To use a channel, category or role the same plan creates, put its ref in value_json as JSON: "ideas" with its quotes, or ["members"] for a list; otherwise use ids from the snapshot or from what you read. Never use a role with moderation or admin powers.
-- A plan can also post the server's saved role menus, ticket panels and saved messages (listed with their ids in server_overview under postable) into a text channel, as entries in posts. Each post is one change. Post only when the admin asks or agrees, since a post can't be undone by Undo. You can't create or edit those items: they're made on the Role menus, Tickets and Messages pages.
+- A plan can also post the server's saved role menus, ticket panels and saved messages (listed with their ids in server_overview under postable) into a text channel, as entries in posts. Each post is one change. Post only when the admin asks or agrees, since a post can't be undone by Undo. Role menus and ticket panels are made on their own pages.
+- A plan can write text, as entries in writes: the welcome card (welcome_join), the leave card (welcome_leave), the welcome DM (welcome_dm, Pro), a new saved message (new_message: rules, an announcement, an info post, an FAQ) or a new version of a saved one (edit_message, by its id from server_overview). Each is one change, shown to the admin in full before anything happens, and Undo puts the old text back. To post a message you write in the same plan, give it a short ref in message_id and use that ref as the post's item_id.
+- How to write: in the server's voice and naming style, for its game and size; plain and friendly, short paragraphs, Discord markdown (**bold**, lists with "- ") where it helps; a rules post as short numbered rules with the reason when it isn't obvious. Never invent facts (dates, prizes, links, staff names) the admin didn't give you: ask, or leave a clear blank like [date]. Welcome cards can greet with {user} and use {server} and {count}. Write only what was asked; in reply, say what you wrote and where it goes, not the whole text (the admin sees it in the draft).
 - A plan can be any mix of structure, settings and posts. Say in reply what it does.
 - Anything else (anti-raid, verification, ticket and role menu setup, saved messages' text, stream alerts, raid templates, warning ladders, welcome card text) you can't change here: say what to set and on which dashboard page (garrison_help has each page and its steps). Anti-nuke and billing are owner-only.
 - Answer from what you read: say what's on, what's off and what you'd change, briefly. Don't paste raw settings back.
@@ -394,13 +429,15 @@ function contextBlocks(input: Omit<PlannerInput, "request">) {
               cont.settings?.length ||
                 cont.posts?.length ||
                 cont.order?.length ||
-                cont.edits?.length
+                cont.edits?.length ||
+                cont.writes?.length
                 ? {
                     operations: cont.operations,
                     settings: cont.settings,
                     posts: cont.posts,
                     order: cont.order,
                     edits: cont.edits,
+                    writes: cont.writes,
                   }
                 : cont.operations,
             )}\n</previous_plan>`,
@@ -743,6 +780,13 @@ export class ClaudePlanner implements Planner {
           itemId: x.item_id,
           channel: x.channel,
         }));
+        const writes = (out.writes ?? []).map((x) => ({
+          target: x.target,
+          messageId: x.message_id,
+          name: x.name,
+          title: x.title,
+          body: x.body,
+        }));
         return {
           ok: true,
           reply: out.reply,
@@ -752,7 +796,8 @@ export class ClaudePlanner implements Planner {
             out.order.length ||
             out.edits.length ||
             settings.length ||
-            posts.length
+            posts.length ||
+            writes.length
               ? {
                   summary: out.plan_summary,
                   operations: out.operations,
@@ -761,6 +806,7 @@ export class ClaudePlanner implements Planner {
                   notes: out.plan_notes,
                   settings,
                   posts,
+                  writes,
                 }
               : null,
           model: response.model,

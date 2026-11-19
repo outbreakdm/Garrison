@@ -35,6 +35,7 @@ import { REQUEST_ERRORS, RequestsPanel } from "@/components/RequestsPanel";
 import { ScrollToEnd } from "@/components/ScrollToEnd";
 import { type PreviewEdit, ServerPreview } from "@/components/ServerPreview";
 import { HandButton } from "@/components/WorkspaceEdit";
+import { WritePreview } from "@/components/WritePreview";
 import { cleanPrompt } from "@/lib/build-prompt";
 import { getDb } from "@/lib/db";
 import { getServerLayout, guildOwnerId } from "@/lib/discord";
@@ -267,6 +268,16 @@ export default async function QuartermasterPage({
     ) : null;
   const diffs = plan ? settingDiffs(layout, plan.plan, plan.settings ?? []) : [];
   const posts = plan ? postPreviews(layout, plan.plan, plan.posts ?? []) : [];
+  const writes = plan?.writes ?? [];
+  // Mentions in written text, as names (they never ping).
+  const mentionNames = {
+    roles: new Map((layout?.roles ?? []).map((r) => [r.id, r.name] as [string, string])),
+    channels: new Map(
+      [...(layout?.loose ?? []), ...(layout?.categories ?? []).flatMap((c) => c.channels)].map(
+        (c) => [c.id, c.name] as [string, string],
+      ),
+    ),
+  };
   const orders = plan ? orderLines(plan.orders ?? [], plan.plan, layout) : [];
   // Changes to what exists, and deletions, as the bot describes them ("~ #general: renamed …").
   const editNames = new Map<string, string>([
@@ -296,6 +307,7 @@ export default async function QuartermasterPage({
     plan?.plan.length && preview ? `adds ${addedText(preview.added)}` : null,
     diffs.length ? `changes ${plural(diffs.length, "setting")}` : null,
     posts.length ? `posts ${plural(posts.length, "saved item")}` : null,
+    writes.length ? `writes ${plural(writes.length, "text", "texts")}` : null,
     orders.length ? `puts ${plural(orders.length, "list")} in a new order` : null,
     edits.length - deleting ? `changes ${plural(edits.length - deleting, "existing item")}` : null,
     deleting ? `deletes ${plural(deleting, "item")}` : null,
@@ -313,7 +325,13 @@ export default async function QuartermasterPage({
         categories: afterRows(preview.categories).length,
       }
     : null;
-  const extras = diffs.length + posts.length + orders.length + edits.length + (plan?.notes ? 1 : 0);
+  const extras =
+    diffs.length +
+    posts.length +
+    writes.length +
+    orders.length +
+    edits.length +
+    (plan?.notes ? 1 : 0);
   const minutesLeft = plan
     ? Math.max(1, Math.ceil((plan.createdAt.getTime() + QM_PLAN_TTL_MS - now) / 60_000))
     : 0;
@@ -867,6 +885,13 @@ export default async function QuartermasterPage({
                           Top to bottom. Only what's listed moves, among the places it holds now.
                         </p>
                       </div>
+                    ) : null}
+                    {writes.length ? (
+                      <WritePreview
+                        writes={writes}
+                        names={mentionNames}
+                        remove={(i) => removeForm({ write: String(i) }, "Remove")}
+                      />
                     ) : null}
                     {posts.length ? (
                       <div className="qm-settings">
