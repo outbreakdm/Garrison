@@ -1249,3 +1249,13 @@ Decided (2026-11-12, owner):
 - 2026-11-18: Deployed branch `claude/garrison-dashboard-errors-c0gcd3` (run #50, `everything`,
   no command registration). The bot came back at 18:03 UTC after 14 hours silent and checks in
   every minute; Hyperdrive's origin connection limit is 12 (was 60).
+- 2026-11-19: AI assistant: edits and deletes (owner's call; still Claude Haiku 5.5). It sees
+  each channel's and category's access, topics, slowmode and kind, each role's permissions and
+  members, and the server's Community settings; it can rename, re-topic, move, re-permission
+  channels and categories and edit plain roles, all undoable, and delete (permanent, at most
+  10, never what Discord or Garrison depends on). Every limit is in the prompt, corrected
+  Discord facts, and a refused draft is fixed once from the checker's reasons before the admin
+  sees anything (docs/AI_ASSISTANT.md, "Editing and deleting"). Migrations **0074** (edits
+  column) and **0075** (bot role: 30 s statements, 10 s locks, 15 s idle-in-transaction, so a
+  connection that dies mid-query frees its slot and locks in seconds; it happened about every
+  45 minutes on 2026-11-18).

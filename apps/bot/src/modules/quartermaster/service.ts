@@ -25,6 +25,7 @@ import {
   QM_ROLE_PERMISSIONS,
   type QmBuild,
   type QmCreated,
+  type QmEdit,
   type QmOperation,
   type QmOrder,
   type QmPost,
@@ -34,9 +35,11 @@ import {
   type QmSettingsLookup,
   qmHoldSupplies,
   quickOutputTokens,
+  readSettings,
   recordQmCreated,
   reserveAiCall,
   resolveQmSettingRefs,
+  SETTINGS_MODULES,
   type SettingsModule,
   settleBuildSupplies,
   transitionQmBuild,
@@ -45,8 +48,13 @@ import {
 import {
   ChannelType,
   type Guild,
+  type GuildChannel,
+  type GuildChannelEditOptions,
+  GuildFeature,
   type GuildMember,
+  GuildVerificationLevel,
   type OverwriteResolvable,
+  OverwriteType,
   PermissionFlagsBits,
 } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
@@ -55,6 +63,7 @@ import { DANGEROUS_PERMISSIONS } from "../gatehouse/nuke.js";
 import { invalidateLedgerSettings } from "../ledger/service.js";
 import { invalidateRanksSettings } from "../ranks/service.js";
 import { invalidateVoiceRooms } from "../voice/service.js";
+import { asAiEdits, type ChannelKind, deletedIds } from "./edits.js";
 import {
   MAX_OPERATIONS,
   orderPositions,
@@ -172,9 +181,107 @@ export function channelOverwrites(
   }));
 }
 
+/** A channel's kind as the AI assistant sees it. */
+function kindOf(t: ChannelType): ChannelKind {
+  switch (t) {
+    case ChannelType.GuildText:
+      return "text";
+    case ChannelType.GuildVoice:
+      return "voice";
+    case ChannelType.GuildAnnouncement:
+      return "announcement";
+    case ChannelType.GuildForum:
+      return "forum";
+    case ChannelType.GuildStageVoice:
+      return "stage";
+    case ChannelType.GuildMedia:
+      return "media";
+    default:
+      return "other";
+  }
+}
+
+/** Permissions worth naming to the model, in the words Discord's settings use. */
+const NAMED_PERMISSIONS: [bigint, string][] = [
+  [P.Administrator, "Administrator"],
+  [P.ManageGuild, "Manage Server"],
+  [P.ManageRoles, "Manage Roles"],
+  [P.ManageChannels, "Manage Channels"],
+  [P.KickMembers, "Kick Members"],
+  [P.BanMembers, "Ban Members"],
+  [P.ModerateMembers, "Timeout Members"],
+  [P.ManageMessages, "Manage Messages"],
+  [P.ManageNicknames, "Manage Nicknames"],
+  [P.ViewAuditLog, "View Audit Log"],
+  [P.ManageWebhooks, "Manage Webhooks"],
+  [P.ManageEvents, "Manage Events"],
+  [P.ManageGuildExpressions, "Manage Expressions"],
+  [P.MentionEveryone, "Mention @everyone"],
+  [P.MuteMembers, "Mute Members"],
+  [P.DeafenMembers, "Deafen Members"],
+  [P.MoveMembers, "Move Members"],
+  [P.PrioritySpeaker, "Priority Speaker"],
+  [P.ChangeNickname, "Change Nickname"],
+  [P.EmbedLinks, "Embed Links"],
+  [P.AttachFiles, "Attach Files"],
+  [P.AddReactions, "Add Reactions"],
+  [P.UseExternalEmojis, "External Emoji"],
+  [P.CreatePublicThreads, "Create Threads"],
+  [P.Stream, "Video"],
+  [P.UseApplicationCommands, "Use App Commands"],
+  [P.SendVoiceMessages, "Voice Messages"],
+  [P.SendPolls, "Create Polls"],
+];
+const namesOf = (bits: bigint) =>
+  bits & P.Administrator
+    ? ["Administrator"]
+    : NAMED_PERMISSIONS.filter(([b]) => bits & b).map(([, n]) => n);
+
+/**
+ * Who can see a channel or category and who can post or speak in it, in words the model can
+ * reason about ("hidden from everyone, visible to Members, read-only, Staff can post"), from
+ * its overwrites. Only what differs from "everyone sees and posts" is listed.
+ */
+function accessSummary(
+  ch: GuildChannel,
+  everyoneId: string,
+  roleName: (id: string) => string | undefined,
+): Record<string, unknown> {
+  const voice = ch.type === ChannelType.GuildVoice || ch.type === ChannelType.GuildStageVoice;
+  const quiet = voice ? P.Speak : P.SendMessages;
+  const out: Record<string, unknown> = {};
+  const overwrites = [...(ch.permissionOverwrites?.cache?.values() ?? [])];
+  const roles = (pick: (allow: bigint, deny: bigint) => boolean) =>
+    overwrites
+      .filter((o) => o.type === OverwriteType.Role && o.id !== everyoneId)
+      .filter((o) => pick(o.allow.bitfield, o.deny.bitfield))
+      .map((o) => roleName(o.id))
+      .filter((n): n is string => Boolean(n))
+      .slice(0, 8);
+  const everyone = overwrites.find((o) => o.id === everyoneId);
+  if (everyone && everyone.deny.bitfield & P.ViewChannel) out.hidden_from_everyone = true;
+  const seeing = roles((allow) => Boolean(allow & P.ViewChannel));
+  if (seeing.length) out.visible_to = seeing;
+  const hiddenFrom = roles((_, deny) => Boolean(deny & P.ViewChannel));
+  if (hiddenFrom.length) out.hidden_from = hiddenFrom;
+  if (everyone && everyone.deny.bitfield & quiet) out.read_only = true;
+  const posting = roles((allow) => Boolean(allow & quiet));
+  if (posting.length) out[voice ? "can_speak" : "can_post"] = posting;
+  const muted = roles((_, deny) => Boolean(deny & quiet));
+  if (muted.length) out[voice ? "cannot_speak" : "cannot_post"] = muted;
+  const members = overwrites.filter((o) => o.type === OverwriteType.Member).length;
+  if (members) out.member_overwrites = members;
+  if (ch.parentId && "permissionsLocked" in ch && ch.permissionsLocked === false)
+    out.own_permissions = true;
+  return out;
+}
+
 export function snapshot(guild: Guild): {
   server: ServerSnapshot;
   channels: PlannerInput["channels"];
+  roleDetails: NonNullable<PlannerInput["roleDetails"]>;
+  categoryDetails: NonNullable<PlannerInput["categoryDetails"]>;
+  serverInfo: NonNullable<PlannerInput["serverInfo"]>;
 } {
   // In Discord's own order: categories top to bottom, the channels in each (text above voice),
   // roles from the top of the list down.
@@ -198,6 +305,9 @@ export function snapshot(guild: Guild): {
   const me = guild.members.me;
   const top = me?.roles.highest.position ?? 0;
   const roles = [...guild.roles.cache.values()].sort((a, b) => b.position - a.position);
+  const roleName = (id: string) => guild.roles.cache.get(id)?.name;
+  const membersKnown =
+    guild.memberCount > 0 && (guild.members.cache?.size ?? 0) >= guild.memberCount;
   return {
     server: {
       everyoneId: guild.roles.everyone.id,
@@ -212,23 +322,75 @@ export function snapshot(guild: Guild): {
           !roleFixed(r, top) &&
           Boolean(me?.permissions.has(P.ManageRoles)),
       })),
-      channels: channels.map((c) => ({ id: c.id, name: c.name, parentId: c.parentId ?? null })),
+      channels: channels.map((c) => ({
+        id: c.id,
+        name: c.name,
+        parentId: c.parentId ?? null,
+        kind: kindOf(c.type),
+      })),
       channelCount: all.length,
       roleCount: guild.roles.cache.size,
       grantable: grantableBy(guild.members.me),
     },
-    channels: channels.map((c) => ({
-      id: c.id,
-      name: c.name,
-      type:
-        c.type === ChannelType.GuildText
-          ? ("text" as const)
-          : c.type === ChannelType.GuildVoice
-            ? ("voice" as const)
-            : ("other" as const),
-      category: "parent" in c && c.parent ? c.parent.name : null,
-      categoryId: c.parentId ?? null,
-    })),
+    channels: channels.map((c) => {
+      const any = c as unknown as Record<string, unknown>;
+      const details: Record<string, unknown> = {
+        ...accessSummary(c as GuildChannel, guild.roles.everyone.id, roleName),
+      };
+      if (typeof any.topic === "string" && any.topic) details.topic = any.topic.slice(0, 120);
+      if (typeof any.rateLimitPerUser === "number" && any.rateLimitPerUser)
+        details.slowmode_seconds = any.rateLimitPerUser;
+      if (typeof any.userLimit === "number" && any.userLimit) details.user_limit = any.userLimit;
+      if (any.nsfw === true) details.nsfw = true;
+      if (c.id === guild.rulesChannelId) details.discord_rules_channel = true;
+      if (c.id === guild.systemChannelId) details.discord_system_channel = true;
+      if (c.id === guild.afkChannelId) details.afk_channel = true;
+      return {
+        id: c.id,
+        name: c.name,
+        type: kindOf(c.type),
+        category: "parent" in c && c.parent ? c.parent.name : null,
+        categoryId: c.parentId ?? null,
+        details,
+      };
+    }),
+    categoryDetails: Object.fromEntries(
+      categories.map((c) => [
+        c.id,
+        accessSummary(c as GuildChannel, guild.roles.everyone.id, roleName),
+      ]),
+    ),
+    roleDetails: Object.fromEntries(
+      roles.map((r) => {
+        const d: Record<string, unknown> = {};
+        const perms = namesOf(r.permissions?.bitfield ?? 0n);
+        if (r.id === guild.roles.everyone.id) d.permissions = perms;
+        else {
+          if (perms.length) d.permissions = perms;
+          if (r.color) d.color = `#${r.color.toString(16).padStart(6, "0")}`;
+          if (r.hoist) d.shown_separately = true;
+          if (r.mentionable) d.mentionable = true;
+          if (r.tags?.botId) d.bot_role = true;
+          if (r.tags?.premiumSubscriberRole) d.booster_role = true;
+          if (r.id === me?.roles.highest.id) d.garrisons_own_role = true;
+          // Members are only counted when Discord gave Garrison every member.
+          if (membersKnown && r.members) d.members = r.members.size;
+        }
+        return [r.id, d];
+      }),
+    ),
+    serverInfo: {
+      name: guild.name,
+      members: guild.memberCount,
+      community: Boolean(guild.features?.includes(GuildFeature.Community)),
+      verification_level: GuildVerificationLevel[guild.verificationLevel],
+      boost_tier: guild.premiumTier,
+      garrisons_role: me?.roles.highest.name ?? null,
+      garrison_can: {
+        manage_channels: Boolean(me?.permissions.has(P.ManageChannels)),
+        manage_roles: Boolean(me?.permissions.has(P.ManageRoles)),
+      },
+    },
   };
 }
 
@@ -312,9 +474,14 @@ export async function continuationFor(
         parent: o.parent,
         items: o.items,
       })),
+      edits: asAiEdits(build.edits ?? []),
     };
   const built = build.created.flatMap((c) =>
-    c.kind === "setting" || c.kind === "post" || c.kind === "order"
+    c.kind === "setting" ||
+    c.kind === "post" ||
+    c.kind === "order" ||
+    c.kind === "edit" ||
+    c.kind === "deleted"
       ? []
       : (c.kind === "role" ? guild.roles.cache.has(c.id) : guild.channels.cache.has(c.id))
         ? [{ kind: c.kind, id: c.id, name: c.name }]
@@ -341,6 +508,7 @@ export async function storePlan(
     settings?: QmSettingChange[];
     posts?: QmPost[];
     orders?: QmOrder[];
+    edits?: QmEdit[];
   },
   model: string,
   line: { continues: QmBuild | null; replacing: QmBuild | null },
@@ -355,7 +523,8 @@ export async function storePlan(
     checked.operations.length +
     (checked.settings?.length ?? 0) +
     (checked.posts?.length ?? 0) +
-    (checked.orders?.length ?? 0);
+    (checked.orders?.length ?? 0) +
+    (checked.edits?.length ?? 0);
   if (changes > now.suppliesLeft)
     return {
       ok: false,
@@ -371,6 +540,7 @@ export async function storePlan(
     settings: checked.settings ?? [],
     posts: checked.posts ?? [],
     orders: checked.orders ?? [],
+    edits: checked.edits ?? [],
     notes: checked.notes || null,
     continuesId: line.continues?.id ?? null,
     model,
@@ -449,13 +619,28 @@ export async function checkDraft(
       settings: QmSettingChange[];
       posts: QmPost[];
       orders: QmOrder[];
+      edits: QmEdit[];
     }
   | { ok: false; errors: string[] }
 > {
   const extra = draft.settings.length + draft.posts.length;
+  // What can't be deleted is only worth reading when the draft deletes something.
+  if (deletesAnything(draft.edits))
+    server = { ...server, protectedChannels: await protectedChannelsFor(ctx, guild) };
   const structure = validatePlan(draft, server, maxOperations, extra);
   if (!structure.ok) return structure;
   if (!extra) return { ...structure, settings: [], posts: [] };
+  // A post or setting can't point at a channel or role the same plan deletes.
+  const gone = deletedIds(structure.edits);
+  const leaning = [
+    ...draft.posts
+      .filter((x) => gone.has(x.channel))
+      .map(() => "A post goes to a channel the plan deletes."),
+    ...draft.settings
+      .filter((x) => [...gone].some((id) => JSON.stringify(x.value ?? null).includes(id)))
+      .map((x) => `The ${x.module} setting "${x.field}" uses something the plan deletes.`),
+  ];
+  if (leaning.length) return { ok: false, errors: leaning };
   const lookup = settingsLookup(guild, structure.operations);
   const ent = entitlements(await getGuildPlan(ctx.db, guild.id));
   const [settings, posts] = await Promise.all([
@@ -470,6 +655,7 @@ export async function checkDraft(
   const total =
     structure.operations.length +
     structure.orders.length +
+    structure.edits.length +
     settings.changes.length +
     posts.posts.length;
   if (!total) return { ok: false, errors: ["Everything in that plan is already set that way."] };
@@ -550,7 +736,10 @@ export async function planBuild(
     refused = true;
     // Charged what it cost so far, so the plan is checked against what's really left.
     if (usage) await meterAiCall(ctx.db, reserved.id, callUsage(usage, model));
-    const checked = validatePlan(result.plan, snap.server, maxOperations);
+    const server = deletesAnything(result.plan.edits)
+      ? { ...snap.server, protectedChannels: await protectedChannelsFor(ctx, guild) }
+      : snap.server;
+    const checked = validatePlan(result.plan, server, maxOperations);
     if (!checked.ok) {
       ctx.logger.info("AI assistant plan rejected", { guildId: guild.id, errors: checked.errors });
       return {
@@ -650,7 +839,7 @@ async function runBuild(ctx: BotContext, guild: Guild, build: QmBuild): Promise<
   }
   const me = guild.members.me ?? (await guild.members.fetchMe());
   if (
-    build.plan.length &&
+    (build.plan.length || build.edits?.length) &&
     !me.permissions.has([PermissionFlagsBits.ManageChannels, PermissionFlagsBits.ManageRoles])
   ) {
     return {
@@ -757,6 +946,13 @@ async function runBuild(ctx: BotContext, guild: Guild, build: QmBuild): Promise<
     await transitionQmBuild(ctx.db, build.id, "applied", "failed", { error: failed });
     return { ok: true, build: claimed, created, failed };
   }
+  if (build.edits?.length) {
+    const failed = await applyPlanEdits(ctx, guild, build, ids, created, me, reason);
+    if (failed) {
+      await transitionQmBuild(ctx.db, build.id, "applied", "failed", { error: failed });
+      return { ok: true, build: claimed, created, failed };
+    }
+  }
   if (build.orders?.length) {
     const failed = await applyPlanOrders(ctx, guild, build, ids, created);
     if (failed) {
@@ -777,6 +973,12 @@ async function runBuild(ctx: BotContext, guild: Guild, build: QmBuild): Promise<
       await transitionQmBuild(ctx.db, build.id, "applied", "failed", { error: failed });
       return { ok: true, build: claimed, created, failed };
     }
+  }
+  // Last, so nothing the plan made or changed depends on what's gone.
+  const failedDelete = await applyPlanDeletes(ctx, guild, build, created, me, reason);
+  if (failedDelete) {
+    await transitionQmBuild(ctx.db, build.id, "applied", "failed", { error: failedDelete });
+    return { ok: true, build: claimed, created, failed: failedDelete };
   }
   return { ok: true, build: claimed, created, failed: null };
 }
@@ -849,6 +1051,350 @@ function roleFixed(
   top: number,
 ) {
   return r.managed || r.position >= top || r.permissions.any(STAFF_POWERS);
+}
+
+/** What an access edit manages on a channel; every other bit in an overwrite stays as it is. */
+const ACCESS_BITS = [
+  P.ViewChannel,
+  P.SendMessages,
+  P.SendMessagesInThreads,
+  P.CreatePublicThreads,
+  P.ReadMessageHistory,
+  P.Connect,
+  P.Speak,
+  P.Stream,
+];
+/** Every permission the AI assistant may give a role (QM_ROLE_PERMISSIONS), as one bitfield. */
+const ROLE_GIVABLE = QM_ROLE_PERMISSION_KEYS.reduce(
+  (bits, k) => bits | P[QM_ROLE_PERMISSIONS[k].flag],
+  0n,
+);
+
+type Overwrite = { id: string; type: number; allow: string; deny: string };
+interface ChannelState {
+  name: string;
+  topic: string | null;
+  slowmode: number | null;
+  userLimit: number | null;
+  nsfw: boolean | null;
+  parentId: string | null;
+  overwrites: Overwrite[];
+}
+interface RoleState {
+  name: string;
+  color: number;
+  hoist: boolean;
+  mentionable: boolean;
+  permissions: string;
+}
+/** What an edit record holds (QmCreated "edit", as JSON in name): enough to put it back. */
+type EditRecord =
+  | { t: "channel"; before: ChannelState; synced?: { id: string; before: ChannelState }[] }
+  | { t: "role"; before: RoleState };
+
+type EditableChannel = GuildChannel & {
+  edit(options: GuildChannelEditOptions): Promise<unknown>;
+};
+
+function channelState(ch: GuildChannel): ChannelState {
+  const any = ch as unknown as Record<string, unknown>;
+  return {
+    name: ch.name,
+    topic: "topic" in ch ? ((any.topic as string | null) ?? null) : null,
+    slowmode: "rateLimitPerUser" in ch ? ((any.rateLimitPerUser as number | null) ?? 0) : null,
+    userLimit: "userLimit" in ch ? ((any.userLimit as number | null) ?? 0) : null,
+    nsfw: "nsfw" in ch ? Boolean(any.nsfw) : null,
+    parentId: ch.parentId ?? null,
+    overwrites: [...ch.permissionOverwrites.cache.values()].map((o) => ({
+      id: o.id,
+      type: o.type,
+      allow: o.allow.bitfield.toString(),
+      deny: o.deny.bitfield.toString(),
+    })),
+  };
+}
+
+/** Put a channel back as it was: name, topic, slowmode, limit, category and every overwrite. */
+async function restoreChannel(ch: EditableChannel, before: ChannelState, reason: string) {
+  const patch: GuildChannelEditOptions = {
+    name: before.name,
+    parent: before.parentId,
+    lockPermissions: false,
+    permissionOverwrites: before.overwrites.map((o) => ({
+      id: o.id,
+      type: o.type,
+      allow: BigInt(o.allow),
+      deny: BigInt(o.deny),
+    })),
+    reason,
+  };
+  if (before.topic !== null || "topic" in ch)
+    (patch as { topic?: string | null }).topic = before.topic;
+  if (before.slowmode !== null) patch.rateLimitPerUser = before.slowmode;
+  if (before.userLimit !== null) (patch as { userLimit?: number }).userLimit = before.userLimit;
+  if (before.nsfw !== null) patch.nsfw = before.nsfw;
+  await ch.edit(patch);
+}
+
+/**
+ * A channel's or category's overwrites with new access: who sees it (privateTo) and who posts
+ * or speaks (readOnly, posters). Only ACCESS_BITS change, and only those Garrison holds. With
+ * privateTo, other plain roles lose an explicit "can see" so it really is private to those
+ * roles; staff and bot roles keep theirs, so moderators still see everything they did.
+ */
+function accessOverwrites(
+  ch: GuildChannel,
+  access: NonNullable<QmEdit["access"]>,
+  ids: { everyone: string; me: string; resolve: (refOrId: string) => string },
+  holds: (bit: bigint) => boolean,
+  keepRole: (roleId: string) => boolean,
+): OverwriteResolvable[] {
+  const managed = ACCESS_BITS.filter(holds).reduce((a, b) => a | b, 0n);
+  const current = new Map(
+    [...ch.permissionOverwrites.cache.values()].map((o) => [
+      o.id,
+      { type: o.type, allow: o.allow.bitfield, deny: o.deny.bitfield },
+    ]),
+  );
+  const privateTo = access.privateTo.map(ids.resolve);
+  const posters = access.posters.map(ids.resolve);
+  const touched = new Set([ids.everyone, ids.me, ...privateTo, ...posters]);
+  for (const [id, o] of current)
+    if (touched.has(id)) {
+      o.allow &= ~managed;
+      o.deny &= ~managed;
+    } else if (privateTo.length && o.type === OverwriteType.Role && !keepRole(id)) {
+      o.allow &= ~((P.ViewChannel | P.Connect) & managed);
+    }
+  const voice = ch.type === ChannelType.GuildVoice || ch.type === ChannelType.GuildStageVoice;
+  const kinds: QmOperation["kind"][] =
+    ch.type === ChannelType.GuildCategory
+      ? ["create_text_channel", "create_voice_channel"]
+      : [voice ? "create_voice_channel" : "create_text_channel"];
+  for (const kind of kinds) {
+    const rows = channelOverwrites(
+      {
+        kind,
+        privateTo: access.privateTo,
+        readOnly: access.readOnly,
+        posters: access.posters,
+      } as QmOperation,
+      ids,
+      holds,
+    );
+    for (const row of rows) {
+      const id = String(row.id);
+      const o = current.get(id) ?? {
+        type: id === ids.everyone || current.has(id) ? OverwriteType.Role : OverwriteType.Role,
+        allow: 0n,
+        deny: 0n,
+      };
+      // A member overwrite for Garrison itself, a role overwrite for everyone else.
+      if (!current.has(id) && id === ids.me) o.type = OverwriteType.Member;
+      for (const bit of (row.allow ?? []) as bigint[]) {
+        o.allow |= bit;
+        o.deny &= ~bit;
+      }
+      for (const bit of (row.deny ?? []) as bigint[]) if (!(o.allow & bit)) o.deny |= bit;
+      current.set(id, o);
+    }
+  }
+  return [...current]
+    .filter(([, o]) => o.allow || o.deny)
+    .map(([id, o]) => ({ id, type: o.type, allow: o.allow, deny: o.deny }));
+}
+
+/**
+ * Channels Discord or Garrison depends on, with why, so a plan can't delete them: Community
+ * channels Discord requires, and every channel a Garrison setting points at (log channels,
+ * welcome, tickets, suggestions…). Read only when a plan deletes something.
+ */
+export async function protectedChannelsFor(ctx: BotContext, guild: Guild) {
+  const out: Record<string, string> = {};
+  const discord: [string | null, string][] = [
+    [guild.rulesChannelId, "Discord requires a rules channel in a Community server."],
+    [guild.publicUpdatesChannelId, "Discord sends Community updates there."],
+    [guild.safetyAlertsChannelId, "Discord sends safety alerts there."],
+  ];
+  for (const [id, why] of discord) if (id) out[id] = why;
+  const modules = SETTINGS_MODULES;
+  const values = await Promise.all(
+    modules.map((m) => readSettings(ctx.db, guild.id, m).catch(() => null)),
+  );
+  values.forEach((v, i) => {
+    if (!v) return;
+    for (const id of JSON.stringify(v).match(/\d{17,20}/g) ?? [])
+      if (guild.channels.cache.has(id) && !out[id])
+        out[id] = `Garrison's ${modules[i]} settings use it. Change that setting first.`;
+  });
+  return out;
+}
+
+/** Does the build delete anything? Then protected channels need reading before checks. */
+export const deletesAnything = (edits: { kind: string }[] | undefined) =>
+  (edits ?? []).some((e) => e.kind.startsWith("delete_"));
+
+/**
+ * A build's edits to existing items, once the items it creates exist. Each item's state is
+ * recorded before it changes, so Undo puts it back even after a failure partway. Everything
+ * is checked again here: the plan may have waited, and Discord's word is what counts now.
+ * Deletions run last, in applyPlanDeletes. Returns why it stopped, or null.
+ */
+async function applyPlanEdits(
+  ctx: BotContext,
+  guild: Guild,
+  build: QmBuild,
+  ids: Map<string, string>,
+  created: QmCreated[],
+  me: GuildMember,
+  reason: string,
+): Promise<string | null> {
+  const resolve = (refOrId: string) => ids.get(refOrId) ?? refOrId;
+  const holds = (bit: bigint) => me.permissions.has(bit);
+  const top = me.roles.highest.position;
+  const keepRole = (roleId: string) => {
+    const r = guild.roles.cache.get(roleId);
+    return !r || roleFixed(r, top);
+  };
+  for (const e of (build.edits ?? []).filter((x) => !x.kind.startsWith("delete_"))) {
+    try {
+      if (e.kind === "edit_role") {
+        const role = guild.roles.cache.get(e.id);
+        if (!role)
+          return `@${e.was} isn't in the server anymore, so I stopped. Use Undo to put things back.`;
+        if (roleFixed(role, top))
+          return `@${role.name} has staff powers or sits above Garrison now, so I left it and stopped.`;
+        const record: QmCreated = {
+          kind: "edit",
+          id: role.id,
+          name: JSON.stringify({
+            t: "role",
+            before: {
+              name: role.name,
+              color: role.color,
+              hoist: role.hoist,
+              mentionable: role.mentionable,
+              permissions: role.permissions.bitfield.toString(),
+            },
+          } satisfies EditRecord),
+        };
+        created.push(record);
+        await recordQmCreated(ctx.db, build.id, record);
+        const chosen = (e.permissions ?? [])
+          .filter((p): p is QmRolePermission => Object.hasOwn(QM_ROLE_PERMISSIONS, p))
+          .map((p) => P[QM_ROLE_PERMISSIONS[p].flag])
+          .filter(holds)
+          .reduce((a, b) => a | b, 0n);
+        await role.edit({
+          ...(e.name ? { name: e.name } : {}),
+          ...(e.color !== undefined ? { color: e.color } : {}),
+          ...(e.hoist !== undefined ? { hoist: e.hoist } : {}),
+          ...(e.mentionable !== undefined ? { mentionable: e.mentionable } : {}),
+          // Only the givable bits change; anything else the role has stays.
+          ...(e.permissions
+            ? { permissions: (role.permissions.bitfield & ~ROLE_GIVABLE) | chosen }
+            : {}),
+          reason,
+        });
+        continue;
+      }
+      const ch = guild.channels.cache.get(e.id);
+      if (!ch || ch.isThread() || ch.isDMBased())
+        return `${e.was} isn't in the server anymore, so I stopped. Use Undo to put things back.`;
+      const channel = ch as EditableChannel;
+      const ids_ = { everyone: guild.roles.everyone.id, me: me.id, resolve };
+      // A category's channels that follow it keep following it after its access changes.
+      const followers =
+        e.kind === "edit_category" && e.access
+          ? ([...guild.channels.cache.values()].filter(
+              (c) =>
+                !c.isThread() &&
+                c.parentId === ch.id &&
+                "permissionsLocked" in c &&
+                c.permissionsLocked === true,
+            ) as unknown as EditableChannel[])
+          : [];
+      const record: QmCreated = {
+        kind: "edit",
+        id: ch.id,
+        name: JSON.stringify({
+          t: "channel",
+          before: channelState(channel),
+          ...(followers.length
+            ? { synced: followers.map((f) => ({ id: f.id, before: channelState(f) })) }
+            : {}),
+        } satisfies EditRecord),
+      };
+      created.push(record);
+      await recordQmCreated(ctx.db, build.id, record);
+      const patch: GuildChannelEditOptions = { reason };
+      if (e.name) patch.name = e.name;
+      if (e.topic !== undefined) (patch as { topic?: string | null }).topic = e.topic || null;
+      if (e.slowmodeSeconds !== undefined) patch.rateLimitPerUser = e.slowmodeSeconds;
+      if (e.userLimit !== undefined) (patch as { userLimit?: number }).userLimit = e.userLimit;
+      if (e.nsfw !== undefined) patch.nsfw = e.nsfw;
+      if (e.parent !== undefined) {
+        patch.parent = e.parent ? resolve(e.parent) : null;
+        patch.lockPermissions = Boolean(e.syncWithCategory);
+      }
+      if (e.access)
+        patch.permissionOverwrites = accessOverwrites(channel, e.access, ids_, holds, keepRole);
+      await channel.edit(patch);
+      if (e.syncWithCategory && e.parent === undefined && "lockPermissions" in channel)
+        await (channel as unknown as { lockPermissions(): Promise<unknown> }).lockPermissions();
+      for (const f of followers)
+        if ("lockPermissions" in f)
+          await (f as unknown as { lockPermissions(): Promise<unknown> }).lockPermissions();
+    } catch (error) {
+      ctx.logger.warn("Quartermaster edit failed", { guildId: guild.id, id: e.id, error });
+      return `Discord refused the change to ${e.was}, so I stopped. Use Undo to put things back.`;
+    }
+  }
+  return null;
+}
+
+/**
+ * A build's deletions, last of all. Checked again first (still there, still not something
+ * Discord or Garrison depends on, a role still safe to touch). Deletions are permanent: each
+ * is recorded as "deleted" so Undo can say what it couldn't bring back. Returns why it
+ * stopped, or null.
+ */
+async function applyPlanDeletes(
+  ctx: BotContext,
+  guild: Guild,
+  build: QmBuild,
+  created: QmCreated[],
+  me: GuildMember,
+  reason: string,
+): Promise<string | null> {
+  const deletes = (build.edits ?? []).filter((x) => x.kind.startsWith("delete_"));
+  if (!deletes.length) return null;
+  const protectedNow = await protectedChannelsFor(ctx, guild);
+  const top = me.roles.highest.position;
+  for (const e of deletes) {
+    try {
+      if (e.kind === "delete_role") {
+        const role = guild.roles.cache.get(e.id);
+        if (!role) continue;
+        if (roleFixed(role, top))
+          return `@${role.name} has staff powers or sits above Garrison now, so I didn't delete it.`;
+        await role.delete(reason);
+      } else {
+        const ch = guild.channels.cache.get(e.id);
+        if (!ch || ch.isThread() || ch.isDMBased()) continue;
+        const why = protectedNow[ch.id];
+        if (why) return `I didn't delete ${ch.name}: ${why}`;
+        await ch.delete(reason);
+      }
+      const item: QmCreated = { kind: "deleted", id: e.id, name: e.was };
+      created.push(item);
+      await recordQmCreated(ctx.db, build.id, item);
+    } catch (error) {
+      ctx.logger.warn("Quartermaster delete failed", { guildId: guild.id, id: e.id, error });
+      return `Discord refused to delete ${e.was}, so I stopped. Use Undo for the rest.`;
+    }
+  }
+  return null;
 }
 
 /** A build's new orders, once what they name exists. Returns why it stopped, or null. */
@@ -998,7 +1544,11 @@ async function applyPlanPosts(
 class SettingsRefused extends Error {}
 
 /** What an undo did to settings and posts, as sentences, or "" when the build had none. */
-export function undoSettingsNote(s: { undone: number; changedSince: number }, posts = 0) {
+export function undoSettingsNote(
+  s: { undone: number; changedSince: number },
+  posts = 0,
+  deleted = 0,
+) {
   const parts = [
     s.undone ? `put back ${s.undone} module${s.undone === 1 ? "'s" : "s'"} settings` : null,
     s.changedSince
@@ -1008,7 +1558,10 @@ export function undoSettingsNote(s: { undone: number; changedSince: number }, po
   const kept = posts
     ? ` ${posts === 1 ? "Its post stays" : `Its ${posts} posts stay`}; delete in Discord if needed.`
     : "";
-  return `${parts.length ? ` Settings: ${parts.join("; ")}.` : ""}${kept}`;
+  const gone = deleted
+    ? ` ${deleted === 1 ? "The one thing it deleted" : `The ${deleted} things it deleted`} can't be brought back.`
+    : "";
+  return `${parts.length ? ` Settings: ${parts.join("; ")}.` : ""}${kept}${gone}`;
 }
 
 /** The bot keeps some settings for a minute; a change from a build should show straight away. */
@@ -1028,6 +1581,8 @@ export type UndoOutcome =
       settings: { undone: number; changedSince: number };
       /** Posts the build made; they aren't removed. */
       posts: number;
+      /** Things the build deleted; they can't be brought back. */
+      deleted: number;
     }
   | { ok: false; error: string };
 
@@ -1089,6 +1644,45 @@ export async function undoBuild(
       ctx.logger.warn("Quartermaster order undo failed", { guildId: guild.id, error });
     }
   }
+  // Edits next, newest first: each item goes back to how it was before the build.
+  for (const item of [...claimed.created].reverse().filter((c) => c.kind === "edit")) {
+    try {
+      const record = JSON.parse(item.name) as EditRecord;
+      if (record.t === "role") {
+        const role = guild.roles.cache.get(item.id);
+        if (!role) missing++;
+        else if (roleFixed(role, me.roles.highest.position)) failed++;
+        else {
+          const b = record.before;
+          await role.edit({
+            name: b.name,
+            color: b.color,
+            hoist: b.hoist,
+            mentionable: b.mentionable,
+            permissions: BigInt(b.permissions),
+            reason,
+          });
+          removed++;
+        }
+      } else {
+        const ch = guild.channels.cache.get(item.id);
+        if (!ch || ch.isThread() || ch.isDMBased()) missing++;
+        else {
+          await restoreChannel(ch as EditableChannel, record.before, reason);
+          for (const f of record.synced ?? []) {
+            const child = guild.channels.cache.get(f.id);
+            if (child && !child.isThread() && !child.isDMBased())
+              await restoreChannel(child as EditableChannel, f.before, reason);
+          }
+          removed++;
+        }
+      }
+    } catch (error) {
+      failed++;
+      ctx.logger.warn("Quartermaster edit undo failed", { guildId: guild.id, id: item.id, error });
+    }
+  }
+  const deleted = claimed.created.filter((c) => c.kind === "deleted").length;
   for (const item of rollbackOrder(claimed.created)) {
     try {
       if (item.kind === "role") {
@@ -1113,5 +1707,5 @@ export async function undoBuild(
     }
   }
   const posted = claimed.created.filter((c) => c.kind === "post").length;
-  return { ok: true, removed, missing, failed, settings, posts: posted };
+  return { ok: true, removed, missing, failed, settings, posts: posted, deleted };
 }

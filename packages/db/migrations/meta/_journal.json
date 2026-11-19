@@ -519,6 +519,20 @@
       "when": 1795021503148,
       "tag": "0073_retention",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1795051603565,
+      "tag": "0074_qm_edits",
+      "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1795052628422,
+      "tag": "0075_bot_timeouts",
+      "breakpoints": true
     }
   ]
 }

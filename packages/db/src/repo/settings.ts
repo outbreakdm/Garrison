@@ -23,6 +23,7 @@ import {
   type SettingsDiff,
   type SettingsModule,
   settingsChanges,
+  settingsModule,
   starboardSettings,
   statsSettings,
   suggestionSettings,
@@ -31,6 +32,9 @@ import {
   watchSettings,
   welcomeSettings,
 } from "../schema";
+
+/** Every settings module, in the database enum's order. */
+export const SETTINGS_MODULES = settingsModule.enumValues as SettingsModule[];
 
 /**
  * The only fields the dashboard may change, per module. Anything else in a

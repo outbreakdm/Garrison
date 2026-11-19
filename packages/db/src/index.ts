@@ -14,6 +14,7 @@ export * from "./messages";
 export * from "./ops-calendar";
 export * from "./plans";
 export * from "./profile";
+export * from "./qm-edits";
 export * from "./qm-settings";
 export * from "./rally";
 export * from "./rank-boosts";
@@ -102,6 +103,7 @@ export type {
   Purchase,
   QmBuild,
   QmCreated,
+  QmEdit,
   QmOperation,
   QmOrder,
   QmPost,

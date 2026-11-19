@@ -11,7 +11,15 @@ import {
   qmSettingsGuide,
 } from "@garrison/db";
 import { z } from "zod";
-import { type AiPlan, AiPlanSchema, MAX_OPERATIONS, type ServerSnapshot } from "./plan.js";
+import { type AiEdit, type ChannelKind, MAX_DELETES } from "./edits.js";
+import {
+  type AiPlan,
+  AiPlanSchema,
+  MAX_OPERATIONS,
+  MAX_ORDERS,
+  MAX_PRIVATE_ROLES,
+  type ServerSnapshot,
+} from "./plan.js";
 import { QM_CHAT_ROUNDS, READ_TOOLS, type ReadTool } from "./tools.js";
 
 /**
@@ -48,6 +56,8 @@ export type PlannerContinuation =
       posts?: { kind: string; item_id: string; channel: string }[];
       /** The new orders it sets. */
       order?: { scope: string; parent: string | null; items: string[] }[];
+      /** Its changes to existing items and deletions, as the model writes them. */
+      edits?: AiEdit[];
     }
   | {
       mode: "extend";
@@ -63,10 +73,18 @@ export interface PlannerInput {
   channels: {
     id?: string;
     name: string;
-    type: "text" | "voice" | "other";
+    type: ChannelKind;
     category: string | null;
     categoryId?: string | null;
+    /** What the model sees about it beyond its name: topic, slowmode, who can see and post. */
+    details?: Record<string, unknown>;
   }[];
+  /** What the model sees about each role, by id: color, permissions, members, whether it can change it. */
+  roleDetails?: Record<string, Record<string, unknown>>;
+  /** Server-wide facts: size, Community features, Garrison's own role and powers. */
+  serverInfo?: Record<string, unknown>;
+  /** Who each category is open to, by id (the same summary as a channel's access). */
+  categoryDetails?: Record<string, Record<string, unknown>>;
   /** The most operations this plan may have: 20, or what's left of the day's changes. */
   maxOperations?: number;
   continuation?: PlannerContinuation;
@@ -145,6 +163,7 @@ export const AiChatSchema = z.object({
     .string()
     .describe("When you draft a plan: one short sentence describing it. Otherwise empty."),
   order: AiPlanSchema.shape.order,
+  edits: AiPlanSchema.shape.edits,
   operations: AiPlanSchema.shape.operations.describe(
     "The plan's operations when you draft one now. Empty while you're still asking.",
   ),
@@ -178,7 +197,15 @@ export const AiChatSchema = z.object({
  * proposes: Garrison validates every operation afterwards and a person approves the
  * result, so this explains the job rather than being the safety boundary.
  */
-const DESIGN = `A plan adds things and can put things in a better order. It adds with these operations: create_category, create_text_channel, create_voice_channel, create_role. It orders with entries in order (see Ordering). You cannot rename, edit or delete anything that already exists. If the admin asks for something you can't do (deleting or merging channels, renaming, moderation, admin or moderator roles, posting messages), leave it out and say so briefly; for too many channels, name the ones you'd delete or merge and say they can delete them in Discord.
+const DESIGN = `A plan can add, change, reorder and delete. It adds with these operations: create_category, create_text_channel, create_voice_channel, create_role. It changes or deletes what already exists with entries in edits (see Editing and deleting). It reorders with entries in order (see Ordering). It can't moderate members (warn, time out, kick, ban), give or take a role from a specific member, create forum, announcement or stage channels, or grant admin or moderation powers: if the admin asks for one of those, say so plainly and offer the closest thing you can.
+
+What a plan can do at most (Garrison refuses a plan past any of these, so never go over them, and never promise more than fits):
+- Changes: the number in <limits>. Every operation, edit, order entry, setting and post is one change.
+- ${MAX_ORDERS} order entries, ${MAX_DELETES} deletions, and ${MAX_PRIVATE_ROLES} roles in any private_to or posters list.
+- Discord's own: 500 channels and 250 roles per server, 50 channels per category.
+If a good answer needs more, do the most important part now and say in notes what you'd do next.
+
+Your reply goes out together with the plan, before Garrison checks and builds it, and nothing changes until the admin applies it. So describe what the plan will do ("This plan makes #rules read-only and…"), never say it's done, and don't offer "Looks good" for something you didn't put in the plan.
 
 How to design:
 - Read the request for what the admin is trying to achieve, not just the nouns in it. "A Valorant section" means a place where the Valorant players in this server can find teammates, talk, share clips and play together, so build all of that, not one channel.
@@ -194,18 +221,36 @@ How to design:
 - Text channel names are lowercase with hyphens. Category, voice channel and role names use normal capitalization.
 - Never go over the operations allowed in <limits>. If a good design needs more, build the most important part and list what you'd add next in notes, so the admin can continue for it.
 
+Editing and deleting:
+- Each edit names an existing channel, category or role by its id from the snapshot. Put everything for one item in one edit; leave a field null to keep it as it is.
+- Look at the snapshot before changing access. Each channel and category shows who it's hidden from or visible to, whether it's read-only, who can post (or speak), and own_permissions when it doesn't follow its category. When asked to "fix", "set up" or "check" permissions, compare what each channel is for with its access and propose edits for the ones that are wrong; say which you'd leave and why.
+- access sets who can see it and who can post or speak, replacing what's set now for @everyone and the roles you list. private_to lists the roles that may see it; then other plain roles can no longer see it unless they're staff. Empty private_to with read_only false opens it to everyone. Read-only with posters: everyone reads (or listens), the posters roles post (or speak). Server staff with Administrator always see everything.
+- sync_with_category true makes a channel follow its category's permissions again. Changing a category's access also changes the channels that follow it; channels with own_permissions keep theirs.
+- Roles marked editable: false (staff powers, a bot's or integration's role, or above Garrison's own) can't be edited, deleted or reordered here: the admin changes those in Server Settings → Roles. @everyone can't be edited or deleted either; change channel access instead.
+- A role's permissions in an edit replace its member permissions with the list you give, from the allowed list in <limits>; anything else it has stays.
+- Prefer changing over replacing: rename, move or edit a channel instead of deleting it and creating a new one, so its messages, pins and history stay.
+- Deleting is permanent: a deleted channel's messages are gone, and Undo can't bring anything back. Only delete what the admin explicitly asked to delete, or agreed to after you named exactly what goes. Name every deletion in your reply and say it can't be undone. Deleting a category keeps its channels; they move out of any category. You can't delete Discord's rules, community-updates or safety-alerts channels, channels Garrison's settings use, or editable: false roles.
+- Everything else a plan changes can be undone with Undo.
+
+How Discord works (use this, and don't contradict it):
+- Permissions come from roles (server-wide, adding up across a member's roles) and from channel overwrites (per channel or category, for @everyone, a role or one member). An overwrite's deny beats a role's allow, and a member's own overwrite beats role overwrites. Administrator ignores every overwrite. Garrison can only set permissions it holds itself.
+- Channel kinds: text, voice, forum (members start posts, with tags), announcement (Community servers; other servers can follow it), stage (Community; speakers and an audience) and media. This plan can edit all of them but only create text, voice and categories.
+- Community servers must keep a rules channel and a community-updates channel, and can use onboarding, membership screening, announcement and stage channels. The snapshot's server section says whether this one is Community.
+- Bots with Manage Roles, like Garrison, can give members roles below their own: Garrison does it with role menus, verification, level rewards and invite roles (set up on their dashboard pages). A plan itself doesn't give anyone a role; for one person, the admin does it in Discord.
+- The snapshot's server section says what Garrison may do (manage_channels, manage_roles). Without them, say what to fix: re-invite Garrison from the dashboard with the right permissions.
+
 How Discord lays a server out (design with this in mind):
 - The sidebar shows categories top to bottom. Put what everyone needs first: a start-here or info category (welcome, rules, announcements, verify, roles to pick) at the top, then general community chat, then game or topic sections, then voice, and staff, logs and other private categories last.
 - Inside a category Discord always lists text channels above voice channels. Order text channels by importance: rules and announcements before chat, chat before niche channels.
 - New categories and channels go to the bottom of their list, so when you create a start-here, rules or verify category, also put it near the top with an order entry.
 - Roles: the role list is a hierarchy. The highest role a member has sets their name color, and the highest hoisted role decides which group they appear in in the member list. A role can only manage, kick or ban members whose top role is lower, and Garrison can only give roles below its own. Keep staff roles above member roles, cosmetic and color roles above the general member role so their color shows, and opt-in game, ping and pronoun roles near the bottom.
 - Permissions add up across a member's roles. Channel overwrites decide visibility: a channel private to a role hides from @everyone and shows to that role; a verified-only server hides categories from @everyone and shows them to the verified role, leaving only a verify channel visible. Channels in a category follow its permissions unless they have their own.
-- Limits: 500 channels and 250 roles per server, 50 channels per category, names up to 100 characters.
+- Names: up to 100 characters. Text channel names are lowercase with hyphens.
 
 Ordering:
 - An order entry lists items top to bottom: scope "categories" (category ids or refs), "channels" with parent set to one category (the channels in it, ids or refs of channels this plan creates there), or "roles" (role ids or refs).
 - The items swap among the places they hold now, so list only what should move, in the order you want; anything not listed stays put. Two or more items per entry.
-- Roles marked movable: false (staff powers, bot roles, roles above Garrison) never go in an order, and you can't put a role above them. Say so if the admin wants them moved; they move them in Server Settings.
+- Roles marked editable: false (staff powers, bot roles, roles above Garrison) never go in an order, and you can't put a role above them. Say so if the admin wants them moved; they move them in Server Settings.
 - Each order entry counts as one change. Use one entry per list you reorder (all categories, one category's channels, the roles).
 - When asked to tidy or sort the server, look at the snapshot's order and propose a better one with a sentence on why (info first, staff last, staff roles above members).
 
@@ -235,6 +280,8 @@ How to talk:
 - When the admin asks for changes to a plan that hasn't been built (<previous_plan>), draft the whole plan again with the changes. When <built_before> is there, the last plan was built: offer what to add next, and draft additions when they want them.
 - After drafting, choices can offer next steps ("Add a clips channel", "Make ranked Gold+ only", "Looks good").
 - If they ask for something you can't do, say so plainly and offer the closest thing you can.
+- When they ask about their server ("who can see #staff?", "why can't members post in #general?", "what's wrong with my permissions?"), answer from the snapshot specifically, naming channels and roles, then offer to fix it.
+- Before deleting anything, name exactly what would go and ask; draft deletions only once they've agreed or asked for those exact things.
 
 Garrison's settings:
 - You can look at how Garrison is set up on this server: server_overview for everything at a glance, module_settings for one module in full. Look when the admin asks about their setup ("is anti-raid on?", "what does my welcome say?"), asks what's missing or what you'd recommend, and before you change a module, so you know what's set now. Don't look when the request doesn't need it, and never ask the admin something a look would tell you.
@@ -270,24 +317,41 @@ function contextBlocks(input: Omit<PlannerInput, "request">) {
   const inCategory = (id: string | null) =>
     listed
       .filter((c) => (c.categoryId ?? null) === id)
-      .map(({ id: cid, name, type }) => (cid ? { id: cid, name, type } : { name, type }));
+      .map(({ id: cid, name, type, details }) => ({
+        ...(cid ? { id: cid } : {}),
+        name,
+        type,
+        ...(details ?? {}),
+      }));
   const snapshot = {
+    ...(input.serverInfo ? { server: input.serverInfo } : {}),
     // Top to bottom, as the sidebar shows them; inside each, text above voice as Discord does.
     channels_without_category: inCategory(null),
     categories: input.server.categories.map((c) => ({
       id: c.id,
       name: c.name,
+      ...(input.categoryDetails?.[c.id] ?? {}),
       channels: inCategory(c.id),
     })),
-    // Top of the role list first. movable: false means it stays where it is in any order.
+    // Top of the role list first. editable: false means the AI assistant can't edit, delete or
+    // reorder it (staff powers, a bot's role, or above Garrison's own).
     roles: input.server.roles
       .filter((r) => r.id !== input.server.everyoneId)
       .map(({ id, name, managed, movable }) => ({
         id,
         name,
         ...(managed ? { managed: true } : {}),
-        movable: Boolean(movable),
+        editable: Boolean(movable),
+        ...(input.roleDetails?.[id] ?? {}),
       })),
+    ...(input.roleDetails?.[input.server.everyoneId]
+      ? {
+          everyone_role: {
+            id: input.server.everyoneId,
+            ...input.roleDetails[input.server.everyoneId],
+          },
+        }
+      : {}),
   };
   const limit = Math.max(1, Math.min(MAX_OPERATIONS, input.maxOperations ?? MAX_OPERATIONS));
   const perms = input.server.grantable ?? QM_ROLE_PERMISSION_KEYS;
@@ -310,12 +374,16 @@ function contextBlocks(input: Omit<PlannerInput, "request">) {
         ? {
             type: "text",
             text: `<previous_plan>\n${JSON.stringify(
-              cont.settings?.length || cont.posts?.length || cont.order?.length
+              cont.settings?.length ||
+                cont.posts?.length ||
+                cont.order?.length ||
+                cont.edits?.length
                 ? {
                     operations: cont.operations,
                     settings: cont.settings,
                     posts: cont.posts,
                     order: cont.order,
+                    edits: cont.edits,
                   }
                 : cont.operations,
             )}\n</previous_plan>`,
@@ -492,11 +560,16 @@ export class ClaudePlanner implements Planner {
           reply: out.reply,
           choices: out.choices,
           plan:
-            out.operations.length || out.order.length || settings.length || posts.length
+            out.operations.length ||
+            out.order.length ||
+            out.edits.length ||
+            settings.length ||
+            posts.length
               ? {
                   summary: out.plan_summary,
                   operations: out.operations,
                   order: out.order,
+                  edits: out.edits,
                   notes: out.plan_notes,
                   settings,
                   posts,

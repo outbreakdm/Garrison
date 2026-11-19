@@ -3,6 +3,7 @@ import {
   QM_ROLE_PERMISSION_KEYS,
   QM_ROLE_PERMISSIONS,
   type QmCreated,
+  type QmEdit,
   type QmOperation,
   type QmOrder,
   type QmRolePermission,
@@ -11,6 +12,8 @@ import {
   qmSettingValueText,
 } from "@garrison/db";
 import { z } from "zod";
+import { AiEditSchema, type ChannelKind, deletedIds, validateEdits } from "./edits.js";
+import { channelName, displayName, MAX_PRIVATE_ROLES } from "./names.js";
 
 /**
  * What the model returns. Deliberately loose (flat, nullable fields) so it maps
@@ -81,10 +84,18 @@ export const AiPlanSchema = z.object({
     .describe(
       "New orders, top to bottom: the categories, the channels inside one category, or roles. Empty when the order doesn't change.",
     ),
+  edits: z
+    .array(AiEditSchema)
+    .describe(
+      "Changes to channels, categories and roles that already exist, and deletions. Empty when nothing existing changes.",
+    ),
 });
 type AiPlanOutput = z.infer<typeof AiPlanSchema>;
-/** A plan as the model writes it; older plans and tests may leave out the order. */
-export type AiPlan = Omit<AiPlanOutput, "order"> & { order?: AiPlanOutput["order"] };
+/** A plan as the model writes it; older plans and tests may leave out the order and edits. */
+export type AiPlan = Omit<AiPlanOutput, "order" | "edits"> & {
+  order?: AiPlanOutput["order"];
+  edits?: AiPlanOutput["edits"];
+};
 export type AiPlanInput = AiPlan;
 
 /** What the plan may refer to that already exists. Built from the server, never from model output. */
@@ -93,8 +104,10 @@ export interface ServerSnapshot {
   categories: { id: string; name: string }[];
   /** Top to bottom. `movable`: Garrison may put it in a new order (see QmOrder). */
   roles: { id: string; name: string; managed: boolean; movable?: boolean }[];
-  /** Channels in each category, top to bottom, for orders. Missing: none known (tests). */
-  channels?: { id: string; name: string; parentId: string | null }[];
+  /** Channels in each category, top to bottom, for orders and edits. Missing: none known (tests). */
+  channels?: { id: string; name: string; parentId: string | null; kind?: ChannelKind }[];
+  /** Channels Discord or Garrison depends on, with why, so they can't be deleted. */
+  protectedChannels?: Record<string, string>;
   channelCount: number;
   roleCount: number;
   /** Role permissions Garrison holds, so can give. Missing: all of them (tests). */
@@ -103,35 +116,20 @@ export interface ServerSnapshot {
 
 /** The most changes one plan can make (QM_CHANGES_PER_PLAN). */
 export const MAX_OPERATIONS = QM_CHANGES_PER_PLAN;
-export const MAX_PRIVATE_ROLES = 5;
 const DISCORD_CHANNEL_LIMIT = 500;
 const DISCORD_ROLE_LIMIT = 250;
 
-/** Discord text-channel names: lowercase, no spaces, 1–90 chars of letters, numbers, - and _. */
-export function channelName(raw: string) {
-  return raw
-    .normalize("NFKC")
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^\p{L}\p{N}_-]/gu, "")
-    .replace(/-{2,}/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 90);
-}
-
-/** Names for categories, voice channels and roles: no control characters, mentions or markdown. */
-export function displayName(raw: string, max = 90) {
-  return raw
-    .normalize("NFKC")
-    .replace(/[\p{Cc}\p{Cf}]/gu, "")
-    .replace(/[@#<>*_`~|\\[\]]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, max);
-}
+export { channelName, displayName, MAX_PRIVATE_ROLES } from "./names.js";
 
 export type ValidationResult =
-  | { ok: true; summary: string; operations: QmOperation[]; orders: QmOrder[]; notes: string }
+  | {
+      ok: true;
+      summary: string;
+      operations: QmOperation[];
+      orders: QmOrder[];
+      edits: QmEdit[];
+      notes: string;
+    }
   | { ok: false; errors: string[] };
 
 /** The most orders one plan sets (all categories, a few categories' channels, the roles). */
@@ -157,7 +155,8 @@ export function validatePlan(
     server.roles.filter((r) => !r.managed && r.id !== server.everyoneId).map((r) => r.id),
   );
 
-  const total = raw.operations.length + (raw.order?.length ?? 0) + settingsCount;
+  const total =
+    raw.operations.length + (raw.order?.length ?? 0) + (raw.edits?.length ?? 0) + settingsCount;
   if (!total) errors.push("The plan has no changes.");
   if (total > maxOperations)
     errors.push(
@@ -272,6 +271,11 @@ export function validatePlan(
     errors.push("This would pass Discord's limit of 250 roles.");
 
   const orders = validateOrders(raw.order ?? [], server, ops, errors);
+  const edits = validateEdits(raw.edits ?? [], server, ops, errors);
+  const gone = deletedIds(edits);
+  for (const o of orders)
+    if ((o.parent && gone.has(o.parent)) || o.items.some((id) => gone.has(id)))
+      errors.push("An order lists something the plan deletes; leave it out of the order.");
 
   if (errors.length) return { ok: false, errors };
   return {
@@ -279,6 +283,7 @@ export function validatePlan(
     summary: displayName(raw.summary, 200) || "Server changes",
     operations: ops,
     orders,
+    edits,
     notes: displayName(raw.notes, 500),
   };
 }

@@ -11,6 +11,7 @@ import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { ButtonHandler, Command } from "../../commands/types.js";
 import { type Card, cardEdit, cardMessage, cardReply, ts } from "../../lib/card.js";
 import { safeText } from "../../lib/text.js";
+import { describeEdits } from "./edits.js";
 import { describeOrders, describePlan, type ServerSnapshot } from "./plan.js";
 import {
   applyBuild,
@@ -35,8 +36,16 @@ export function planCard(
   notes: string,
   suppliesLeft?: number,
 ): Card {
+  const names = new Map<string, string>([
+    ...build.plan.map((o) => [o.ref, o.name] as [string, string]),
+    ...server.categories.map((c) => [c.id, c.name] as [string, string]),
+    ...server.roles.map((r) => [r.id, r.name] as [string, string]),
+  ]);
+  const edits = build.edits ?? [];
+  const deletes = edits.filter((e) => e.kind.startsWith("delete_")).length;
   const lines = [
     ...describePlan(build.plan, server),
+    ...describeEdits(edits, names),
     ...describeOrders(build.orders ?? [], build.plan, server),
   ].map((l) => safeText(l));
   const expires = new Date(build.createdAt.getTime() + PLAN_TTL_MS);
@@ -49,7 +58,11 @@ export function planCard(
       { text: `\`\`\`diff\n${lines.join("\n").replaceAll("```", "'''")}\n\`\`\`` },
       ...(notes ? [{ text: `**Notes:** ${safeText(notes)}` }] : []),
       {
-        text: `-# New roles get only member permissions. Nothing that exists is changed${(build.orders ?? []).length ? ", only put in a new order" : ""}. Expires ${ts(expires)}.`,
+        text: `-# New roles get only member permissions. ${
+          edits.length
+            ? `Changes to what exists can be undone${deletes ? `; the ${deletes === 1 ? "deletion" : `${deletes} deletions`} can't` : ""}.`
+            : `Nothing that exists is changed${(build.orders ?? []).length ? ", only put in a new order" : ""}.`
+        } Expires ${ts(expires)}.`,
       },
     ],
     actions: [
@@ -133,8 +146,12 @@ export const qm: Command = {
         });
         return;
       }
-      const channels = build.created.filter((c) => c.kind !== "role").length;
+      const channels = build.created.filter(
+        (c) => c.kind === "channel" || c.kind === "category",
+      ).length;
       const roles = build.created.filter((c) => c.kind === "role").length;
+      const edited = build.created.filter((c) => c.kind === "edit").length;
+      const deleted = build.created.filter((c) => c.kind === "deleted").length;
       await interaction.reply(
         cardReply({
           tone: "caution",
@@ -142,7 +159,15 @@ export const qm: Command = {
           lead: safeText(build.summary),
           blocks: [
             {
-              text: `This deletes the ${channels} channels and categories and ${roles} roles it created, including any messages posted in those channels since. Nothing else is touched.`,
+              text: `This deletes the ${channels} channels and categories and ${roles} roles it created, including any messages posted in those channels since.${
+                edited
+                  ? ` It puts back the ${edited === 1 ? "item" : `${edited} items`} it changed.`
+                  : ""
+              }${
+                deleted
+                  ? ` It can't bring back the ${deleted === 1 ? "one thing" : `${deleted} things`} it deleted.`
+                  : ""
+              } Nothing else is touched.`,
               button: button(
                 `${QM_PREFIX}:undo:${build.id}`,
                 `Undo v${build.version}`,
@@ -233,12 +258,18 @@ export const qmButtons: ButtonHandler = {
         );
         return;
       }
+      const wasName = (id: string) =>
+        (build.edits ?? []).find((e) => e.id === id)?.was ?? "an item";
       const created = result.created.map((c) =>
         c.kind === "role"
           ? `@${safeText(c.name)}`
           : c.kind === "category"
             ? `**${safeText(c.name)}**`
-            : `<#${c.id}>`,
+            : c.kind === "edit"
+              ? `changed ${safeText(wasName(c.id))}`
+              : c.kind === "deleted"
+                ? `deleted ${safeText(c.name)}`
+                : `<#${c.id}>`,
       );
       await interaction.editReply(
         cardEdit(interaction.message, {
@@ -284,7 +315,7 @@ export const qmButtons: ButtonHandler = {
         result.failed ? `${result.failed} couldn't be removed: check my role position` : null,
       ].filter(Boolean);
       await interaction.editReply(
-        `Undone v${build.version}. Removed ${result.removed}.${extra.length ? ` ${extra.join("; ")}.` : ""}${undoSettingsNote(result.settings, result.posts)}`,
+        `Undone v${build.version}. Removed ${result.removed}.${extra.length ? ` ${extra.join("; ")}.` : ""}${undoSettingsNote(result.settings, result.posts, result.deleted)}`,
       );
     }
   },

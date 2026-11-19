@@ -1,6 +1,7 @@
 import {
   AI_SUPPLIES_PER_MESSAGE,
   aiAllowance,
+  describeEdits,
   entitlements,
   getGuildPlan,
   latestQmThread,
@@ -178,6 +179,25 @@ export default async function QuartermasterPage({
   const diffs = plan ? settingDiffs(layout, plan.plan, plan.settings ?? []) : [];
   const posts = plan ? postPreviews(layout, plan.plan, plan.posts ?? []) : [];
   const orders = plan ? orderLines(plan.orders ?? [], plan.plan, layout) : [];
+  // Changes to what exists, and deletions, as the bot describes them ("~ #general: renamed …").
+  const editNames = new Map<string, string>([
+    ...(plan?.plan ?? []).map((o) => [o.ref, o.name] as [string, string]),
+    ...(layout?.categories ?? []).map((c) => [c.id, c.name] as [string, string]),
+    ...(layout?.roles ?? []).map((r) => [r.id, r.name] as [string, string]),
+  ]);
+  const edits = plan
+    ? describeEdits(plan.edits ?? [], editNames).map((line) => {
+        const gone = line.startsWith("−");
+        const body = line.slice(2);
+        const cut = gone ? body.indexOf(" (") : body.indexOf(": ");
+        return {
+          gone,
+          what: cut > 0 ? body.slice(0, cut) : body,
+          how: cut > 0 ? body.slice(cut + (gone ? 2 : 2)).replace(/\)$/, "") : "",
+        };
+      })
+    : [];
+  const deleting = edits.filter((e) => e.gone).length;
   const changes = plan ? qmChangeCount(plan) : 0;
   // What applying does, in one sentence: "Adds 2 channels, changes 1 setting and posts 1 item."
   const doing = [
@@ -185,6 +205,8 @@ export default async function QuartermasterPage({
     diffs.length ? `changes ${plural(diffs.length, "setting")}` : null,
     posts.length ? `posts ${plural(posts.length, "saved item")}` : null,
     orders.length ? `puts ${plural(orders.length, "list")} in a new order` : null,
+    edits.length - deleting ? `changes ${plural(edits.length - deleting, "existing item")}` : null,
+    deleting ? `deletes ${plural(deleting, "item")}` : null,
   ].filter((x): x is string => Boolean(x));
   const sentence = doing.length
     ? `${doing.slice(0, -1).join(", ")}${doing.length > 1 ? " and " : ""}${doing.at(-1)}`
@@ -199,7 +221,7 @@ export default async function QuartermasterPage({
         categories: afterRows(preview.categories).length,
       }
     : null;
-  const extras = diffs.length + posts.length + orders.length + (plan?.notes ? 1 : 0);
+  const extras = diffs.length + posts.length + orders.length + edits.length + (plan?.notes ? 1 : 0);
   const minutesLeft = plan
     ? Math.max(1, Math.ceil((plan.createdAt.getTime() + QM_PLAN_TTL_MS - now) / 60_000))
     : 0;
@@ -564,6 +586,32 @@ export default async function QuartermasterPage({
                         </dl>
                       </div>
                     ) : null}
+                    {edits.length ? (
+                      <div className="qm-settings">
+                        <h3 className="g-label">Changes to what exists</h3>
+                        <dl className="qm-settings__list">
+                          {edits.map((e) => (
+                            <div key={`${e.gone ? "-" : "~"}${e.what}`}>
+                              <dt>{e.what}</dt>
+                              <dd>
+                                {e.gone ? (
+                                  <span className="notice" role="alert">
+                                    {e.how || "Deleted"}
+                                  </span>
+                                ) : (
+                                  e.how
+                                )}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                        <p className="g-help">
+                          {deleting
+                            ? `Undo puts every change back, but not ${deleting === 1 ? "the deletion" : `the ${deleting} deletions`}: what's deleted is gone for good.`
+                            : "Undo puts every change back as it was."}
+                        </p>
+                      </div>
+                    ) : null}
                     {orders.length ? (
                       <div className="qm-settings">
                         <h3 className="g-label">New order</h3>
@@ -634,6 +682,10 @@ export default async function QuartermasterPage({
                         ↕{preview?.moved ?? orders.length} moved
                       </span>
                     ) : null}
+                    {edits.length - deleting ? (
+                      <span className="qm-plan__edit">~{edits.length - deleting} changed</span>
+                    ) : null}
+                    {deleting ? <span className="qm-plan__gone">−{deleting} deleted</span> : null}
                   </span>
                   <form action={requestAction}>
                     <input type="hidden" name="guildId" value={guild.id} />

@@ -772,6 +772,47 @@ export interface QmOperation {
 }
 
 /**
+ * A change to something that already exists, or its deletion (the AI assistant, since
+ * 2026-11-19). `id` is the existing item; anything left out stays as it is. Edits are undone
+ * from what the build recorded before it changed them (QmCreated "edit"); deletes are
+ * permanent. Every check is in validatePlan (apps/bot quartermaster/plan.ts).
+ */
+export interface QmEdit {
+  kind:
+    | "edit_channel"
+    | "edit_category"
+    | "edit_role"
+    | "delete_channel"
+    | "delete_category"
+    | "delete_role";
+  id: string;
+  /** Its name when the plan was drafted, for the preview. */
+  was: string;
+  name?: string;
+  /** Text channels. "" clears it. */
+  topic?: string;
+  slowmodeSeconds?: number;
+  /** Voice channels. 0 is no limit. */
+  userLimit?: number;
+  nsfw?: boolean;
+  /** Channels: a category id or a category ref from this plan; null takes it out of any category. */
+  parent?: string | null;
+  /**
+   * Channels and categories: who sees it and who posts or speaks. privateTo empty and readOnly
+   * false makes it open to everyone. Refs or ids, like a new channel's.
+   */
+  access?: { privateTo: string[]; readOnly: boolean; posters: string[] };
+  /** Channels: take the category's permissions again. */
+  syncWithCategory?: boolean;
+  /** Roles. */
+  color?: number;
+  hoist?: boolean;
+  mentionable?: boolean;
+  /** Roles: the member-level permissions from QM_ROLE_PERMISSIONS it should have. */
+  permissions?: string[];
+}
+
+/**
  * A new order a plan sets, top to bottom: the server's categories, the channels inside one
  * category, or roles. Items are ids, or refs of things the same plan creates. They swap
  * among the places they already hold, so nothing outside the list moves: roles with admin or
@@ -815,8 +856,12 @@ export interface QmPost {
  * named "module.field". A post is the channel it went to; posts aren't undone.
  */
 export interface QmCreated {
-  /** An order: id is its scope ("roles", "categories", "channels:<id>"), name the order before. */
-  kind: "category" | "channel" | "role" | "setting" | "post" | "order";
+  /**
+   * An order: id is its scope ("roles", "categories", "channels:<id>"), name the order before.
+   * An edit: id is the item, name its state before as JSON (Undo puts it back). Deleted: id and
+   * name of what's gone; Undo can't bring it back.
+   */
+  kind: "category" | "channel" | "role" | "setting" | "post" | "order" | "edit" | "deleted";
   id: string;
   name: string;
 }
@@ -884,6 +929,8 @@ export const qmBuilds = pgTable(
     posts: jsonb("posts").$type<QmPost[]>().notNull().default([]),
     /** New orders it sets (categories, channels in a category, roles), after the structure. */
     orders: jsonb("orders").$type<QmOrder[]>().notNull().default([]),
+    /** Changes to what already exists and deletions, after the structure (QmEdit). */
+    edits: jsonb("edits").$type<QmEdit[]>().notNull().default([]),
     /** What the model left out or would add next, shown with the plan and used to continue it. */
     notes: text("notes"),
     /** The build this one continues: a revised plan, or more added onto a built one. */

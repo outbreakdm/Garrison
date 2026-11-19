@@ -147,17 +147,20 @@ export async function chatTurn(
       role: m.role === "assistant" ? "assistant" : "user",
       text: m.buildId ? `${m.text}\n[You drafted a plan here.]` : m.text,
     }));
-    const result = await planner.chat({
-      history: turns,
-      ...snap,
-      maxOperations,
-      continuation,
-      rounds,
-      maxTokens,
-      read: rounds > 1 ? settingsReader(ctx.db, guild, allowance) : undefined,
-    });
+    const chat = planner.chat.bind(planner);
+    const ask = (history: ChatTurn[], withReads: boolean) =>
+      chat({
+        history,
+        ...snap,
+        maxOperations,
+        continuation,
+        rounds: withReads ? rounds : 1,
+        maxTokens,
+        read: withReads && rounds > 1 ? settingsReader(ctx.db, guild, allowance) : undefined,
+      });
+    let result = await ask(turns, true);
     usage = result.usage;
-    const cost = callUsage(usage, model);
+    let cost = callUsage(usage, model);
     if (!result.ok) {
       // A failed call is charged what it used: those tokens were paid for.
       await say(result.error, { supplies: suppliesFor(cost.costMicros) });
@@ -174,8 +177,63 @@ export async function chatTurn(
       refused = true;
       if (room < 1) reply = `${reply} ${suppliesMessage(allowance)}`;
       else {
-        const checked = await checkDraft(ctx, guild, result.plan, snap.server, maxOperations);
-        if (!checked.ok) {
+        let checked = await checkDraft(ctx, guild, result.plan, snap.server, maxOperations);
+        // Refused: show the model Garrison's reasons and its own draft once, and take the
+        // corrected plan, instead of telling the admin about a plan that won't build. Only
+        // when this message's hold pays for another call.
+        if (!checked.ok && rounds > 1) {
+          ctx.logger.info("AI assistant draft refused; asking for a fix", {
+            guildId: guild.id,
+            errors: checked.errors,
+          });
+          const draft = result.plan;
+          const retry = await ask(
+            [
+              ...turns,
+              {
+                role: "assistant",
+                text: `${result.reply}\n<draft>${JSON.stringify({
+                  operations: draft.operations,
+                  edits: draft.edits ?? [],
+                  order: draft.order ?? [],
+                  settings: draft.settings,
+                  posts: draft.posts,
+                })}</draft>`,
+              },
+              {
+                role: "user",
+                text: `<garrison_check>Garrison's checks refused that draft, so nothing was saved:\n${checked.errors
+                  .slice(0, 8)
+                  .map((e) => `- ${e}`)
+                  .join(
+                    "\n",
+                  )}\nSend the corrected plan in full. Keep what was fine, fix or drop what was refused, and make the reply describe the corrected plan. If it can't be fixed, leave the plan empty and say why in one sentence.</garrison_check>`,
+              },
+            ],
+            false,
+          );
+          if (retry.usage)
+            usage = {
+              ...retry.usage,
+              inputTokens: (usage?.inputTokens ?? 0) + retry.usage.inputTokens,
+              outputTokens: (usage?.outputTokens ?? 0) + retry.usage.outputTokens,
+              cacheReadTokens: (usage?.cacheReadTokens ?? 0) + (retry.usage.cacheReadTokens ?? 0),
+              cacheWriteTokens:
+                (usage?.cacheWriteTokens ?? 0) + (retry.usage.cacheWriteTokens ?? 0),
+            };
+          cost = callUsage(usage, model);
+          if (usage) await meterAiCall(ctx.db, reserved.id, cost);
+          if (retry.ok) {
+            result = retry;
+            reply = retry.reply.trim() || reply;
+            if (retry.plan)
+              checked = await checkDraft(ctx, guild, retry.plan, snap.server, maxOperations);
+            else checked = { ok: false, errors: [] };
+          }
+        }
+        if (!checked.ok && !checked.errors.length) {
+          // The model said why it couldn't be done; its reply already explains.
+        } else if (!checked.ok) {
           ctx.logger.info("AI assistant chat plan rejected", {
             guildId: guild.id,
             errors: checked.errors,
@@ -190,7 +248,7 @@ export async function chatTurn(
             person,
             input.message,
             checked,
-            result.model,
+            result.ok ? result.model : model,
             { continues: working, replacing },
           );
           if (stored.ok) {

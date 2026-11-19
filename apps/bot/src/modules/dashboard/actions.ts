@@ -330,7 +330,7 @@ async function doUndoBuild(ctx: BotContext, guild: Guild, member: GuildMember, r
   return res.ok
     ? {
         ok: true,
-        message: `Undid that build: removed ${res.removed}${res.missing ? `, ${res.missing} already gone` : ""}.${undoSettingsNote(res.settings, res.posts)}`,
+        message: `Undid that build: removed ${res.removed}${res.missing ? `, ${res.missing} already gone` : ""}.${undoSettingsNote(res.settings, res.posts, res.deleted)}`,
       }
     : fail(res.error);
 }

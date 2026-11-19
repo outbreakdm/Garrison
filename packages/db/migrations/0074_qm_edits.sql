@@ -1,0 +1,1 @@
+ALTER TABLE "qm_builds" ADD COLUMN IF NOT EXISTS "edits" jsonb DEFAULT '[]'::jsonb NOT NULL;

@@ -310,6 +310,7 @@ describe("Quartermaster end to end", () => {
       failed: 0,
       settings: { undone: 0, changedSince: 0 },
       posts: 0,
+      deleted: 0,
     });
     expect(f.deleted).toEqual(["q3-2", "q3-1"]); // category before role
     expect(f.channels.has("pre-existing")).toBe(true);
@@ -793,6 +794,41 @@ describe("AI assistant chat", () => {
     );
     expect(outcome).toMatchObject({ ok: true, build: null });
     expect(outcome.ok && outcome.reply).toMatch(/couldn't make that plan safely/);
+  });
+
+  it("fixes a refused draft once from Garrison's reasons, instead of showing a broken plan", async () => {
+    const f = fakeGuild("q18b");
+    const bad: AiPlan = {
+      summary: "x",
+      notes: "",
+      operations: [op({ kind: "create_role", ref: "Bad Ref!", name: "Raiders" })],
+    };
+    const good: AiPlan = {
+      summary: "Adds a Raiders role",
+      notes: "",
+      operations: [op({ kind: "create_role", ref: "raiders", name: "Raiders" })],
+    };
+    const seen: ChatInput[] = [];
+    const outcome = await chatTurn(
+      ctx,
+      scripted(
+        [
+          { reply: "Here's a Raiders role.", plan: bad },
+          { reply: "This plan adds a Raiders role.", plan: good },
+        ],
+        seen,
+      ),
+      f.guild,
+      asker(f),
+      { message: "add a raiders role" },
+    );
+    expect(outcome).toMatchObject({ ok: true, reply: "This plan adds a Raiders role." });
+    expect(outcome.ok && outcome.build?.plan[0]?.ref).toBe("raiders");
+    // The second call saw the checker's exact reason and its own draft.
+    const repair = seen[1]?.history.at(-1)?.text ?? "";
+    expect(repair).toMatch(/Garrison's checks refused that draft/);
+    expect(repair).toMatch(/ref "Bad Ref!" isn't valid/);
+    expect(seen[1]?.history.at(-2)?.text).toMatch(/<draft>/);
   });
 
   it("charges a typical message 3 supplies, and says so in the chat when they run out", async () => {

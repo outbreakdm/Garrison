@@ -623,6 +623,11 @@ a.g-btn--primary:hover {
 .qm-plan__edit {
   color: var(--caution);
 }
+/* Deletions in a plan: permanent, so they read as a warning. */
+.qm-plan__gone {
+  color: var(--alert);
+  font-weight: 600;
+}
 .qm-plan__rules {
   margin: 0;
   padding: 0 var(--space-4) 12px;

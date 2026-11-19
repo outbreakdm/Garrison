@@ -189,3 +189,43 @@ deployed only when the owner says so.
   sloppy, route chat to Sonnet 5.5 at about 10x the cost per message, or raise the message
   price.
 - **Discord:** a `/assistant` thread in Discord later, using the same tools, if owners ask.
+
+## Editing and deleting (built 2026-11-19)
+
+Owner decision (2026-11-19): the assistant may change and delete what already exists, keeping
+Claude Haiku 5.5. Real chats showed the add-only builder failing at what managers ask most:
+"set up permissions for each channel" (it couldn't touch existing channels), claiming work it
+then couldn't do (the hidden 6-order cap), and saying wrong things ("bots can't assign roles").
+
+- **Edits** (`edits` on `qm_builds`, migration 0074; `QmEdit` in `packages/db/src/schema.ts`):
+  rename; topic, slowmode, user limit, age restriction; move a channel between categories or
+  sync it with its category; set who sees and who posts or speaks in a channel or category;
+  a role's name, color, show-separately, mentionable and member permissions (from the same
+  allowlist as new roles; other bits it holds stay). Checked in `quartermaster/edits.ts`, applied
+  after the plan's new items and before orders, settings and posts.
+- **Access edits** change only view, send, threads, read history, connect, speak and stream,
+  and only bits Garrison holds. "Private to X" clears other plain roles' explicit view allows;
+  staff and bot roles keep theirs. Editing a category's access keeps channels that followed it
+  in step.
+- **Undo** puts every edited item back from the state recorded just before it changed
+  (`QmCreated` "edit": name, topic, slowmode, limit, category and every overwrite, or a role's
+  name, color, flags and permissions), including channels that followed an edited category.
+- **Deletes** (`delete_channel`, `delete_category`, `delete_role`) are permanent: at most 10 a
+  plan, run last, shown as "can't be undone" in the Discord card and on the dashboard, and
+  recorded as "deleted" so Undo says what it couldn't bring back. Refused: Discord's rules,
+  community-updates and safety-alerts channels, channels any Garrison setting points at, roles
+  with staff powers, bots' roles, roles above Garrison, @everyone. Checked again when applied.
+- **What it sees**: every channel's kind (text, voice, forum, announcement, stage, media),
+  topic, slowmode, limit and access in words (hidden from everyone, visible to, read-only, who
+  can post, own permissions); every category's access; each role's permissions, color, flags,
+  member count (when Discord gave every member) and whether it's editable; the server's size,
+  Community status, verification level and what Garrison may do.
+- **Prompt**: every limit stated up front (changes in <limits>, 6 orders, 10 deletions, 5
+  roles per access list), Discord's permission model and channel kinds, the correct facts on
+  role assignment, and "describe what the plan will do, never say it's done".
+- **Self-repair**: when Garrison's checks refuse a chat draft, the model gets the exact reasons
+  and its own draft once and returns a corrected plan (only when the message's hold pays for the
+  call). The admin sees the checker's reasons only if that also fails.
+- Still not possible: creating forum, announcement or stage channels; giving a role to a
+  specific member; anything with admin or moderation powers; moderation itself.
+
