@@ -1259,3 +1259,10 @@ Decided (2026-11-12, owner):
   column) and **0075** (bot role: 30 s statements, 10 s locks, 15 s idle-in-transaction, so a
   connection that dies mid-query frees its slot and locks in seconds; it happened about every
   45 minutes on 2026-11-18).
+- 2026-11-19: The bot froze 40 to 50 minutes after every start (02:35 → 03:21, 05:44 → 06:29,
+  11:17 → …): a connection about 45 minutes old was cut on the way to the pooler mid-transaction
+  ("unexpected EOF on client connection with an open transaction"), the pool froze, and the
+  watchdog restarted the bot. Its connections now renew every 10 to 15 minutes, each at its own
+  time (postgres-js lets a running transaction finish first; checked against Postgres 16). If the
+  drops continue, move the bot's DATABASE_URL to the session pooler (port 5432), which Supabase
+  recommends for long-running servers.

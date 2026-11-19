@@ -17,6 +17,12 @@ export interface CreateDbOptions {
    * ("{a,b}"), and nothing the dashboard runs does (checked 2026-11-18).
    */
   fetchTypes?: boolean;
+  /**
+   * Seconds before a connection is replaced (when it's free; a transaction always finishes
+   * first). postgres-js's default is 30 to 60 minutes. A function is asked once per connection,
+   * so connections renew at different times.
+   */
+  maxLifetimeSeconds?: number | (() => number);
 }
 
 /** Give up on opening a connection after this long, instead of postgres-js's 30 s. */
@@ -39,6 +45,11 @@ export function createDb(url: string, options: CreateDbOptions = {}) {
     connect_timeout: DB_CONNECT_TIMEOUT_S,
     idle_timeout: DB_IDLE_TIMEOUT_S,
     fetch_types: options.fetchTypes ?? true,
+    // postgres-js's types say a number, but it calls a function once per connection (its own
+    // default is one: postgres/src/connection.js timer()).
+    ...(options.maxLifetimeSeconds !== undefined
+      ? { max_lifetime: options.maxLifetimeSeconds as unknown as number }
+      : {}),
   });
   const db = drizzle(sql, { schema });
   return { db: db as unknown as Db, close: () => sql.end({ timeout: 5 }) };

@@ -63,7 +63,17 @@ import { welcomeJoin, welcomeLeave } from "./modules/welcome/service.js";
 
 const env = loadEnv();
 const logger = createLogger(env.LOG_LEVEL);
-const { db, close } = createDb(env.DATABASE_URL);
+/**
+ * The bot's connections renew every 10 to 15 minutes, each at its own time. Until 2026-11-19
+ * they lived 30 to 60 minutes (postgres-js's default), and something on the way to the pooler
+ * cut them at about 45 minutes, mid-transaction: "unexpected EOF on client connection with an
+ * open transaction" in Postgres's log, then a frozen pool and a watchdog restart, 40 to 50
+ * minutes after every start. Renewing well before that means no connection gets that old;
+ * postgres-js lets a running transaction finish before it renews one.
+ */
+const { db, close } = createDb(env.DATABASE_URL, {
+  maxLifetimeSeconds: () => 600 + Math.random() * 300,
+});
 // Fail closed: never run with a login that skips the database's own protections.
 const problem = roleProblem(await describeDbRole(db), "garrison_bot");
 if (problem) {
