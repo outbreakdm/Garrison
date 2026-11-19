@@ -39,6 +39,7 @@ import {
   type QmWrite,
   qmChargedChanges,
   qmHoldSupplies,
+  qmWriteItemId,
   qmWritePatches,
   readSettings,
   recordQmCreated,
@@ -513,12 +514,25 @@ export async function continuationFor(
               : w.field === "dmCard"
                 ? "welcome_dm"
                 : "welcome_join"
-            : w.isNew
-              ? "new_message"
-              : "edit_message",
+            : w.kind === "role_menu"
+              ? "new_role_menu"
+              : w.kind === "ticket_panel"
+                ? "new_ticket_panel"
+                : w.isNew
+                  ? "new_message"
+                  : "edit_message",
         message_id: w.isNew ? (w.ref ?? "") : (w.messageId ?? ""),
         name: w.isNew ? w.name : "",
         ...cardText(w.card),
+        style: w.menu?.style ?? null,
+        items: w.menu
+          ? w.menu.options.map((o) => ({ role: o.roleId, label: o.label, emoji: o.emoji ?? "" }))
+          : (w.panel?.topics ?? []).map((t) => ({
+              role: "",
+              label: t.label,
+              emoji: t.emoji ?? "",
+            })),
+        staff_roles: w.staffRoleIds ?? [],
       })),
     };
   const built = build.created.flatMap((c) =>
@@ -702,12 +716,27 @@ export async function checkDraft(
   if (leaning.length) return { ok: false, errors: leaning };
   const lookup = settingsLookup(guild, structure.operations);
   const ent = entitlements(await getGuildPlan(ctx.db, guild.id));
-  const written = await checkQmWrites(ctx.db, guild.id, draft.writes ?? [], ent);
+  const written = await checkQmWrites(
+    ctx.db,
+    guild.id,
+    draft.writes ?? [],
+    ent,
+    settingsLookup(guild, structure.operations),
+  );
   // A post may name a message the same plan writes, by its ref.
   const refs = written.ok
-    ? written.writes.flatMap((w) =>
-        w.isNew && w.ref && w.messageId ? [{ ref: w.ref, id: w.messageId, name: w.name }] : [],
-      )
+    ? written.writes.flatMap((w) => {
+        const id = qmWriteItemId(w);
+        const kind =
+          w.kind === "role_menu"
+            ? "role_menu"
+            : w.kind === "ticket_panel"
+              ? "ticket_panel"
+              : "message";
+        return w.isNew && w.ref && id
+          ? [{ kind: kind as QmPost["kind"], ref: w.ref, id, name: w.name }]
+          : [];
+      })
     : [];
   const [settings, posts] = await Promise.all([
     checkQmSettings(ctx.db, guild.id, draft.settings, lookup, ent),
@@ -1053,6 +1082,7 @@ async function runBuild(ctx: BotContext, guild: Guild, build: QmBuild): Promise<
       build,
       ent ?? entitlements(await getGuildPlan(ctx.db, guild.id)),
       created,
+      ids,
     );
     if (failed) {
       await transitionQmBuild(ctx.db, build.id, "applied", "failed", { error: failed });
@@ -1598,10 +1628,11 @@ async function applyPlanWrites(
   build: QmBuild,
   ent: Entitlements,
   created: QmCreated[],
+  ids: Map<string, string>,
 ): Promise<string | null> {
   const writes = build.writes ?? [];
   if (!writes.length) return null;
-  const planned = await qmWritePatches(ctx.db, guild.id, writes, ent);
+  const planned = await qmWritePatches(ctx.db, guild.id, writes, ent, ids);
   if (!planned.ok) return `The text couldn't be saved: ${planned.error} Use Undo for the rest.`;
   for (const { module, patch } of planned.patches) {
     const result = await applySettingsChange(ctx.db, {
@@ -1613,7 +1644,7 @@ async function applyPlanWrites(
     });
     if (!result.ok) {
       if (result.reason === "unchanged") continue;
-      return `The ${module === "welcome" ? "welcome cards" : "messages"} weren't ready to change. Use Undo for the rest.`;
+      return `The ${{ welcome: "welcome cards", messages: "messages", roles: "role menus", tickets: "ticket panels" }[module]} weren't ready to change. Use Undo for the rest.`;
     }
     refreshSettings(module, guild.id);
     const item: QmCreated = { kind: "setting", id: result.change.id, name: `${module}.write` };

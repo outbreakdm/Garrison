@@ -4719,3 +4719,19 @@ a.item-tile:not([open]) > .panel__summary {
   margin-top: var(--space-2);
   opacity: 0.8;
 }
+/* A new role menu's buttons and the roles they give, or a ticket panel's topics. */
+.qm-write__items {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+.qm-write__button {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}

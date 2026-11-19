@@ -1470,3 +1470,156 @@ describe("text the AI assistant writes", () => {
     expect(out.ok && out.build).toBeFalsy();
   });
 });
+
+describe("role menus and ticket panels the AI assistant makes", () => {
+  const menuBot = (
+    writes: NonNullable<ChatInput["history"]> extends unknown ? unknown[] : never,
+    posts: unknown[] = [],
+  ): Planner => ({
+    model: "claude-haiku-5-5",
+    plan: async () => ({ ok: false, error: "not used" }),
+    chat: async () => ({
+      ok: true,
+      reply: "This plan adds a game roles menu and a support panel.",
+      choices: [],
+      model: "claude-haiku-5-5",
+      usage: TYPICAL,
+      plan: {
+        summary: "Menus",
+        notes: "",
+        operations: [op({ kind: "create_role", ref: "apex", name: "Apex" })],
+        settings: [],
+        posts: posts as never,
+        writes: writes as never,
+      },
+    }),
+  });
+
+  it("drafts both in full, applies them with the real role ids, and Undo takes them out", async () => {
+    const { readSettings, readRoleMenus, readTicketPanels, getQmBuild } = await import(
+      "@garrison/db"
+    );
+    const f = fakeGuild("q91");
+    const role = (rid: string, name: string, bits = 0n) =>
+      f.roles.set(rid, {
+        id: rid,
+        name,
+        managed: false,
+        position: 2,
+        permissions: new PermissionsBitField(bits),
+        delete: async () => {},
+      });
+    role("123456789012345401", "Valorant");
+    role("123456789012345402", "Mods", PermissionFlagsBits.KickMembers);
+    // Discord gives new roles snowflake ids, which a role menu requires.
+    Object.assign(f.guild.roles, {
+      create: async (o: { name: string }) => {
+        role("123456789012345499", o.name);
+        return { id: "123456789012345499", name: o.name };
+      },
+    });
+    f.channels.set("123456789012345403", {
+      id: "123456789012345403",
+      name: "roles",
+      type: ChannelType.GuildText,
+      isThread: () => false,
+      rawPosition: 0,
+      parentId: null,
+      delete: async () => {},
+    });
+    const a = asker(f);
+    const writes = [
+      {
+        target: "new_role_menu",
+        messageId: "games",
+        name: "Game roles",
+        title: "Pick your games",
+        body: "Tap a game to get its role.",
+        style: "buttons",
+        items: [
+          { role: "123456789012345401", label: "Valorant", emoji: "🔫" },
+          { role: "apex", label: "Apex", emoji: "🎯" },
+        ],
+      },
+      {
+        target: "new_ticket_panel",
+        messageId: "support",
+        name: "Support",
+        title: "Need help?",
+        body: "Open a ticket and the Mods will answer.",
+        items: [{ role: "", label: "Report someone", emoji: "🚩" }],
+        // Ticket staff may have moderation powers: they only see tickets.
+        staffRoles: ["123456789012345402"],
+      },
+    ];
+    const out = await chatTurn(
+      ctx,
+      menuBot(writes, [{ kind: "role_menu", itemId: "games", channel: "123456789012345403" }]),
+      f.guild,
+      a,
+      {
+        message: "Game roles menu in #roles, and a support panel",
+      },
+    );
+    if (!out.ok || !out.build) throw new Error(out.ok ? "no draft" : out.error);
+    const draft = out.build;
+    expect(draft.writes.map((w) => w.kind)).toEqual(["role_menu", "ticket_panel"]);
+    // The post names the new menu by its id, made when drafted.
+    expect(draft.posts[0]?.itemId).toBe(draft.writes[0]?.menu?.id);
+    expect(draft.writes[0]?.menu?.options.map((o) => o.roleId)).toEqual([
+      "123456789012345401",
+      "apex",
+    ]);
+
+    // Applied without its post (posting needs Discord), the role ref becomes the new role's id.
+    const applied = await applyBuild(ctx, f.guild, { ...draft, posts: [] });
+    expect(applied).toMatchObject({ ok: true, failed: null });
+    const menus = readRoleMenus((await readSettings(ctx.db, "q91", "roles"))?.menus ?? []);
+    expect(menus).toHaveLength(1);
+    expect(menus[0]?.options.map((o) => o.roleId)).toEqual([
+      "123456789012345401",
+      "123456789012345499",
+    ]);
+    const tickets = await readSettings(ctx.db, "q91", "tickets");
+    expect(readTicketPanels(tickets?.panels ?? []).map((p) => p.name)).toEqual(["Support"]);
+    expect(tickets?.staffRoleIds).toEqual(["123456789012345402"]);
+
+    const built = await getQmBuild(ctx.db, "q91", draft.id);
+    if (!built) throw new Error("gone");
+    await undoBuild(ctx, f.guild, built, a.id);
+    expect(readRoleMenus((await readSettings(ctx.db, "q91", "roles"))?.menus ?? [])).toEqual([]);
+    expect(readTicketPanels((await readSettings(ctx.db, "q91", "tickets"))?.panels ?? [])).toEqual(
+      [],
+    );
+  });
+
+  it("won't put a role with moderation powers in a role menu", async () => {
+    const f = fakeGuild("q92");
+    f.roles.set("123456789012345501", {
+      id: "123456789012345501",
+      name: "Mods",
+      managed: false,
+      position: 2,
+      permissions: new PermissionsBitField(PermissionFlagsBits.BanMembers),
+      delete: async () => {},
+    });
+    const out = await chatTurn(
+      ctx,
+      menuBot([
+        {
+          target: "new_role_menu",
+          name: "Bad",
+          title: "Get Mods",
+          body: "x",
+          style: "buttons",
+          items: [{ role: "123456789012345501", label: "Mods", emoji: "" }],
+        },
+      ]),
+      f.guild,
+      asker(f),
+      { message: "menu" },
+    );
+    expect(out.ok && out.build).toBeFalsy();
+    expect(out.ok && out.reply).toMatch(/moderation or admin powers/);
+  });
+});

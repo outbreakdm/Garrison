@@ -272,7 +272,13 @@ export default async function QuartermasterPage({
   const writes = plan?.writes ?? [];
   // Mentions in written text, as names (they never ping).
   const mentionNames = {
-    roles: new Map((layout?.roles ?? []).map((r) => [r.id, r.name] as [string, string])),
+    // The plan's new roles by ref too, so a new role menu names them.
+    roles: new Map([
+      ...(layout?.roles ?? []).map((r) => [r.id, r.name] as [string, string]),
+      ...(plan?.plan ?? [])
+        .filter((o) => o.kind === "create_role")
+        .map((o) => [o.ref, o.name] as [string, string]),
+    ]),
     channels: new Map(
       [...(layout?.loose ?? []), ...(layout?.categories ?? []).flatMap((c) => c.channels)].map(
         (c) => [c.id, c.name] as [string, string],

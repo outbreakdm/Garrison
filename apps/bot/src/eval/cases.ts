@@ -850,6 +850,84 @@ export const CASES: EvalCase[] = [
     ),
   },
 
+  {
+    id: "menu-game-roles",
+    category: "posts",
+    ask: "Make a role menu where people pick Valorant, Apex or Minecraft, and post it in #roles.",
+    draft: "yes",
+    check: (a) => {
+      const w = writesOf(a).find((x) => x.target === "new_role_menu");
+      const roles = (w?.items ?? []).map((i) => i.role);
+      return all(
+        need(Boolean(w), "no new role menu"),
+        need(
+          [ID.valorant, ID.apexRole, ID.minecraftRole].every((r) => roles.includes(r)),
+          "doesn't give the three game roles",
+        ),
+        need(
+          (a.plan?.posts ?? []).some(
+            (p) => p.kind === "role_menu" && p.channel === ID.roles && p.itemId === w?.messageId,
+          ),
+          "not posted in #roles",
+        ),
+      );
+    },
+    reference: reply(
+      "This plan makes a game roles menu and posts it in #roles.",
+      plan({
+        writes: [
+          {
+            target: "new_role_menu",
+            messageId: "games",
+            name: "Game roles",
+            title: "Pick your games",
+            body: "Tap a game to get its role and its channels.",
+            style: "buttons",
+            items: [
+              { role: ID.valorant, label: "Valorant", emoji: "🔫" },
+              { role: ID.apexRole, label: "Apex", emoji: "🎯" },
+              { role: ID.minecraftRole, label: "Minecraft", emoji: "⛏️" },
+            ],
+          },
+        ],
+        posts: [{ kind: "role_menu", itemId: "games", channel: ID.roles }],
+      }),
+    ),
+  },
+  {
+    id: "tickets-new-panel",
+    category: "posts",
+    ask: "Set up tickets: a panel where people can report someone or ask for help, answered by Mods.",
+    draft: "yes",
+    check: (a) => {
+      const w = writesOf(a).find((x) => x.target === "new_ticket_panel");
+      return all(
+        need(Boolean(w), "no new ticket panel"),
+        need((w?.items?.length ?? 0) >= 2, "fewer than two topics"),
+        need(Boolean(w?.staffRoles?.includes(ID.mods)), "Mods don't answer"),
+      );
+    },
+    reference: reply(
+      "This plan makes a support panel answered by Mods.",
+      plan({
+        writes: [
+          {
+            target: "new_ticket_panel",
+            messageId: "support",
+            name: "Support",
+            title: "Need a hand?",
+            body: "Pick a topic and a private ticket opens with the Mods.",
+            items: [
+              { role: "", label: "Report someone", emoji: "🚩" },
+              { role: "", label: "Ask for help", emoji: "🙋" },
+            ],
+            staffRoles: [ID.mods],
+          },
+        ],
+      }),
+    ),
+  },
+
   // How Garrison works: point at the right page, draft nothing.
   {
     id: "howto-stream-alerts",

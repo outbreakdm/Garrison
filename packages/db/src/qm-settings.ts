@@ -902,23 +902,28 @@ export async function checkQmPosts(
   guildId: string,
   proposals: QmPostProposal[],
   lookup: QmSettingsLookup,
-  /** Messages the same plan writes, by the ref the model gave them, which it may post too. */
-  written: { ref: string; id: string; name: string }[] = [],
+  /**
+   * What the same plan makes (messages, role menus, ticket panels), by the ref the model gave
+   * them, which it may post too.
+   */
+  written: { kind?: QmPost["kind"]; ref: string; id: string; name: string }[] = [],
 ): Promise<{ ok: true; posts: QmPost[] } | { ok: false; errors: string[] }> {
   if (!proposals.length) return { ok: true, posts: [] };
   const errors: string[] = [];
   if (proposals.length > QM_POSTS_MAX) errors.push(`A plan posts at most ${QM_POSTS_MAX} things.`);
   const saved = await qmPostables(db, guildId);
+  const made = (kind: QmPost["kind"]) =>
+    written.filter((w) => (w.kind ?? "message") === kind).map(({ id, name }) => ({ id, name }));
   const have = {
-    ...saved,
-    message: [...saved.message, ...written.map(({ id, name }) => ({ id, name }))],
+    role_menu: [...saved.role_menu, ...made("role_menu")],
+    ticket_panel: [...saved.ticket_panel, ...made("ticket_panel")],
+    message: [...saved.message, ...made("message")],
   };
-  // A message the plan writes is named by its ref; it posts by its id.
+  // Something the plan makes is named by its ref; it posts by its id.
   proposals = proposals.map((p) => {
-    const w =
-      p.kind === "message"
-        ? written.find((x) => x.ref === String(p.itemId).toLowerCase())
-        : undefined;
+    const w = written.find(
+      (x) => (x.kind ?? "message") === p.kind && x.ref === String(p.itemId).toLowerCase(),
+    );
     return w ? { ...p, itemId: w.id } : p;
   });
   const posts: QmPost[] = [];

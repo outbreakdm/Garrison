@@ -54,14 +54,49 @@ export function WritePreview({
                   {" "}
                   {w.kind === "welcome"
                     ? "· new text"
-                    : w.isNew
-                      ? "· a new saved message"
-                      : "· a new version of this saved message"}
+                    : w.kind === "role_menu"
+                      ? `· a new role menu (${w.menu?.style === "dropdown" ? "dropdown" : "buttons"})`
+                      : w.kind === "ticket_panel"
+                        ? "· a new ticket panel"
+                        : w.isNew
+                          ? "· a new saved message"
+                          : "· a new version of this saved message"}
                 </span>
               </span>
               {remove(i)}
             </div>
             <CardText card={w.card} names={names} />
+            {w.menu?.options.length ? (
+              <ul className="qm-write__items" aria-label="Roles members pick">
+                {w.menu.options.map((o) => (
+                  <li key={o.roleId}>
+                    <span className="qm-write__button">
+                      {o.emoji ? `${o.emoji} ` : ""}
+                      {o.label}
+                    </span>{" "}
+                    gives <strong>@{names.roles.get(o.roleId) ?? o.roleId}</strong>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {w.panel?.topics.length ? (
+              <ul className="qm-write__items" aria-label="Ticket topics">
+                {w.panel.topics.map((t) => (
+                  <li key={t.id}>
+                    <span className="qm-write__button">
+                      {t.emoji ? `${t.emoji} ` : ""}
+                      {t.label}
+                    </span>
+                  </li>
+                ))}
+                {w.staffRoleIds?.length ? (
+                  <li className="muted">
+                    Answered by{" "}
+                    {w.staffRoleIds.map((r) => `@${names.roles.get(r) ?? r}`).join(", ")}
+                  </li>
+                ) : null}
+              </ul>
+            ) : null}
             {w.was ? (
               <details className="qm-write__was">
                 <summary>What it says now</summary>

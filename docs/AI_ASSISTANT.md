@@ -425,7 +425,12 @@ On Sonnet that's 20x the money.
    moderation powers are refused; Pro parts need Pro. A new text channel can be a forum or,
    on a Community server, an announcement channel (`text_kind`, stored as `textKind`). The
    Features tab lists the new modules. 6 new eval cases, 60 in all.
-   **8B, not started:** whole new items, each needing its own entry type the way writes have:
+   **8B, in progress.** Done: new role menus and new ticket panels as writes
+   (`new_role_menu`, `new_ticket_panel`), checked by `checkRoleMenus` and `checkTicketPanels`,
+   roles by id or by the ref of one the plan makes (never a fixed role; a role with staff powers
+   only as ticket staff), postable by ref in the same plan, undone through Settings history. No
+   migration. Next: stream alerts (`checkAlertFeeds`).
+   **8B as planned:** whole new items, each needing its own entry type the way writes have:
    ticket panels and their staff roles, making role menus (today a plan only posts saved
    ones), stream alerts, giveaways, the economy and shop, raid and LFG templates, invite
    labels and roles, and server stats counters. Each should reuse its page's check function

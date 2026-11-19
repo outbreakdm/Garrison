@@ -2,12 +2,22 @@ import { CARD_LIMITS, type CardBlock, type CustomCard, parseCard } from "./cards
 import type { Db } from "./client";
 import { checkMessages, MESSAGE_LIMITS, readMessages, type SavedMessage } from "./messages";
 import type { Entitlements } from "./plans";
+import type { QmSettingsLookup } from "./qm-settings";
 import { readSettings } from "./repo/settings";
+import {
+  checkRoleMenus,
+  isOneEmoji,
+  ROLE_MENU_LIMITS,
+  type RoleMenu,
+  readRoleMenus,
+} from "./role-menus";
+import { checkTicketPanels, readTicketPanels, TICKET_LIMITS, type TicketPanel } from "./tickets";
 import { readWelcome } from "./welcome";
 
 /**
- * Text the AI assistant writes into a plan (docs/AI_ASSISTANT.md, phase 7): the welcome,
- * leave and DM cards, new saved messages and rewrites of existing ones. Each write is checked
+ * Text the AI assistant writes into a plan (docs/AI_ASSISTANT.md, phases 7 and 8B): the
+ * welcome, leave and DM cards, new saved messages and rewrites of existing ones, and new role
+ * menus and ticket panels (a card with roles, or with topics). Each write is checked
  * by the dashboard's own rules (parseCard, checkMessages), shown in full before it's applied,
  * applied through Settings history (so Undo puts the old text back), and costs one change.
  * The model writes a title and a body; the rest of a card's look stays as it is.
@@ -21,6 +31,8 @@ export const QM_WRITE_TARGETS = [
   "welcome_dm",
   "new_message",
   "edit_message",
+  "new_role_menu",
+  "new_ticket_panel",
 ] as const;
 export type QmWriteTarget = (typeof QM_WRITE_TARGETS)[number];
 
@@ -37,7 +49,7 @@ const WELCOME_NAME = {
 
 /** One write, checked, as a plan stores it. */
 export interface QmWrite {
-  kind: "welcome" | "message";
+  kind: "welcome" | "message" | "role_menu" | "ticket_panel";
   /** Welcome: which card. */
   field?: "joinCard" | "leaveCard" | "dmCard";
   /** Message: the saved message's id; for a new one, made when the plan is drafted. */
@@ -51,6 +63,12 @@ export interface QmWrite {
   card: CustomCard;
   /** What it said before; null for a new message. */
   was: CustomCard | null;
+  /** A new role menu, its roles as ids or refs of roles the same plan makes. */
+  menu?: RoleMenu;
+  /** A new ticket panel. */
+  panel?: TicketPanel;
+  /** Ticket panels: staff roles to add to the server's ticket staff, ids or refs. */
+  staffRoleIds?: string[];
 }
 
 /** A write as the model proposes it. */
@@ -62,7 +80,27 @@ export interface QmWriteProposal {
   name?: string;
   title: string;
   body: string;
+  /** new_role_menu: "buttons" or "dropdown". */
+  style?: string;
+  /** new_role_menu: a role each (id or ref) with its label and emoji. new_ticket_panel: topics. */
+  items?: { role: string; label: string; emoji: string }[];
+  /** new_ticket_panel: roles that see and answer its tickets, ids or refs. */
+  staffRoles?: string[];
 }
+
+const BLANK: CustomCard = {
+  title: "",
+  blocks: [],
+  accent: null,
+  image: null,
+  thumbnail: null,
+  footer: null,
+  author: null,
+  url: null,
+};
+
+/** A role as a plan names it: its ref when the plan makes it, an id otherwise. */
+const isRef = (x: string) => !/^\d{17,20}$/.test(x);
 
 /** A card's text, back as a title and a body (paragraphs between blank lines). */
 export function cardText(card: CustomCard) {
@@ -108,6 +146,8 @@ export async function checkQmWrites(
   guildId: string,
   proposals: QmWriteProposal[],
   ent: Entitlements,
+  /** Roles in the server and the plan's new ones, for role menus and ticket staff. */
+  lookup?: QmSettingsLookup,
 ): Promise<{ ok: true; writes: QmWrite[] } | { ok: false; errors: string[] }> {
   if (!proposals.length) return { ok: true, writes: [] };
   const errors: string[] = [];
@@ -119,6 +159,48 @@ export async function checkQmWrites(
   ]);
   const welcome = readWelcome(welcomeRow);
   const before = readMessages(messagesRow?.messages ?? []);
+  const wantsMenu = proposals.some((p) => p.target === "new_role_menu");
+  const wantsPanel = proposals.some((p) => p.target === "new_ticket_panel");
+  const [menusRow, ticketsRow] = await Promise.all([
+    wantsMenu ? readSettings(db, guildId, "roles") : null,
+    wantsPanel ? readSettings(db, guildId, "tickets") : null,
+  ]);
+  const menusBefore = readRoleMenus(menusRow?.menus ?? []);
+  const panelsBefore = readTicketPanels(ticketsRow?.panels ?? []);
+  let menus: RoleMenu[] = [...menusBefore];
+  let panels: TicketPanel[] = [...panelsBefore];
+  // Refs stand in as fake ids while the dashboard's checks run, which only accept ids.
+  const stand = new Map<string, string>();
+  const standIn = (ref: string) => {
+    let id = stand.get(ref);
+    if (!id) {
+      id = String(900000000000000000n + BigInt(stand.size + 1));
+      stand.set(ref, id);
+    }
+    return id;
+  };
+  /**
+   * A role a write names, or why it can't. `staff`: ticket staff see tickets and gain no
+   * power, so roles with moderation powers are fine there; a role menu hands its roles to
+   * anyone, so never.
+   */
+  const roleFor = (raw: string, where: string, staff: boolean): string | { error: string } => {
+    const id = String(raw ?? "").trim();
+    if (!id) return { error: `${where}: each needs a role.` };
+    if (isRef(id)) {
+      if (lookup?.created(id.toLowerCase()) !== "role")
+        return { error: `${where}: "${id.slice(0, 30)}" isn't a role in this plan.` };
+      return id.toLowerCase();
+    }
+    const role = lookup?.role(id);
+    if (!role) return { error: `${where}: that role isn't in this server.` };
+    if (role.status === "fixed") return { error: `${where}: @${role.name} can't be used here.` };
+    if (role.status === "dangerous" && !staff)
+      return {
+        error: `${where}: @${role.name} has moderation or admin powers, so it can't go in a role menu.`,
+      };
+    return id;
+  };
   let messages: SavedMessage[] = [...before];
   const writes: QmWrite[] = [];
   const seen = new Set<string>();
@@ -175,11 +257,107 @@ export async function checkQmWrites(
       });
       continue;
     }
-    // A new saved message: given an id now, so a post in the same plan can name it.
+    const ref =
+      String(p.messageId ?? "")
+        .trim()
+        .toLowerCase()
+        .slice(0, 32) || undefined;
     const name = String(p.name ?? p.title)
       .replace(/\s+/g, " ")
       .trim()
-      .slice(0, MESSAGE_LIMITS.name);
+      .slice(0, target === "new_message" ? MESSAGE_LIMITS.name : ROLE_MENU_LIMITS.name);
+    if (target === "new_role_menu") {
+      const where = name || "The role menu";
+      const options: RoleMenu["options"] = [];
+      for (const item of p.items ?? []) {
+        const role = roleFor(item.role, where, false);
+        if (typeof role !== "string") {
+          errors.push(role.error);
+          continue;
+        }
+        const emoji = String(item.emoji ?? "").trim();
+        options.push({
+          roleId: role,
+          label: String(item.label ?? "")
+            .trim()
+            .slice(0, ROLE_MENU_LIMITS.label),
+          emoji: emoji && isOneEmoji(emoji) ? emoji : null,
+          description: null,
+        });
+      }
+      if (!options.length) errors.push(`${where}: a role menu needs at least one role.`);
+      const menu: RoleMenu = {
+        id: newId(),
+        name: name || "Role menu",
+        card: withText(BLANK, p.title, p.body),
+        style: p.style === "dropdown" ? "dropdown" : "buttons",
+        options,
+        maxPicks: null,
+        requiredRoleId: null,
+        placeholder: null,
+      };
+      // Checked with stand-in ids for the plan's new roles; stored with their refs.
+      const checked = {
+        ...menu,
+        options: options.map((o) => ({
+          ...o,
+          roleId: isRef(o.roleId) ? standIn(o.roleId) : o.roleId,
+        })),
+      };
+      menus = [...menus, checked];
+      writes.push({
+        kind: "role_menu",
+        isNew: true,
+        ...(ref ? { ref } : {}),
+        name: menu.name,
+        card: menu.card,
+        was: null,
+        menu,
+      });
+      continue;
+    }
+    if (target === "new_ticket_panel") {
+      const where = name || "The ticket panel";
+      const topics = (p.items ?? []).map((item) => {
+        const emoji = String(item.emoji ?? "").trim();
+        return {
+          id: newId(),
+          label: String(item.label ?? "")
+            .trim()
+            .slice(0, TICKET_LIMITS.label),
+          emoji: emoji && isOneEmoji(emoji) ? emoji : null,
+          questions: [],
+        };
+      });
+      if (!topics.length) errors.push(`${where}: a ticket panel needs at least one topic.`);
+      const staff: string[] = [];
+      for (const r of p.staffRoles ?? []) {
+        const role = roleFor(r, where, true);
+        if (typeof role !== "string") errors.push(role.error);
+        else if (!staff.includes(role)) staff.push(role);
+      }
+      if (staff.length > TICKET_LIMITS.staffRoles)
+        errors.push(`${where}: at most ${TICKET_LIMITS.staffRoles} staff roles.`);
+      const panel: TicketPanel = {
+        id: newId(),
+        name: name || "Ticket panel",
+        card: withText(BLANK, p.title, p.body),
+        topics,
+      };
+      panels = [...panels, panel];
+      writes.push({
+        kind: "ticket_panel",
+        isNew: true,
+        ...(ref ? { ref } : {}),
+        name: panel.name,
+        card: panel.card,
+        was: null,
+        panel,
+        staffRoleIds: staff,
+      });
+      continue;
+    }
+    // A new saved message: given an id now, so a post in the same plan can name it.
     if (!name) {
       errors.push("A new message needs a name.");
       continue;
@@ -206,11 +384,6 @@ export async function checkQmWrites(
       schedule: null,
     };
     messages = [...messages, msg];
-    const ref =
-      String(p.messageId ?? "")
-        .trim()
-        .toLowerCase()
-        .slice(0, 32) || undefined;
     writes.push({
       kind: "message",
       messageId: msg.id,
@@ -227,24 +400,42 @@ export async function checkQmWrites(
     const checked = checkMessages(messages, ent, before);
     if (!checked.ok) return { ok: false, errors: [checked.error] };
   }
+  // Role menus and panels as their pages would save them: labels, emoji, counts, plan limits.
+  if (wantsMenu) {
+    const checked = checkRoleMenus(menus, ent, menusBefore);
+    if (!checked.ok) return { ok: false, errors: [checked.error] };
+  }
+  if (wantsPanel) {
+    const checked = checkTicketPanels(panels, ent, panelsBefore);
+    if (!checked.ok) return { ok: false, errors: [checked.error] };
+  }
   return { ok: true, writes };
 }
+
+/** The id a write's item has, for posting it: a message's, a menu's or a panel's. */
+export const qmWriteItemId = (w: QmWrite) => w.messageId ?? w.menu?.id ?? w.panel?.id;
 
 /**
  * The settings patches that apply a plan's writes to the server as it is now: the welcome
  * cards it writes, and the saved-message list with its new and rewritten messages. Checked
  * again here, since the server may have changed since the plan was drafted.
  */
+type WriteModule = "welcome" | "messages" | "roles" | "tickets";
+
 export async function qmWritePatches(
   db: Db,
   guildId: string,
   writes: QmWrite[],
   ent: Entitlements,
+  /** Refs of the plan's new roles, as the ids the build made. */
+  ids: Map<string, string> = new Map(),
 ): Promise<
-  | { ok: true; patches: { module: "welcome" | "messages"; patch: Record<string, unknown> }[] }
+  | { ok: true; patches: { module: WriteModule; patch: Record<string, unknown> }[] }
   | { ok: false; error: string }
 > {
-  const patches: { module: "welcome" | "messages"; patch: Record<string, unknown> }[] = [];
+  const patches: { module: WriteModule; patch: Record<string, unknown> }[] = [];
+  // A ref the build made is swapped for its id; one it didn't make stays unresolved (null).
+  const real = (x: string) => (isRef(x) ? (ids.get(x) ?? null) : x);
   const welcome = Object.fromEntries(
     writes.filter((w) => w.kind === "welcome" && w.field).map((w) => [w.field as string, w.card]),
   );
@@ -274,6 +465,40 @@ export async function qmWritePatches(
     const checked = checkMessages(list, ent, before);
     if (!checked.ok) return { ok: false, error: checked.error };
     patches.push({ module: "messages", patch: { messages: checked.value } });
+  }
+  const newMenus = writes.flatMap((w) => (w.kind === "role_menu" && w.menu ? [w.menu] : []));
+  if (newMenus.length) {
+    const before = readRoleMenus((await readSettings(db, guildId, "roles"))?.menus ?? []);
+    const add = newMenus
+      .filter((m) => !before.some((b) => b.id === m.id))
+      .map((m) => ({ ...m, options: m.options.map((o) => ({ ...o, roleId: real(o.roleId) })) }));
+    if (add.some((m) => m.options.some((o) => o.roleId === null)))
+      return { ok: false, error: "A role a menu gives wasn't made." };
+    const checked = checkRoleMenus([...before, ...add], ent, before);
+    if (!checked.ok) return { ok: false, error: checked.error };
+    patches.push({ module: "roles", patch: { menus: checked.value } });
+  }
+  const newPanels = writes.filter((w) => w.kind === "ticket_panel" && w.panel);
+  if (newPanels.length) {
+    const row = await readSettings(db, guildId, "tickets");
+    const before = readTicketPanels(row?.panels ?? []);
+    const add = newPanels
+      .map((w) => w.panel as TicketPanel)
+      .filter((p) => !before.some((b) => b.id === p.id));
+    const checked = checkTicketPanels([...before, ...add], ent, before);
+    if (!checked.ok) return { ok: false, error: checked.error };
+    const staffBefore = Array.isArray(row?.staffRoleIds) ? (row.staffRoleIds as string[]) : [];
+    const staff = [
+      ...new Set([...staffBefore, ...newPanels.flatMap((w) => (w.staffRoleIds ?? []).map(real))]),
+    ];
+    if (staff.some((x) => x === null))
+      return { ok: false, error: "A ticket staff role wasn't made." };
+    if (staff.length > TICKET_LIMITS.staffRoles)
+      return {
+        ok: false,
+        error: `Tickets can have ${TICKET_LIMITS.staffRoles} staff roles at most.`,
+      };
+    patches.push({ module: "tickets", patch: { panels: checked.value, staffRoleIds: staff } });
   }
   return { ok: true, patches };
 }

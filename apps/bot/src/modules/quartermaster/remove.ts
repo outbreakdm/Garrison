@@ -1,11 +1,12 @@
-import type {
-  QmBuild,
-  QmEdit,
-  QmOperation,
-  QmOrder,
-  QmPost,
-  QmSettingChange,
-  QmWrite,
+import {
+  type QmBuild,
+  type QmEdit,
+  type QmOperation,
+  type QmOrder,
+  type QmPost,
+  type QmSettingChange,
+  type QmWrite,
+  qmWriteItemId,
 } from "@garrison/db";
 
 export interface RemoveTarget {
@@ -70,7 +71,7 @@ export function withoutItem(
     writes = writes.filter((_, i) => i !== target.write);
     if (hit) removed.push(hit.name);
     // A post of a message only this write made goes with it.
-    if (hit?.isNew) posts = posts.filter((p) => p.itemId !== hit.messageId);
+    if (hit?.isNew) posts = posts.filter((p) => p.itemId !== qmWriteItemId(hit));
     return { plan: build.plan, settings, posts, orders, edits, writes, removed };
   }
   if (target.edit) {
