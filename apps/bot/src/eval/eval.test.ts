@@ -17,7 +17,7 @@ describe("the AI assistant eval", () => {
   it("has 40 or more cases with unique ids, across every category", () => {
     expect(CASES.length).toBeGreaterThanOrEqual(40);
     expect(new Set(CASES.map((c) => c.id)).size).toBe(CASES.length);
-    expect(new Set(CASES.map((c) => c.category)).size).toBe(9);
+    expect(new Set(CASES.map((c) => c.category)).size).toBe(10);
     // Both directions: cases that must draft and cases that must not.
     expect(CASES.filter((c) => c.draft === "yes").length).toBeGreaterThan(10);
     expect(CASES.filter((c) => c.draft === "no").length).toBeGreaterThan(10);

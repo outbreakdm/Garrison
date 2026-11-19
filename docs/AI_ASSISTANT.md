@@ -381,7 +381,18 @@ On Sonnet that's 20x the money.
    a feature (what it does, where it lives, which plan has it, how to set it up), from one
    help file the dashboard can show too. Replies may run longer and use short lists when the
    admin asks how something works or asks for written content. *Small.*
-6. **Server insight.** Read tools for what the dashboard already shows: member counts and
+6. **Server insight.** *Done 2026-11-19, not deployed (no migration).* One read tool,
+   `server_insight`, with fixed topics: activity for a week, a month or a year (a year is Pro;
+   Free is held to 30 days, as on Insights), moderation (cases in 7 and 30 days by action and
+   by who made them, and how many were undone: counts only, never who a case was against),
+   tickets (the queue; opened, closed and time to first reply on Pro, as on Tickets), the
+   latest health check's problems, the leveling top 10, and what's coming up (raids with
+   sign-ups and bench, running giveaways with entries, open groups). Built on the dashboard's
+   own queries (`packages/db/src/repo/server-insight.ts`); channel ids come back as names. The
+   instructions say to answer with numbers and their period, never guess one, suggest a next
+   step, and never name who a case was against. 8 eval cases (53 in all); a test reads real
+   rows and checks no case target leaks. The eval hasn't run on the real models.
+   The plan as written: read tools for what the dashboard already shows: member counts and
    joins and leaves over time, activity and top channels, mod cases and warnings by week,
    open tickets, server health checks, leveling top members, giveaways and raids coming up.
    Totals and lists the dashboard shows only; nothing new about any one member. *Medium.*

@@ -1331,3 +1331,44 @@ describe("rating the assistant's replies", () => {
     expect(after.some((d) => d.id === reply?.id)).toBe(false);
   });
 });
+
+describe("how the server is doing, for the AI assistant", () => {
+  it("reads cases as counts, the health check, the leaderboard and what's coming up", async () => {
+    const { createCase, saveHealthSnapshot, awardXp, aiAllowance } = await import("@garrison/db");
+    const { settingsReader } = await import("./tools.js");
+    const f = fakeGuild("q71");
+    await upsertGuild(ctx.db, { id: "q71", name: "q71" });
+    const mod = { moderatorId: "m1", moderatorTag: "mod" };
+    for (const action of ["warn", "warn", "ban"] as const)
+      await createCase(ctx.db, {
+        guildId: "q71",
+        action,
+        targetId: "victim-1",
+        targetTag: "Victim",
+        reason: "x",
+        ...mod,
+      });
+    await saveHealthSnapshot(ctx.db, "q71", [
+      { status: "ok", text: "Garrison can post in the log channel." },
+      { status: "warn", text: "Mods sits above Garrison's role." },
+    ]);
+    await awardXp(ctx.db, "q71", { id: "u1", username: "Nyx" }, 50, 0);
+    const read = settingsReader(ctx.db, f.guild, await aiAllowance(ctx.db, "q71", "someone"));
+    const ask = async (topic: string) => (await read("server_insight", { topic })).text;
+
+    const moderation = await ask("moderation");
+    expect(moderation).toContain('"ban":1');
+    expect(moderation).toContain('"warn":2');
+    // Counts only: never who a case was against.
+    expect(moderation).not.toContain("Victim");
+    expect(moderation).not.toContain("victim-1");
+
+    expect(await ask("health")).toContain("Mods sits above Garrison's role.");
+    expect(await ask("health")).not.toContain("log channel");
+    expect(await ask("leveling")).toContain('"name":"Nyx"');
+    expect(await ask("upcoming")).toContain('"open_groups":0');
+    // Free keeps 30 days; a year's activity is Pro's.
+    expect(await ask("activity_year")).toContain('"days":30');
+    expect((await read("server_insight", { topic: "everything" })).error).toBe(true);
+  });
+});

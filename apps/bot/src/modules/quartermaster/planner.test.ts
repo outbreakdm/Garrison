@@ -118,6 +118,7 @@ describe("the AI assistant chat's read tools", () => {
     expect(sent[0]?.tools?.map((t) => t.name)).toEqual([
       "server_overview",
       "module_settings",
+      "server_insight",
       "garrison_help",
     ]);
     expect(sent[0]?.tool_choice).toEqual({ type: "auto" });

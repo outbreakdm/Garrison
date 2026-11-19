@@ -9,7 +9,9 @@ import {
   helpText,
   qmPostables,
   readSettings,
+  type ServerInsightTopic,
   type SettingsModule,
+  serverInsight,
 } from "@garrison/db";
 import { ChannelType, type Guild } from "discord.js";
 
@@ -70,6 +72,23 @@ const MODULES = (Object.keys(EDITABLE_FIELDS) as SettingsModule[]).filter(
   (m): m is ReadableModule => m !== "access" && m !== "members",
 );
 
+/**
+ * The insight tool's topics, as the model picks them. Activity comes in three fixed periods,
+ * so it never makes one up; a year is Pro's (Free keeps 30 days).
+ */
+export const INSIGHT_TOPICS = {
+  activity_week: { topic: "activity", days: 7, about: "activity in the last 7 days" },
+  activity_month: { topic: "activity", days: 30, about: "activity in the last 30 days" },
+  activity_year: { topic: "activity", days: 365, about: "activity in the last year (Pro)" },
+  moderation: { topic: "moderation", days: 30, about: "cases in the last 7 and 30 days" },
+  tickets: { topic: "tickets", days: 30, about: "the ticket queue, and stats on Pro" },
+  health: { topic: "health", days: 30, about: "Garrison's latest health check" },
+  leveling: { topic: "leveling", days: 30, about: "the leveling top 10" },
+  upcoming: { topic: "upcoming", days: 30, about: "raids, giveaways and open groups" },
+} as const satisfies Record<string, { topic: ServerInsightTopic; days: number; about: string }>;
+export type InsightChoice = keyof typeof INSIGHT_TOPICS;
+const INSIGHT_CHOICES = Object.keys(INSIGHT_TOPICS) as InsightChoice[];
+
 /** The tools the chat model may call. Fixed, so the prompt prefix stays the same. */
 export const READ_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
@@ -90,6 +109,21 @@ export const READ_TOOLS: Anthropic.Beta.BetaTool[] = [
       type: "object",
       properties: { module: { type: "string", enum: MODULES } },
       required: ["module"],
+      additionalProperties: false,
+    },
+    strict: true,
+  },
+  {
+    name: "server_insight",
+    description: `How this server is doing, as its dashboard shows it: ${INSIGHT_CHOICES.map(
+      (t) => `${t} (${INSIGHT_TOPICS[t].about})`,
+    ).join(
+      "; ",
+    )}. Counts and lists only, never who a moderation case was against. Use it when the admin asks how active the server is, how many joined or left, how moderation or tickets are going, who's top on the leaderboard, what's coming up, or what's wrong, and answer with the numbers and their period.`,
+    input_schema: {
+      type: "object",
+      properties: { topic: { type: "string", enum: INSIGHT_CHOICES } },
+      required: ["topic"],
       additionalProperties: false,
     },
     strict: true,
@@ -195,6 +229,18 @@ export function settingsReader(db: Db, guild: Guild, allowance: AiAllowance): Re
         };
       }
       if (name === "garrison_help") return readHelp(input);
+      if (name === "server_insight") {
+        const choice = (input as { topic?: unknown } | null)?.topic;
+        if (typeof choice !== "string" || !(choice in INSIGHT_TOPICS))
+          return { text: `Unknown topic. Use one of: ${INSIGHT_CHOICES.join(", ")}.`, error: true };
+        const t = INSIGHT_TOPICS[choice as InsightChoice];
+        const numbers = await serverInsight(db, guild.id, t.topic, {
+          pro: allowance.tier !== "free",
+          days: t.days,
+        });
+        const extra = t.topic === "activity" ? { members_now: guild.memberCount } : {};
+        return { text: cut(resolve({ topic: choice, ...extra, ...numbers })), error: false };
+      }
       return { text: `There's no tool called ${name}.`, error: true };
     } catch {
       return { text: "Couldn't read that just now.", error: true };

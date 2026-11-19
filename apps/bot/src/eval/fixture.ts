@@ -176,6 +176,71 @@ const MODULES: Record<string, Record<string, unknown> | null> = {
   roles: { menus: 1 },
 };
 
+/** How Ironclad is doing, as server_insight returns it (made up, but consistent). */
+export const INSIGHT: Record<string, unknown> = {
+  activity_week: {
+    days: 7,
+    members_now: 212,
+    messages: 1050,
+    joins: 9,
+    leaves: 3,
+    members_posting: 61,
+    messages_today: 140,
+    top_channels: [
+      { channelId: `#general (${ID.general})`, messages: 520 },
+      { channelId: `#apex (${ID.apex})`, messages: 210 },
+    ],
+    busiest_hours: ["20:00 UTC", "21:00 UTC", "19:00 UTC"],
+  },
+  activity_month: {
+    days: 30,
+    members_now: 212,
+    messages: 4200,
+    joins: 38,
+    leaves: 12,
+    members_posting: 96,
+    stayed_a_week: "29 of 38 who joined",
+    top_channels: [{ channelId: `#general (${ID.general})`, messages: 2100 }],
+    busiest_hours: ["20:00 UTC", "21:00 UTC"],
+  },
+  activity_year: { days: 365, members_now: 212, messages: 31000, joins: 260, leaves: 90 },
+  moderation: {
+    last_7_days: {
+      total: 4,
+      byAction: { warn: 3, timeout: 1 },
+      bySource: { automod: 2, manual: 2 },
+      undone: 0,
+    },
+    last_30_days: {
+      total: 17,
+      byAction: { warn: 11, timeout: 4, ban: 2 },
+      bySource: { automod: 9, manual: 6, escalation: 2 },
+      undone: 1,
+    },
+  },
+  tickets: { open: 5, waiting_on_staff: 3, waiting_on_member: 2, unclaimed: 1 },
+  health: {
+    problems: 1,
+    needs_attention: [
+      { status: "warn", text: "Mods sits above Garrison's role, so anti-nuke can't act on them." },
+    ],
+  },
+  leveling: {
+    on: true,
+    top_members: [
+      { place: 1, name: "Nyx", level: 31, xp: 52000 },
+      { place: 2, name: "Bram", level: 27, xp: 39000 },
+    ],
+  },
+  upcoming: {
+    raids: [
+      { title: "Vault of Glass", starts: "2026-11-21T20:00:00Z", signed_up: 5, on_the_bench: 1 },
+    ],
+    giveaways: [{ prize: "Discord Nitro", ends: "2026-11-23T18:00:00Z", winners: 1, entries: 44 }],
+    open_groups: 2,
+  },
+};
+
 /** The read tools over the fixture: nothing reaches a database. */
 export const readFixture: ReadTool = async (name, input) => {
   if (name === "server_overview")
@@ -202,5 +267,12 @@ export const readFixture: ReadTool = async (name, input) => {
     return { text: JSON.stringify({ module, settings: MODULES[module] }), error: false };
   }
   if (name === "garrison_help") return readHelp(input);
+  if (name === "server_insight") {
+    const topic = (input as { topic?: string } | null)?.topic ?? "";
+    const numbers = INSIGHT[topic];
+    return numbers
+      ? { text: JSON.stringify({ topic, ...(numbers as object) }), error: false }
+      : { text: "Unknown topic.", error: true };
+  }
   return { text: `There's no tool called ${name}.`, error: true };
 };

@@ -47,6 +47,7 @@ export * from "./repo/rally";
 export * from "./repo/ranks";
 export * from "./repo/role-menus";
 export * from "./repo/search";
+export * from "./repo/server-insight";
 export * from "./repo/settings";
 export * from "./repo/shares";
 export * from "./repo/starboard";
