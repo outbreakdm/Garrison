@@ -1,3 +1,5 @@
+import { HELP, HELP_TOPICS } from "@garrison/db";
+
 /**
  * What the dashboard search finds besides members and cases: every page and
  * every setting, with words people might type for them. Static and pure, so
@@ -37,6 +39,14 @@ const setting = (panel: string, module: string, title: string, keywords: string)
   path: PANELS[panel] ?? "/settings",
   keywords,
 });
+
+/** Every Help entry, by its words, so a search for "how do I verify" finds it. */
+const HELP_ENTRIES: SearchEntry[] = HELP_TOPICS.map((t) => ({
+  title: HELP[t].title,
+  where: "Help",
+  path: `/help#${t}`,
+  keywords: `help how ${HELP[t].keywords}`,
+}));
 
 export const SEARCH_INDEX: SearchEntry[] = [
   page("", "Overview", null, "home dashboard stats health activity"),
@@ -158,6 +168,8 @@ export const SEARCH_INDEX: SearchEntry[] = [
   setting("ranks", "Ranks", "Level-up messages", "announce channel"),
   setting("ledger", "Logs", "Log channel", "logs channel events"),
   setting("ledger", "Logs", "Keep events for", "retention days prune"),
+  page("/help", "Help", null, "help how guide docs documentation commands what does pro include"),
+  ...HELP_ENTRIES,
 ];
 
 /** Every word of the query must appear in the title, place or keywords. */

@@ -368,7 +368,16 @@ On Sonnet that's 20x the money.
    pick): **thumbs up or down on every reply**, with an optional note, stored with the
    message; a thumbs-down reply can be added to the eval set, so what real admins ask keeps
    testing the assistant. *Medium.*
-5. **Garrison how-to help.** A `garrison_help` read tool that returns the real help text for
+5. **Garrison how-to help.** *Done 2026-11-19, not deployed (no migration).* One help file,
+   `packages/db/src/help.ts`: 29 entries (what it does, its page and path, steps, commands,
+   keywords), with Free and Pro limits read from `FEATURES` so they can't drift. The chat's
+   `garrison_help` tool returns an entry, and the instructions say to look it up for any
+   how-to, page, command or plan question and never guess one; how-to replies may be a
+   sentence and up to six "- " lines (the chat keeps line breaks). The dashboard's new Help
+   page (in the menu's foot, beside Settings) shows the same entries, and search finds them.
+   Two eval cases added (Pro ticket panels, the LFG command): 45 now. Tests check every
+   entry's page exists and every plan line resolves. The eval hasn't run on the real models.
+   The plan as written: a `garrison_help` read tool that returns the real help text for
    a feature (what it does, where it lives, which plan has it, how to set it up), from one
    help file the dashboard can show too. Replies may run longer and use short lists when the
    admin asks how something works or asks for written content. *Small.*

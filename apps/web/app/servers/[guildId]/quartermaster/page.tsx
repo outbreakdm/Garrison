@@ -460,7 +460,7 @@ export default async function QuartermasterPage({
                         <span className="qm-msg__mark" aria-hidden="true" />
                       )}
                       <div className="qm-msg__bubble">
-                        <p>{m.text}</p>
+                        <p className="qm-msg__text">{m.text}</p>
                         {m.role === "assistant" && m.supplies != null ? (
                           <span className="qm-msg__cost">
                             {isSmart(m.model) ? "Smart · " : ""}

@@ -1,6 +1,6 @@
 import type { ServerSnapshot } from "../modules/quartermaster/plan.js";
 import type { ChatInput } from "../modules/quartermaster/planner.js";
-import type { ReadTool } from "../modules/quartermaster/tools.js";
+import { type ReadTool, readHelp } from "../modules/quartermaster/tools.js";
 
 /**
  * The server every eval case runs against: a mid-size gaming community ("Ironclad"), written
@@ -201,5 +201,6 @@ export const readFixture: ReadTool = async (name, input) => {
       return { text: JSON.stringify({ module, settings: null }), error: false };
     return { text: JSON.stringify({ module, settings: MODULES[module] }), error: false };
   }
+  if (name === "garrison_help") return readHelp(input);
   return { text: `There's no tool called ${name}.`, error: true };
 };

@@ -115,7 +115,11 @@ describe("the AI assistant chat's read tools", () => {
       usage: { inputTokens: 2000, outputTokens: 200 },
     });
     expect(asked).toEqual([{ name: "module_settings", args: { module: "suggestions" } }]);
-    expect(sent[0]?.tools?.map((t) => t.name)).toEqual(["server_overview", "module_settings"]);
+    expect(sent[0]?.tools?.map((t) => t.name)).toEqual([
+      "server_overview",
+      "module_settings",
+      "garrison_help",
+    ]);
     expect(sent[0]?.tool_choice).toEqual({ type: "auto" });
     // The second round carries the look and what it found.
     expect(sent[1]?.messages.at(-2)).toMatchObject({
@@ -365,5 +369,22 @@ describe("a message never costs more than it holds", () => {
       onStep: (s) => steps.push(s),
     });
     expect(steps).toEqual(["Looking at your Moderation settings"]);
+  });
+
+  it("answers how-to questions from Garrison's own help", async () => {
+    const steps: string[] = [];
+    const { planner, sent } = fakeApi([
+      look("h", "garrison_help", { topic: "tickets" }),
+      answer("Ok."),
+    ]);
+    const { readHelp } = await import("./tools.js");
+    await planner.chat({
+      ...input(async (name, args) =>
+        name === "garrison_help" ? readHelp(args) : { text: "{}", error: false },
+      ),
+      onStep: (s) => steps.push(s),
+    });
+    expect(steps).toEqual(["Looking up how Tickets and modmail works"]);
+    expect(JSON.stringify(sent[1]?.messages.at(-1))).toContain("Ticket panels: Free 1, Pro 10");
   });
 });

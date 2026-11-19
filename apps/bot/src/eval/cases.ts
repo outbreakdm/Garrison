@@ -722,6 +722,25 @@ export const CASES: EvalCase[] = [
     reference: reply("I can't switch that on here: turn on verification on the Security page."),
   },
 
+  {
+    id: "howto-ticket-pro",
+    category: "howto",
+    ask: "How many ticket panels does Pro get?",
+    draft: "no",
+    check: (a) => need(says(a, "10"), "doesn't say 10"),
+    reference: reply("Pro gets 10 ticket panels (Free gets 1), each with up to 10 topics."),
+  },
+  {
+    id: "howto-lfg-command",
+    category: "howto",
+    ask: "How do my members post a group to find teammates?",
+    draft: "no",
+    check: (a) => need(says(a, "/lfg"), "doesn't name /lfg"),
+    reference: reply(
+      "They run /lfg create in Discord:\n- pick a size or roles\n- add a start time and a note",
+    ),
+  },
+
   // Writing: today the assistant can't post text it wrote, so it says what it can do.
   {
     id: "writing-rules",

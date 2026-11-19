@@ -83,6 +83,7 @@ const GROUPS: { name: string; foot?: boolean; items: NavItem[] }[] = [
     foot: true,
     items: [
       { id: "steel", href: "/settings", name: "Settings", icon: "settings" },
+      { id: "steel", href: "/help", name: "Help", icon: "help" },
       { id: "steel", href: "/plan", name: "Plan", icon: "plan", sheetOnly: true },
     ],
   },

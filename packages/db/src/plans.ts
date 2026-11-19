@@ -132,7 +132,7 @@ export const yearlySaving = (monthly: number, yearly: number) =>
 /** A price for display, always with cents so prices line up: "$8.99", "$0.00". */
 export const formatPrice = (n: number) => `$${n.toFixed(2)}`;
 
-type Module =
+export type Module =
   | "cards"
   | "messages"
   | "profile"

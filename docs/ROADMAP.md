@@ -7,7 +7,7 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **AI assistant v2 (planned 2026-11-19), next up:** `docs/AI_ASSISTANT.md`, "Assistant v2". Owner chose Haiku (Fast) and Sonnet (Smart, Pro and Agency only), supplies at each model's real cost, every coverage gap (writing, more modules, insight, how-to help), and a "Your server" workspace with hand edits (rename, drag to reorder) and an Apply build button. Phase 1 first: a message's hold assumes 12,000 input tokens a round but nothing enforces it, so a big server can cost more than it held. **Phases 1 to 4 built** (not deployed; migrations 0076, 0077 and 0078). The eval has never run on the real models: it needs `ANTHROPIC_API_KEY` and the owner's yes (about $6.20 for both models, 3 runs). Phase 5, how-to help, is next.
+- **AI assistant v2 (planned 2026-11-19), next up:** `docs/AI_ASSISTANT.md`, "Assistant v2". Owner chose Haiku (Fast) and Sonnet (Smart, Pro and Agency only), supplies at each model's real cost, every coverage gap (writing, more modules, insight, how-to help), and a "Your server" workspace with hand edits (rename, drag to reorder) and an Apply build button. Phase 1 first: a message's hold assumes 12,000 input tokens a round but nothing enforces it, so a big server can cost more than it held. **Phases 1 to 5 built** (not deployed; migrations 0076, 0077 and 0078). The eval has never run on the real models: it needs `ANTHROPIC_API_KEY` and the owner's yes (about $6.20 for both models, 3 runs). Phase 5 (how-to help) is done too; phase 6, server insight, is next.
 - **Optimize and polish (2026-11-17):** 15 fewer database queries on every dashboard page (the
   menu's module settings in one query), faster AI assistant paint, no layout shift on Settings,
   24 px targets, unused CSS removed (see the Log). To run the Worker beside the database, set the
@@ -1306,3 +1306,10 @@ Decided (2026-11-12, owner):
   note on a thumbs down (migration **0078**: three columns, the dashboard may write only
   those); `eval:collect` pulls thumbs-down replies to review as new cases. 743 tests pass and
   the dashboard builds; not checked in a browser. Not deployed.
+- 2026-11-19: AI assistant v2, phase 5: how-to help. One help file (`packages/db/src/help.ts`, 29
+  features: what each does, its page, how to set it up, its commands, and Free and Pro limits
+  read from the real feature list). The assistant looks things up with a new `garrison_help`
+  tool instead of guessing pages, commands or limits, and how-to answers can list steps. The
+  dashboard has a Help page with the same text (menu foot, and in search). 747 tests pass and
+  the dashboard builds; not checked in a browser, and the eval hasn't run on the real models.
+  No migration. Not deployed.

@@ -3,6 +3,10 @@ import {
   type AiAllowance,
   type Db,
   EDITABLE_FIELDS,
+  HELP,
+  HELP_TOPICS,
+  type HelpTopic,
+  helpText,
   qmPostables,
   readSettings,
   type SettingsModule,
@@ -90,7 +94,28 @@ export const READ_TOOLS: Anthropic.Beta.BetaTool[] = [
     },
     strict: true,
   },
+  {
+    name: "garrison_help",
+    description: `How a Garrison feature works: what it does, its dashboard page, how to set it up, its commands, and what Free and Pro get. Use it when the admin asks how to do something with Garrison, where something is, or what a plan includes, and answer from it. Topics: ${HELP_TOPICS.map(
+      (t) => `${t} (${HELP[t].title})`,
+    ).join("; ")}.`,
+    input_schema: {
+      type: "object",
+      properties: { topic: { type: "string", enum: HELP_TOPICS } },
+      required: ["topic"],
+      additionalProperties: false,
+    },
+    strict: true,
+  },
 ];
+
+/** The help tool's answer, for the chat and the eval fixture alike. */
+export function readHelp(input: unknown): { text: string; error: boolean } {
+  const topic = (input as { topic?: unknown } | null)?.topic;
+  if (typeof topic !== "string" || !HELP_TOPICS.includes(topic as HelpTopic))
+    return { text: `Unknown topic. Use one of: ${HELP_TOPICS.join(", ")}.`, error: true };
+  return { text: helpText(topic as HelpTopic), error: false };
+}
 
 /** The most a tool result may be, so one big setting can't crowd out the conversation. */
 const MAX_RESULT = 6000;
@@ -169,6 +194,7 @@ export function settingsReader(db: Db, guild: Guild, allowance: AiAllowance): Re
           error: false,
         };
       }
+      if (name === "garrison_help") return readHelp(input);
       return { text: `There's no tool called ${name}.`, error: true };
     } catch {
       return { text: "Couldn't read that just now.", error: true };

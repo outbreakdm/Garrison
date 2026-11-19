@@ -8,6 +8,7 @@ export * from "./client";
 export * from "./economy";
 export * from "./emoji";
 export * from "./giveaways";
+export * from "./help";
 export * from "./ids";
 export * from "./invite-labels";
 export * from "./messages";
