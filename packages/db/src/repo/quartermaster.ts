@@ -274,6 +274,77 @@ export async function listQmThreads(db: Db, guildId: string, authorId: string, l
   return rows.map((r) => ({ ...r, first: r.first ?? "" }));
 }
 
+/**
+ * Rate one of the assistant's replies in a person's own conversation: 1, -1, or null to take
+ * the rating back, with an optional note. False when there's no such reply of theirs.
+ */
+export async function rateQmReply(
+  db: Db,
+  input: {
+    guildId: string;
+    authorId: string;
+    messageId: string;
+    feedback: 1 | -1 | null;
+    note?: string | null;
+  },
+) {
+  const rows = await db
+    .update(qmMessages)
+    .set({
+      feedback: input.feedback,
+      feedbackNote: input.feedback === -1 ? input.note?.trim().slice(0, 500) || null : null,
+      feedbackAt: input.feedback === null ? null : new Date(),
+    })
+    .where(
+      and(
+        eq(qmMessages.id, input.messageId),
+        eq(qmMessages.guildId, input.guildId),
+        eq(qmMessages.authorId, input.authorId),
+        eq(qmMessages.role, "assistant"),
+      ),
+    )
+    .returning({ id: qmMessages.id });
+  return rows.length > 0;
+}
+
+/**
+ * Replies rated thumbs down since `since`, each with the admin's message it answered, for
+ * reviewing as new eval cases (apps/bot/src/eval/collect.ts). Newest first.
+ */
+export async function listDownRatedReplies(db: Db, since: Date, limit = 200) {
+  const replies = await db
+    .select()
+    .from(qmMessages)
+    .where(and(eq(qmMessages.feedback, -1), gte(qmMessages.feedbackAt, since)))
+    .orderBy(desc(qmMessages.feedbackAt))
+    .limit(limit);
+  return Promise.all(
+    replies.map(async (r) => {
+      const [asked] = await db
+        .select({ text: qmMessages.text })
+        .from(qmMessages)
+        .where(
+          and(
+            eq(qmMessages.threadId, r.threadId),
+            eq(qmMessages.role, "user"),
+            sql`${qmMessages.createdAt} <= ${r.createdAt.toISOString()}::timestamptz`,
+          ),
+        )
+        .orderBy(desc(qmMessages.createdAt))
+        .limit(1);
+      return {
+        id: r.id,
+        at: r.feedbackAt,
+        model: r.model,
+        ask: asked?.text ?? "",
+        reply: r.text,
+        drafted: r.buildId !== null,
+        note: r.feedbackNote,
+      };
+    }),
+  );
+}
+
 /** A conversation's messages, oldest first, the most recent `limit`. Only the author's own. */
 export async function listQmThread(
   db: Db,

@@ -7,7 +7,7 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **AI assistant v2 (planned 2026-11-19), next up:** `docs/AI_ASSISTANT.md`, "Assistant v2". Owner chose Haiku (Fast) and Sonnet (Smart, Pro and Agency only), supplies at each model's real cost, every coverage gap (writing, more modules, insight, how-to help), and a "Your server" workspace with hand edits (rename, drag to reorder) and an Apply build button. Phase 1 first: a message's hold assumes 12,000 input tokens a round but nothing enforces it, so a big server can cost more than it held. **Phases 1 to 3 done** (not deployed; migrations 0076 and 0077); phase 4, the eval set, is next and needs `ANTHROPIC_API_KEY` for real runs.
+- **AI assistant v2 (planned 2026-11-19), next up:** `docs/AI_ASSISTANT.md`, "Assistant v2". Owner chose Haiku (Fast) and Sonnet (Smart, Pro and Agency only), supplies at each model's real cost, every coverage gap (writing, more modules, insight, how-to help), and a "Your server" workspace with hand edits (rename, drag to reorder) and an Apply build button. Phase 1 first: a message's hold assumes 12,000 input tokens a round but nothing enforces it, so a big server can cost more than it held. **Phases 1 to 4 built** (not deployed; migrations 0076, 0077 and 0078). The eval has never run on the real models: it needs `ANTHROPIC_API_KEY` and the owner's yes (about $6.20 for both models, 3 runs). Phase 5, how-to help, is next.
 - **Optimize and polish (2026-11-17):** 15 fewer database queries on every dashboard page (the
   menu's module settings in one query), faster AI assistant paint, no layout shift on Settings,
   24 px targets, unused CSS removed (see the Log). To run the Worker beside the database, set the
@@ -1297,3 +1297,12 @@ Decided (2026-11-12, owner):
   page's settings, checking the draft). Past conversations open from a list beside New
   conversation. New bot setting `QM_SMART_MODEL` (default `claude-sonnet-5-5`). 736 tests pass
   and the dashboard builds; not checked in a browser. Not deployed.
+- 2026-11-19: AI assistant v2, phase 4: an eval set and reply ratings. 43 hand-written cases on a
+  fixture server (design, edits, questions, settings, posts, how-to, writing, refusals,
+  injection), graded by code on drafted right, valid, on task and safe, through the real
+  planner with the production hold. CI checks the eval itself (every reference passes, empty
+  answers and a server wipe fail). `pnpm --filter @garrison/bot eval` shows the cost and runs
+  with `--yes`; not run yet (no API key here). Thumbs up or down under every reply, with a
+  note on a thumbs down (migration **0078**: three columns, the dashboard may write only
+  those); `eval:collect` pulls thumbs-down replies to review as new cases. 743 tests pass and
+  the dashboard builds; not checked in a browser. Not deployed.

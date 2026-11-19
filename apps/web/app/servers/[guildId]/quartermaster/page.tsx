@@ -30,6 +30,7 @@ import { formatTime } from "@/components/format";
 import { ModelPicker } from "@/components/ModelPicker";
 import { PageTabs, TabPanel } from "@/components/PageTabs";
 import { PlanDetails } from "@/components/PlanDetails";
+import { ReplyFeedback } from "@/components/ReplyFeedback";
 import { REQUEST_ERRORS, RequestsPanel } from "@/components/RequestsPanel";
 import { ScrollToEnd } from "@/components/ScrollToEnd";
 import { type PreviewEdit, ServerPreview } from "@/components/ServerPreview";
@@ -467,6 +468,13 @@ export default async function QuartermasterPage({
                               ? `Used ${plural(m.supplies, "supply", "supplies")}`
                               : "Free"}
                           </span>
+                        ) : null}
+                        {m.role === "assistant" ? (
+                          <ReplyFeedback
+                            guildId={guild.id}
+                            messageId={m.id}
+                            initial={m.feedback === 1 || m.feedback === -1 ? m.feedback : null}
+                          />
                         ) : null}
                         {drafted ? (
                           drafted === plan ? (

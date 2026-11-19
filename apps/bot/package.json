@@ -9,7 +9,9 @@
     "build": "tsup",
     "typecheck": "tsc -p tsconfig.json",
     "commands:deploy": "tsx --env-file-if-exists=../../.env src/deploy-commands.ts",
-    "preflight": "tsx --env-file-if-exists=../../.env src/preflight.ts"
+    "preflight": "tsx --env-file-if-exists=../../.env src/preflight.ts",
+    "eval": "tsx --env-file-if-exists=../../.env src/eval/run.ts",
+    "eval:collect": "tsx --env-file-if-exists=../../.env src/eval/collect.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0",

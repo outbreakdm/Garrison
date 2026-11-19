@@ -1292,3 +1292,42 @@ describe("Fast or Smart in the AI assistant", () => {
     expect(threads[0]?.threadId).toBe(second.threadId);
   });
 });
+
+describe("rating the assistant's replies", () => {
+  it("keeps a person's thumbs on their own replies, and lists the downs for review", async () => {
+    const { rateQmReply, listDownRatedReplies, latestQmThread, listQmThread } = await import(
+      "@garrison/db"
+    );
+    const f = fakeGuild("q61");
+    const a = asker(f);
+    const bot: Planner = {
+      model: "claude-haiku-5-5",
+      plan: async () => ({ ok: false, error: "not used" }),
+      chat: async () => ({
+        ok: true,
+        reply: "Your Moderation page has that.",
+        choices: [],
+        plan: null,
+        model: "claude-haiku-5-5",
+      }),
+    };
+    await chatTurn(ctx, bot, f.guild, a, { message: "Where are warnings set?" });
+    const thread = await latestQmThread(ctx.db, "q61", a.id);
+    const reply = (await listQmThread(ctx.db, "q61", a.id, thread ?? "")).at(-1);
+    const rate = (authorId: string, feedback: 1 | -1 | null, note?: string) =>
+      rateQmReply(ctx.db, { guildId: "q61", authorId, messageId: reply?.id ?? "", feedback, note });
+    // Someone else can't rate it.
+    expect(await rate("someone-else", 1)).toBe(false);
+    expect(await rate(a.id, -1, "It's on the Moderation page, warnings tab")).toBe(true);
+    const downs = await listDownRatedReplies(ctx.db, new Date(Date.now() - 60_000));
+    expect(downs.find((d) => d.id === reply?.id)).toMatchObject({
+      ask: "Where are warnings set?",
+      reply: "Your Moderation page has that.",
+      note: "It's on the Moderation page, warnings tab",
+    });
+    // Taken back, it leaves the list.
+    expect(await rate(a.id, null)).toBe(true);
+    const after = await listDownRatedReplies(ctx.db, new Date(Date.now() - 60_000));
+    expect(after.some((d) => d.id === reply?.id)).toBe(false);
+  });
+});

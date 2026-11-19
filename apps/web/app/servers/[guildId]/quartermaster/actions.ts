@@ -11,6 +11,7 @@ import {
   type QmSettingsModule,
   qmSettingLabel,
   queueDashboardAction,
+  rateQmReply,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
 import { wakeBot } from "@/lib/bot";
@@ -170,4 +171,27 @@ export async function handEdit(guildId: string, change: QmEditPayload): Promise<
   if (!queued.ok) return { ok: false, error: HAND_ERRORS[queued.reason] ?? "Try again." };
   wakeBot();
   return { ok: true };
+}
+
+/**
+ * Thumbs up or down on one of the assistant's replies in your own conversation, with an
+ * optional note on a thumbs down. Down-rated replies are reviewed as new eval cases.
+ */
+export async function rateReply(
+  guildId: string,
+  messageId: string,
+  feedback: 1 | -1 | null,
+  note?: string,
+): Promise<{ ok: boolean }> {
+  const access = await checkGuildAccess(guildId);
+  if (!access || !/^[0-9a-f-]{36}$/.test(messageId)) return { ok: false };
+  if (feedback !== 1 && feedback !== -1 && feedback !== null) return { ok: false };
+  const ok = await rateQmReply(await getDb(), {
+    guildId: access.guild.id,
+    authorId: access.session.userId,
+    messageId,
+    feedback,
+    note: typeof note === "string" ? note : null,
+  });
+  return { ok };
 }

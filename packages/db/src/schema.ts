@@ -12,6 +12,7 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
+  smallint,
   text,
   timestamp,
   uniqueIndex,
@@ -992,6 +993,11 @@ export const qmMessages = pgTable(
     supplies: integer("supplies"),
     /** The model that wrote this reply ("claude-haiku-5-5"). Null on older replies. */
     model: text("model"),
+    /** The admin's rating of this reply: 1 (helpful) or -1 (not). Written by the dashboard. */
+    feedback: smallint("feedback"),
+    /** What was wrong, in the admin's words, with a thumbs down. */
+    feedbackNote: text("feedback_note"),
+    feedbackAt: timestamp("feedback_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

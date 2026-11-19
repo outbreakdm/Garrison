@@ -4538,3 +4538,52 @@ a.item-tile:not([open]) > .panel__summary {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Thumbs up or down on the assistant's replies. */
+.qm-rate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  margin-top: 4px;
+}
+.qm-rate__btn {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.qm-rate__btn:hover {
+  background: var(--surface-raised);
+  color: var(--text);
+}
+.qm-rate__btn.is-on {
+  color: var(--accent-strong);
+}
+.qm-rate__btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.qm-rate__note {
+  display: flex;
+  flex: 1 1 100%;
+  gap: var(--space-2);
+  margin-top: 4px;
+}
+.qm-rate__input {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  font-size: 13px;
+}
+.qm-rate__thanks {
+  margin-left: 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+}

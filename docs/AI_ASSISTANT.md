@@ -340,7 +340,26 @@ On Sonnet that's 20x the money.
    - **Past conversations:** a list of earlier threads (first message, when, how many
      drafts) to reopen, beside New conversation.
    *Medium.*
-4. **An eval set.** Before adding powers: about 40 real-style requests across design, edits
+4. **An eval set.** *Built 2026-11-19, not deployed: needs migration **0078** (reply ratings);
+   never run against the real models yet (needs `ANTHROPIC_API_KEY`).* In
+   `apps/bot/src/eval/`: `fixture.ts` (Ironclad, a hand-written mid-size gaming server with a
+   staff channel everyone can see, an unused channel, and injection traps in a channel name,
+   a role name and the welcome text), `cases.ts` (43 cases in 9 categories: design, edit,
+   question, settings, posts, how-to, writing, refusal, injection; each with whether it
+   should draft, a check for what it asks, and a reference answer), `grade.ts` (code only, no
+   model judge: drafted right, valid by `validatePlan` and the settings fields, on task, safe:
+   no deletion it wasn't asked for), `harness.ts` (calls the real `ClaudePlanner.chat` with the
+   production hold; errors, timeouts and a wrong serving model are kept out of the scores;
+   pass rates with 95% intervals, cost from the API's tokens, p50/p90 seconds). CI runs the
+   self-tests: every reference passes, empty and "Sure." answers fail, a plan that deletes
+   the server fails every case. Real runs: `pnpm --filter @garrison/bot eval` prints the cost
+   (about $0.39 Fast and $5.80 Smart for 3 runs; at most $1.81 and $34.83) and runs only with
+   `--yes`; `--models fast --reps 1` is the cheap check. Results go to
+   `apps/bot/eval-results/` (not committed). Ratings: thumbs up or down under each reply, a
+   note with a thumbs down (`qm_messages.feedback`, written by the dashboard through a grant
+   on those three columns only); `pnpm --filter @garrison/bot eval:collect` writes the
+   thumbs-down replies with the message they answered to a candidates file for review.
+   The plan as written: before adding powers: about 40 real-style requests across design, edits
    and permissions, server questions, settings, posts, how-to, writing, insight, refusals
    (moderation, admin powers, anti-nuke, billing) and injection in names. Score each on a
    valid draft first try, doing what was asked, refusing what it must, tokens and seconds.
