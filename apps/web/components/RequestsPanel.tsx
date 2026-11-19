@@ -40,6 +40,7 @@ export const REQUEST_ERRORS: Record<string, string> = {
   qm_cant_continue:
     "That plan can't be continued any more: it expired, was discarded or was undone. Start a new plan.",
   qm_not_yours: "Only the person who asked for a plan can apply it. You can discard it.",
+  smart_pro: "Smart is part of Garrison Pro. Fast works on every plan.",
 };
 
 /**

@@ -64,7 +64,14 @@ export async function chatTurn(
   planner: Planner,
   guild: Guild,
   person: { id: string; tag: string },
-  input: { message: string; threadId?: string; fresh?: boolean; continues?: QmBuild | null },
+  input: {
+    message: string;
+    threadId?: string;
+    fresh?: boolean;
+    continues?: QmBuild | null;
+    /** What it's doing, for the page while it waits. */
+    onStep?: (step: string) => void;
+  },
 ): Promise<ChatOutcome> {
   if (!planner.chat) return { ok: false, error: "The AI assistant can't chat on this Garrison." };
   await ensureGuild(ctx, guild);
@@ -86,6 +93,7 @@ export async function chatTurn(
       threadId: thread,
       authorId: person.id,
       role: "assistant",
+      model: planner.model ?? DEFAULT_MODEL,
       text: text.replace(/<t:(\d+):[a-zA-Z]>/g, (_, s: string) => `on ${dayName(Number(s))}`),
       ...extra,
     });
@@ -157,7 +165,9 @@ export async function chatTurn(
         rounds: withReads ? QM_CHAT_ROUNDS : 1,
         budgetMicros,
         read: withReads ? settingsReader(ctx.db, guild, allowance) : undefined,
+        onStep: input.onStep,
       });
+    input.onStep?.("Reading your server");
     let result = await ask(turns, true, holdMicros);
     usage = result.usage;
     let cost = callUsage(usage, model);
@@ -177,6 +187,7 @@ export async function chatTurn(
       refused = true;
       if (room < 1) reply = `${reply} ${suppliesMessage(allowance)}`;
       else {
+        input.onStep?.("Checking the draft");
         let checked = await checkDraft(ctx, guild, result.plan, snap.server, maxOperations);
         // Refused: show the model Garrison's reasons and its own draft once, and take the
         // corrected plan, instead of telling the admin about a plan that won't build. Only
@@ -187,6 +198,7 @@ export async function chatTurn(
             errors: checked.errors,
           });
           const draft = result.plan;
+          input.onStep?.("Fixing what Garrison's checks refused");
           const retry = await ask(
             [
               ...turns,

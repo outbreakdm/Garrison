@@ -7,7 +7,7 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **AI assistant v2 (planned 2026-11-19), next up:** `docs/AI_ASSISTANT.md`, "Assistant v2". Owner chose Haiku (Fast) and Sonnet (Smart, Pro and Agency only), supplies at each model's real cost, every coverage gap (writing, more modules, insight, how-to help), and a "Your server" workspace with hand edits (rename, drag to reorder) and an Apply build button. Phase 1 first: a message's hold assumes 12,000 input tokens a round but nothing enforces it, so a big server can cost more than it held. **Phases 1 and 2 done** (not deployed; phase 2 needs migration 0076); phase 3, the model picker, is next.
+- **AI assistant v2 (planned 2026-11-19), next up:** `docs/AI_ASSISTANT.md`, "Assistant v2". Owner chose Haiku (Fast) and Sonnet (Smart, Pro and Agency only), supplies at each model's real cost, every coverage gap (writing, more modules, insight, how-to help), and a "Your server" workspace with hand edits (rename, drag to reorder) and an Apply build button. Phase 1 first: a message's hold assumes 12,000 input tokens a round but nothing enforces it, so a big server can cost more than it held. **Phases 1 to 3 done** (not deployed; migrations 0076 and 0077); phase 4, the eval set, is next and needs `ANTHROPIC_API_KEY` for real runs.
 - **Optimize and polish (2026-11-17):** 15 fewer database queries on every dashboard page (the
   menu's module settings in one query), faster AI assistant paint, no layout shift on Settings,
   24 px targets, unused CSS removed (see the Log). To run the Worker beside the database, set the
@@ -1287,3 +1287,13 @@ Decided (2026-11-12, owner):
   Build history and the requests list moved to a History tab. Fixed: "Remove from plan" lost
   a draft's edits. Migration **0076**. 732 tests pass and the dashboard builds; not checked in
   a browser (needs the local Docker stack). Not deployed.
+- 2026-11-19: AI assistant v2, phase 3: Fast or Smart. A switch under the composer picks Haiku
+  (Fast, every plan, about 3 supplies a message) or Sonnet (Smart, Pro and Agency, about 45),
+  with "about N messages left" for the choice and a one-time check before the first Smart
+  message. Both charge their real price through the phase 1 ceiling. Smart runs without the
+  refusal fallback so a message never holds twice its worst case. The reply keeps its model
+  (migration **0077**) and the chat shows "Smart" on it; a conversation keeps the model it last
+  used. While it replies, the chat shows what it's doing (reading the server, looking at a
+  page's settings, checking the draft). Past conversations open from a list beside New
+  conversation. New bot setting `QM_SMART_MODEL` (default `claude-sonnet-5-5`). 736 tests pass
+  and the dashboard builds; not checked in a browser. Not deployed.

@@ -1,4 +1,5 @@
 import {
+  aiTier,
   createLfgPost,
   createQmPlan,
   getLfgPost,
@@ -8,6 +9,7 @@ import {
   latestWaitingQmBuild,
   leaveLfg,
   listActiveMembers,
+  noteDashboardAction,
   QM_PLAN_TTL_MS,
   qmChangeCount,
   renderWording,
@@ -91,6 +93,7 @@ const qmChat = z.object({
   message: z.string().trim().min(1).max(REQUEST_MAX),
   threadId: uuid.optional(),
   fresh: z.boolean().optional(),
+  model: z.enum(["fast", "smart"]).optional(),
   continues: uuid.optional(),
 });
 const qmPlan = z.object({
@@ -367,18 +370,42 @@ export async function doQmPlan(ctx: BotContext, guild: Guild, member: GuildMembe
 }
 
 /** A message to the AI assistant's chat: it answers, asks, or drafts the next plan. */
-export async function doQmChat(ctx: BotContext, guild: Guild, member: GuildMember, raw: unknown) {
+export async function doQmChat(
+  ctx: BotContext,
+  guild: Guild,
+  member: GuildMember,
+  raw: unknown,
+  /** The request, so the page can show what the assistant is doing while it runs. */
+  actionId?: string,
+) {
   const p = qmChat.safeParse(raw);
   if (!p.success) return fail("Write a message of 500 characters or fewer.");
   if (!ctx.planner?.chat)
     return fail("The AI assistant isn't set up on this Garrison: the bot has no Claude API key.");
+  let planner = ctx.planner;
+  if (p.data.model === "smart") {
+    if (!ctx.smartPlanner?.chat) return fail("Smart isn't set up on this Garrison. Use Fast.");
+    if ((await aiTier(ctx.db, guild.id)) === "free")
+      return fail("Smart is part of Garrison Pro. Fast works on every plan.");
+    planner = ctx.smartPlanner;
+  }
   const continues = p.data.continues ? await getQmBuild(ctx.db, guild.id, p.data.continues) : null;
+  const { model: _, ...rest } = p.data;
   const outcome = await chatTurn(
     ctx,
-    ctx.planner,
+    planner,
     guild,
     { id: member.id, tag: member.user.username },
-    { ...p.data, continues },
+    {
+      ...rest,
+      continues,
+      onStep: actionId
+        ? (step) =>
+            void noteDashboardAction(ctx.db, actionId, `${step}…`).catch(() => {
+              // Progress is a courtesy; the reply doesn't wait on it.
+            })
+        : undefined,
+    },
   );
   if (!outcome.ok) return fail(outcome.error.replace(/\n/g, " "));
   return {

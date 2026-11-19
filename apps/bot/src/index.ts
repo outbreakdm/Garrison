@@ -87,6 +87,9 @@ const ctx: BotContext = {
   planner: env.ANTHROPIC_API_KEY
     ? new ClaudePlanner(env.ANTHROPIC_API_KEY, env.QM_MODEL)
     : undefined,
+  smartPlanner: env.ANTHROPIC_API_KEY
+    ? new ClaudePlanner(env.ANTHROPIC_API_KEY, env.QM_SMART_MODEL)
+    : undefined,
   metrics: new Metrics(),
   appUrl: env.APP_URL,
   qmDailyBudgetUsd: env.QM_DAILY_BUDGET_USD,

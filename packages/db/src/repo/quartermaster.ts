@@ -224,6 +224,8 @@ export async function addQmMessage(
     buildId?: string | null;
     /** What the message behind this reply was charged. */
     supplies?: number | null;
+    /** The model that wrote the reply. */
+    model?: string | null;
   },
 ): Promise<QmMessage> {
   const [row] = await db
@@ -233,6 +235,7 @@ export async function addQmMessage(
       choices: input.choices ?? [],
       buildId: input.buildId ?? null,
       supplies: input.supplies ?? null,
+      model: input.model ?? null,
     })
     .returning();
   if (!row) throw new Error("Couldn't save the message");
@@ -248,6 +251,27 @@ export async function latestQmThread(db: Db, guildId: string, authorId: string) 
     .orderBy(desc(qmMessages.createdAt))
     .limit(1);
   return row?.threadId ?? null;
+}
+
+/**
+ * A person's conversations on a server, newest first: when each started and was last used,
+ * its first message, and how many drafts it made. Only the author's own.
+ */
+export async function listQmThreads(db: Db, guildId: string, authorId: string, limit = 10) {
+  const rows = await db
+    .select({
+      threadId: qmMessages.threadId,
+      startedAt: sql<Date>`min(${qmMessages.createdAt})`.mapWith((v) => new Date(v)),
+      lastAt: sql<Date>`max(${qmMessages.createdAt})`.mapWith((v) => new Date(v)),
+      first: sql<string>`(array_agg(${qmMessages.text} order by ${qmMessages.createdAt}) filter (where ${qmMessages.role} = 'user'))[1]`,
+      drafts: sql<number>`count(${qmMessages.buildId})::int`,
+    })
+    .from(qmMessages)
+    .where(and(eq(qmMessages.guildId, guildId), eq(qmMessages.authorId, authorId)))
+    .groupBy(qmMessages.threadId)
+    .orderBy(desc(sql`max(${qmMessages.createdAt})`))
+    .limit(limit);
+  return rows.map((r) => ({ ...r, first: r.first ?? "" }));
 }
 
 /** A conversation's messages, oldest first, the most recent `limit`. Only the author's own. */

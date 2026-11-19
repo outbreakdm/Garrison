@@ -576,7 +576,7 @@ export async function runDashboardAction(
     case "qm_plan":
       return doQmPlan(ctx, guild, member, action.payload);
     case "qm_chat":
-      return doQmChat(ctx, guild, member, action.payload);
+      return doQmChat(ctx, guild, member, action.payload, action.id);
     case "qm_apply":
       return doQmApply(ctx, guild, member, action.payload);
     case "qm_cancel":

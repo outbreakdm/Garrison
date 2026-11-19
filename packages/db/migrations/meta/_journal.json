@@ -540,6 +540,13 @@
       "when": 1795095398205,
       "tag": "0076_qm_edit",
       "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1795097585536,
+      "tag": "0077_qm_message_model",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,7 @@
 "use server";
 
 import {
+  aiTier,
   BAN_LENGTHS,
   checkGiveaway,
   checkProfileRequest,
@@ -533,6 +534,9 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
     case "qm_chat": {
       const message = field(form, "message");
       if (!message || message.length > 500) return { ok: false, error: "qm_request" };
+      // Smart is Pro and Agency; the bot checks again when it runs.
+      const smart = field(form, "model") === "smart";
+      if (smart && (await aiTier(db, guildId)) === "free") return { ok: false, error: "smart_pro" };
       const thread = uuid.safeParse(field(form, "threadId"));
       const fresh = field(form, "fresh") === "1";
       const raw = field(form, "continues");
@@ -552,6 +556,7 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
           kind,
           payload: {
             message,
+            ...(smart ? { model: "smart" as const } : {}),
             ...(thread.success && !fresh ? { threadId: thread.data } : {}),
             ...(fresh ? { fresh: true } : {}),
             ...(continues ? { continues } : {}),

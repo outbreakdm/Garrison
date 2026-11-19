@@ -341,18 +341,29 @@ describe("a message never costs more than it holds", () => {
     expect(() => new ClaudePlanner("test-key", "claude-new-model")).toThrow(/MODEL_PRICES/);
   });
 
-  it("sends Sonnet's refusal fallback and holds for both attempts", async () => {
+  it("runs Smart without a refusal fallback, so a request holds its worst case once", async () => {
     const { planner, sent } = fakeApi([answer("Hi.")], {
       inputTokens: 12_000,
       model: "claude-sonnet-5-5",
     });
     await planner.chat({ ...input(), budgetMicros: 90_000 });
-    expect((sent[0] as Body & { fallbacks?: unknown }).fallbacks).toEqual([
-      { model: "claude-sonnet-5" },
-    ]);
-    // Twice the worst case must fit in the hold.
+    expect((sent[0] as Body & { fallbacks?: unknown }).fallbacks).toBeUndefined();
     const max = sent[0]?.max_tokens ?? 0;
-    expect(roundWorstMicros("claude-sonnet-5-5", 12_064, max, 2)).toBeLessThanOrEqual(90_000);
-    expect(roundWorstMicros("claude-sonnet-5-5", 12_064, max + 1, 2)).toBeGreaterThan(90_000);
+    expect(roundWorstMicros("claude-sonnet-5-5", 12_064, max)).toBeLessThanOrEqual(90_000);
+    // Held once, not twice: nearly the whole answer fits (twice would leave 1,484).
+    expect(max).toBeGreaterThan(5900);
+  });
+
+  it("says what a round of looks is doing", async () => {
+    const steps: string[] = [];
+    const { planner } = fakeApi([
+      look("a", "module_settings", { module: "automod" }),
+      answer("Ok."),
+    ]);
+    await planner.chat({
+      ...input(async () => ({ text: "{}", error: false })),
+      onStep: (s) => steps.push(s),
+    });
+    expect(steps).toEqual(["Looking at your Moderation settings"]);
   });
 });

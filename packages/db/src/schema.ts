@@ -990,6 +990,8 @@ export const qmMessages = pgTable(
     buildId: uuid("build_id").references(() => qmBuilds.id, { onDelete: "set null" }),
     /** Supplies the message that produced this reply was charged. Null on older replies. */
     supplies: integer("supplies"),
+    /** The model that wrote this reply ("claude-haiku-5-5"). Null on older replies. */
+    model: text("model"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -1451,6 +1453,8 @@ export interface RaidWithdrawPayload {
 /** Talk to the AI assistant: it answers, asks, or drafts a plan in the same thread. */
 export interface QmChatPayload {
   message: string;
+  /** Fast (Haiku, the default) or Smart (Sonnet, Pro and Agency): see QM_MODELS. */
+  model?: "fast" | "smart";
   /** The conversation to continue. Omitted, or `fresh`, starts a new one. */
   threadId?: string;
   fresh?: boolean;

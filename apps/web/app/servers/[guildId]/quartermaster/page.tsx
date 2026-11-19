@@ -1,5 +1,4 @@
 import {
-  AI_SUPPLIES_PER_MESSAGE,
   aiAllowance,
   describeEdits,
   entitlements,
@@ -8,14 +7,17 @@ import {
   listDashboardActions,
   listQmBuilds,
   listQmThread,
+  listQmThreads,
   listTemplates,
   QM_MIN_MESSAGE_SUPPLIES,
+  QM_MODELS,
   QM_PLAN_TTL_MS,
   QM_SETTINGS_MODULES,
   type QmBuild,
   qmChangeCount,
   qmChargedChanges,
   qmHoldSupplies,
+  qmTypicalSupplies,
   readSettings,
   TEMPLATE_NAME_MAX,
   TEMPLATES_PER_USER,
@@ -25,6 +27,7 @@ import { WaitingForBot } from "@/components/BotOffline";
 import { ProTag } from "@/components/cards/CardEditor";
 import { FeaturesPanel } from "@/components/FeaturesPanel";
 import { formatTime } from "@/components/format";
+import { ModelPicker } from "@/components/ModelPicker";
 import { PageTabs, TabPanel } from "@/components/PageTabs";
 import { PlanDetails } from "@/components/PlanDetails";
 import { REQUEST_ERRORS, RequestsPanel } from "@/components/RequestsPanel";
@@ -103,18 +106,33 @@ export default async function QuartermasterPage({
   const { guild, session, role } = await requireGuildAccess(guildId);
   const db = await getDb();
   const fresh = query.fresh === "1";
-  const [builds, actions, layout, templates, guildPlan, ownerId, flash, allowance, threadId] =
-    await Promise.all([
-      listQmBuilds(db, guild.id, 25),
-      listDashboardActions(db, guild.id, 30),
-      getServerLayout(guild.id).catch(() => null),
-      listTemplates(db, session.userId),
-      getGuildPlan(db, guild.id),
-      guildOwnerId(guild.id).catch(() => null),
-      readFlash(),
-      aiAllowance(db, guild.id, session.userId),
-      fresh ? null : latestQmThread(db, guild.id, session.userId),
-    ]);
+  // A past conversation reopened from the list, or the latest one.
+  const asked =
+    typeof query.thread === "string" && /^[0-9a-f-]{36}$/.test(query.thread) ? query.thread : null;
+  const [
+    builds,
+    actions,
+    layout,
+    templates,
+    guildPlan,
+    ownerId,
+    flash,
+    allowance,
+    latest,
+    threads,
+  ] = await Promise.all([
+    listQmBuilds(db, guild.id, 25),
+    listDashboardActions(db, guild.id, 30),
+    getServerLayout(guild.id).catch(() => null),
+    listTemplates(db, session.userId),
+    getGuildPlan(db, guild.id),
+    guildOwnerId(guild.id).catch(() => null),
+    readFlash(),
+    aiAllowance(db, guild.id, session.userId),
+    fresh || asked ? null : latestQmThread(db, guild.id, session.userId),
+    listQmThreads(db, guild.id, session.userId, 8),
+  ]);
+  const threadId = fresh ? null : (asked ?? latest);
   const [messages, featureValues] = await Promise.all([
     threadId ? listQmThread(db, guild.id, session.userId, threadId) : [],
     Promise.all(
@@ -314,6 +332,23 @@ export default async function QuartermasterPage({
   // A reply that looks at settings first can take a minute or two; say so after one.
   const slow = myChat.some((a) => now - a.createdAt.getTime() > 60_000);
   const lastBot = [...messages].reverse().find((m) => m.role === "assistant");
+  // What the assistant is doing while it replies, as the bot writes it on the request.
+  const step = myChat.find((a) => a.status === "running")?.message ?? null;
+  // Fast or Smart: the conversation keeps the model it last used.
+  const smartAllowed = allowance.tier !== "free";
+  const isSmart = (model: string | null) => Boolean(model?.startsWith("claude-sonnet"));
+  const initialModel = smartAllowed && isSmart(lastBot?.model ?? null) ? "smart" : "fast";
+  const prices = {
+    fast: {
+      typical: qmTypicalSupplies(QM_MODELS.fast.id),
+      hold: qmHoldSupplies(QM_MODELS.fast.id, 3),
+    },
+    smart: {
+      typical: qmTypicalSupplies(QM_MODELS.smart.id),
+      hold: qmHoldSupplies(QM_MODELS.smart.id, 3),
+    },
+  };
+  const pastThreads = threads.filter((t) => t.threadId !== threadId);
   const choices = thinking
     ? []
     : messages.length === 0
@@ -368,11 +403,33 @@ export default async function QuartermasterPage({
                 <h2 className="qm-chat__title" id="qm-chat-title">
                   Chat
                 </h2>
-                {messages.length ? (
-                  <a className="g-btn g-btn--ghost g-btn--sm" href="?fresh=1#describe">
-                    New conversation
-                  </a>
-                ) : null}
+                <span className="qm-chat__head-do">
+                  {pastThreads.length ? (
+                    <details className="qm-threads">
+                      <summary className="g-btn g-btn--ghost g-btn--sm qm-threads__toggle">
+                        Past conversations
+                      </summary>
+                      <ul className="qm-threads__list">
+                        {pastThreads.map((t) => (
+                          <li key={t.threadId}>
+                            <a className="qm-threads__link" href={`?thread=${t.threadId}#describe`}>
+                              <span className="qm-threads__first">{t.first || "Conversation"}</span>
+                              <span className="muted">
+                                {formatTime(t.lastAt)}
+                                {t.drafts ? ` · ${plural(t.drafts, "draft")}` : ""}
+                              </span>
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  ) : null}
+                  {messages.length ? (
+                    <a className="g-btn g-btn--ghost g-btn--sm" href="?fresh=1#describe">
+                      New conversation
+                    </a>
+                  ) : null}
+                </span>
               </div>
               <ol className="qm-chat__log" aria-live="polite" aria-label="Conversation">
                 {messages.length === 0 && !queued.length ? (
@@ -405,6 +462,7 @@ export default async function QuartermasterPage({
                         <p>{m.text}</p>
                         {m.role === "assistant" && m.supplies != null ? (
                           <span className="qm-msg__cost">
+                            {isSmart(m.model) ? "Smart · " : ""}
                             {m.supplies
                               ? `Used ${plural(m.supplies, "supply", "supplies")}`
                               : "Free"}
@@ -444,6 +502,7 @@ export default async function QuartermasterPage({
                         <i />
                       </span>
                       <span className="sr-only">Garrison is replying</span>
+                      {step ? <span className="qm-msg__step">{step}</span> : null}
                       {slow ? (
                         <span className="qm-msg__cost">
                           Still working on it. Replies that look at your settings take longer.
@@ -459,6 +518,7 @@ export default async function QuartermasterPage({
               {choices.length ? (
                 <form action={requestAction} className="qm-chat__choices">
                   {chatHidden}
+                  <input type="hidden" name="model" value={initialModel} data-model-sync />
                   {choices.map((c) => (
                     <button
                       key={c}
@@ -499,6 +559,14 @@ export default async function QuartermasterPage({
                 <button type="submit" className="g-btn g-btn--primary" disabled={blocked !== null}>
                   {blocked ?? "Send"}
                 </button>
+                <ModelPicker
+                  initial={initialModel}
+                  smartAllowed={smartAllowed}
+                  fast={prices.fast}
+                  smart={prices.smart}
+                  suppliesLeft={suppliesLeft}
+                  upgradeHref={`/servers/${guild.id}/plan`}
+                />
               </form>
               <div className="qm-usage">
                 <progress
@@ -519,7 +587,7 @@ export default async function QuartermasterPage({
                     ) : null}
                   </span>
                   <span className="muted">
-                    About {AI_SUPPLIES_PER_MESSAGE} a message, 1 a change
+                    1 a change made by the AI
                     {perPerson ? " · shared across your Free servers" : ""}
                     {shared ? " · shared by your Agency servers" : ""} · renews {renews}
                   </span>

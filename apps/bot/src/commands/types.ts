@@ -14,8 +14,10 @@ import type { Planner } from "../modules/quartermaster/planner.js";
 export interface BotContext {
   db: Db;
   logger: Logger;
-  /** Quartermaster's planner. Absent when no Claude API key is configured. */
+  /** Quartermaster's planner (Fast). Absent when no Claude API key is configured. */
   planner?: Planner;
+  /** The AI assistant's Smart planner, for Pro and Agency. Absent: Smart is off. */
+  smartPlanner?: Planner;
   /** Quartermaster's spend cap for all servers per UTC day, in dollars. Absent: no cap (tests). */
   qmDailyBudgetUsd?: number;
   /** Activity and response-time counters. Absent in tests. */

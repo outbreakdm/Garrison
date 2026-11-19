@@ -24,7 +24,7 @@ import {
   MAX_PRIVATE_ROLES,
   type ServerSnapshot,
 } from "./plan.js";
-import { QM_CHAT_ROUNDS, READ_TOOLS, type ReadTool } from "./tools.js";
+import { MODULE_GUIDE, QM_CHAT_ROUNDS, READ_TOOLS, type ReadTool } from "./tools.js";
 
 /**
  * Haiku: a plan is a small structured list that Garrison validates and a person
@@ -140,6 +140,8 @@ export interface ChatInput extends Omit<PlannerInput, "request"> {
   read?: ReadTool;
   /** Rounds this message may use, at most QM_CHAT_ROUNDS: fewer near the end of a pool. */
   rounds?: number;
+  /** Told what the model is doing ("Looking at your Moderation settings"), for the page. */
+  onStep?: (step: string) => void;
 }
 
 /** A plan drafted in the chat: structure, and settings it changes (unchecked). */
@@ -442,8 +444,14 @@ const RETRIES = 2;
 export const CHAT_TOO_BIG =
   "There aren't enough supplies left for an answer that size. Start a new conversation, or wait for more supplies.";
 
-/** The refusal fallback each model may use. Haiku has none, and sending one there is a 400. */
-const FALLBACK: Record<string, string> = { "claude-sonnet-5-5": "claude-sonnet-5" };
+/**
+ * The refusal fallback each model may use. None for now: a fallback can bill a request twice
+ * (the declined attempt and the rescue), so every Smart message would have to hold twice its
+ * worst case, and refusals are rare for server design. A declined message is charged what it
+ * used, like Haiku's. Add `"claude-sonnet-5-5": "claude-sonnet-5"` to turn it on; holds then
+ * double by themselves (attempts).
+ */
+const FALLBACK: Record<string, string> = {};
 
 type CountRequest = Omit<Anthropic.Beta.Messages.MessageCountTokensParams, "model">;
 
@@ -693,6 +701,7 @@ export class ClaudePlanner implements Planner {
         if (stopped) return { ok: false, error: stopped, usage };
         if (read && response.stop_reason === "tool_use" && !lastRound) {
           const calls = response.content.filter((b) => b.type === "tool_use");
+          input.onStep?.(lookStep(calls.map((c) => ({ name: c.name, input: c.input }))));
           const results = await Promise.all(
             calls.map(async (call): Promise<Anthropic.Beta.BetaToolResultBlockParam> => {
               reads.push(call.name);
@@ -761,6 +770,18 @@ export class ClaudePlanner implements Planner {
       return usage ? { ...failed, usage } : failed;
     }
   }
+}
+
+/** What a round of looks is doing, in the admin's words. */
+export function lookStep(calls: { name: string; input: unknown }[]) {
+  const pages = calls.flatMap((c) => {
+    if (c.name !== "module_settings") return [];
+    const m = (c.input as { module?: string } | null)?.module;
+    return m && m in MODULE_GUIDE ? [MODULE_GUIDE[m as keyof typeof MODULE_GUIDE].page] : [];
+  });
+  const unique = [...new Set(pages)];
+  if (!unique.length) return "Looking at how Garrison is set up";
+  return `Looking at your ${unique.slice(0, 2).join(" and ")} settings`;
 }
 
 /** A request that may have been billed but never answered: charged its worst case. */

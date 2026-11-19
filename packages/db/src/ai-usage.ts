@@ -16,6 +16,34 @@ export const MODEL_PRICES: Record<string, { input: number; output: number; cache
   "claude-opus-5-5": { input: 4, output: 20, cacheRead: 0.2 },
 };
 
+/**
+ * The AI assistant's two choices: Fast (Haiku), for everyone, and Smart (Sonnet), on Pro and
+ * Agency. Both charge supplies at their own real price.
+ */
+export const QM_MODELS = {
+  fast: { id: "claude-haiku-5-5", label: "Fast" },
+  smart: { id: "claude-sonnet-5-5", label: "Smart" },
+} as const;
+export type QmModelChoice = keyof typeof QM_MODELS;
+
+/**
+ * A typical chat message, measured in production (Nov 2026, docs/haiku-sonnet-split.html):
+ * the instructions read from the cache, the server and conversation written to it, and the
+ * reply with its thinking.
+ */
+const TYPICAL_MESSAGE = { input: 3400, cacheRead: 2550, cacheWrite: 3400, output: 2850 };
+
+/** What a typical chat message costs in supplies on a model, for "about N a message". */
+export function qmTypicalSupplies(model: string) {
+  const t = TYPICAL_MESSAGE;
+  return Math.max(
+    1,
+    Math.ceil(
+      costMicros(model, t.input, t.output, { read: t.cacheRead, write: t.cacheWrite }) / 1000,
+    ),
+  );
+}
+
 /** The most expensive known model, for anything a call reports that isn't listed. */
 const HIGHEST = { input: 4, output: 20, cacheRead: 0.4 };
 

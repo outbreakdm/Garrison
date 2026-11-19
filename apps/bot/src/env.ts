@@ -58,6 +58,15 @@ const schema = z.object({
       isPricedModel,
       "QM_MODEL must be a model in MODEL_PRICES (packages/db/src/ai-usage.ts)",
     ),
+  /** The AI assistant's Smart model, for Pro and Agency (QM_MODELS.smart). */
+  QM_SMART_MODEL: z
+    .string()
+    .min(1)
+    .default("claude-sonnet-5-5")
+    .refine(
+      isPricedModel,
+      "QM_SMART_MODEL must be a model in MODEL_PRICES (packages/db/src/ai-usage.ts)",
+    ),
   /** The AI assistant's base spend cap for all servers per UTC day, in dollars; each paying server adds its share. */
   QM_DAILY_BUDGET_USD: z.coerce.number().positive().max(1000).default(2),
 });

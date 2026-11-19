@@ -1,0 +1,1 @@
+ALTER TABLE "qm_messages" ADD COLUMN "model" text;

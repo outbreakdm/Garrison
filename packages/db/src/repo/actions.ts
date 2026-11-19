@@ -236,6 +236,17 @@ export async function expireDashboardActions(db: Db, now = new Date()) {
     );
 }
 
+/**
+ * What a running request is doing now ("Looking at your settings"), for the page to show
+ * while it waits. Only while it runs; the finish message replaces it.
+ */
+export async function noteDashboardAction(db: Db, id: string, message: string) {
+  await db
+    .update(dashboardActions)
+    .set({ message: message.slice(0, 200) })
+    .where(and(eq(dashboardActions.id, id), eq(dashboardActions.status, "running")));
+}
+
 export async function finishDashboardAction(
   db: Db,
   id: string,

@@ -311,7 +311,19 @@ On Sonnet that's 20x the money.
      request shows as a notice in the panel with Retry.
    - The panel's footer rules text is updated, since a plan can now rename, edit and delete.
    *Large.*
-3. **Model picker and chat.** A Fast / Smart switch in the composer. Smart is Pro and
+3. **Model picker and chat.** *Done 2026-11-19, not deployed: needs migration **0077**
+   (`qm_messages.model`).* Built as below, with these differences: Smart runs **without** the
+   refusal fallback, because a fallback can bill a request twice and every Smart message would
+   have to hold twice its worst case (turn it on in `planner.ts` `FALLBACK`; holds double by
+   themselves); Haiku stays at effort `medium` until the eval (phase 4) shows `low` holds up.
+   Fast is about 3 supplies a message (holds up to 14), Smart about 45 (holds up to 270), from
+   `qmTypicalSupplies` and production usage. The Smart model is `QM_SMART_MODEL` (default
+   `claude-sonnet-5-5`, must be in `MODEL_PRICES`). Progress is written to the chat request's
+   message while it runs (`noteDashboardAction`): "Reading your server", "Looking at your
+   Moderation settings", "Checking the draft", "Fixing what Garrison's checks refused".
+   Past conversations: the 8 newest, reopened with `?thread=`. The Smart confirmation is asked
+   once per browser. Not checked in a browser yet.
+   The plan as written: a Fast / Smart switch in the composer. Smart is Pro and
    Agency only (Free sees it locked, with Upgrade). The model is stored on the message and on
    `ai_usage`. A thread can switch models, which loses the prompt cache for one message.
    Before Sonnet ships, check on a real refusal how a fallback is billed (whether the

@@ -1207,3 +1207,88 @@ describe("hand changes from the Your server panel", () => {
     expect(next?.edits.map((e) => e.name)).toEqual(["Play"]);
   });
 });
+
+describe("Fast or Smart in the AI assistant", () => {
+  /** A chat model that says which one it is, and reports a look as it goes. */
+  const named = (model: string): Planner => ({
+    model,
+    plan: async () => ({ ok: false, error: "not used" }),
+    chat: async (input) => {
+      input.onStep?.("Looking at your Moderation settings");
+      return {
+        ok: true,
+        reply: `Hi from ${model}.`,
+        choices: [],
+        plan: null,
+        model,
+        usage: { model, inputTokens: 1000, outputTokens: 200 },
+      };
+    },
+  });
+  const both = () => ({
+    ...ctx,
+    planner: named("claude-haiku-5-5"),
+    smartPlanner: named("claude-sonnet-5-5"),
+  });
+
+  it("keeps Smart for Pro, and Fast for every plan", async () => {
+    const { doQmChat } = await import("../dashboard/more.js");
+    const f = fakeGuild("q51");
+    const a = asker(f);
+    const me = { id: a.id, user: { username: a.tag } } as unknown as GuildMember;
+    expect(await doQmChat(both(), f.guild, me, { message: "hi", model: "smart" })).toMatchObject({
+      ok: false,
+      message: expect.stringMatching(/Smart is part of Garrison Pro/),
+    });
+    expect(await doQmChat(both(), f.guild, me, { message: "hi" })).toMatchObject({ ok: true });
+  });
+
+  it("runs Smart on Pro, keeps the model on the reply, and says what it's doing", async () => {
+    const { doQmChat } = await import("../dashboard/more.js");
+    const { latestQmThread, listQmThread, queueDashboardAction, claimDashboardActions } =
+      await import("@garrison/db");
+    const f = fakeGuild("q52");
+    await upsertGuild(ctx.db, { id: "q52", name: "q52" });
+    await ctx.db.insert(schema.guildPlans).values({ guildId: "q52", plan: "pro" });
+    const a = asker(f);
+    const me = { id: a.id, user: { username: a.tag } } as unknown as GuildMember;
+    // A real request, running, so the step lands on it.
+    const queued = await queueDashboardAction(
+      ctx.db,
+      "q52",
+      { id: a.id, name: a.tag },
+      { kind: "qm_chat", payload: { message: "hi", model: "smart" } },
+    );
+    if (!queued.ok) throw new Error(queued.reason);
+    await claimDashboardActions(ctx.db, 10);
+    const out = await doQmChat(
+      both(),
+      f.guild,
+      me,
+      { message: "hi", model: "smart" },
+      queued.action.id,
+    );
+    expect(out).toMatchObject({ ok: true });
+    const thread = await latestQmThread(ctx.db, "q52", a.id);
+    const reply = (await listQmThread(ctx.db, "q52", a.id, thread ?? "")).at(-1);
+    expect(reply).toMatchObject({ text: "Hi from claude-sonnet-5-5.", model: "claude-sonnet-5-5" });
+    const { listDashboardActions } = await import("@garrison/db");
+    const row = (await listDashboardActions(ctx.db, "q52", 5)).find(
+      (x) => x.id === queued.action.id,
+    );
+    expect(row?.message).toBe("Looking at your Moderation settings…");
+  });
+
+  it("lists a person's conversations, newest first, with their first message", async () => {
+    const { listQmThreads } = await import("@garrison/db");
+    const f = fakeGuild("q53");
+    const a = asker(f);
+    const bot = named("claude-haiku-5-5");
+    const first = await chatTurn(ctx, bot, f.guild, a, { message: "Make a Valorant section" });
+    const second = await chatTurn(ctx, bot, f.guild, a, { message: "Tidy my roles", fresh: true });
+    if (!first.ok || !second.ok) throw new Error("chat failed");
+    const threads = await listQmThreads(ctx.db, "q53", a.id);
+    expect(threads.map((t) => t.first)).toEqual(["Tidy my roles", "Make a Valorant section"]);
+    expect(threads[0]?.threadId).toBe(second.threadId);
+  });
+});
