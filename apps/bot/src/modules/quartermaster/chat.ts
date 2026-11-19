@@ -6,10 +6,10 @@ import {
   getQmBuild,
   listQmThread,
   meterAiCall,
+  QM_MICROS_PER_SUPPLY,
   QM_MIN_MESSAGE_SUPPLIES,
   type QmBuild,
   qmHoldSupplies,
-  quickOutputTokens,
   reserveAiCall,
   suppliesFor,
 } from "@garrison/db";
@@ -29,6 +29,7 @@ import {
   snapshot,
   storePlan,
   suppliesMessage,
+  warnIfOverHold,
 } from "./service.js";
 import { QM_CHAT_ROUNDS, settingsReader } from "./tools.js";
 
@@ -127,11 +128,10 @@ export async function chatTurn(
     return { ok: false, error };
   }
   const allowance = reserved.allowance;
-  // Near the end of a pool the hold is smaller: as many rounds as it pays for, no looks with
-  // only one, and a shorter answer when even one round doesn't fit.
-  const oneRound = qmHoldSupplies(model, 1);
-  const rounds = Math.max(1, Math.min(QM_CHAT_ROUNDS, Math.floor(reserved.hold / oneRound)));
-  const maxTokens = reserved.hold < oneRound ? quickOutputTokens(model, reserved.hold) : undefined;
+  // What this message may cost, every request in it: its hold. The planner counts each
+  // request first and fits it inside what's left, so near the end of a pool (or on a big
+  // server) the answer gets shorter or looks less, and never costs more than it held.
+  const holdMicros = reserved.hold * QM_MICROS_PER_SUPPLY;
 
   // Charged what it cost unless Garrison's own checks refused the plan it drafted.
   let refused = false;
@@ -148,17 +148,17 @@ export async function chatTurn(
       text: m.buildId ? `${m.text}\n[You drafted a plan here.]` : m.text,
     }));
     const chat = planner.chat.bind(planner);
-    const ask = (history: ChatTurn[], withReads: boolean) =>
+    const ask = (history: ChatTurn[], withReads: boolean, budgetMicros: number) =>
       chat({
         history,
         ...snap,
         maxOperations,
         continuation,
-        rounds: withReads ? rounds : 1,
-        maxTokens,
-        read: withReads && rounds > 1 ? settingsReader(ctx.db, guild, allowance) : undefined,
+        rounds: withReads ? QM_CHAT_ROUNDS : 1,
+        budgetMicros,
+        read: withReads ? settingsReader(ctx.db, guild, allowance) : undefined,
       });
-    let result = await ask(turns, true);
+    let result = await ask(turns, true, holdMicros);
     usage = result.usage;
     let cost = callUsage(usage, model);
     if (!result.ok) {
@@ -180,8 +180,8 @@ export async function chatTurn(
         let checked = await checkDraft(ctx, guild, result.plan, snap.server, maxOperations);
         // Refused: show the model Garrison's reasons and its own draft once, and take the
         // corrected plan, instead of telling the admin about a plan that won't build. Only
-        // when this message's hold pays for another call.
-        if (!checked.ok && rounds > 1) {
+        // with what's left of this message's hold: one that doesn't fit isn't sent.
+        if (!checked.ok) {
           ctx.logger.info("AI assistant draft refused; asking for a fix", {
             guildId: guild.id,
             errors: checked.errors,
@@ -211,6 +211,7 @@ export async function chatTurn(
               },
             ],
             false,
+            holdMicros - cost.costMicros,
           );
           if (retry.usage)
             usage = {
@@ -220,6 +221,7 @@ export async function chatTurn(
               cacheReadTokens: (usage?.cacheReadTokens ?? 0) + (retry.usage.cacheReadTokens ?? 0),
               cacheWriteTokens:
                 (usage?.cacheWriteTokens ?? 0) + (retry.usage.cacheWriteTokens ?? 0),
+              costMicros: cost.costMicros + callUsage(retry.usage, model).costMicros,
             };
           cost = callUsage(usage, model);
           if (usage) await meterAiCall(ctx.db, reserved.id, cost);
@@ -269,8 +271,10 @@ export async function chatTurn(
     });
     return { ok: true, threadId: thread, reply, build };
   } finally {
+    const spent = callUsage(usage, model);
+    warnIfOverHold(ctx, guild.id, spent, reserved.hold);
     await finishAiCall(ctx.db, reserved.id, {
-      ...callUsage(usage, model),
+      ...spent,
       ok: answered,
       charge: !refused,
     }).catch((error: unknown) =>

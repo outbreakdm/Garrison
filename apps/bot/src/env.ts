@@ -1,3 +1,4 @@
+import { isPricedModel } from "@garrison/db";
 import { z } from "zod";
 
 const schema = z.object({
@@ -49,7 +50,14 @@ const schema = z.object({
     .optional()
     .or(z.literal("").transform(() => undefined)),
   /** Model Quartermaster plans with (docs/ai-costs.md). */
-  QM_MODEL: z.string().min(1).default("claude-haiku-5-5"),
+  QM_MODEL: z
+    .string()
+    .min(1)
+    .default("claude-haiku-5-5")
+    .refine(
+      isPricedModel,
+      "QM_MODEL must be a model in MODEL_PRICES (packages/db/src/ai-usage.ts)",
+    ),
   /** The AI assistant's base spend cap for all servers per UTC day, in dollars; each paying server adds its share. */
   QM_DAILY_BUDGET_USD: z.coerce.number().positive().max(1000).default(2),
 });

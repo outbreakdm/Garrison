@@ -829,6 +829,10 @@ describe("AI assistant chat", () => {
     expect(repair).toMatch(/Garrison's checks refused that draft/);
     expect(repair).toMatch(/ref "Bad Ref!" isn't valid/);
     expect(seen[1]?.history.at(-2)?.text).toMatch(/<draft>/);
+    // The message's hold is the budget, and the fix gets only what the first answer left.
+    expect(seen[0]?.budgetMicros).toBe(14_000);
+    const first = costMicros(TYPICAL.model, TYPICAL.inputTokens, TYPICAL.outputTokens);
+    expect(seen[1]?.budgetMicros).toBe(14_000 - first);
   });
 
   it("charges a typical message 3 supplies, and says so in the chat when they run out", async () => {

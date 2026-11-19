@@ -7,7 +7,7 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **AI assistant v2 (planned 2026-11-19), next up:** `docs/AI_ASSISTANT.md`, "Assistant v2". Owner chose Haiku (Fast) and Sonnet (Smart, Pro and Agency only), supplies at each model's real cost, every coverage gap (writing, more modules, insight, how-to help), and a "Your server" workspace with hand edits (rename, drag to reorder) and an Apply build button. Phase 1 first: a message's hold assumes 12,000 input tokens a round but nothing enforces it, so a big server can cost more than it held. Nothing built yet.
+- **AI assistant v2 (planned 2026-11-19), next up:** `docs/AI_ASSISTANT.md`, "Assistant v2". Owner chose Haiku (Fast) and Sonnet (Smart, Pro and Agency only), supplies at each model's real cost, every coverage gap (writing, more modules, insight, how-to help), and a "Your server" workspace with hand edits (rename, drag to reorder) and an Apply build button. Phase 1 first: a message's hold assumes 12,000 input tokens a round but nothing enforces it, so a big server can cost more than it held. **Phase 1 done** (not deployed, no migration); phase 2, the Your server workspace, is next.
 - **Optimize and polish (2026-11-17):** 15 fewer database queries on every dashboard page (the
   menu's module settings in one query), faster AI assistant paint, no layout shift on Settings,
   24 px targets, unused CSS removed (see the Log). To run the Worker beside the database, set the
@@ -1268,3 +1268,11 @@ Decided (2026-11-12, owner):
   drops continue, move the bot's DATABASE_URL to the session pooler (port 5432), which Supabase
   recommends for long-running servers.
 - 2026-11-19: Planned AI assistant v2 (`docs/AI_ASSISTANT.md`, "Assistant v2"; analysis in `docs/haiku-sonnet-split.html`). Eight phases: a cost ceiling that holds on any model and server size, the Your server workspace (hand edits, Apply build in the panel, history as a tab), a Fast/Smart model picker (Sonnet on Pro and Agency), an eval set, how-to help, server insight, writing content, more modules. Found: the 12,000-token input limit behind every hold isn't enforced. Nothing built yet.
+- 2026-11-19: AI assistant v2, phase 1: a message can't cost more than it holds. The planner
+  counts every request (`count_tokens`, free) and fits its output, then the conversation,
+  inside what's left of the hold; a request that can't fit isn't sent ("not enough supplies
+  for an answer that size"). Looks stop when what's left wouldn't pay for an answer, the
+  self-fix after a refused draft gets only the remainder, a timed-out request is charged its
+  worst case, the SDK's own retries are off (the planner retries only 429/529/5xx), each
+  round is priced at the model that ran it (Sonnet's cache reads at its real 0.05x), and an
+  unpriced `QM_MODEL` stops the bot at start. 710 tests pass. Not deployed.

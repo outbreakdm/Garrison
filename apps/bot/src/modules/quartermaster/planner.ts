@@ -1,6 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import {
+  costMicros,
+  isPricedModel,
+  outputThatFits,
   QM_MAX_OUTPUT_TOKENS,
   QM_POST_KINDS,
   QM_POSTS_MAX,
@@ -9,6 +12,7 @@ import {
   type QmPostProposal,
   type QmSettingProposal,
   qmSettingsGuide,
+  roundWorstMicros,
 } from "@garrison/db";
 import { z } from "zod";
 import { type AiEdit, type ChannelKind, MAX_DELETES } from "./edits.js";
@@ -28,9 +32,6 @@ import { QM_CHAT_ROUNDS, READ_TOOLS, type ReadTool } from "./tools.js";
  * (docs/ai-costs.md). QM_MODEL overrides it.
  */
 export const DEFAULT_MODEL = "claude-haiku-5-5";
-
-/** Models with a server-side refusal fallback. Haiku has none; sending one there is a 400. */
-const hasFallback = (model: string) => /^claude-(opus|sonnet|fable)-/.test(model);
 
 /** One earlier build in the line being continued, oldest first. */
 export interface PlannerHistory {
@@ -88,11 +89,14 @@ export interface PlannerInput {
   /** The most operations this plan may have: 20, or what's left of the day's changes. */
   maxOperations?: number;
   continuation?: PlannerContinuation;
-  /**
-   * The most the model may write, below the usual cap: a message near the end of a pool
-   * gets what its supplies can pay for.
-   */
+  /** The most the model may write, below the usual cap. */
   maxTokens?: number;
+  /**
+   * The most this call may cost, every request in it included, in millionths of a dollar:
+   * what its supplies hold. Each request is counted first and fitted inside what's left
+   * (shorter output, then fewer old turns); one that can't fit isn't sent.
+   */
+  budgetMicros?: number;
 }
 
 /** What a call used, for its cost. Absent when no request reached the model. */
@@ -103,6 +107,11 @@ export interface PlannerUsage {
   outputTokens: number;
   cacheReadTokens?: number;
   cacheWriteTokens?: number;
+  /**
+   * What it cost, each request at the price of the model that ran it, plus the worst case of
+   * any request that may have been billed without an answer. Absent: priced from the tokens.
+   */
+  costMicros?: number;
 }
 
 export type PlannerResult = (
@@ -419,56 +428,171 @@ export const CHAT_DEADLINE_MS = 150_000;
 export const CHAT_TOO_SLOW =
   "Claude took too long to answer. Try again, or ask for a smaller piece at a time.";
 
+/** The least output a request runs with: below it, an answer can't be useful. */
+export const MIN_ROUND_OUTPUT = 1024;
+/** The least output kept for the answer after a look, so a look never ends a message. */
+const MIN_ANSWER_OUTPUT = 2500;
+/** What one round of looks can add to the next request: two results of 6,000 characters. */
+const LOOK_GROWTH_TOKENS = 4000;
+/** Added to every count: tool_choice and the parsed-output wrapper differ a little from it. */
+const COUNT_MARGIN = 64;
+/** Retries of a request the API turned away unbilled (busy, overloaded, a server error). */
+const RETRIES = 2;
+
+export const CHAT_TOO_BIG =
+  "There aren't enough supplies left for an answer that size. Start a new conversation, or wait for more supplies.";
+
+/** The refusal fallback each model may use. Haiku has none, and sending one there is a 400. */
+const FALLBACK: Record<string, string> = { "claude-sonnet-5-5": "claude-sonnet-5" };
+
+type CountRequest = Omit<Anthropic.Beta.Messages.MessageCountTokensParams, "model">;
+
+/**
+ * An error after which the request may still have been billed: it timed out, was cut off,
+ * or the connection dropped, so the answer (and its usage) never arrived.
+ */
+const maybeBilled = (error: unknown) =>
+  error instanceof Anthropic.APIConnectionError || error instanceof Anthropic.APIUserAbortError;
+
+/** Turned away without running: busy (429), overloaded (529) or a server error (5xx). */
+const retryable = (error: unknown) =>
+  error instanceof Anthropic.RateLimitError ||
+  (error instanceof Anthropic.APIError && typeof error.status === "number" && error.status >= 500);
+
 export class ClaudePlanner implements Planner {
   private client: Anthropic;
   private chatDeadlineMs: number;
+  private retryDelayMs: number;
 
   constructor(
     apiKey: string,
     readonly model = DEFAULT_MODEL,
-    /** For tests: a fake `fetch` in place of the API, and a shorter chat deadline. */
-    options: { fetch?: typeof fetch; chatDeadlineMs?: number } = {},
+    /** For tests: a fake `fetch` in place of the API, a shorter chat deadline and retry wait. */
+    options: { fetch?: typeof fetch; chatDeadlineMs?: number; retryDelayMs?: number } = {},
   ) {
-    const { chatDeadlineMs, ...sdk } = options;
+    if (!isPricedModel(model))
+      throw new Error(`Garrison doesn't know what ${model} costs; add it to MODEL_PRICES first.`);
+    const { chatDeadlineMs, retryDelayMs, ...sdk } = options;
     this.chatDeadlineMs = chatDeadlineMs ?? CHAT_DEADLINE_MS;
-    this.client = new Anthropic({ apiKey, maxRetries: 2, timeout: 90_000, ...sdk });
+    this.retryDelayMs = retryDelayMs ?? 1000;
+    // No retries inside the SDK: one after a timeout could be billed twice, unseen. The
+    // planner retries only what the API turned away unbilled (call()).
+    this.client = new Anthropic({ apiKey, maxRetries: 0, timeout: 90_000, ...sdk });
   }
 
-  private base(maxTokens?: number) {
-    return {
-      model: this.model,
-      // A full 20-change plan with topics is ~2,500 tokens; the rest is room to think.
-      max_tokens: Math.max(1, Math.min(QM_MAX_OUTPUT_TOKENS, maxTokens ?? QM_MAX_OUTPUT_TOKENS)),
-      // Where the model has one, a declined request is retried on a fallback inside the call.
-      ...(hasFallback(this.model)
-        ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }
-        : {}),
-    };
+  /** Requests a call may bill: a refusal fallback runs it a second time on another model. */
+  private get attempts() {
+    return FALLBACK[this.model] ? 2 : 1;
+  }
+
+  private fallback() {
+    const to = FALLBACK[this.model];
+    return to ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: [{ model: to }] } : {};
+  }
+
+  /**
+   * A request's input tokens, counted by the API (free), plus a small margin. If counting
+   * fails, a generous estimate from its length (Claude averages 3 to 4 characters a token).
+   */
+  private async count(request: CountRequest, signal?: AbortSignal) {
+    // A count that hangs gives up at 10 seconds, or at the message's deadline.
+    const timeout = AbortSignal.timeout(10_000);
+    try {
+      const counted = await this.client.beta.messages.countTokens(
+        { model: this.model, ...request },
+        { signal: signal ? AbortSignal.any([signal, timeout]) : timeout },
+      );
+      return counted.input_tokens + COUNT_MARGIN;
+    } catch {
+      return Math.ceil(JSON.stringify(request).length / 1.8) + COUNT_MARGIN;
+    }
+  }
+
+  /**
+   * Fit a request inside `micros`: count its input and give it the most output that still
+   * fits, dropping the oldest turns of the conversation (two at a time) while that's below
+   * `minOutput`. Null: it can't fit even with nothing left to drop.
+   */
+  private async fit(
+    micros: number,
+    build: (trim: number) => CountRequest,
+    trimmable: number,
+    signal?: AbortSignal,
+  ) {
+    for (let trim = 0; ; trim += 2) {
+      const cut = Math.min(trim, trimmable);
+      const request = build(cut);
+      const input = await this.count(request, signal);
+      const output = outputThatFits(this.model, micros, input, this.attempts);
+      if (output >= MIN_ROUND_OUTPUT) return { input, output, trim: cut };
+      if (cut >= trimmable) return null;
+    }
+  }
+
+  /**
+   * One request. What the API turned away unbilled is retried; when the answer may have been
+   * billed but never arrived (timeout, cut off), `worst` comes back as what it cost.
+   */
+  private async call<T>(
+    run: () => Promise<T>,
+    worst: number,
+    signal?: AbortSignal,
+  ): Promise<{ response: T } | { error: unknown; worst?: number }> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return { response: await run() };
+      } catch (error) {
+        if (maybeBilled(error) || signal?.aborted) return { error, worst };
+        if (!retryable(error) || attempt >= RETRIES) return { error };
+        await new Promise((r) => setTimeout(r, this.retryDelayMs * 2 ** attempt));
+      }
+    }
   }
 
   async plan(input: PlannerInput): Promise<PlannerResult> {
     const blocks = contextBlocks(input);
     blocks.push({ type: "text", text: `<request>\n${input.request}\n</request>` });
-    try {
-      const response = await this.client.beta.messages.parse({
-        ...this.base(input.maxTokens),
-        output_config: { effort: "medium", format: betaZodOutputFormat(AiPlanSchema) },
-        system: PLAN_SYSTEM_BLOCKS,
-        messages: [{ role: "user", content: blocks }],
-      });
-      const usage = usageOf(response);
-      const stopped = stopError(response.stop_reason);
-      if (stopped) return { ok: false, error: stopped, usage };
-      if (!response.parsed_output)
-        return {
-          ok: false,
-          error: "Claude's plan didn't come back in the right shape. Try again.",
-          usage,
-        };
-      return { ok: true, plan: response.parsed_output, model: response.model, usage };
-    } catch (error) {
-      return apiError(error);
+    const budget = input.budgetMicros ?? Number.POSITIVE_INFINITY;
+    const output_config = {
+      effort: "medium" as const,
+      format: betaZodOutputFormat(AiPlanSchema),
+    };
+    const messages: Anthropic.Beta.BetaMessageParam[] = [{ role: "user", content: blocks }];
+    const fitted = await this.fit(
+      budget,
+      () => ({ output_config, system: PLAN_SYSTEM_BLOCKS, messages }),
+      0,
+    );
+    if (!fitted) return { ok: false, error: CHAT_TOO_BIG };
+    const max_tokens = Math.min(fitted.output, input.maxTokens ?? QM_MAX_OUTPUT_TOKENS);
+    const worst = roundWorstMicros(this.model, fitted.input, max_tokens, this.attempts);
+    const sent = await this.call(
+      () =>
+        this.client.beta.messages.parse({
+          model: this.model,
+          max_tokens,
+          ...this.fallback(),
+          output_config,
+          system: PLAN_SYSTEM_BLOCKS,
+          messages,
+        }),
+      worst,
+    );
+    if ("error" in sent) {
+      const failed = apiError(sent.error);
+      return sent.worst ? { ...failed, usage: unknownUsage(this.model, sent.worst) } : failed;
     }
+    const response = sent.response;
+    const usage = usageOf(response);
+    const stopped = stopError(response.stop_reason);
+    if (stopped) return { ok: false, error: stopped, usage };
+    if (!response.parsed_output)
+      return {
+        ok: false,
+        error: "Claude's plan didn't come back in the right shape. Try again.",
+        usage,
+      };
+    return { ok: true, plan: response.parsed_output, model: response.model, usage };
   }
 
   async chat(input: ChatInput): Promise<ChatResult> {
@@ -477,44 +601,93 @@ export class ClaudePlanner implements Planner {
     const last = turns.at(-1);
     if (last?.role !== "user") return { ok: false, error: "There's nothing to answer." };
     const earlier = turns.slice(0, -1);
-    // The API wants the conversation to open with the admin.
-    while (earlier[0]?.role === "assistant") earlier.shift();
     const blocks = contextBlocks(input);
     blocks.push({ type: "text", text: last.text });
-    const messages: Anthropic.Beta.BetaMessageParam[] = [
-      ...earlier.map((t) => ({ role: t.role, content: t.text })),
-      { role: "user", content: blocks },
-    ];
+    /** The conversation less its oldest `cut` turns, opening with the admin as the API wants. */
+    const opening = (cut: number): Anthropic.Beta.BetaMessageParam[] => {
+      const kept = earlier.slice(cut);
+      while (kept[0]?.role === "assistant") kept.shift();
+      return [
+        ...kept.map((t) => ({ role: t.role, content: t.text })),
+        { role: "user" as const, content: blocks },
+      ];
+    };
+    // Looks and their results, after the opening.
+    const looked: Anthropic.Beta.BetaMessageParam[] = [];
     const read = input.read;
     const reads: string[] = [];
-    // Every round is a model call; the cost is the sum of them.
+    // Every round is a model call; the cost is the sum of them, each at its own model's price.
     let usage: PlannerUsage | undefined;
+    const budget = input.budgetMicros ?? Number.POSITIVE_INFINITY;
+    const maxRounds = read ? Math.min(QM_CHAT_ROUNDS, input.rounds ?? QM_CHAT_ROUNDS) : 1;
+    let trim = 0;
     // All rounds, retries included, end inside the bot's request pass (3 min), so a slow
     // answer is a clear "took too long" instead of a request that expires unanswered.
     const deadline = AbortSignal.timeout(this.chatDeadlineMs);
+    const output_config = {
+      effort: "medium" as const,
+      format: betaZodOutputFormat(AiChatSchema),
+    };
+    const request = (cut: number, lastRound: boolean) => ({
+      output_config,
+      system: CHAT_SYSTEM_BLOCKS,
+      ...(read
+        ? {
+            tools: READ_TOOLS,
+            tool_choice: lastRound ? { type: "none" as const } : { type: "auto" as const },
+            // With looks, the conversation so far is cached too, so a later round re-reads
+            // the earlier ones from the cache rather than paying for them again.
+            cache_control: { type: "ephemeral" as const },
+          }
+        : {}),
+      messages: [...opening(cut), ...looked],
+    });
     try {
       for (let round = 1; ; round++) {
-        // The last round must answer, so a message never ends on a look.
-        const lastRound =
-          !read || round >= Math.min(QM_CHAT_ROUNDS, input.rounds ?? QM_CHAT_ROUNDS);
-        const response = await this.client.beta.messages.parse(
-          {
-            ...this.base(input.maxTokens),
-            output_config: { effort: "medium", format: betaZodOutputFormat(AiChatSchema) },
-            system: CHAT_SYSTEM_BLOCKS,
-            ...(read
-              ? {
-                  tools: READ_TOOLS,
-                  tool_choice: lastRound ? { type: "none" as const } : { type: "auto" as const },
-                  // With looks, the conversation so far is cached too, so a later round re-reads
-                  // the earlier ones from the cache rather than paying for them again.
-                  cache_control: { type: "ephemeral" as const },
-                }
-              : {}),
-            messages,
-          },
-          { signal: deadline },
+        const left = budget - (usage?.costMicros ?? 0);
+        const trimmable = earlier.length - trim;
+        // The last round must answer, so a message never ends on a look. A round may look
+        // only if, after its worst case, what's left still pays for an answer.
+        let lastRound = round >= maxRounds;
+        let fitted = await this.fit(left, (n) => request(trim + n, lastRound), trimmable, deadline);
+        if (fitted && !lastRound) {
+          const after =
+            left - roundWorstMicros(this.model, fitted.input, fitted.output, this.attempts);
+          const answer = roundWorstMicros(
+            this.model,
+            fitted.input + fitted.output + LOOK_GROWTH_TOKENS,
+            MIN_ANSWER_OUTPUT,
+            this.attempts,
+          );
+          if (after < answer) {
+            lastRound = true;
+            fitted = await this.fit(left, (n) => request(trim + n, true), trimmable, deadline);
+          }
+        }
+        if (!fitted) return { ok: false, error: CHAT_TOO_BIG, usage };
+        trim += fitted.trim;
+        const max_tokens = Math.min(fitted.output, input.maxTokens ?? QM_MAX_OUTPUT_TOKENS);
+        const worst = roundWorstMicros(this.model, fitted.input, max_tokens, this.attempts);
+        const params = {
+          ...request(trim, lastRound),
+          model: this.model,
+          max_tokens,
+          ...this.fallback(),
+        };
+        const sent = await this.call(
+          () => this.client.beta.messages.parse(params, { signal: deadline }),
+          worst,
+          deadline,
         );
+        if ("error" in sent) {
+          // A request that may have been billed without an answer costs its worst case.
+          if (sent.worst) usage = addUsage(usage, unknownUsage(this.model, sent.worst));
+          const failed = deadline.aborted
+            ? { ok: false as const, error: CHAT_TOO_SLOW }
+            : apiError(sent.error);
+          return usage ? { ...failed, usage } : failed;
+        }
+        const response = sent.response;
         usage = addUsage(usage, usageOf(response));
         const stopped = stopError(response.stop_reason);
         if (stopped) return { ok: false, error: stopped, usage };
@@ -532,7 +705,7 @@ export class ClaudePlanner implements Planner {
               };
             }),
           );
-          messages.push(
+          looked.push(
             { role: "assistant", content: response.content.map(asParam) },
             { role: "user", content: results },
           );
@@ -581,13 +754,18 @@ export class ClaudePlanner implements Planner {
         };
       }
     } catch (error) {
-      // A call that failed after earlier rounds still cost those rounds.
+      // Anything unexpected after earlier rounds still cost those rounds.
       const failed = deadline.aborted
         ? { ok: false as const, error: CHAT_TOO_SLOW }
         : apiError(error);
       return usage ? { ...failed, usage } : failed;
     }
   }
+}
+
+/** A request that may have been billed but never answered: charged its worst case. */
+function unknownUsage(model: string, micros: number): PlannerUsage {
+  return { model, inputTokens: 0, outputTokens: 0, costMicros: micros };
 }
 
 function usageOf(response: {
@@ -599,12 +777,16 @@ function usageOf(response: {
     cache_read_input_tokens?: number | null;
   };
 }): PlannerUsage {
+  const { input_tokens, output_tokens } = response.usage;
+  const read = response.usage.cache_read_input_tokens ?? 0;
+  const write = response.usage.cache_creation_input_tokens ?? 0;
   return {
     model: response.model,
-    inputTokens: response.usage.input_tokens,
-    outputTokens: response.usage.output_tokens,
-    cacheReadTokens: response.usage.cache_read_input_tokens ?? 0,
-    cacheWriteTokens: response.usage.cache_creation_input_tokens ?? 0,
+    inputTokens: input_tokens,
+    outputTokens: output_tokens,
+    cacheReadTokens: read,
+    cacheWriteTokens: write,
+    costMicros: costMicros(response.model, input_tokens, output_tokens, { read, write }),
   };
 }
 
@@ -625,6 +807,8 @@ function addUsage(a: PlannerUsage | undefined, b: PlannerUsage): PlannerUsage {
     outputTokens: a.outputTokens + b.outputTokens,
     cacheReadTokens: (a.cacheReadTokens ?? 0) + (b.cacheReadTokens ?? 0),
     cacheWriteTokens: (a.cacheWriteTokens ?? 0) + (b.cacheWriteTokens ?? 0),
+    // Each round at its own model's price, so a fallback round is priced right.
+    costMicros: (a.costMicros ?? 0) + (b.costMicros ?? 0),
   };
 }
 

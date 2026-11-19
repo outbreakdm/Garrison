@@ -2,10 +2,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addMonths,
   billingMonth,
+  costMicros,
+  isPricedModel,
   nextUtcMonthStart,
+  outputThatFits,
   qmHoldSupplies,
   qmReserveMicros,
-  quickOutputTokens,
+  roundWorstMicros,
   suppliesFor,
   utcDayStart,
 } from "./ai-usage";
@@ -88,9 +91,23 @@ describe("AI supplies", () => {
     expect(qmHoldSupplies(model, 1)).toBe(5);
     expect(suppliesFor(2620)).toBe(3);
     expect(suppliesFor(0)).toBe(0);
-    // Four supplies pay for one round with a shorter answer.
-    expect(quickOutputTokens(model, 4)).toBe(5000);
-    expect(quickOutputTokens(model, 50)).toBe(6000);
+    // Four supplies pay for 12,000 tokens in and a shorter answer.
+    expect(outputThatFits(model, 4000, 12_000)).toBe(5000);
+    expect(outputThatFits(model, 50_000, 12_000)).toBe(6000);
+    // A bigger server leaves less room for the answer in the same hold.
+    expect(outputThatFits(model, 4000, 30_000)).toBe(500);
+  });
+
+  it("prices each model at its own rates, and knows which it may run", () => {
+    expect(roundWorstMicros(model, 12_000, 6000)).toBe(4500);
+    // A refusal fallback can bill a request twice.
+    expect(roundWorstMicros("claude-sonnet-5-5", 12_000, 6000, 2)).toBe(180_000);
+    expect(outputThatFits("claude-sonnet-5-5", 180_000, 12_000, 2)).toBe(6000);
+    // Sonnet 5.5 reads its cache at $0.10 per 1M, not a tenth of input.
+    expect(costMicros("claude-sonnet-5-5", 0, 0, { read: 10_000 })).toBe(1000);
+    expect(isPricedModel("claude-haiku-5-5")).toBe(true);
+    expect(isPricedModel("claude-sonnet-5")).toBe(true);
+    expect(isPricedModel("some-new-model")).toBe(false);
   });
 
   it("holds a message while it runs, then charges what it really cost", async () => {

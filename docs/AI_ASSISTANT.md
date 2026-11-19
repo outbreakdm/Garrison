@@ -255,7 +255,15 @@ On Sonnet that's 20x the money.
 
 ### Phases
 
-1. **A ceiling that holds.** Count each round's input before sending it (`count_tokens`,
+1. **A ceiling that holds.** *Done 2026-11-19, not deployed (no migration).* Built as below,
+   plus: a request that may have been billed without an answer (timeout, cut off) is charged
+   its worst case; the SDK no longer retries on its own (a retry after a timeout could be
+   billed twice), and the planner retries only 429, 529 and 5xx; the self-fix after a refused
+   draft gets only what the first answer left of the hold; `QM_MODEL` must be in
+   `MODEL_PRICES` or the bot won't start; Sonnet 5.5's fallback is Sonnet 5 by name, and its
+   requests hold twice their worst case; a call that still costs more than it held is logged
+   as an error. Tests in `planner.test.ts` ("a message never costs more than it holds").
+   The plan as written: Count each round's input before sending it (`count_tokens`,
    free) and price it on the model it will run on. Size the hold from the real input plus
    the output cap, not from a guess. Before each further round, check that what's left of
    the hold covers that round's worst case. If it doesn't, answer now (`tool_choice: none`)
@@ -291,6 +299,8 @@ On Sonnet that's 20x the money.
 3. **Model picker and chat.** A Fast / Smart switch in the composer. Smart is Pro and
    Agency only (Free sees it locked, with Upgrade). The model is stored on the message and on
    `ai_usage`. A thread can switch models, which loses the prompt cache for one message.
+   Before Sonnet ships, check on a real refusal how a fallback is billed (whether the
+   declined attempt shows in `usage`), and keep the 2x hold until it's known.
    Sonnet runs at effort `medium` with the server-side fallback; Haiku runs questions at `low`
    once the eval shows answers hold up. `QM_MODEL` stays as the operator's default. With it,
    owner's picks of 2026-11-19:

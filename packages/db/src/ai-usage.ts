@@ -4,22 +4,40 @@
  * dashboard, which shows a server's credits for the day.
  */
 
-/** Anthropic list prices, $ per 1M tokens (Haiku 5.5's rate for prompts up to 100K). */
-export const MODEL_PRICES: Record<string, { input: number; output: number }> = {
-  "claude-haiku-5-5": { input: 0.1, output: 0.5 },
-  "claude-sonnet-5-5": { input: 2, output: 10 },
-  "claude-opus-5-5": { input: 4, output: 20 },
+/**
+ * Anthropic list prices, $ per 1M tokens (Haiku 5.5's rate for prompts up to 100K). Cache
+ * reads have each model's own rate. Only a model listed here may run (isPricedModel), so a
+ * call is never priced on a guess. Claude Sonnet 5 is here as Sonnet 5.5's refusal fallback.
+ */
+export const MODEL_PRICES: Record<string, { input: number; output: number; cacheRead: number }> = {
+  "claude-haiku-5-5": { input: 0.1, output: 0.5, cacheRead: 0.01 },
+  "claude-sonnet-5-5": { input: 2, output: 10, cacheRead: 0.1 },
+  "claude-sonnet-5": { input: 2, output: 10, cacheRead: 0.2 },
+  "claude-opus-5-5": { input: 4, output: 20, cacheRead: 0.2 },
 };
+
+/** The most expensive known model, for anything a call reports that isn't listed. */
+const HIGHEST = { input: 4, output: 20, cacheRead: 0.4 };
+
+/** A model's prices: an exact id first, then the longest listed id it starts with. */
+function knownPrice(model: string) {
+  if (MODEL_PRICES[model]) return MODEL_PRICES[model];
+  const prefix = Object.keys(MODEL_PRICES)
+    .filter((id) => model.startsWith(id))
+    .sort((a, b) => b.length - a.length)[0];
+  return prefix ? MODEL_PRICES[prefix] : undefined;
+}
+
+/** Whether Garrison knows what this model costs, and so may call it. */
+export const isPricedModel = (model: string) => knownPrice(model) !== undefined;
 
 /** An unknown model is priced as the most expensive known one, so limits stay safe. */
 export function priceFor(model: string) {
-  const known = Object.entries(MODEL_PRICES).find(([id]) => model.startsWith(id));
-  return known?.[1] ?? { input: 4, output: 20 };
+  return knownPrice(model) ?? HIGHEST;
 }
 
-/** Writing the prompt cache costs 1.25x an input token; reading it back costs 0.1x. */
+/** Writing the prompt cache (5 minutes) costs 1.25x an input token. */
 export const CACHE_WRITE_RATE = 1.25;
-export const CACHE_READ_RATE = 0.1;
 
 /**
  * Millionths of a dollar: tokens × $/1M tokens is exactly that. `inputTokens` is the
@@ -35,14 +53,39 @@ export function costMicros(
   return Math.ceil(
     inputTokens * p.input +
       (cache.write ?? 0) * p.input * CACHE_WRITE_RATE +
-      (cache.read ?? 0) * p.input * CACHE_READ_RATE +
+      (cache.read ?? 0) * p.cacheRead +
       outputTokens * p.output,
   );
 }
 
 /**
- * The AI assistant's ceiling on one round with the model: the instructions, the server and
- * the conversation (6,500 to 12,000 tokens, docs/pricing.md), and the output cap. A full
+ * The most one request can cost: every input token at the cache-write rate (the highest
+ * an input token is billed) and all `maxTokens` written. `attempts` is 2 when a refusal
+ * fallback may run the request again on another model inside the same call.
+ */
+export const roundWorstMicros = (
+  model: string,
+  inputTokens: number,
+  maxTokens: number,
+  attempts = 1,
+) => attempts * costMicros(model, 0, maxTokens, { write: inputTokens });
+
+/**
+ * The most output a request may write and still cost at most `micros`, with `inputTokens`
+ * of input: what's left once the input is paid for at the cache-write rate. Never more than
+ * the usual cap.
+ */
+export function outputThatFits(model: string, micros: number, inputTokens: number, attempts = 1) {
+  const p = priceFor(model);
+  const room = micros / attempts - inputTokens * p.input * CACHE_WRITE_RATE;
+  return Math.max(0, Math.min(QM_MAX_OUTPUT_TOKENS, Math.floor(room / p.output)));
+}
+
+/**
+ * What a message holds before it runs: rounds of the instructions, the server and the
+ * conversation (6,500 to 12,000 tokens, docs/pricing.md) and the output cap. Only the hold:
+ * the planner counts each request's real input first and fits it, and its output, inside
+ * what's held (planner.ts), so a bigger server gets a shorter answer, never a bigger bill. A full
  * 20-change plan with a topic on every channel is about 2,500 tokens, plus reasoning.
  */
 export const QM_MAX_INPUT_TOKENS = 12_000;
@@ -67,16 +110,6 @@ export const qmHoldSupplies = (model: string, rounds: number) =>
 
 /** The fewest supplies a message can run on: one round with a short answer. */
 export const QM_MIN_MESSAGE_SUPPLIES = 4;
-
-/**
- * The output a one-round answer may write and still cost at most `supplies`, for a message
- * near the end of a pool. Never more than the usual cap.
- */
-export function quickOutputTokens(model: string, supplies: number) {
-  const p = priceFor(model);
-  const room = supplies * QM_MICROS_PER_SUPPLY - QM_MAX_INPUT_TOKENS * p.input * CACHE_WRITE_RATE;
-  return Math.max(0, Math.min(QM_MAX_OUTPUT_TOKENS, Math.floor(room / p.output)));
-}
 
 /** Attempts per server per hour, failed ones included, so failures can't run up a bill. */
 export const QM_ATTEMPTS_PER_HOUR = 10;

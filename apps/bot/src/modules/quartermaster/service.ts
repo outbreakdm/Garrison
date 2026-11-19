@@ -19,6 +19,7 @@ import {
   type LimitReason,
   meterAiCall,
   QM_ATTEMPTS_PER_HOUR,
+  QM_MICROS_PER_SUPPLY,
   QM_MIN_MESSAGE_SUPPLIES,
   QM_PLAN_TTL_MS,
   QM_ROLE_PERMISSION_KEYS,
@@ -34,7 +35,6 @@ import {
   type QmSettingProposal,
   type QmSettingsLookup,
   qmHoldSupplies,
-  quickOutputTokens,
   readSettings,
   recordQmCreated,
   reserveAiCall,
@@ -86,11 +86,33 @@ export function callUsage(usage: PlannerUsage | undefined, model: string): AiCal
   if (!usage) return { model, inputTokens: 0, outputTokens: 0, costMicros: 0 };
   return {
     ...usage,
-    costMicros: costMicros(usage.model, usage.inputTokens, usage.outputTokens, {
-      read: usage.cacheReadTokens,
-      write: usage.cacheWriteTokens,
-    }),
+    // The planner's own total prices each request at the model that ran it.
+    costMicros:
+      usage.costMicros ??
+      costMicros(usage.model, usage.inputTokens, usage.outputTokens, {
+        read: usage.cacheReadTokens,
+        write: usage.cacheWriteTokens,
+      }),
   };
+}
+
+/**
+ * A call that cost more than it held means a gap in the planner's fitting: say so loudly.
+ * It's still charged what it cost (packs, then the pool's next period, cover it).
+ */
+export function warnIfOverHold(
+  ctx: BotContext,
+  guildId: string,
+  cost: AiCallUsage,
+  holdSupplies: number,
+) {
+  if (cost.costMicros > holdSupplies * QM_MICROS_PER_SUPPLY)
+    ctx.logger.error("AI call cost more than it held", {
+      guildId,
+      model: cost.model,
+      costMicros: cost.costMicros,
+      holdSupplies,
+    });
 }
 
 /**
@@ -712,8 +734,6 @@ export async function planBuild(
     1,
     Math.min(MAX_OPERATIONS, reserved.allowance.suppliesLeft - AI_SUPPLIES_PER_MESSAGE),
   );
-  const maxTokens =
-    reserved.hold < qmHoldSupplies(model, 1) ? quickOutputTokens(model, reserved.hold) : undefined;
 
   // Whatever happens below, record what the call used and charge it, unless Garrison's own
   // checks refused the plan.
@@ -728,7 +748,8 @@ export async function planBuild(
       ...snap,
       maxOperations,
       continuation,
-      maxTokens,
+      // Each request is counted and fitted inside what this call holds.
+      budgetMicros: reserved.hold * QM_MICROS_PER_SUPPLY,
     });
     usage = result.usage;
     if (!result.ok) return result;
@@ -758,8 +779,10 @@ export async function planBuild(
     refused = false;
     return { ...stored, server: snap.server, notes: checked.notes };
   } finally {
+    const cost = callUsage(usage, model);
+    warnIfOverHold(ctx, guild.id, cost, reserved.hold);
     await finishAiCall(ctx.db, reserved.id, {
-      ...callUsage(usage, model),
+      ...cost,
       ok: answered,
       charge: !refused,
     }).catch((error: unknown) =>
