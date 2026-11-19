@@ -26,6 +26,7 @@ const server: ServerSnapshot = {
 
 type Op = AiPlan["operations"][number];
 const op = (o: Partial<Op> & Pick<Op, "kind" | "ref" | "name">): Op => ({
+  text_kind: null,
   parent: null,
   topic: null,
   slowmode_seconds: null,
@@ -403,5 +404,43 @@ describe("orders", () => {
     expect(roleCrossing(ladder, ["c", "b"])).toBeNull();
     expect(roleCrossing(ladder, ["b", "a"])).toBe("b");
     expect(roleCrossing(ladder, ["a", "c", "b"])).toBeNull();
+  });
+});
+
+describe("forum and announcement channels", () => {
+  const channel = (text_kind: "forum" | "announcement") => ({
+    summary: "x",
+    notes: "",
+    operations: [
+      {
+        kind: "create_text_channel" as const,
+        ref: "news",
+        name: "News",
+        text_kind,
+        parent: null,
+        topic: "What's new",
+        slowmode_seconds: null,
+        user_limit: null,
+        private_to: [],
+        read_only: null,
+        posters: [],
+        color_hex: null,
+        hoist: null,
+        mentionable: null,
+        permissions: [],
+      },
+    ],
+  });
+
+  it("makes a forum or, on a Community server, an announcement channel", () => {
+    const forum = validatePlan(channel("forum"), server);
+    expect(forum.ok && forum.operations[0]).toMatchObject({ textKind: "forum", name: "news" });
+    const news = validatePlan(channel("announcement"), { ...server, community: true });
+    expect(news.ok && news.operations[0]?.textKind).toBe("announcement");
+  });
+
+  it("refuses an announcement channel outside a Community server", () => {
+    const out = validatePlan(channel("announcement"), { ...server, community: false });
+    expect(!out.ok && out.errors[0]).toMatch(/need a Community server/);
   });
 });

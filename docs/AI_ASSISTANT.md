@@ -414,7 +414,24 @@ On Sonnet that's 20x the money.
    welcome and leave card text, and a rules or info channel's message, written by the model
    and shown in full before it's applied. Everything goes through the dashboard's own checks.
    Posting still needs the admin's yes. *Medium.*
-8. **More modules.** Extend `QM_SETTINGS` and the proposal tools to tickets (panels, staff
+8. **More modules.** Split in two.
+   **8A, done 2026-11-19, not deployed (no migration).** Settings a plan can change now also
+   cover Security's anti-raid and verification (join rate and window, lockdown or alert only,
+   auto-unlock, new-account flag, alert channel, staff roles, the Verified role, its account
+   age, website check, weekly backups on Pro; never anti-nuke), Groups and raids' time zone
+   and attendance (Pro), Leveling's voice XP, Moderation's appeals, the whole warning ladder
+   (new kind `ladder`, the Moderation page's choices) and level rewards (new kind `rewards`,
+   with roles the same plan makes). Ranges match each page's form; roles with admin or
+   moderation powers are refused; Pro parts need Pro. A new text channel can be a forum or,
+   on a Community server, an announcement channel (`text_kind`, stored as `textKind`). The
+   Features tab lists the new modules. 6 new eval cases, 60 in all.
+   **8B, not started:** whole new items, each needing its own entry type the way writes have:
+   ticket panels and their staff roles, making role menus (today a plan only posts saved
+   ones), stream alerts, giveaways, the economy and shop, raid and LFG templates, invite
+   labels and roles, and server stats counters. Each should reuse its page's check function
+   (`checkTicketPanels`, `checkRoleMenus`, `checkAlertFeeds`, `checkGiveaway`, `checkEconomy`,
+   `checkTemplates`, `checkInviteLabels`, `checkServerStats`), one module per step.
+   The plan as written: extend `QM_SETTINGS` and the proposal tools to tickets (panels, staff
    roles), role menus (create, not just post), anti-raid and verification (never anti-nuke),
    stream alerts, giveaways, economy, raid and LFG templates, the warning ladder, level
    rewards and invite roles. Create forum and announcement channels. Each module uses its

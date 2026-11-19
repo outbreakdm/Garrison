@@ -127,6 +127,7 @@ export const SERVER: ServerSnapshot = {
   },
   channelCount: CHANNELS.length + 6,
   roleCount: roles.length,
+  community: true,
 };
 
 /** Everything a chat request carries about the server, as snapshot() builds it in the bot. */

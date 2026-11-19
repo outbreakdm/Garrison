@@ -81,10 +81,11 @@ const STARTERS = [
 
 /** What the assistant does, shown in an empty conversation. */
 const CAN_DO = [
-  "Design channels, categories and roles",
-  "Set up modules like Automod, Welcome, Leveling and Suggestions",
-  "Post your saved role menus, ticket panels and messages",
-  "Answer questions about how Garrison is set up here",
+  "Design channels, categories, roles, forums and announcement channels",
+  "Fix permissions, rename, reorder and tidy what you have",
+  "Set up anti-raid, verification, automod, warnings, welcome, leveling and more",
+  "Write rules, announcements and welcome cards, and post them",
+  "Tell you how the server is doing, and how any Garrison feature works",
 ];
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;

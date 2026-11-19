@@ -65,6 +65,7 @@ const all = (...results: (string | null)[]) => results.find((r) => r !== null) ?
 
 type Op = AiPlan["operations"][number];
 const op = (kind: Op["kind"], ref: string, name: string, more: Partial<Op> = {}): Op => ({
+  text_kind: null,
   kind,
   ref,
   name,
@@ -308,6 +309,56 @@ export const CASES: EvalCase[] = [
           op("create_text_channel", "ml", "members-lounge", {
             parent: ID.community,
             private_to: [ID.members],
+          }),
+        ],
+      }),
+    ),
+  },
+  {
+    id: "design-forum",
+    category: "design",
+    ask: "Add a forum in Media where people submit their best clips.",
+    draft: "yes",
+    check: (a) =>
+      need(
+        opsOf(a).some(
+          (o) =>
+            o.kind === "create_text_channel" && o.text_kind === "forum" && o.parent === ID.media,
+        ),
+        "no forum in Media",
+      ),
+    reference: reply(
+      "This plan adds a clip forum to Media.",
+      plan({
+        operations: [
+          op("create_text_channel", "clip-forum", "clip-submissions", {
+            parent: ID.media,
+            text_kind: "forum",
+            topic: "One clip per post. Say the game in the title.",
+          }),
+        ],
+      }),
+    ),
+  },
+  {
+    id: "design-announcement",
+    category: "design",
+    ask: "Add a patch notes channel other servers can follow, in Info.",
+    draft: "yes",
+    check: (a) =>
+      need(
+        opsOf(a).some((o) => o.kind === "create_text_channel" && o.text_kind === "announcement"),
+        "not an announcement channel",
+      ),
+    reference: reply(
+      "This plan adds a patch notes announcement channel.",
+      plan({
+        operations: [
+          op("create_text_channel", "patch", "patch-notes", {
+            parent: ID.info,
+            text_kind: "announcement",
+            read_only: true,
+            posters: [ID.mods],
           }),
         ],
       }),
@@ -656,6 +707,107 @@ export const CASES: EvalCase[] = [
     ),
   },
 
+  {
+    id: "settings-raid-alert",
+    category: "settings",
+    ask: "When there's a raid, just alert us, don't lock the whole server.",
+    draft: "yes",
+    check: (a) =>
+      need(
+        settingsOf(a).some(
+          (x) => x.module === "gatehouse" && x.field === "raidResponse" && x.value === "alert",
+        ),
+        "anti-raid not set to alert only",
+      ),
+    reference: reply(
+      "This plan makes anti-raid alert you instead of locking the server.",
+      plan({ settings: [{ module: "gatehouse", field: "raidResponse", value: "alert" }] }),
+    ),
+  },
+  {
+    id: "settings-ladder",
+    category: "settings",
+    ask: "Set up our warnings: 3 warnings in a day is a 1 hour timeout, and 5 in a week is a ban.",
+    draft: "yes",
+    check: (a) => {
+      const rules = settingsOf(a).find((x) => x.module === "escalation" && x.field === "rules")
+        ?.value as
+        | {
+            warnCount: number;
+            action: string;
+            windowMinutes: number;
+            durationSeconds: number | null;
+          }[]
+        | undefined;
+      return all(
+        need(Array.isArray(rules), "no ladder"),
+        need(
+          Boolean(
+            rules?.some(
+              (r) =>
+                r.warnCount === 3 &&
+                r.action === "timeout" &&
+                r.windowMinutes === 1440 &&
+                r.durationSeconds === 3600,
+            ),
+          ),
+          "no 3-in-a-day timeout",
+        ),
+        need(
+          Boolean(
+            rules?.some(
+              (r) => r.warnCount === 5 && r.action === "ban" && r.windowMinutes === 10080,
+            ),
+          ),
+          "no 5-in-a-week ban",
+        ),
+      );
+    },
+    reference: reply(
+      "This plan sets the warning ladder.",
+      plan({
+        settings: [
+          {
+            module: "escalation",
+            field: "rules",
+            value: [
+              { warnCount: 3, windowMinutes: 1440, action: "timeout", durationSeconds: 3600 },
+              { warnCount: 5, windowMinutes: 10080, action: "ban", durationSeconds: null },
+            ],
+          },
+        ],
+      }),
+    ),
+  },
+  {
+    id: "settings-reward-new-role",
+    category: "settings",
+    ask: "Make a Veteran role and give it to people when they reach level 20.",
+    draft: "yes",
+    check: (a) => {
+      const made = opsOf(a).find((o) => o.kind === "create_role" && named(o.name, "veteran"));
+      const rewards = settingsOf(a).find((x) => x.module === "rewards")?.value as
+        | { level: number; roleId: string }[]
+        | undefined;
+      return all(
+        need(Boolean(made), "no Veteran role"),
+        need(
+          Boolean(rewards?.some((r) => r.level === 20 && r.roleId === made?.ref)),
+          "not given at level 20",
+        ),
+      );
+    },
+    reference: reply(
+      "This plan makes a Veteran role, given at level 20.",
+      plan({
+        operations: [op("create_role", "veteran", "Veteran", { color_hex: "#c9a227" })],
+        settings: [
+          { module: "rewards", field: "rewards", value: [{ level: 20, roleId: "veteran" }] },
+        ],
+      }),
+    ),
+  },
+
   // Posting saved items.
   {
     id: "posts-role-menu",
@@ -719,12 +871,23 @@ export const CASES: EvalCase[] = [
   },
   {
     id: "howto-verification",
-    category: "howto",
+    category: "settings",
     ask: "Can you turn on verification for new members?",
-    draft: "no",
-    // Verification isn't something a plan can change: it says where to do it.
-    check: (a) => need(says(a, "security"), "doesn't point to Security"),
-    reference: reply("I can't switch that on here: turn on verification on the Security page."),
+    draft: "either",
+    // It can now set the Verified role; posting the button stays on the Security page.
+    check: (a) =>
+      need(
+        says(a, "security", "verify") ||
+          settingsOf(a).some((x) => x.module === "gatehouse" && x.field === "verifyRoleId"),
+        "neither sets it up nor says where",
+      ),
+    reference: reply(
+      "This plan makes a Verified role and sets it as the role the Verify button gives. Post the button from the Security page.",
+      plan({
+        operations: [op("create_role", "verified", "Verified")],
+        settings: [{ module: "gatehouse", field: "verifyRoleId", value: "verified" }],
+      }),
+    ),
   },
 
   {

@@ -192,6 +192,7 @@ describe("deleting", () => {
       plan([edit({ kind: "delete_category", id: CAT })], {
         operations: [
           {
+            text_kind: null,
             kind: "create_text_channel",
             ref: "news",
             name: "news",

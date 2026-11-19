@@ -771,6 +771,11 @@ export interface QmOperation {
   posters?: string[];
   /** Roles: member-level permissions from QM_ROLE_PERMISSIONS. Absent means none. */
   permissions?: string[];
+  /**
+   * Text channels: made as an announcement channel (Community servers) or a forum instead.
+   * Absent: a plain text channel.
+   */
+  textKind?: "announcement" | "forum";
 }
 
 /**

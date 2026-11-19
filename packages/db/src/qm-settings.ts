@@ -28,7 +28,11 @@ type Kind =
   | "textChannels"
   | "voiceChannels"
   | "category"
-  | "roles";
+  | "role"
+  | "roles"
+  | "ladder"
+  | "rewards"
+  | "timezone";
 
 interface FieldSpec {
   label: string;
@@ -46,6 +50,14 @@ interface ModuleSpec {
 }
 
 const on = (about: string): FieldSpec => ({ label: "On", kind: "bool", about });
+
+/** The warning ladder's choices, as the Moderation page offers them (settings-schema.ts). */
+export const QM_LADDER = {
+  steps: 5,
+  windows: [60, 360, 1440, 10080, 43200],
+  durations: [600, 3600, 21600, 86400, 604800, 2419200],
+} as const;
+const REWARDS_MAX = 10;
 
 export const QM_SETTINGS = {
   suggestions: {
@@ -185,6 +197,11 @@ export const QM_SETTINGS = {
     label: "Leveling",
     fields: {
       enabled: on("members earn XP for chatting and level up"),
+      voiceXp: {
+        label: "Voice XP",
+        kind: "bool",
+        about: "members also earn XP in voice, with someone else listening",
+      },
       announce: {
         label: "Level-ups",
         kind: "enum",
@@ -223,12 +240,125 @@ export const QM_SETTINGS = {
   watch: {
     label: "Moderation",
     fields: {
+      appealsEnabled: {
+        label: "Appeals",
+        kind: "bool",
+        about: "members with an active case can appeal on a page of their own",
+      },
       logChannelId: {
         label: "Mod log",
         kind: "textChannel",
         about: "where warnings, timeouts, kicks and bans are logged",
       },
       dmMembers: { label: "DM members", kind: "bool", about: "tell members when they're punished" },
+    },
+  },
+  gatehouse: {
+    label: "Security",
+    fields: {
+      antiRaidEnabled: on("watches the join rate and acts on a raid"),
+      raidJoinCount: {
+        label: "Raid joins",
+        kind: "int",
+        about: "joins within raidWindowSeconds that count as a raid",
+        min: 3,
+        max: 200,
+      },
+      raidWindowSeconds: {
+        label: "Raid window",
+        kind: "int",
+        about: "seconds the joins are counted over",
+        min: 5,
+        max: 600,
+      },
+      raidResponse: {
+        label: "On a raid",
+        kind: "enum",
+        about: "lockdown locks the server and pauses invites; alert only warns staff",
+        options: ["lockdown", "alert"],
+      },
+      autoUnlockMinutes: {
+        label: "Auto-unlock",
+        kind: "int",
+        about: "minutes before a raid lockdown lifts by itself; 0 waits for staff",
+        min: 0,
+        max: 1440,
+      },
+      flagAccountAgeDays: {
+        label: "Flag new accounts",
+        kind: "int",
+        about: "joins from accounts younger than this many days are flagged; 0 is off",
+        min: 0,
+        max: 365,
+      },
+      alertChannelId: {
+        label: "Alert channel",
+        kind: "textChannel",
+        about: "where raid and security alerts go",
+      },
+      staffRoleIds: {
+        label: "Staff roles",
+        kind: "roles",
+        about: "roles that keep talking during a lockdown (10 at most)",
+      },
+      verifyRoleId: {
+        label: "Verified role",
+        kind: "role",
+        about: "the role the Verify button gives; no admin or moderation powers",
+      },
+      verifyMinAccountAgeDays: {
+        label: "Verify account age",
+        kind: "int",
+        about: "accounts younger than this many days can't verify; 0 for any",
+        min: 0,
+        max: 365,
+      },
+      verifyWeb: {
+        label: "Verify on the website",
+        kind: "bool",
+        about: "the Verify button sends members to a website check with a captcha",
+      },
+      backupWeekly: {
+        label: "Weekly backups",
+        kind: "bool",
+        about: "Pro: a backup of roles and channels every week",
+      },
+    },
+  },
+  ops: {
+    label: "Groups and raids",
+    fields: {
+      timezone: {
+        label: "Time zone",
+        kind: "timezone",
+        about: 'the server\'s time zone for raids and schedules, like "America/Chicago"',
+      },
+      trackAttendance: {
+        label: "Track attendance",
+        kind: "bool",
+        about: "Pro: count who shows up to raids and groups from voice",
+      },
+    },
+  },
+  escalation: {
+    label: "Warning ladder",
+    fields: {
+      rules: {
+        label: "Ladder",
+        kind: "ladder",
+        about: `the whole ladder, replacing it: up to ${QM_LADDER.steps} steps of { warnCount 1-50, windowMinutes (one of ${QM_LADDER.windows.join(", ")}), action timeout|kick|ban, durationSeconds (timeout only: one of ${QM_LADDER.durations.join(", ")}; else null) }, each with a different warnCount`,
+      },
+    },
+  },
+  rewards: {
+    label: "Level rewards",
+    fields: {
+      rewards: {
+        label: "Rewards",
+        kind: "rewards",
+        about:
+          "every reward, replacing them: up to 10 of { level 1-500, roleId } with different levels; roles without admin or moderation powers, existing or made by this plan",
+      },
     },
   },
 } as const satisfies Partial<Record<SettingsModule, ModuleSpec>>;
@@ -277,7 +407,11 @@ const KIND_TEXT: Record<Kind, string> = {
   textChannels: "list of text channel ids or refs",
   voiceChannels: "list of voice channel ids or refs",
   category: "a category id or ref, or null",
+  role: "a role id or ref, or null",
   roles: "list of role ids or refs",
+  ladder: "list of ladder steps (see the field)",
+  rewards: "list of { level, roleId }",
+  timezone: "an IANA time zone name",
 };
 
 type IdTarget = "text" | "voice" | "category" | "role";
@@ -286,6 +420,7 @@ const TARGETS: Partial<Record<Kind, IdTarget>> = {
   textChannels: "text",
   voiceChannels: "voice",
   category: "category",
+  role: "role",
   roles: "role",
 };
 const MANY = new Set<Kind>(["textChannels", "voiceChannels", "roles", "words"]);
@@ -368,7 +503,53 @@ const MODULES: Record<
     read: (row) => ({
       logChannelId: row?.logChannelId ?? null,
       dmMembers: row?.dmMembers !== false,
+      appealsEnabled: row?.appealsEnabled === true,
     }),
+    check: (b, p) => ({ ok: true, value: { ...b, ...p } }),
+  },
+  gatehouse: {
+    read: (row) => ({
+      antiRaidEnabled: row?.antiRaidEnabled !== false,
+      raidJoinCount: typeof row?.raidJoinCount === "number" ? row.raidJoinCount : 10,
+      raidWindowSeconds: typeof row?.raidWindowSeconds === "number" ? row.raidWindowSeconds : 30,
+      raidResponse: row?.raidResponse === "alert" ? "alert" : "lockdown",
+      autoUnlockMinutes: typeof row?.autoUnlockMinutes === "number" ? row.autoUnlockMinutes : 15,
+      flagAccountAgeDays: typeof row?.flagAccountAgeDays === "number" ? row.flagAccountAgeDays : 7,
+      alertChannelId: row?.alertChannelId ?? null,
+      staffRoleIds: Array.isArray(row?.staffRoleIds) ? row.staffRoleIds : [],
+      verifyRoleId: row?.verifyRoleId ?? null,
+      verifyMinAccountAgeDays:
+        typeof row?.verifyMinAccountAgeDays === "number" ? row.verifyMinAccountAgeDays : 0,
+      verifyWeb: row?.verifyWeb === true,
+      backupWeekly: row?.backupWeekly === true,
+    }),
+    check: (b, p, e) => {
+      const v = { ...b, ...p };
+      if ((v.staffRoleIds as unknown[]).length > 10)
+        return { ok: false, error: "At most 10 staff roles." };
+      // A server back on Free can still turn weekly backups off, as on the Security page.
+      if (p.backupWeekly === true && !e["backups.weekly"])
+        return { ok: false, error: "Weekly backups are part of Garrison Pro." };
+      return { ok: true, value: v };
+    },
+  },
+  ops: {
+    read: (row) => ({
+      timezone: typeof row?.timezone === "string" ? row.timezone : "UTC",
+      trackAttendance: row?.trackAttendance === true,
+    }),
+    check: (b, p, e) => {
+      if (p.trackAttendance === true && !e["ops.attendance"])
+        return { ok: false, error: "Attendance is part of Garrison Pro." };
+      return { ok: true, value: { ...b, ...p } };
+    },
+  },
+  escalation: {
+    read: (row) => ({ rules: Array.isArray(row?.rules) ? row.rules : [] }),
+    check: (b, p) => ({ ok: true, value: { ...b, ...p } }),
+  },
+  rewards: {
+    read: (row) => ({ rewards: Array.isArray(row?.rewards) ? row.rewards : [] }),
     check: (b, p) => ({ ok: true, value: { ...b, ...p } }),
   },
 };
@@ -454,7 +635,13 @@ export async function checkQmSettings(
 
   const changes: QmSettingChange[] = [];
   const restore = (v: unknown): unknown =>
-    typeof v === "string" ? (back.get(v) ?? v) : Array.isArray(v) ? v.map(restore) : v;
+    typeof v === "string"
+      ? (back.get(v) ?? v)
+      : Array.isArray(v)
+        ? v.map(restore)
+        : v && typeof v === "object"
+          ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, restore(x)]))
+          : v;
   for (const [module, patch] of byModule) {
     const run = MODULES[module];
     const before = run.read(await readSettings(db, guildId, module));
@@ -511,6 +698,68 @@ function shape(
     const unique = [...new Set(out)];
     return { value: MANY.has(f.kind) ? unique : (unique[0] ?? null) };
   }
+  if (f.kind === "timezone") {
+    if (typeof value !== "string") return `${name}: a time zone like America/Chicago.`;
+    try {
+      new Intl.DateTimeFormat("en-US", { timeZone: value.trim() });
+      return { value: value.trim() };
+    } catch {
+      return `${name}: "${value.slice(0, 40)}" isn't a time zone. Use a name like America/Chicago.`;
+    }
+  }
+  if (f.kind === "ladder") {
+    if (!Array.isArray(value) || value.length > QM_LADDER.steps)
+      return `${name}: up to ${QM_LADDER.steps} steps.`;
+    const steps: {
+      warnCount: number;
+      windowMinutes: number;
+      action: string;
+      durationSeconds: number | null;
+    }[] = [];
+    for (const raw of value) {
+      const st = (raw ?? {}) as Record<string, unknown>;
+      const warnCount = st.warnCount;
+      const windowMinutes = st.windowMinutes;
+      const action = st.action;
+      if (!Number.isInteger(warnCount) || (warnCount as number) < 1 || (warnCount as number) > 50)
+        return `${name}: each step needs 1 to 50 warnings.`;
+      if (!(QM_LADDER.windows as readonly unknown[]).includes(windowMinutes))
+        return `${name}: the window is one of ${QM_LADDER.windows.join(", ")} minutes.`;
+      if (action !== "timeout" && action !== "kick" && action !== "ban")
+        return `${name}: each step times out, kicks or bans.`;
+      const durationSeconds = action === "timeout" ? st.durationSeconds : null;
+      if (
+        action === "timeout" &&
+        !(QM_LADDER.durations as readonly unknown[]).includes(durationSeconds)
+      )
+        return `${name}: a timeout lasts one of ${QM_LADDER.durations.join(", ")} seconds.`;
+      steps.push({
+        warnCount: warnCount as number,
+        windowMinutes: windowMinutes as number,
+        action,
+        durationSeconds: durationSeconds as number | null,
+      });
+    }
+    if (new Set(steps.map((x) => x.warnCount)).size !== steps.length)
+      return `${name}: each step needs a different number of warnings.`;
+    return { value: steps };
+  }
+  if (f.kind === "rewards") {
+    if (!Array.isArray(value) || value.length > REWARDS_MAX)
+      return `${name}: up to ${REWARDS_MAX} rewards.`;
+    const out: { level: number; roleId: string }[] = [];
+    for (const raw of value) {
+      const r = (raw ?? {}) as Record<string, unknown>;
+      if (!Number.isInteger(r.level) || (r.level as number) < 1 || (r.level as number) > 500)
+        return `${name}: each reward needs a level from 1 to 500.`;
+      const role = shape({ label: name, kind: "role", about: "" }, r.roleId, name, lookup, standIn);
+      if (typeof role === "string") return role;
+      if (!role.value) return `${name}: each reward needs a role.`;
+      if (out.some((x) => x.level === r.level)) return `${name}: two rewards at level ${r.level}.`;
+      out.push({ level: r.level as number, roleId: role.value as string });
+    }
+    return { value: out };
+  }
   switch (f.kind) {
     case "bool":
       return typeof value === "boolean" ? { value } : `${name}: true or false.`;
@@ -566,14 +815,49 @@ export function qmSettingValueText(
     return list.length ? list.map((v) => name(String(v))).join(", ") : "none";
   }
   if (kind === "enum") return String(value).replace(/_/g, " ");
+  if (kind === "ladder" && Array.isArray(value))
+    return value.length
+      ? value
+          .map(
+            (st: {
+              warnCount: number;
+              windowMinutes: number;
+              action: string;
+              durationSeconds: number | null;
+            }) => {
+              const within =
+                st.windowMinutes >= 1440
+                  ? `${st.windowMinutes / 1440} d`
+                  : `${st.windowMinutes / 60} h`;
+              const lasts = st.durationSeconds
+                ? ` ${st.durationSeconds >= 86400 ? `${st.durationSeconds / 86400} d` : st.durationSeconds >= 3600 ? `${st.durationSeconds / 3600} h` : `${st.durationSeconds / 60} min`}`
+                : "";
+              return `${st.warnCount} warnings in ${within} → ${st.action}${lasts}`;
+            },
+          )
+          .join("; ")
+      : "none";
+  if (kind === "rewards" && Array.isArray(value))
+    return value.length
+      ? value
+          .map((r: { level: number; roleId: string }) => `level ${r.level}: ${name(r.roleId)}`)
+          .join(", ")
+      : "none";
   return String(value);
 }
 
 /** A change's value with refs swapped for the ids the build made. Only id fields are touched. */
 export function resolveQmSettingRefs(change: QmSettingChange, ids: Map<string, string>): unknown {
-  if (!qmSettingTarget(change.module, change.field)) return change.to;
+  const kind = spec(change.module)?.fields[change.field]?.kind;
+  if (!qmSettingTarget(change.module, change.field) && kind !== "rewards") return change.to;
   const swap = (v: unknown): unknown =>
-    typeof v === "string" ? (ids.get(v) ?? v) : Array.isArray(v) ? v.map(swap) : v;
+    typeof v === "string"
+      ? (ids.get(v) ?? v)
+      : Array.isArray(v)
+        ? v.map(swap)
+        : v && typeof v === "object"
+          ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, swap(x)]))
+          : v;
   return swap(change.to);
 }
 

@@ -101,7 +101,8 @@ describe("AI assistant settings", () => {
       [
         p("automod", "exemptRoleIds", [MODS]),
         p("starboard", "channelId", VOICE),
-        p("gatehouse", "antiRaidEnabled", true),
+        // Anti-nuke is owner-only: never the AI assistant's.
+        p("gatehouse", "antiNukeEnabled", false),
         p("watch", "appealText", "x"),
         p("welcome", "joinRoleIds", ["nope"]),
       ],
@@ -111,7 +112,7 @@ describe("AI assistant settings", () => {
     expect(!out.ok && out.errors).toEqual([
       expect.stringMatching(/@Mods has moderation or admin powers/),
       expect.stringMatching(/isn't a text channel/),
-      expect.stringMatching(/gatehouse settings can't be changed/),
+      expect.stringMatching(/"antiNukeEnabled" can't be changed/),
       expect.stringMatching(/"appealText" can't be changed/),
       expect.stringMatching(/"nope" isn't in this server/),
     ]);
@@ -216,5 +217,55 @@ describe("AI assistant settings", () => {
       free,
     );
     expect(!out.ok && out.errors).toEqual([expect.stringMatching(/at most 6 modules/)]);
+  });
+});
+
+describe("AI assistant settings for more modules", () => {
+  it("checks anti-raid, the warning ladder and level rewards like their pages do", async () => {
+    const ladder = [
+      { warnCount: 3, windowMinutes: 1440, action: "timeout", durationSeconds: 3600 },
+      { warnCount: 5, windowMinutes: 10080, action: "ban", durationSeconds: 999 },
+    ];
+    const ok = await checkQmSettings(
+      db,
+      "s1",
+      [
+        p("gatehouse", "raidJoinCount", 15),
+        p("gatehouse", "raidResponse", "alert"),
+        p("escalation", "rules", ladder),
+        p("ops", "timezone", "Europe/London"),
+      ],
+      lookup(),
+      free,
+    );
+    if (!ok.ok) throw new Error(ok.errors.join(" "));
+    const rules = ok.changes.find((c) => c.field === "rules")?.to as {
+      durationSeconds: number | null;
+    }[];
+    // A ban has no duration, whatever was sent.
+    expect(rules.map((r) => r.durationSeconds)).toEqual([3600, null]);
+    expect(ok.changes.find((c) => c.field === "timezone")?.to).toBe("Europe/London");
+
+    const bad = await checkQmSettings(
+      db,
+      "s1",
+      [
+        p("gatehouse", "raidJoinCount", 1),
+        p("escalation", "rules", [
+          { warnCount: 3, windowMinutes: 7, action: "kick", durationSeconds: null },
+        ]),
+        p("rewards", "rewards", [{ level: 10, roleId: MODS }]),
+        p("ops", "timezone", "Mars/Olympus"),
+        p("gatehouse", "backupWeekly", true),
+      ],
+      lookup(),
+      free,
+    );
+    expect(!bad.ok && bad.errors).toEqual([
+      expect.stringMatching(/goes from 3 to 200/),
+      expect.stringMatching(/window is one of/),
+      expect.stringMatching(/@Mods has moderation or admin powers/),
+      expect.stringMatching(/isn't a time zone/),
+    ]);
   });
 });

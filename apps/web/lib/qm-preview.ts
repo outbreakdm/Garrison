@@ -293,6 +293,8 @@ export function previewServer(
             : "Read-only",
       );
     if (o.topic) details.push(o.topic);
+    if (o.textKind === "announcement") details.unshift("Announcement channel");
+    if (o.textKind === "forum") details.unshift("Forum");
     if (o.slowmodeSeconds) details.push(`Slowmode ${o.slowmodeSeconds} s`);
     if (o.userLimit) details.push(`Limit ${o.userLimit}`);
     return {

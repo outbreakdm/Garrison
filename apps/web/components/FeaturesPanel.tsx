@@ -12,6 +12,10 @@ const MODULES: Record<QmSettingsModule, { href: string; on?: string; set?: strin
   ranks: { href: "/ranks", on: "enabled" },
   ledger: { href: "/ledger", set: "channelId" },
   watch: { href: "/watch", set: "logChannelId" },
+  gatehouse: { href: "/gatehouse", on: "antiRaidEnabled" },
+  ops: { href: "/rally", set: "trackAttendance" },
+  escalation: { href: "/watch", set: "rules" },
+  rewards: { href: "/ranks", set: "rewards" },
 };
 
 const words = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, " ");
@@ -194,7 +198,13 @@ export function FeaturesPanel({
         const spec = QM_SETTINGS[m];
         const meta = MODULES[m];
         const v = values[m] ?? {};
-        const on = meta.on ? v[meta.on] === true : Boolean(meta.set && v[meta.set]);
+        const set = meta.set ? v[meta.set] : null;
+        // A list is set once it has something in it.
+        const on = meta.on
+          ? v[meta.on] === true
+          : Array.isArray(set)
+            ? set.length > 0
+            : Boolean(set);
         const fields = Object.keys(spec.fields).filter((f) => f !== meta.on);
         return (
           <details className="qm-feat" key={m}>

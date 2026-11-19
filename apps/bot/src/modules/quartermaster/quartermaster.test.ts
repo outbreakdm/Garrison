@@ -47,6 +47,7 @@ vi.mock("../dispatch/service.js", () => ({
 
 type Op = AiPlan["operations"][number];
 const op = (o: Partial<Op> & Pick<Op, "kind" | "ref" | "name">): Op => ({
+  text_kind: null,
   parent: null,
   topic: null,
   slowmode_seconds: null,

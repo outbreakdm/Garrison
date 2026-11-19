@@ -63,6 +63,12 @@ export const AiPlanSchema = z.object({
       permissions: z
         .array(z.enum(QM_ROLE_PERMISSION_KEYS as [QmRolePermission, ...QmRolePermission[]]))
         .describe("Roles only: member permissions from the allowed list. Empty for none."),
+      text_kind: z
+        .enum(["text", "announcement", "forum"])
+        .nullable()
+        .describe(
+          "create_text_channel only: announcement (other servers can follow it; Community servers only) or forum (members start posts; its topic is the posting guidelines). Null or text for a normal text channel.",
+        ),
     }),
   ),
   notes: z.string().describe("Anything you could not or would not do, and why. Empty if none."),
@@ -112,6 +118,8 @@ export interface ServerSnapshot {
   roleCount: number;
   /** Role permissions Garrison holds, so can give. Missing: all of them (tests). */
   grantable?: QmRolePermission[];
+  /** A Community server, which announcement channels need. Missing: not known (tests). */
+  community?: boolean;
 }
 
 /** The most changes one plan can make (QM_CHANGES_PER_PLAN). */
@@ -235,6 +243,14 @@ export function validatePlan(
       else errors.push(`${n}: "${op.color_hex.slice(0, 20)}" isn't a color like #d4ff3a.`);
     }
 
+    if (
+      op.kind === "create_text_channel" &&
+      op.text_kind === "announcement" &&
+      server.community === false
+    )
+      errors.push(
+        `${n}: announcement channels need a Community server. Make it a text channel, or turn on Community in Server Settings first.`,
+      );
     const slowmode =
       op.kind === "create_text_channel" && op.slowmode_seconds ? op.slowmode_seconds : null;
     if (slowmode !== null && (slowmode < 0 || slowmode > 21_600))
@@ -260,6 +276,10 @@ export function validatePlan(
       readOnly,
       posters,
       permissions,
+      ...(op.kind === "create_text_channel" &&
+      (op.text_kind === "announcement" || op.text_kind === "forum")
+        ? { textKind: op.text_kind }
+        : {}),
     });
   });
 

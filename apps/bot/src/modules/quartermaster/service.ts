@@ -359,6 +359,7 @@ export function snapshot(guild: Guild): {
       channelCount: all.length,
       roleCount: guild.roles.cache.size,
       grantable: grantableBy(guild.members.me),
+      community: Boolean(guild.features?.includes(GuildFeature.Community)),
     },
     channels: channels.map((c) => {
       const any = c as unknown as Record<string, unknown>;
@@ -458,6 +459,7 @@ function asAiOperations(plan: QmOperation[]) {
     hoist: op.hoist,
     mentionable: op.mentionable,
     permissions: (op.permissions ?? []) as QmRolePermission[],
+    text_kind: op.textKind ?? null,
   }));
 }
 
@@ -991,7 +993,14 @@ async function runBuild(ctx: BotContext, guild: Guild, build: QmBuild): Promise<
         );
         const channel = await guild.channels.create({
           name: op.name,
-          type: op.kind === "create_voice_channel" ? ChannelType.GuildVoice : ChannelType.GuildText,
+          type:
+            op.kind === "create_voice_channel"
+              ? ChannelType.GuildVoice
+              : op.textKind === "announcement"
+                ? ChannelType.GuildAnnouncement
+                : op.textKind === "forum"
+                  ? ChannelType.GuildForum
+                  : ChannelType.GuildText,
           parent: op.parent ? resolve(op.parent) : undefined,
           topic: op.topic ?? undefined,
           rateLimitPerUser: op.slowmodeSeconds ?? undefined,

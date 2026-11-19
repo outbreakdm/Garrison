@@ -7,7 +7,7 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **AI assistant v2 (planned 2026-11-19), next up:** `docs/AI_ASSISTANT.md`, "Assistant v2". Owner chose Haiku (Fast) and Sonnet (Smart, Pro and Agency only), supplies at each model's real cost, every coverage gap (writing, more modules, insight, how-to help), and a "Your server" workspace with hand edits (rename, drag to reorder) and an Apply build button. Phase 1 first: a message's hold assumes 12,000 input tokens a round but nothing enforces it, so a big server can cost more than it held. **Phases 1 to 7 built** (not deployed; migrations 0076 to 0079). The eval has never run on the real models: it needs `ANTHROPIC_API_KEY` and the owner's yes (about $6.20 for both models, 3 runs). Phases 5 to 7 (how-to help, server insight, writing) are done too; phase 8, more modules, is next.
+- **AI assistant v2 (planned 2026-11-19), next up:** `docs/AI_ASSISTANT.md`, "Assistant v2". Owner chose Haiku (Fast) and Sonnet (Smart, Pro and Agency only), supplies at each model's real cost, every coverage gap (writing, more modules, insight, how-to help), and a "Your server" workspace with hand edits (rename, drag to reorder) and an Apply build button. Phase 1 first: a message's hold assumes 12,000 input tokens a round but nothing enforces it, so a big server can cost more than it held. **Phases 1 to 8A built** (not deployed; migrations 0076 to 0079). The eval has never run on the real models: it needs `ANTHROPIC_API_KEY` and the owner's yes (about $6.20 for both models, 3 runs). Phases 5 to 8A (how-to help, server insight, writing, more settings and forum and announcement channels) are done too; 8B (new role menus, ticket panels, alerts, giveaways, economy, templates, invite labels, stats counters) is next.
 - **Optimize and polish (2026-11-17):** 15 fewer database queries on every dashboard page (the
   menu's module settings in one query), faster AI assistant paint, no layout shift on Settings,
   24 px targets, unused CSS removed (see the Log). To run the Worker beside the database, set the
@@ -1327,3 +1327,11 @@ Decided (2026-11-12, owner):
   writes. It writes in the server's voice and leaves [blanks] instead of inventing facts.
   Migration **0079**. 754 tests pass and the dashboard builds; not checked in a browser, and the
   eval hasn't run on the real models. Not deployed.
+- 2026-11-19: AI assistant v2, phase 8A: more settings, and forum and announcement channels. A
+  plan can now set anti-raid and verification (never anti-nuke), the time zone and attendance,
+  voice XP, appeals, the whole warning ladder and level rewards (with roles it makes), each to
+  its page's own ranges and plan limits. New text channels can be forums or, on Community
+  servers, announcement channels. 6 new eval cases (60 in all). 757 tests pass and the dashboard
+  builds; not checked in a browser, and the eval hasn't run on the real models. No migration.
+  Not deployed. 8B (whole new items: role menus, ticket panels, alerts, giveaways, economy,
+  templates, invite labels, stats counters) is planned in docs/AI_ASSISTANT.md.
