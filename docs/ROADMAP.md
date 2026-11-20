@@ -1357,3 +1357,16 @@ Decided (2026-11-12, owner):
   0073 to 0075 were already applied but unrecorded, so 0073 to 0079 were recorded together (80
   rows, one per migration file). Preflight passed; the new bot started at 22:41:46 UTC and is
   checking in.
+- 2026-11-20: AI assistant replies weren't arriving: 7 of the last 8 chats since 2026-11-17
+  expired ("Garrison didn't get to this in time") before the bot even saved the message. The
+  bot's queries hang on a connection the network dropped silently (a garrison_bot statement
+  stuck at PARSE until the 30 s timeout at 00:06:05 UTC, then a watchdog restart), and nothing
+  noticed while the heartbeat still got through on another connection. Fix (`3ec2a9f`): the
+  database client replaces its pool when any query waits over 60 s, failing the stuck ones
+  (packages/db watchdog.ts, tested live against Postgres), and each dashboard request has a
+  deadline (6 min for AI, 2 min otherwise). Deployed bot-only from branch `deploy/retry-cf`
+  (run #56). Cloudflare kept answering 100146 ("version could not be found") right after
+  uploading; three failed attempts (run #55) took the bot down from 00:44 to 00:56 UTC, and
+  the workflow now retries only that error, 30 s apart (`d9d31f3`). The engine is named
+  Bastion v1 in the picker, on replies, in Help and in the prompt (`3b82001`, not deployed).
+  Still to do: confirm a real chat answers, and run the eval on real models (needs a key).
