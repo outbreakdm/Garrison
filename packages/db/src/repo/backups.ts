@@ -86,7 +86,7 @@ export async function listWeeklyBackupsDue(db: Db, now = new Date()) {
     .where(
       and(
         eq(gatehouseSettings.backupWeekly, true),
-        sql`NOT EXISTS (SELECT 1 FROM ${serverBackups} WHERE ${serverBackups.guildId} = ${gatehouseSettings.guildId} AND ${serverBackups.createdAt} > ${weekAgo})`,
+        sql`NOT EXISTS (SELECT 1 FROM ${serverBackups} WHERE ${serverBackups.guildId} = ${gatehouseSettings.guildId} AND ${serverBackups.createdAt} > ${weekAgo.toISOString()}::timestamptz)`,
       ),
     )
     .limit(25);

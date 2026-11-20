@@ -220,7 +220,9 @@ export async function recordTicketMessage(db: Db, line: TicketLine) {
         lastMessageAt: line.createdAt,
         messageCount: sql`${tickets.messageCount} + 1`,
         ...(line.staff
-          ? { firstResponseAt: sql`coalesce(${tickets.firstResponseAt}, ${line.createdAt})` }
+          ? {
+              firstResponseAt: sql`coalesce(${tickets.firstResponseAt}, ${line.createdAt.toISOString()}::timestamptz)`,
+            }
           : {}),
       })
       .where(eq(tickets.id, line.ticketId));

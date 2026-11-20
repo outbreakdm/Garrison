@@ -211,7 +211,7 @@ export async function claimDashboardActions(
       inArray(
         dashboardActions.id,
         sql`(SELECT id FROM ${dashboardActions} WHERE ${dashboardActions.status} = 'pending'
-             AND ${dashboardActions.createdAt} >= ${stale}
+             AND ${dashboardActions.createdAt} >= ${stale.toISOString()}::timestamptz
              ORDER BY ${dashboardActions.createdAt} LIMIT ${limit} FOR UPDATE SKIP LOCKED)`,
       ),
     )

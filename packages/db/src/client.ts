@@ -41,6 +41,23 @@ export const DB_CONNECT_TIMEOUT_S = 10;
 export const DB_IDLE_TIMEOUT_S = 60;
 
 /**
+ * Drizzle tells postgres-js to send dates as they come, since its own columns hand over text.
+ * A JavaScript Date written straight into raw sql`` (`created_at >= ${cutoff}`) then reached
+ * the socket as an object, and postgres-js threw before sending anything: on 2026-11-18 that
+ * stopped the bot claiming any dashboard request, so the AI assistant never answered. PGlite,
+ * which the tests use, accepts a Date, so they didn't see it. Here a Date becomes ISO text;
+ * everything else still passes through untouched.
+ */
+const DATE_TYPES = ["1082", "1083", "1114", "1184"];
+export function datesAsText(serializers: Record<string, unknown>) {
+  for (const type of DATE_TYPES) {
+    const next = serializers[type];
+    serializers[type] = (v: unknown) =>
+      v instanceof Date ? v.toISOString() : typeof next === "function" ? next(v) : v;
+  }
+}
+
+/**
  * Connect to Postgres. With Supabase, use the pooled connection string
  * (Supavisor, port 6543): prepared statements are off so transaction mode works.
  */
@@ -61,9 +78,11 @@ export function createDb(url: string, options: CreateDbOptions = {}) {
   if (options.watchdog) {
     const dog = watchClient(open as unknown as () => WatchedClient, options.watchdog);
     const db = drizzle(dog.client as unknown as ReturnType<typeof open>, { schema });
+    datesAsText(dog.client.options.serializers);
     return { db: db as unknown as Db, close: () => dog.close(5) };
   }
   const sql = open();
   const db = drizzle(sql, { schema });
+  datesAsText(sql.options.serializers);
   return { db: db as unknown as Db, close: () => sql.end({ timeout: 5 }) };
 }
