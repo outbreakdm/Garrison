@@ -1013,14 +1013,14 @@ a.g-btn--primary:hover {
   font-size: 12px;
 }
 /* Set up in three clicks: three numbered rows, each with its one action on the right. */
-.setup {
+.starter {
   display: grid;
   gap: 0;
   padding: 0;
   overflow: hidden;
   border-color: color-mix(in srgb, var(--go) 28%, var(--line));
 }
-.setup__head {
+.starter__head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -1031,22 +1031,22 @@ a.g-btn--primary:hover {
     linear-gradient(90deg, color-mix(in srgb, var(--go) 8%, transparent), transparent 70%),
     var(--surface);
 }
-.setup__title {
+.starter__title {
   margin: 0;
   font-size: 15px;
   font-weight: 650;
 }
-.setup__sub {
+.starter__sub {
   margin: 2px 0 0;
   color: var(--text-muted);
   font-size: 13px;
 }
-.setup__steps {
+.starter__steps {
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.setup__step {
+.starter__step {
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr) auto;
   align-items: center;
@@ -1054,10 +1054,10 @@ a.g-btn--primary:hover {
   padding: 14px 18px;
   border-top: 1px solid var(--line);
 }
-.setup__step:first-child {
+.starter__step:first-child {
   border-top: 0;
 }
-.setup__n {
+.starter__n {
   display: grid;
   place-items: center;
   width: 26px;
@@ -1069,45 +1069,45 @@ a.g-btn--primary:hover {
   font-weight: 650;
   font-variant-numeric: tabular-nums;
 }
-.setup__step.is-done .setup__n {
+.starter__step.is-done .starter__n {
   border-color: transparent;
   background: color-mix(in srgb, var(--go) 18%, transparent);
   color: var(--go);
 }
-.setup__name {
+.starter__name {
   margin: 0;
   font-size: 14px;
   font-weight: 650;
 }
-.setup__step.is-done .setup__name {
+.starter__step.is-done .starter__name {
   color: var(--text-muted);
 }
-.setup__about {
+.starter__about {
   margin: 2px 0 0;
   color: var(--text-muted);
   font-size: 13px;
   max-width: 62ch;
 }
-.setup__state {
+.starter__state {
   color: var(--go);
   font-size: 12.5px;
   font-weight: 650;
 }
-.setup__do {
+.starter__do {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
 }
-.setup__select {
+.starter__select {
   min-width: 11rem;
 }
-.setup__do--presets {
+.starter__do--presets {
   grid-column: 2 / -1;
   justify-content: flex-start;
 }
-.setup__presets {
+.starter__presets {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -1115,7 +1115,7 @@ a.g-btn--primary:hover {
   padding: 0;
   border: 0;
 }
-.setup__preset {
+.starter__preset {
   position: relative;
   display: grid;
   gap: 1px;
@@ -1125,33 +1125,33 @@ a.g-btn--primary:hover {
   background: var(--surface-raised);
   cursor: pointer;
 }
-.setup__preset input {
+.starter__preset input {
   position: absolute;
   inset: 0;
   opacity: 0;
   cursor: pointer;
 }
-.setup__preset:has(input:checked) {
+.starter__preset:has(input:checked) {
   border-color: var(--go);
   background: color-mix(in srgb, var(--go) 10%, var(--surface-raised));
 }
-.setup__preset:has(input:focus-visible) {
+.starter__preset:has(input:focus-visible) {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
-.setup__preset-name {
+.starter__preset-name {
   font-size: 13px;
   font-weight: 650;
 }
-.setup__preset-about {
+.starter__preset-about {
   color: var(--text-muted);
   font-size: 12px;
 }
 @media (max-width: 640px) {
-  .setup__step {
+  .starter__step {
     grid-template-columns: 28px minmax(0, 1fr);
   }
-  .setup__do {
+  .starter__do {
     grid-column: 2;
     justify-content: flex-start;
   }

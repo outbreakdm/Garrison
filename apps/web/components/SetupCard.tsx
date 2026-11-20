@@ -17,13 +17,13 @@ export function SetupCard({
 }) {
   const left = Object.values(done).filter((d) => !d).length;
   return (
-    <section className="g-card setup" id="setup" aria-labelledby="setup-title">
-      <div className="setup__head">
+    <section className="g-card starter" id="setup" aria-labelledby="setup-title">
+      <div className="starter__head">
         <div>
-          <h2 className="setup__title" id="setup-title">
+          <h2 className="starter__title" id="setup-title">
             Set up in three clicks
           </h2>
-          <p className="setup__sub">
+          <p className="starter__sub">
             {left === 3
               ? "Protect the server, welcome people, then let the AI assistant build the rest."
               : `${3 - left} of 3 done.`}
@@ -37,22 +37,22 @@ export function SetupCard({
           </button>
         </form>
       </div>
-      <ol className="setup__steps">
-        <li className={`setup__step${done.protect ? " is-done" : ""}`}>
-          <span className="setup__n" aria-hidden="true">
+      <ol className="starter__steps">
+        <li className={`starter__step${done.protect ? " is-done" : ""}`}>
+          <span className="starter__n" aria-hidden="true">
             {done.protect ? "✓" : "1"}
           </span>
-          <div className="setup__body">
-            <h3 className="setup__name">Protect</h3>
-            <p className="setup__about">
+          <div className="starter__body">
+            <h3 className="starter__name">Protect</h3>
+            <p className="starter__about">
               Automod removes scam links and invites, AI moderation reads for harassment and hate,
               and anti-raid watches the join rate.
             </p>
           </div>
           {done.protect ? (
-            <span className="setup__state">On</span>
+            <span className="starter__state">On</span>
           ) : (
-            <form action={runSetupStep} className="setup__do" data-need="manager">
+            <form action={runSetupStep} className="starter__do" data-need="manager">
               <input type="hidden" name="guildId" value={guildId} />
               <input type="hidden" name="step" value="protect" />
               <button type="submit" className="g-btn g-btn--primary g-btn--sm">
@@ -61,20 +61,20 @@ export function SetupCard({
             </form>
           )}
         </li>
-        <li className={`setup__step${done.welcome ? " is-done" : ""}`}>
-          <span className="setup__n" aria-hidden="true">
+        <li className={`starter__step${done.welcome ? " is-done" : ""}`}>
+          <span className="starter__n" aria-hidden="true">
             {done.welcome ? "✓" : "2"}
           </span>
-          <div className="setup__body">
-            <h3 className="setup__name">Welcome</h3>
-            <p className="setup__about">
+          <div className="starter__body">
+            <h3 className="starter__name">Welcome</h3>
+            <p className="starter__about">
               A welcome card for everyone who joins, in a channel you pick.
             </p>
           </div>
           {done.welcome ? (
-            <span className="setup__state">On</span>
+            <span className="starter__state">On</span>
           ) : (
-            <form action={runSetupStep} className="setup__do" data-need="manager">
+            <form action={runSetupStep} className="starter__do" data-need="manager">
               <input type="hidden" name="guildId" value={guildId} />
               <input type="hidden" name="step" value="welcome" />
               <label className="sr-only" htmlFor="setup-welcome-channel">
@@ -83,7 +83,7 @@ export function SetupCard({
               <select
                 id="setup-welcome-channel"
                 name="channelId"
-                className="g-select setup__select"
+                className="g-select starter__select"
                 required
                 defaultValue=""
               >
@@ -102,30 +102,30 @@ export function SetupCard({
             </form>
           )}
         </li>
-        <li className={`setup__step${done.build ? " is-done" : ""}`}>
-          <span className="setup__n" aria-hidden="true">
+        <li className={`starter__step${done.build ? " is-done" : ""}`}>
+          <span className="starter__n" aria-hidden="true">
             {done.build ? "✓" : "3"}
           </span>
-          <div className="setup__body">
-            <h3 className="setup__name">Build</h3>
-            <p className="setup__about">
+          <div className="starter__body">
+            <h3 className="starter__name">Build</h3>
+            <p className="starter__about">
               Pick what kind of server it is. The AI assistant drafts channels, roles and order for
               it, and nothing changes until you apply.
             </p>
           </div>
           {done.build ? (
-            <span className="setup__state">Built</span>
+            <span className="starter__state">Built</span>
           ) : (
-            <form action={runSetupStep} className="setup__do setup__do--presets">
+            <form action={runSetupStep} className="starter__do starter__do--presets">
               <input type="hidden" name="guildId" value={guildId} />
               <input type="hidden" name="step" value="build" />
-              <fieldset className="setup__presets">
+              <fieldset className="starter__presets">
                 <legend className="sr-only">Kind of server</legend>
                 {SETUP_PRESET_KEYS.map((k, i) => (
-                  <label key={k} className="setup__preset">
+                  <label key={k} className="starter__preset">
                     <input type="radio" name="preset" value={k} defaultChecked={i === 0} />
-                    <span className="setup__preset-name">{SETUP_PRESETS[k].label}</span>
-                    <span className="setup__preset-about">{SETUP_PRESETS[k].about}</span>
+                    <span className="starter__preset-name">{SETUP_PRESETS[k].label}</span>
+                    <span className="starter__preset-about">{SETUP_PRESETS[k].about}</span>
                   </label>
                 ))}
               </fieldset>
