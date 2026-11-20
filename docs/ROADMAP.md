@@ -84,7 +84,10 @@ then updates **Status** and the **Log** before stopping.
      never twice in a row, a wrong number restarts from 1, best kept), and `/trivia` (40
      questions, four buttons, 30 seconds, one guess each, first right answer wins; English only).
      Free. **Migration 0087**; **deploy with register_commands** for /birthday and /trivia.
-- **Deploying all twelve (when the owner says deploy):** apply migrations **0080 to 0087** to
+- **All twelve deployed 2026-11-20** (`c5db134`, run #64; migrations 0080 to 0087 applied to
+  production and recorded; 37 commands registered with their translations; the bot restarted on
+  it at 21:36 UTC). Still off until the owner adds keys: see below.
+- **Deploying all twelve (done):** apply migrations **0080 to 0087** to
   production and record each in drizzle.__drizzle_migrations (git-blob sha256 and the journal's
   "when"), then deploy target=everything with **register_commands=true** (/tag, /ticket assist,
   /temprole, /birthday, /trivia and every command's translations). New optional secrets, all off
@@ -1605,3 +1608,8 @@ Decided (2026-11-12, owner):
   `fun/`). Checked on the local preview after 0087: birthdays and counting saved with their
   channels. The Discord side (greetings, counting, trivia) needs the deployed bot. All twelve
   best-bot items are built and committed. Lint, type-check, 849 tests pass. Not deployed.
+- 2026-11-20: Deployed all twelve best-bot items (`c5db134`, run #64, everything, commands
+  registered). Migrations 0080 to 0087 applied to production by hand and recorded (88 rows).
+  The bot deployed on the first try (no 100146) and restarted at 21:36 UTC; healthz 200, the
+  status page says online, an unknown public page is a 404, and the Twitch webhook answers 404
+  until its secret is set.
