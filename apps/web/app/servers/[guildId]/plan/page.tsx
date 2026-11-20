@@ -1,5 +1,4 @@
 import {
-  AI_SUPPLIES_PER_MESSAGE,
   aiAllowance,
   FEATURES,
   formatPrice,
@@ -243,8 +242,8 @@ export default async function PlanPage({
             AI assistant supplies
           </h2>
           <p className="card-sub">
-            What the AI assistant runs on. A message uses what it really costs, about{" "}
-            {AI_SUPPLIES_PER_MESSAGE}; each change a plan makes uses 1.
+            What the AI assistant runs on. A message uses what its AI really costs, so Smart uses
+            more than Fast; each change a plan makes uses 1.
           </p>
         </div>
         <div className="qm-usage supplies__usage">
@@ -281,7 +280,6 @@ export default async function PlanPage({
               <li key={key} className="pack">
                 <div className="pack__what">
                   <strong className="pack__size">{num(pack.supplies)} supplies</strong>
-                  <span className="pack__about">About {num(pack.messages)} messages</span>
                 </div>
                 <span className="pack__price">{formatPrice(pack.price)}</span>
                 {selling ? (

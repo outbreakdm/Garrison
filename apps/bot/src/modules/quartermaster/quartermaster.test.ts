@@ -412,16 +412,17 @@ describe("Quartermaster end to end", () => {
     const small = await planBuild(ctx, stub(rolesPlan(3)), f.guild, a, "x");
     expect(small).toMatchObject({ ok: true, suppliesLeft: 21 });
     // 21 left: the message takes 3, so the next plan may make up to 18. One asking for more
-    // is refused whole, and the refusal gives its message back.
+    // is refused whole; its message still costs the 3 its AI used (since 2026-11-20).
     const tooBig = await planBuild(ctx, stub(rolesPlan(19)), f.guild, a, "x");
     expect(!tooBig.ok && tooBig.error).toMatch(/only 18 supplies are left for changes./);
-    expect(await planBuild(ctx, stub(rolesPlan(18)), f.guild, a, "x")).toMatchObject({
+    // 18 left: 3 for the message, 15 for changes.
+    expect(await planBuild(ctx, stub(rolesPlan(15)), f.guild, a, "x")).toMatchObject({
       ok: true,
       suppliesLeft: 0,
     });
     const none = await planBuild(ctx, stub(rolesPlan(1)), f.guild, a, "x");
     expect(!none.ok && none.error).toMatch(
-      /this month's 200 AI assistant supplies on Free servers\. They renew <t:\d+:R>.*Garrison Pro gives a server 3,000 supplies a month/,
+      /this month's 200 AI assistant supplies on Free servers\. They renew <t:\d+:R>.*Garrison Pro gives a server 2,500 supplies a month/,
     );
   });
 
@@ -469,7 +470,7 @@ describe("Quartermaster end to end", () => {
     expect(!eleventh.ok && eleventh.error).toMatch(/this month's 200 AI assistant supplies/);
   });
 
-  it("gives an Agency plan one pool of 13,000 a month, shared by its servers", async () => {
+  it("gives an Agency plan one pool of 11,000 a month, shared by its servers", async () => {
     const { planBundles } = schema;
     const f = fakeGuild("q11");
     await upsertGuild(ctx.db, { id: "q11", name: "q11" });
@@ -482,16 +483,16 @@ describe("Quartermaster end to end", () => {
       .values({ guildId: "q11", plan: "pro", bundleId: bundle?.id });
     expect(await aiAllowance(ctx.db, "q11", "98100")).toEqual({
       tier: "agency",
-      pool: 13_000,
-      suppliesLeft: 13_000,
-      poolLeft: 13_000,
+      pool: 11_000,
+      suppliesLeft: 11_000,
+      poolLeft: 11_000,
       packLeft: 0,
       perPerson: false,
       shared: true,
       resetsAt: expect.any(Date),
     });
     const first = await planBuild(ctx, stub(sectionPlan), f.guild, asker(f), "x");
-    expect(first).toMatchObject({ ok: true, suppliesLeft: 12_993 });
+    expect(first).toMatchObject({ ok: true, suppliesLeft: 10_993 });
   });
 
   it("revises a waiting plan into the next version, which replaces it", async () => {
@@ -989,7 +990,8 @@ describe("AI assistant chat", () => {
     });
     expect(turn).toMatchObject({ ok: true, build: null });
     expect(turn.ok && turn.reply).toMatch(/@Admins has moderation or admin powers/);
-    expect(await suppliesUsed(ctx.db, { guildId: "q23" })).toBe(0);
+    // The AI it used is charged (6 here); its refused changes cost nothing.
+    expect(await suppliesUsed(ctx.db, { guildId: "q23" })).toBe(6);
   });
 
   it("leaves a setting alone on undo when someone changed it since", async () => {
@@ -1085,10 +1087,10 @@ describe("AI assistant chat", () => {
     });
     expect(turn).toMatchObject({ ok: true, build: null });
     expect(turn.ok && turn.reply).toMatch(/isn't saved on this server/);
-    expect(await suppliesUsed(ctx.db, { guildId: "q26" })).toBe(0);
+    expect(await suppliesUsed(ctx.db, { guildId: "q26" })).toBe(6);
   });
 
-  it("gives a message's supplies back when its plan couldn't be made safely", async () => {
+  it("charges a message whose plan couldn't be made safely its AI, and nothing for changes", async () => {
     const f = fakeGuild("q20");
     const bad: AiPlan = {
       summary: "x",
@@ -1098,7 +1100,8 @@ describe("AI assistant chat", () => {
     await chatTurn(ctx, scripted([{ reply: "Here.", plan: bad }]), f.guild, asker(f), {
       message: "go",
     });
-    expect(await suppliesUsed(ctx.db, { guildId: "q20" })).toBe(0);
+    // Until 2026-11-20 this was free, which let a pool spend AI it never counted.
+    expect(await suppliesUsed(ctx.db, { guildId: "q20" })).toBe(6);
   });
 });
 

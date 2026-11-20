@@ -49,7 +49,7 @@ first draft counted 20 a plan; the page and pricing show the honest 23.
 - **Reading is free.** Garrison looking at settings to answer a question costs nothing beyond
   the message.
 - Unused supplies carry from plan to plan through the month. Since supplies v2 they are a
-  monthly pool (Free 200, Pro 3,000, Agency 13,000 shared) and a message is charged what it
+  monthly pool (Free 200, Pro 2,500, Agency 11,000 shared; 3,000 and 13,000 until 2026-11-20) and a message is charged what it
   really cost; see `docs/AI_SUPPLIES_V2.md`.
 
 **What's removed:** "plans a day", the change allowance, the request cap and the chat cap all

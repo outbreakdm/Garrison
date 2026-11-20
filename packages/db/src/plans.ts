@@ -26,13 +26,15 @@ export const QM_CHANGES_PER_PLAN = 20;
  * Pro counts per server and renews with its billing period (a month at a time on yearly
  * plans too); Agency is one pool shared by its servers, renewing with its billing period.
  * Free counts per server and also per person across every Free server they ask from, so
- * extra servers don't add free AI, and renews on the 1st (UTC). Worst case, a pool's AI
- * costs under half of what the plan brings in (docs/AI_SUPPLIES_V2.md).
+ * extra servers don't add free AI, and renews on the 1st (UTC). Worst case (every supply
+ * spent on AI, on either model, since a supply is $0.001 of AI whichever runs), a paid pool's
+ * AI is at most 39% of what the plan brings in after Stripe, so every plan keeps a margin of
+ * at least 59% before hosting (docs/pricing.md, 2026-11-20; it was 52% on yearly plans).
  */
 export const AI_SUPPLIES_PER_MONTH = {
   free: 200,
-  pro: 3000,
-  agency: 13_000,
+  pro: 2500,
+  agency: 11_000,
 } as const satisfies Record<AiTier, number>;
 /** What a typical message costs, for "about N messages". */
 export const AI_SUPPLIES_PER_MESSAGE = 3;
@@ -41,12 +43,12 @@ export const AI_SUPPLIES_PER_CHANGE = 1;
 /**
  * Supply packs: AI supplies a server buys once, used after its monthly pool runs out,
  * oldest first, for SUPPLY_PACK_DAYS. Any server can buy them, Free included. Worst case,
- * a pack's AI costs at most 44% of what it brings in after Stripe's fee
- * (docs/AI_SUPPLIES_V2.md). Prices in US dollars.
+ * a pack's AI is at most 35% of what it brings in after Stripe's fee, a margin of at least
+ * 60% (docs/pricing.md). Prices in US dollars.
  */
 export const SUPPLY_PACKS = {
-  small: { supplies: 1000, price: 2.99, messages: 330 },
-  large: { supplies: 5000, price: 11.99, messages: 1650 },
+  small: { supplies: 800, price: 2.99 },
+  large: { supplies: 4000, price: 11.99 },
 } as const;
 export type SupplyPack = keyof typeof SUPPLY_PACKS;
 export const SUPPLY_PACK_DAYS = 365;
@@ -91,7 +93,7 @@ export const PRICING = {
     highlights: [
       "Moderation, anti-raid, anti-nuke, verification and logs, in full",
       "Every module with the standard look and sensible limits",
-      "AI assistant: 200 supplies a month, about 65 messages",
+      "AI assistant: 200 supplies a month",
       "Undo and history on every change",
     ],
   },
@@ -106,7 +108,7 @@ export const PRICING = {
       "Ticket forms, auto-assign, stats and a year of transcripts",
       "Custom rank cards, XP boosts and seasons",
       "Raid attendance, roles from game stats, scheduled backups",
-      "AI assistant: 3,000 supplies a month (about 1,000 messages), and server templates",
+      "AI assistant: 2,500 supplies a month, and server templates",
     ],
   },
   agency: {
@@ -118,7 +120,7 @@ export const PRICING = {
     highlights: [
       "Everything in Pro, on each of 5 servers",
       "Put a server in a seat, or free it, from its Plan page",
-      "AI assistant: 13,000 supplies a month, shared by your servers",
+      "AI assistant: 11,000 supplies a month, shared by your servers",
       "One bill: $7.00 a server a month",
     ],
   },
@@ -384,7 +386,7 @@ export const FEATURES = {
   "qm.supplies": {
     module: "qm",
     about:
-      "AI assistant supplies a month: a message costs what it really uses (about 3), each change a plan makes costs 1 (Agency: 13,000 shared by its servers; Free: 200 per person across all their servers)",
+      "AI assistant supplies a month: a message costs what its AI really uses, on Fast or Smart, and each change a plan makes costs 1 (Agency: 11,000 shared by its servers; Free: 200 per person across all their servers)",
     free: AI_SUPPLIES_PER_MONTH.free,
     pro: AI_SUPPLIES_PER_MONTH.pro,
   },

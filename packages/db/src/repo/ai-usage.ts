@@ -339,7 +339,7 @@ export async function aiAllowance(
 
 /**
  * The global daily budget: a circuit breaker for a runaway, never an allowance. `baseUsd`
- * plus three times each paid pool's average day (Pro: 3 × $3.00 / 30 = $0.30), so normal
+ * plus three times each paid pool's average day (Pro: 3 × $2.50 / 30 = $0.25), so normal
  * use on every paying server at once can't trip it, plus everything in packs bought this
  * past week, which a server may spend in a day.
  */

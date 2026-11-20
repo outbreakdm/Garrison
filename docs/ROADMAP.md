@@ -1389,3 +1389,12 @@ Decided (2026-11-12, owner):
   answered correctly in 8 s for 3 supplies; a Smart "clean up and reorder" drafted 6 orders
   (categories, channels in four categories, roles) in 18 s for 74 supplies. Not applied.
   Deployed bot-only runs #58 to #60.
+- 2026-11-20: Pricing re-check for a 50%+ margin on both models (docs/pricing.md). A supply is
+  $0.001 of AI on Fast or Smart alike, so a pool's worst case doesn't depend on the model; Smart
+  just uses it 20 to 25 times faster (45 to 75 supplies a message against 2 to 3). Yearly plans
+  were at 52% worst case, and a message whose plan Garrison refused was free, which let a pool
+  spend AI it never counted. Owner chose: charge those messages their AI (not their changes),
+  pools Pro 2,500 and Agency 11,000 (from 3,000 and 13,000), packs 800 and 4,000 supplies at
+  the same prices, and plan cards in supplies only. Worst case is now 59%+ on every plan and
+  pack before hosting. Pack sizes go on the Checkout session so a pack bought mid-change gets
+  what it said. Lint, type-check, 779 tests and `next build` pass. Not deployed.

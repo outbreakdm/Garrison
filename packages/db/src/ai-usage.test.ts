@@ -181,9 +181,9 @@ describe("AI supplies", () => {
     await finish(before.id);
     expect(await aiAllowance(db, "p1", "107", { now: at(1) })).toEqual({
       tier: "pro",
-      pool: 3000,
-      suppliesLeft: 3000,
-      poolLeft: 3000,
+      pool: 2500,
+      suppliesLeft: 2500,
+      poolLeft: 2500,
       packLeft: 0,
       perPerson: false,
       shared: false,
@@ -194,8 +194,8 @@ describe("AI supplies", () => {
     await finish(agency.id);
     expect(await aiAllowance(db, "g2", "109", { now: at(1) })).toMatchObject({
       tier: "agency",
-      pool: 13_000,
-      suppliesLeft: 12_997,
+      pool: 11_000,
+      suppliesLeft: 10_997,
       shared: true,
     });
   });
@@ -288,9 +288,9 @@ describe("AI supplies", () => {
   });
 
   it("grows the global daily budget with each paying server", async () => {
-    // $2, plus $0.30 a day for the Pro server and $1.30 for the Agency plan, plus the 2,000
+    // $2, plus $0.25 a day for the Pro server and $1.10 for the Agency plan, plus the 2,000
     // supplies in packs bought this week ($2.00).
-    expect(await aiDailyBudgetMicros(db, 2, at(121))).toBe(5_600_000);
+    expect(await aiDailyBudgetMicros(db, 2, at(121))).toBe(5_350_000);
   });
 
   it("stops at the day's budget, counting running calls at their hold", async () => {

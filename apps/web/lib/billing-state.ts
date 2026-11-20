@@ -37,3 +37,9 @@ export function readMetadata(meta: Stripe.Metadata | null | undefined): PlanMeta
   if (tier === "pro" && !(guildId && /^\d{17,20}$/.test(guildId))) return null;
   return { tier, userId, guildId };
 }
+
+/** A pack size Garrison wrote on a Checkout session: a whole number of supplies, or null. */
+export function packSupplies(raw: string | undefined) {
+  const n = Number(raw);
+  return Number.isInteger(n) && n > 0 && n <= 100_000 ? n : null;
+}

@@ -129,7 +129,15 @@ export async function buySuppliesAction(form: FormData) {
   const pack = String(form.get("pack") ?? "") as SupplyPack;
   if (!packsReady() || !Object.hasOwn(SUPPLY_PACKS, pack)) redirect(`${back}#supplies`);
   const user = access.session.userId;
-  const metadata = { kind: "supplies", pack, guildId: access.guild.id, userId: user };
+  // The size goes with the session, so a pack bought just before a size change gets what
+  // its Checkout page said.
+  const metadata = {
+    kind: "supplies",
+    pack,
+    guildId: access.guild.id,
+    userId: user,
+    supplies: String(SUPPLY_PACKS[pack].supplies),
+  };
   const supplies = SUPPLY_PACKS[pack].supplies.toLocaleString("en-US");
   const base = env().APP_URL;
   let url: string | null = null;

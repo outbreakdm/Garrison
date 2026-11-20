@@ -844,9 +844,8 @@ export async function planBuild(
     Math.min(MAX_OPERATIONS, reserved.allowance.suppliesLeft - AI_SUPPLIES_PER_MESSAGE),
   );
 
-  // Whatever happens below, record what the call used and charge it, unless Garrison's own
-  // checks refused the plan.
-  let refused = false;
+  // Whatever happens below, record what the call used and charge it: a plan Garrison's checks
+  // refuse still cost its AI (its changes cost nothing, since nothing is built).
   let answered = false;
   let usage: PlannerUsage | undefined;
   try {
@@ -863,7 +862,6 @@ export async function planBuild(
     usage = result.usage;
     if (!result.ok) return result;
     answered = true;
-    refused = true;
     // Charged what it cost so far, so the plan is checked against what's really left.
     if (usage) await meterAiCall(ctx.db, reserved.id, callUsage(usage, model));
     const server = deletesAnything(result.plan.edits)
@@ -885,7 +883,6 @@ export async function planBuild(
       replacing,
     });
     if (!stored.ok) return stored;
-    refused = false;
     return { ...stored, server: snap.server, notes: checked.notes };
   } finally {
     const cost = callUsage(usage, model);
@@ -893,7 +890,7 @@ export async function planBuild(
     await finishAiCall(ctx.db, reserved.id, {
       ...cost,
       ok: answered,
-      charge: !refused,
+      charge: true,
     }).catch((error: unknown) =>
       ctx.logger.warn("Couldn't record a Quartermaster call", { guildId: guild.id, error }),
     );

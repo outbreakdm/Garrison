@@ -12,7 +12,7 @@ import {
   setGuildBilling,
 } from "@garrison/db";
 import Stripe from "stripe";
-import { readMetadata, subscriptionState } from "./billing-state";
+import { packSupplies, readMetadata, subscriptionState } from "./billing-state";
 
 export type { PlanMetadata } from "./billing-state";
 export { readMetadata, subscriptionState } from "./billing-state";
@@ -157,7 +157,8 @@ export async function applySupplyPack(db: Db, session: Stripe.Checkout.Session) 
     sessionId: session.id,
     guildId: meta.guildId,
     pack,
-    supplies: SUPPLY_PACKS[pack].supplies,
+    // What the Checkout page sold (written by Garrison when it made the session), else today's.
+    supplies: packSupplies(meta.supplies) ?? SUPPLY_PACKS[pack].supplies,
     amountCents: session.amount_total ?? packCents(pack),
     paymentIntent: typeof intent === "string" ? intent : (intent?.id ?? null),
     buyerId: meta.userId ?? null,

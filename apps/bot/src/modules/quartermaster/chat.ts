@@ -55,7 +55,8 @@ export type ChatOutcome =
  * (asking, suggesting or drafting a plan), and a drafted plan goes through the same
  * checks and supplies as any plan before it's stored as the next version. A message holds
  * the most it could cost while it runs and is charged what it really cost (1 supply per
- * $0.001); a reply whose plan Garrison's checks refused is free. Every answer, including a
+ * $0.001), even when Garrison's checks refused the plan it drafted: that AI was paid for, and
+ * a free refusal let a pool spend AI it never counted (2026-11-20). Every answer, including a
  * refusal, is saved to the conversation with what it cost, so the page shows it. Before
  * answering, the model may look at the server's settings (tools.ts); it can't change them.
  */
@@ -141,8 +142,7 @@ export async function chatTurn(
   // server) the answer gets shorter or looks less, and never costs more than it held.
   const holdMicros = reserved.hold * QM_MICROS_PER_SUPPLY;
 
-  // Charged what it cost unless Garrison's own checks refused the plan it drafted.
-  let refused = false;
+  // Charged what it cost, whatever happens to the plan it drafts.
   let answered = false;
   let usage: PlannerUsage | undefined;
   try {
@@ -183,8 +183,6 @@ export async function chatTurn(
     let reply = result.reply.trim() || "Here's what I've got.";
     let build: QmBuild | null = null;
     if (result.plan || result.planProblem) {
-      // A plan that was drafted but can't be stored: the message is free.
-      refused = true;
       if (room < 1) reply = `${reply} ${suppliesMessage(allowance)}`;
       else {
         input.onStep?.("Checking the draft");
@@ -272,10 +270,8 @@ export async function chatTurn(
             result.ok ? result.model : model,
             { continues: working, replacing },
           );
-          if (stored.ok) {
-            build = stored.build;
-            refused = false;
-          } else reply = `${reply} ${stored.error}`;
+          if (stored.ok) build = stored.build;
+          else reply = `${reply} ${stored.error}`;
         }
       }
     }
@@ -286,7 +282,7 @@ export async function chatTurn(
     await say(reply.slice(0, 2000), {
       choices,
       buildId: build?.id ?? null,
-      supplies: refused ? 0 : suppliesFor(cost.costMicros),
+      supplies: suppliesFor(cost.costMicros),
     });
     return { ok: true, threadId: thread, reply, build };
   } finally {
@@ -295,7 +291,7 @@ export async function chatTurn(
     await finishAiCall(ctx.db, reserved.id, {
       ...spent,
       ok: answered,
-      charge: !refused,
+      charge: true,
     }).catch((error: unknown) =>
       ctx.logger.warn("Couldn't record an AI assistant chat call", { guildId: guild.id, error }),
     );

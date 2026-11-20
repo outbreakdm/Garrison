@@ -37,26 +37,48 @@ them together. Below $8 it reads as a hobby add-on; above $10 it competes with M
 
 ## Does it pay for AI?
 
-AI is the only cost that grows with use (Claude Haiku 5.5, `docs/ai-costs.md`). Since supplies
-v2 (2026-11-15, `docs/AI_SUPPLIES_V2.md`) the AI assistant runs on **supplies** from a monthly
-pool (`AI_SUPPLIES_PER_MONTH` in `packages/db/src/plans.ts`): Free 200 per person, Pro 3,000
-per server, Agency 13,000 shared. A supply is $0.001 of AI: every AI call is charged what it
-really cost, rounded up (about 3 for a typical message), and every change a plan makes costs 1.
-So a pool can never cost more than its size in tenths of a cent, whatever the use:
+AI is the only cost that grows with use (`docs/ai-costs.md`). Since supplies v2 (2026-11-15,
+`docs/AI_SUPPLIES_V2.md`) the AI assistant runs on **supplies** from a monthly pool
+(`AI_SUPPLIES_PER_MONTH` in `packages/db/src/plans.ts`): Free 200 per person, Pro 2,500 per
+server, Agency 11,000 shared (3,000 and 13,000 until 2026-11-20). A supply is $0.001 of AI:
+every AI call is charged what it really cost, rounded up, and every change a plan makes costs
+1\. So a pool can never cost more than its size in tenths of a cent, whatever the use.
 
-| Plan or pack | Worst-case AI | Brings in (after Stripe) | Share |
-|---|---|---|---|
-| Pro, a month | $3.00 | $6.45 (yearly) to $8.43 (monthly) | 36 to 47% |
-| Agency, a month | $13.00 | $28.30 to $33.68 | 39 to 46% |
-| Pack, 1,000 supplies | $1.00 | $2.60 | 38% |
-| Pack, 5,000 supplies | $5.00 | $11.34 | 44% |
-| Free, a month per person | $0.20 | $0 | n/a |
+**Both models cost the same per supply.** Fast (Claude Haiku 5.5, $0.10/$0.50 per million
+tokens) and Smart (Claude Sonnet 5.5, $2/$10) are each charged at their own real price, so a
+pool's worst-case AI is the same on either; Smart just uses a pool about 20 to 25 times faster.
+Measured in production (2026-11-20): a Fast message costs about $0.002 to $0.003 (2 to 3
+supplies); a Smart one about $0.045 to $0.075 (45 to 75), so 2,500 supplies is roughly 800
+Fast messages or 35 to 55 Smart ones. The plan cards say supplies only; the picker under the
+chat shows messages left for the mode chosen.
 
-A message holds the most it can cost while it runs (14 supplies: 3 rounds of 12,000 tokens in
-at the cache-write rate and 6,000 out) and gives back what it didn't use. Failed calls are
-charged what they used; plans Garrison's checks refuse are free; discarded and expired plans
-give their changes back. The tables below are from before supplies v2, when supplies were daily
-and a message was a flat 3; they show why the ceiling was needed.
+**Target: at least 50% margin, worst case, before hosting.** Margin is what's left of the
+price after Stripe (2.9% + $0.30 a charge) and every supply spent on AI. Set 2026-11-20 at
+59% or more, leaving about 9 points for hosting, Stripe Managed Payments (an extra fee if kept
+on) and disputes:
+
+| Plan or pack | Price | After Stripe | Worst-case AI | Margin |
+|---|---|---|---|---|
+| Pro monthly | $8.99 | $8.43 | $2.50 | 66% |
+| Pro yearly | $6.67/mo | $6.45/mo | $2.50 | 59% |
+| Agency monthly | $34.99 | $33.68 | $11.00 | 65% |
+| Agency yearly | $29.17/mo | $28.30/mo | $11.00 | 59% |
+| Pack, 800 supplies | $2.99 | $2.60 | $0.80 | 60% |
+| Pack, 4,000 supplies | $11.99 | $11.34 | $4.00 | 61% |
+| Free, a month per person | $0 | $0 | $0.20 | n/a |
+
+Before this (3,000 and 13,000, packs of 1,000 and 5,000) yearly plans sat at 52%, and the
+packs at 53 to 54%. The pool sizes are the lever; the price per supply never changes.
+
+A message holds the most it can cost while it runs (Fast 14 supplies, Smart 270: 3 rounds of
+12,000 tokens in at the cache-write rate and 6,000 out) and gives back what it didn't use.
+Failed calls are charged what they used, and so is a message whose plan Garrison's checks
+refuse (its changes cost nothing, since nothing is built): until 2026-11-20 those were free,
+which let a pool spend AI it never counted, up to $0.27 a Smart message and 40 messages an
+hour. Discarded and expired plans give their changes back. Pack sizes go on the Checkout
+session, so a pack bought just before a change gets what its page said. The tables below are
+from before supplies v2, when supplies were daily and a message was a flat 3; they show why
+the ceiling was needed.
 
 ### What a message really costs (measured 2026-11-15)
 
