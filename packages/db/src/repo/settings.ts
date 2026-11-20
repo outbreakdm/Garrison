@@ -29,6 +29,7 @@ import {
   statsSettings,
   suggestionSettings,
   ticketSettings,
+  utilitySettings,
   voiceSettings,
   watchSettings,
   welcomeSettings,
@@ -80,6 +81,8 @@ export const EDITABLE_FIELDS = {
   messages: ["messages", "responders"],
   // Application forms are checked with checkApplicationForms before they get here.
   applications: ["forms"],
+  // Stickies and self-clearing channels are checked with checkStickies and checkClearRules.
+  utilities: ["restoreRoles", "restoreSkipRoleIds", "stickies", "clearing"],
   // Who else may use the dashboard; checked with checkAccessGrants before it gets here.
   access: ["grants"],
   // Which member pages show (docs/MEMBER_PAGES.md).
@@ -279,6 +282,7 @@ const TABLES = {
   invites: inviteSettings,
   economy: economySettings,
   applications: applicationSettings,
+  utilities: utilitySettings,
 } as const;
 
 /** Modules whose settings row is created on first use, by the bot or the dashboard. */
@@ -303,6 +307,7 @@ const LAZY = new Set<SettingsModule>([
   "invites",
   "economy",
   "applications",
+  "utilities",
 ]);
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -557,6 +562,12 @@ async function writeRow(tx: Tx, module: SettingsModule, guildId: string, values:
         .update(applicationSettings)
         .set(set as Partial<typeof applicationSettings.$inferInsert>)
         .where(eq(applicationSettings.guildId, guildId));
+      return;
+    case "utilities":
+      await tx
+        .update(utilitySettings)
+        .set(set as Partial<typeof utilitySettings.$inferInsert>)
+        .where(eq(utilitySettings.guildId, guildId));
       return;
   }
 }

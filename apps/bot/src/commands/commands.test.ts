@@ -48,6 +48,7 @@ describe("command definitions", () => {
       "giveaway",
       "suggest",
       "tag",
+      "temprole",
     ]);
     expect(new Set(names).size).toBe(names.length);
   });

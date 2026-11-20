@@ -37,6 +37,7 @@ import type { RoleMenu } from "./role-menus";
 import type { StatCounter } from "./server-stats";
 import type { StatRole } from "./stat-roles";
 import type { TicketPanel } from "./tickets";
+import type { ClearRule, Sticky } from "./utilities";
 import type { VerifyAnswer, VerifyQuestion } from "./verify-questions";
 
 /**
@@ -496,6 +497,7 @@ export const settingsModule = pgEnum("settings_module", [
   "invites",
   "economy",
   "applications",
+  "utilities",
 ]);
 
 /** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */
@@ -1779,6 +1781,77 @@ export const applications = pgTable(
 ).enableRLS();
 
 export type ApplicationRow = typeof applications.$inferSelect;
+
+/** Role and channel tools (utilities.ts): the dashboard edits them, the bot reads them. */
+export const utilitySettings = pgTable(
+  "utility_settings",
+  {
+    guildId: text("guild_id")
+      .primaryKey()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    /** Give members their roles back when they rejoin. */
+    restoreRoles: boolean("restore_roles").notNull().default(false),
+    /** Never given back, on top of bot roles, roles above Garrison and moderator roles. */
+    restoreSkipRoleIds: text("restore_skip_role_ids").array().notNull().default(sql`'{}'::text[]`),
+    stickies: jsonb("stickies").$type<Sticky[]>().notNull().default(sql`'[]'::jsonb`),
+    clearing: jsonb("clearing").$type<ClearRule[]>().notNull().default(sql`'[]'::jsonb`),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      "utility_lists",
+      sql`jsonb_typeof(${t.stickies}) = 'array' AND jsonb_array_length(${t.stickies}) <= 10 AND jsonb_typeof(${t.clearing}) = 'array' AND jsonb_array_length(${t.clearing}) <= 10`,
+    ),
+  ],
+).enableRLS();
+
+/** A member's roles when they left, for giving back if they rejoin. Kept 180 days. */
+export const memberRoleSnapshots = pgTable(
+  "member_role_snapshots",
+  {
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    roleIds: text("role_ids").array().notNull(),
+    leftAt: timestamp("left_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.guildId, t.userId] }),
+    index("member_role_snapshots_left").on(t.leftAt),
+  ],
+).enableRLS();
+
+/** A role given with /temprole, taken off at expires_at by the bot's sweep. */
+export const timedRoles = pgTable(
+  "timed_roles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    roleId: text("role_id").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    givenBy: text("given_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("timed_roles_member_role").on(t.guildId, t.userId, t.roleId),
+    index("timed_roles_due").on(t.expiresAt),
+  ],
+).enableRLS();
+export type TimedRole = typeof timedRoles.$inferSelect;
+
+/** The sticky message Garrison last posted in a channel, so the next post replaces it. */
+export const stickyPosts = pgTable("sticky_posts", {
+  channelId: text("channel_id").primaryKey(),
+  guildId: text("guild_id")
+    .notNull()
+    .references(() => guilds.id, { onDelete: "cascade" }),
+  messageId: text("message_id").notNull(),
+  postedAt: timestamp("posted_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
 
 export const messageSettings = pgTable(
   "message_settings",

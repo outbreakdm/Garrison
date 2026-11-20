@@ -47,6 +47,7 @@ const GROUPS: { name: string; foot?: boolean; items: NavItem[] }[] = [
       { id: "orchid", href: "/insignia", name: "Role menus", icon: "roles" },
       { id: "orchid", href: "/invites", name: "Invites", icon: "invites" },
       { id: "orchid", href: "/barracks", name: "Game accounts", icon: "accounts" },
+      { id: "orchid", href: "/utilities", name: "Utilities", icon: "utilities" },
     ],
   },
   {

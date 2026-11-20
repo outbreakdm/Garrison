@@ -184,6 +184,22 @@ export const HELP = {
     modules: ["tickets"],
     keywords: "tickets support modmail help desk panel transcript",
   },
+  utilities: {
+    title: "Utilities",
+    page: "Utilities",
+    path: "/utilities",
+    about:
+      "Small role and channel tools: roles back when a member rejoins, timed roles with /temprole, sticky messages kept at the bottom of a channel, and self-clearing channels.",
+    steps: [
+      "Utilities → Roles back on rejoin: turn it on and pick any roles never to give back. Bot roles, roles above Garrison's and moderator roles never come back.",
+      "Add a sticky message to a channel, or a self-clearing channel that deletes messages older than a time you pick (up to 14 days).",
+      "Staff with Manage Roles run /temprole give with a member, a role and a time like 2h or 3d. Free runs 1 sticky, 1 self-clearing channel and 25 timed roles; Pro 10, 10 and 1,000.",
+    ],
+    commands: ["/temprole give", "/temprole remove", "/temprole list"],
+    modules: ["utilities"],
+    keywords:
+      "sticky message timed role temporary role temprole rejoin restore roles persist auto delete clear channel",
+  },
   applications: {
     title: "Applications",
     page: "Applications",

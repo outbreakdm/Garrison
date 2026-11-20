@@ -19,6 +19,7 @@ import { tag } from "../modules/responders/commands.js";
 import { roleMenuButtons, roleMenuSelects } from "../modules/roles/handlers.js";
 import { suggest, suggestionButtons } from "../modules/suggestions/commands.js";
 import { ticket, ticketButtons, ticketModals } from "../modules/tickets/handlers.js";
+import { temprole } from "../modules/utilities/commands.js";
 import { watchButtons, watchCommands } from "../modules/watch/commands/index.js";
 import type { ButtonHandler, Command, ModalHandler, SelectHandler } from "./types.js";
 
@@ -42,6 +43,7 @@ export const commands: Command[] = [
   giveaway,
   suggest,
   tag,
+  temprole,
 ];
 export const buttons: ButtonHandler[] = [
   ...watchButtons,

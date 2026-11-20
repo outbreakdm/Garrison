@@ -58,6 +58,12 @@ import {
   onTicketMessage,
   sweepTickets,
 } from "./modules/tickets/service.js";
+import {
+  onStickyMessage,
+  onUtilityJoin,
+  onUtilityLeave,
+  sweepUtilities,
+} from "./modules/utilities/service.js";
 import { onVoiceRoomUpdate, sweepVoiceRooms } from "./modules/voice/service.js";
 import { onAutomodMessage, wasRemovedByAutomod } from "./modules/watch/automod.js";
 import { onPatternBlock, sweepPatterns } from "./modules/watch/patterns.js";
@@ -253,6 +259,7 @@ client.once(Events.ClientReady, async (ready) => {
       await step("Temporary ban sweep", () => liftExpiredBans(ctx, ready));
       await step("Giveaway sweep", () => sweepGiveaways(ctx, ready));
       await step("Ticket sweep", () => sweepTickets(ctx, ready));
+      await step("Utilities sweep", () => sweepUtilities(ctx, ready));
       await step("Ledger prune", () => maybePruneLedger(ctx));
       await step("Verification answers prune", () => maybePruneAnswers(ctx));
       await step("Applications prune", () => maybePruneApplications(ctx));
@@ -342,6 +349,9 @@ client.on(Events.MessageCreate, (message) => {
   onTicketMessage(ctx, message).catch((error) =>
     logger.error("Ticket transcript failed", { guildId: message.guildId, error }),
   );
+  onStickyMessage(ctx, message).catch((error) =>
+    logger.warn("Sticky message failed", { guildId: message.guildId, error }),
+  );
 });
 client.on(Events.MessageUpdate, (before, after) => {
   onMessageEdit(ctx, before, after).catch((error) =>
@@ -384,11 +394,18 @@ client.on(Events.GuildMemberAdd, (member) => {
   handleMemberJoin(ctx, member)
     .catch((error) => logger.error("Join handling failed", { guildId: member.guild.id, error }))
     .then(() => welcomeJoin(ctx, member))
-    .catch((error) => logger.error("Welcome failed", { guildId: member.guild.id, error }));
+    .catch((error) => logger.error("Welcome failed", { guildId: member.guild.id, error }))
+    .then(() => onUtilityJoin(ctx, member))
+    .catch((error) =>
+      logger.warn("Roles back on rejoin failed", { guildId: member.guild.id, error }),
+    );
   void onMemberJoin(ctx, member);
 });
 client.on(Events.GuildMemberRemove, (member) => {
   void onMemberLeave(ctx, member);
+  onUtilityLeave(ctx, member).catch((error) =>
+    logger.warn("Keeping roles on leave failed", { guildId: member.guild.id, error }),
+  );
   welcomeLeave(ctx, member).catch((error) =>
     logger.error("Leave message failed", { guildId: member.guild.id, error }),
   );

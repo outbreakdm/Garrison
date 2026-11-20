@@ -168,6 +168,12 @@ After pulling this change, run `pnpm commands:deploy` once: `/lfg create` has a 
 - **Rewards:** `/ranks reward level:10 role:@Veteran` gives a role at a level (`unreward`, `rewards` to manage). Roles with moderation or admin powers, integration roles and roles above Garrison are refused when set _and_ skipped at grant time, so editing a reward role later can't hand out power.
 - The dashboard has a Ranks page with the leaderboard and rewards.
 
+### Utilities
+
+- **Roles back on rejoin:** a member who leaves keeps their roles for 180 days and gets them back on rejoining (never a bot's role, one above Garrison's, or one with moderation powers; a server can skip more).
+- **Timed roles:** `/temprole give|remove|list` (Manage Roles) gives a role for 30m to 365d; the sweep takes it off when it's up.
+- **Sticky messages** posted again at the bottom of a channel 10 seconds after chat goes quiet, and **self-clearing channels** that delete messages older than 1 hour to 14 days, pins kept if wanted. Free 1 of each and 25 timed roles; Pro 10, 10 and 1,000.
+
 ### Health
 
 `/health` checks Garrison's permissions per module, its role position (roles with moderation powers above Garrison are anti-nuke's blind spot), the log and alert channels, the verify and staff roles, and whether protections are on. If permissions are wrong, a **Fix permissions** button re-invites Garrison with exactly the set it uses (never Administrator, and it warns if Garrison has it).

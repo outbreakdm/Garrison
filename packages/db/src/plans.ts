@@ -162,6 +162,7 @@ export type Module =
   | "economy"
   | "suggestions"
   | "applications"
+  | "utilities"
   | "insights";
 
 interface Feature<T> {
@@ -216,6 +217,24 @@ export const FEATURES = {
     about: "Application and recruitment forms, reviewed by staff",
     free: 1,
     pro: 10,
+  },
+  "utilities.stickies": {
+    module: "utilities",
+    about: "Sticky messages Garrison keeps at the bottom of a channel",
+    free: 1,
+    pro: 10,
+  },
+  "utilities.clearing": {
+    module: "utilities",
+    about: "Self-clearing channels: old messages deleted after a set time",
+    free: 1,
+    pro: 10,
+  },
+  "utilities.timedRoles": {
+    module: "utilities",
+    about: "Timed roles running at once (/temprole)",
+    free: 25,
+    pro: 1000,
   },
   "messages.responders": {
     module: "messages",

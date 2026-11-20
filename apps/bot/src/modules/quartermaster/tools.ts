@@ -73,6 +73,11 @@ export const MODULE_GUIDE: Record<ReadableModule, { page: string; about: string 
     page: "Applications",
     about: "application and recruitment forms: questions, the staff channel, roles given on accept",
   },
+  utilities: {
+    page: "Utilities",
+    about:
+      "roles back when a member rejoins, sticky messages kept at the bottom of a channel, and self-clearing channels",
+  },
 };
 
 const MODULES = (Object.keys(EDITABLE_FIELDS) as SettingsModule[]).filter(

@@ -32,7 +32,12 @@ then updates **Status** and the **Log** before stopping.
      and the server's tags and auto-responder answers, which it's told are data, not orders.
      Pro (`tickets.aiAssist`); charged in supplies like any AI call (feature `ticket_assist`,
      30 an hour per server). No migration; **deploy with register_commands** for the subcommand.
-  6. [ ] Small role tools: roles back on rejoin, timed roles, sticky messages, self-clearing channels.
+  6. [x] Small role tools, on a new Utilities page under Members: roles back on rejoin (kept
+     180 days, never bot, higher or moderator roles, plus a skip list), `/temprole` timed roles
+     (Manage Roles, only roles below the giver's own), sticky messages (reposted 10 s after chat
+     settles) and self-clearing channels (every 10 minutes, 1 hour to 14 days, pins kept).
+     Free 1 sticky, 1 self-clearing channel, 25 timed roles; Pro 10, 10, 1,000.
+     **Migration 0083** (tables, enum value, grants); **deploy with register_commands** for /temprole.
   7. [ ] More alert sources: Kick, Reddit, RSS, Bluesky.
   8. [ ] Riot and Steam stat roles (Valorant and League ranks; Riot's production key needs applying).
   9. [ ] Public server page and leaderboard.
@@ -1519,3 +1524,7 @@ Decided (2026-11-12, owner):
   `complete()` on the planner that is counted and fitted inside its hold like a chat round).
   Never posts on its own: the card is only for the staff member who asked. Lint, type-check,
   808 tests pass. The real call needs the deployed bot. Not deployed.
+- 2026-11-20: Best bot item 6, Utilities (`packages/db/src/utilities.ts`, bot
+  `modules/utilities`, web `utilities/`). Checked on the local preview after 0083: a sticky in
+  #general, roles back on rejoin with @Mods skipped, and a 3-day self-clearing channel all saved.
+  Lint, type-check, 817 tests pass. The Discord side needs the deployed bot. Not deployed.
