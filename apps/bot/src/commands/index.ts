@@ -1,3 +1,4 @@
+import { commandLocalizations } from "@garrison/db";
 import {
   applicationModals,
   applyButtons,
@@ -67,5 +68,12 @@ export const modals: ModalHandler[] = [
   questionModals,
   applicationModals,
 ];
+
+// Each command's description in Spanish, Portuguese, German and French: Discord shows members
+// the one their Discord is set to (packages/db i18n.ts).
+for (const c of commands) {
+  const localized = commandLocalizations(c.data.name);
+  if (localized) c.data.description_localizations = localized;
+}
 
 export const commandsByName = new Map(commands.map((c) => [c.data.name, c]));

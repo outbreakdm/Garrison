@@ -96,6 +96,7 @@ export const opsForm = z.object({
     .trim()
     .max(64)
     .refine(isValidTimeZone, "That isn't a time zone. Use a name like America/Chicago."),
+  language: z.enum(["en", "es", "pt", "de", "fr"]).default("en"),
 });
 
 export const ranksForm = z
@@ -224,6 +225,7 @@ export const FIELD_LABELS: Record<string, string> = {
   autoUnlockMinutes: "Auto-unlock (min)",
   flagAccountAgeDays: "Flag accounts under (days)",
   timezone: "Time zone",
+  language: "Language",
   trackAttendance: "Track attendance",
   voiceXp: "XP for voice",
   boosts: "XP boosts",

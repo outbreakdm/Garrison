@@ -3,12 +3,14 @@ import {
   awardXp,
   boostFor,
   entitlements,
+  getGuildLanguage,
   getGuildPlan,
   getRanksSettings,
   listRankRewards,
   type RankBoost,
   type RanksSettings,
   readBoosts,
+  say,
 } from "@garrison/db";
 import type { Guild, GuildBasedChannel, GuildMember, Message } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
@@ -70,8 +72,14 @@ export async function celebrateLevel(
 ) {
   const given = member ? await grantRewards(ctx, member, level) : [];
   if (settings.announce === "off") return;
-  const roles = given.length ? ` and got ${given.map((id) => `<@&${id}>`).join(" ")}` : "";
-  const text = `<@${userId}> reached level ${level}${roles}.`;
+  const lang = await getGuildLanguage(ctx.db, guild.id);
+  const text = given.length
+    ? say(lang, "levelUpRoles", {
+        user: `<@${userId}>`,
+        level,
+        roles: given.map((id) => `<@&${id}>`).join(" "),
+      })
+    : say(lang, "levelUp", { user: `<@${userId}>`, level });
   const target =
     settings.announce === "channel" && settings.announceChannelId
       ? guild.channels.cache.get(settings.announceChannelId)

@@ -1,5 +1,6 @@
 import { and, asc, eq, gt, isNull, lte, sql } from "drizzle-orm";
 import type { Db } from "../client";
+import { isLanguage, type Language } from "../i18n";
 import {
   type LfgSlotGroup,
   type OpsEvent,
@@ -13,6 +14,15 @@ import { addWeeksInZone } from "../time";
 export async function getOpsTimezone(db: Db, guildId: string) {
   const [row] = await db.select().from(opsSettings).where(eq(opsSettings.guildId, guildId));
   return row?.timezone ?? "UTC";
+}
+
+/** The language Garrison speaks to this server's members in. English until picked. */
+export async function getGuildLanguage(db: Db, guildId: string): Promise<Language> {
+  const [row] = await db
+    .select({ language: opsSettings.language })
+    .from(opsSettings)
+    .where(eq(opsSettings.guildId, guildId));
+  return isLanguage(row?.language) ? row.language : "en";
 }
 
 /** The calendar feed's secret, or null when the feed is off. */

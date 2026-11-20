@@ -1,9 +1,12 @@
 import {
   entitlements,
   getAccessGrants,
+  getGuildLanguage,
   getGuildPlan,
   getMemberPages,
   getOpsTimezone,
+  LANGUAGE_LIST,
+  LANGUAGES,
   listSettingsChanges,
   PUBLIC_ABOUT_MAX,
   publicBoardSize,
@@ -201,8 +204,9 @@ export default async function SettingsPage({
     readFlash(),
     getMemberPages(db, guild.id),
   ]);
-  const [timezone, history, channels, roles, plan, look] = await Promise.all([
+  const [timezone, language, history, channels, roles, plan, look] = await Promise.all([
     getOpsTimezone(db, guild.id),
+    getGuildLanguage(db, guild.id),
     listSettingsChanges(db, guild.id),
     listTextChannels(guild.id).catch(() => []),
     listGuildRoles(guild.id).catch(() => []),
@@ -255,7 +259,7 @@ export default async function SettingsPage({
             action={saveOps}
             undo={undoChange}
             guildId={guild.id}
-            stamp={timezone}
+            stamp={`${timezone}-${language}`}
             saveLabel="Save time zone"
           >
             <label className="g-field" htmlFor="timezone">
@@ -270,6 +274,21 @@ export default async function SettingsPage({
               />
               <span className="g-help">
                 Used when /raid create gets a date without a time zone.
+              </span>
+            </label>
+            <label className="g-field" htmlFor="language">
+              <span>Language</span>
+              <select className="g-input" id="language" name="language" defaultValue={language}>
+                {LANGUAGE_LIST.map((l) => (
+                  <option key={l} value={l}>
+                    {LANGUAGES[l].label}
+                  </option>
+                ))}
+              </select>
+              <span className="g-help">
+                What Garrison says to members: level-ups, stream and post alerts, and your public
+                page. Slash commands already show in each member's own Discord language. The
+                dashboard stays in English for now.
               </span>
             </label>
           </AutoSaveCard>

@@ -368,6 +368,8 @@ export const opsSettings = pgTable("ops_settings", {
     .references(() => guilds.id, { onDelete: "cascade" }),
   /** IANA time zone used when /raid create gets a date without one. */
   timezone: text("timezone").notNull().default("UTC"),
+  /** The language Garrison speaks to members in (i18n.ts): en, es, pt, de or fr. */
+  language: text("language").notNull().default("en"),
   /** The secret in the calendar feed's link (ICS). Null: no feed. Reset to cut off old links. */
   calendarToken: text("calendar_token"),
   /** Pro: mark who showed up to raids and groups by whether they were in voice. */

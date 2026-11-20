@@ -1,9 +1,9 @@
 import { lookup } from "node:dns/promises";
 import {
-  ALERT_BUTTON,
   type AlertFeed,
   type AlertProvider,
   type AlertStateRow,
+  alertButton,
   alertHeading,
   alertLook,
   claimAlertItem,
@@ -11,8 +11,10 @@ import {
   entitlements,
   fillAlert,
   getAlertFeeds,
+  getGuildLanguage,
   getGuildPlan,
   isFeedPaused,
+  type Language,
   listAlertSettings,
   listAlertState,
   noteAlertCheck,
@@ -85,14 +87,19 @@ export interface AlertItem {
 }
 
 /** The alert as Discord gets it: heading, the feed's words, the thumbnail and a link button. */
-export function alertMessage(feed: AlertFeed, ent: Entitlements, item: AlertItem) {
+export function alertMessage(
+  feed: AlertFeed,
+  ent: Entitlements,
+  item: AlertItem,
+  lang: Language = "en",
+) {
   const look = alertLook(feed, ent);
   const values = { name: item.name, title: item.title, game: item.game, url: item.url };
   const container = new ContainerBuilder()
     .setAccentColor(Number.parseInt(look.accent.slice(1), 16))
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        `### ${safeText(alertHeading(feed.provider, item.name))}`,
+        `### ${safeText(alertHeading(feed.provider, item.name, lang))}`,
       ),
       new TextDisplayBuilder().setContent(fillAlert(look.text, values, safeText).slice(0, 1800)),
     );
@@ -111,7 +118,7 @@ export function alertMessage(feed: AlertFeed, ent: Entitlements, item: AlertItem
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)
           .setURL(item.url)
-          .setLabel(ALERT_BUTTON[feed.provider]),
+          .setLabel(alertButton(feed.provider, lang)),
       ),
     );
   const components = feed.roleId
@@ -125,14 +132,20 @@ export function alertMessage(feed: AlertFeed, ent: Entitlements, item: AlertItem
   };
 }
 
-async function post(guild: Guild, feed: AlertFeed, ent: Entitlements, item: AlertItem) {
+async function post(
+  guild: Guild,
+  feed: AlertFeed,
+  ent: Entitlements,
+  lang: Language,
+  item: AlertItem,
+) {
   const channel = guild.channels.cache.get(feed.channelId);
   if (!channel?.isSendable()) return false;
   const me = guild.members.me ?? (await guild.members.fetchMe());
   const perms = channel.permissionsFor(me);
   if (!perms?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages]))
     return false;
-  await channel.send(alertMessage(feed, ent, item));
+  await channel.send(alertMessage(feed, ent, item, lang));
   return true;
 }
 
@@ -140,6 +153,8 @@ interface Watched {
   guild: Guild;
   feed: AlertFeed;
   ent: Entitlements;
+  /** The language the server's alerts are written in. */
+  lang: Language;
   state: AlertStateRow | undefined;
 }
 
@@ -152,9 +167,10 @@ async function watched(ctx: BotContext, client: Client<true>): Promise<Watched[]
     const guild = client.guilds.cache.get(row.guildId);
     if (!guild) continue;
     const ent = entitlements(await getGuildPlan(ctx.db, guild.id));
+    const lang = await getGuildLanguage(ctx.db, guild.id);
     readAlertFeeds(row.feeds).forEach((feed, i) => {
       if (!isFeedPaused(i, ent))
-        out.push({ guild, feed, ent, state: stateOf.get(`${guild.id}:${feed.id}`) });
+        out.push({ guild, feed, ent, lang, state: stateOf.get(`${guild.id}:${feed.id}`) });
     });
   }
   return out;
@@ -201,7 +217,7 @@ async function sweepLive(
       }))
     )
       continue;
-    await post(w.guild, w.feed, w.ent, {
+    await post(w.guild, w.feed, w.ent, w.lang, {
       id: stream.id,
       name: stream.name,
       title: stream.title,
@@ -297,7 +313,7 @@ export async function sweepPosts(
       const fresh = now.getTime() - p.published.getTime() < FRESH_MS;
       const claimed = await claimAlertItem(ctx.db, key(w), p.id, { post: announce && fresh });
       if (!claimed || !announce || !fresh || !p.url) continue;
-      await post(w.guild, w.feed, w.ent, {
+      await post(w.guild, w.feed, w.ent, w.lang, {
         id: p.id,
         name: w.feed.provider === "bluesky" ? p.author || got.name : got.name,
         title: p.title || "New post",
@@ -360,7 +376,7 @@ export async function sweepYoutube(ctx: BotContext, list: Watched[], now = new D
       const fresh = now.getTime() - v.published.getTime() < FRESH_MS;
       const claimed = await claimAlertItem(ctx.db, key(w), v.id, { post: announce && fresh });
       if (!claimed || !announce || !fresh) continue;
-      await post(w.guild, w.feed, w.ent, {
+      await post(w.guild, w.feed, w.ent, w.lang, {
         id: v.id,
         name: v.author || "A channel",
         title: v.title,
@@ -413,7 +429,8 @@ export async function doTestAlert(
     url: TEST_URL[feed.provider](feed.handle),
     thumbnail: "",
   };
-  const posted = await post(guild, { ...feed, roleId: null }, ent, sample).catch(() => false);
+  const lang = await getGuildLanguage(ctx.db, guild.id);
+  const posted = await post(guild, { ...feed, roleId: null }, ent, lang, sample).catch(() => false);
   return posted
     ? {
         ok: true,

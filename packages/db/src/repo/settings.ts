@@ -64,7 +64,7 @@ export const EDITABLE_FIELDS = {
     "verifyAnswersChannelId",
     "backupWeekly",
   ],
-  ops: ["timezone", "trackAttendance"],
+  ops: ["timezone", "trackAttendance", "language"],
   // The rank card is checked with checkRankCard before it gets here.
   // Boosts are checked with checkBoosts before they get here.
   ranks: ["enabled", "announce", "announceChannelId", "card", "voiceXp", "boosts"],

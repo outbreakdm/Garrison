@@ -10,6 +10,7 @@
  */
 
 import { ACCENT, STANDARD_ACCENT } from "./cards";
+import { type Language, say } from "./i18n";
 import { type Entitlements, FEATURES } from "./plans";
 import type { Parsed } from "./rally";
 
@@ -274,21 +275,39 @@ export function fillAlert(
   );
 }
 
-/** The heading over an alert: "shroud is live on Twitch". */
-export function alertHeading(provider: AlertProvider, name: string) {
+/** The heading over an alert, in the server's language: "shroud is live on Twitch". */
+export function alertHeading(provider: AlertProvider, name: string, lang: Language = "en") {
   switch (provider) {
     case "twitch":
-      return `${name} is live on Twitch`;
+      return say(lang, "liveOn", { name, site: "Twitch" });
     case "kick":
-      return `${name} is live on Kick`;
+      return say(lang, "liveOn", { name, site: "Kick" });
     case "youtube":
-      return `${name} posted a new video`;
+      return say(lang, "newVideo", { name });
     case "reddit":
-      return `New post in r/${name}`;
+      return say(lang, "newInSubreddit", { name });
     case "bluesky":
-      return `${name} posted on Bluesky`;
+      return say(lang, "postedOn", { name, site: "Bluesky" });
     case "rss":
-      return `New from ${name}`;
+      return say(lang, "newFrom", { name });
+  }
+}
+
+/** The link button under an alert, in the server's language. */
+export function alertButton(provider: AlertProvider, lang: Language = "en") {
+  switch (provider) {
+    case "twitch":
+      return say(lang, "watchOn", { site: "Twitch" });
+    case "kick":
+      return say(lang, "watchOn", { site: "Kick" });
+    case "youtube":
+      return say(lang, "watchOn", { site: "YouTube" });
+    case "reddit":
+      return say(lang, "openOn", { site: "Reddit" });
+    case "bluesky":
+      return say(lang, "openOn", { site: "Bluesky" });
+    case "rss":
+      return say(lang, "readIt");
   }
 }
 

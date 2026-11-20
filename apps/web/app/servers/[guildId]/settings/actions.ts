@@ -249,7 +249,7 @@ export async function saveRewards(form: FormData): Promise<AutoResult> {
 
 export async function saveOps(form: FormData): Promise<AutoResult> {
   const { guild } = await authorize(form);
-  const parsed = opsForm.safeParse(pick(form, ["timezone"]));
+  const parsed = opsForm.safeParse(pick(form, ["timezone", "language"]));
   if (!parsed.success) return failed(form, guild.id, PLACES.ops, "timezone");
   else return save("ops", form, parsed.data, PLACES.ops);
 }

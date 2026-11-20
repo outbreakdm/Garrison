@@ -79,6 +79,8 @@ describe("command definitions", () => {
       if (forEveryone.has(data.name)) expect(data.default_member_permissions).toBeNull();
       else expect(data.default_member_permissions).toMatch(/^\d+$/);
       expect(data.description.length).toBeLessThanOrEqual(100);
+      // Every command is described in Spanish, Portuguese, German and French too.
+      expect(Object.keys(data.description_localizations ?? {}).length, data.name).toBe(5);
     }
   });
 });

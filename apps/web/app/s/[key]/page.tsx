@@ -1,9 +1,12 @@
 import {
   entitlements,
+  getGuildLanguage,
   getGuildPlan,
   getLeaderboard,
   getPublicPage,
+  LANGUAGES,
   publicBoardSize,
+  say,
 } from "@garrison/db";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -32,24 +35,26 @@ export async function generateMetadata({
   };
 }
 
-const number = (n: number) => n.toLocaleString("en-US");
-
 export default async function PublicServerPage({ params }: { params: Promise<{ key: string }> }) {
   const { key } = await params;
   const page = await load(key);
   if (!page) notFound();
   const db = await getDb();
-  const [look, plan] = await Promise.all([
+  const [look, plan, lang] = await Promise.all([
     publicGuildLook(page.guildId),
     getGuildPlan(db, page.guildId),
+    getGuildLanguage(db, page.guildId),
   ]);
+  // Numbers and words in the server's language.
+  const number = (n: number) => n.toLocaleString(LANGUAGES[lang].discord[0]);
+  const [madeBefore = "", madeAfter = ""] = say(lang, "madeWith").split("{garrison}");
   const board = page.publicLeaderboard
     ? await getLeaderboard(db, page.guildId, publicBoardSize(entitlements(plan)))
     : [];
   const site = env().APP_URL.replace("://dash.", "://");
 
   return (
-    <main className="shell">
+    <main className="shell" lang={lang}>
       <div className="main public-server">
         <header className="public-server__head">
           {look?.iconUrl ? (
@@ -63,7 +68,9 @@ export default async function PublicServerPage({ params }: { params: Promise<{ k
           <div className="public-server__title">
             <h1>{page.name}</h1>
             {look?.members ? (
-              <p className="public-server__meta">{number(look.members)} members on Discord</p>
+              <p className="public-server__meta">
+                {say(lang, "members", { count: number(look.members) })}
+              </p>
             ) : null}
           </div>
           {page.publicInvite ? (
@@ -72,7 +79,7 @@ export default async function PublicServerPage({ params }: { params: Promise<{ k
               href={`https://discord.gg/${page.publicInvite}`}
               rel="noopener nofollow"
             >
-              Join on Discord
+              {say(lang, "join")}
             </a>
           ) : null}
         </header>
@@ -82,31 +89,33 @@ export default async function PublicServerPage({ params }: { params: Promise<{ k
         {page.publicLeaderboard ? (
           <section className="g-card public-server__board" aria-labelledby="board-title">
             <h2 className="card-title" id="board-title">
-              Leaderboard
+              {say(lang, "leaderboard")}
             </h2>
             {board.length ? (
               <ol className="public-board">
                 {board.map((m, i) => (
                   <li key={m.userId} className="public-board__row">
                     <span className="public-board__place">{i + 1}</span>
-                    <span className="public-board__name">{m.username || "A member"}</span>
-                    <span className="public-board__level">Level {m.level}</span>
+                    <span className="public-board__name">{m.username || say(lang, "aMember")}</span>
+                    <span className="public-board__level">
+                      {say(lang, "level", { level: m.level })}
+                    </span>
                     <span className="public-board__xp">{number(m.xp)} XP</span>
                   </li>
                 ))}
               </ol>
             ) : (
-              <p className="g-help">Nobody has earned XP yet.</p>
+              <p className="g-help">{say(lang, "noXp")}</p>
             )}
           </section>
         ) : null}
 
         <p className="g-help public-server__foot">
-          A page made with{" "}
+          {madeBefore}
           <a href={site} target="_blank" rel="noopener">
             Garrison
           </a>
-          , this server's Discord bot.
+          {madeAfter}
         </p>
       </div>
     </main>

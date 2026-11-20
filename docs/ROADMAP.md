@@ -69,7 +69,15 @@ then updates **Status** and the **Log** before stopping.
      `APP_URL/auth/twitch/callback` added as a redirect URL in the Twitch console. **Not built:
      Patreon.** It needs a Patreon client of the owner's and its own creator connection and
      webhooks, and Patreon already gives Discord roles itself; worth deciding whether it's wanted.
-  11. [ ] Other languages (Spanish, Portuguese, German, French first).
+  11. [x] Other languages, first pass: Spanish, Portuguese (Brazil), German and French. Every
+     slash command is described in all four (Discord shows each member their own Discord
+     language; **deploy with register_commands** to send them). A server picks the language
+     Garrison speaks to members in (Settings → Server): level-up messages, alert headings and
+     buttons, and the public page, numbers included. **Migration 0086** (`ops_settings.language`).
+     **Not translated yet:** the dashboard, bot replies to staff, cards and prompts (verification,
+     tickets, giveaways, applications), and subcommand and option descriptions: the strings are
+     inline everywhere, so each needs moving into `packages/db/src/i18n.ts`. Translations were
+     written here, not by a native speaker; worth a check before announcing them.
   12. [ ] Fun extras: birthdays, trivia, counting.
 - **AI assistant v2 (planned 2026-11-19), next up:** `docs/AI_ASSISTANT.md`, "Assistant v2". Owner chose Haiku (Fast) and Sonnet (Smart, Pro and Agency only), supplies at each model's real cost, every coverage gap (writing, more modules, insight, how-to help), and a "Your server" workspace with hand edits (rename, drag to reorder) and an Apply build button. Phase 1 first: a message's hold assumes 12,000 input tokens a round but nothing enforces it, so a big server can cost more than it held. **Phases 1 to 8A built** (not deployed; migrations 0076 to 0079). The eval has never run on the real models: it needs `ANTHROPIC_API_KEY` and the owner's yes (about $6.20 for both models, 3 runs). Phases 5 to 8A (how-to help, server insight, writing, more settings and forum and announcement channels) are done too; 8B is built too (role menus, ticket panels, stream alerts, giveaways, the economy and shop, LFG templates, invite labels, server stats counters). **Deployed 2026-11-19** (`9c003e1`, run #54, migrations 0076 to 0079). What's left needs the owner: the first real-model eval run.
 - **Landing refresh and Needs attention (2026-11-20), deployed** (`db83944`, run #62, dashboard): hero buttons are Add to
@@ -1577,3 +1585,7 @@ Decided (2026-11-12, owner):
   tried against Twitch (no keys here): the webhook signature check, the list's storage with each
   login's grants, and the role changes are tested; the card shows "Waiting for Garrison's
   Twitch keys" on the local preview. Lint, type-check, 837 tests pass. Not deployed.
+- 2026-11-20: Best bot item 11, other languages (`packages/db/src/i18n.ts`). Checked on the
+  local preview after 0086: picking Español in Settings → Server saved, and the public page
+  read "128 miembros en Discord", "Clasificación", "Nivel 32", "48.210 XP". Lint, type-check,
+  841 tests pass. Not deployed.
