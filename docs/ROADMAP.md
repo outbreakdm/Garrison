@@ -1373,3 +1373,19 @@ Decided (2026-11-12, owner):
 - 2026-11-20: Deployed `1e0fe76` (run #57, `everything`, no command registration): Bastion v1
   naming and the deploy retry, on top of the hang fix. No 100146 retries were needed; the new
   bot started at 01:06:44 UTC and is checking in.
+- 2026-11-20: The AI assistant answers again, tested for real on the owner's server from the
+  dashboard. Three faults, each hiding the next:
+  1. Since `c24525e` (2026-11-18) the bot's request claim put a JS Date into raw SQL;
+     postgres-js threw before sending it, so no dashboard request was ever picked up (PGlite in
+     the tests accepts a Date). Fixed in `730c25e`, with the weekly backup check and a ticket's
+     first staff reply; createDb now turns any Date into ISO text.
+  2. The chat's structured-output schema had 25 nullable fields (the API allows 16): a 400
+     before the model ran. `8525721` cut it to 3 with "not set" values (wire.ts).
+  3. Then "The compiled grammar is too large": the plan left the grammar (`a15d45c`). The
+     answer is reply, quick replies and plan_json; the plan's shape is in the cached
+     instructions and checked on the way in, a bad one going back to the model once.
+  Also: up to 12 reorders and channels outside any category (`08b5a1f`); a 4xx from the AI
+  service now says what it said; messages say Bastion. Results in production: a Fast question
+  answered correctly in 8 s for 3 supplies; a Smart "clean up and reorder" drafted 6 orders
+  (categories, channels in four categories, roles) in 18 s for 74 supplies. Not applied.
+  Deployed bot-only runs #58 to #60.
