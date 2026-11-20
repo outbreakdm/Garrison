@@ -30,6 +30,17 @@ import {
   type ServerSnapshot,
 } from "./plan.js";
 import { MODULE_GUIDE, QM_CHAT_ROUNDS, READ_TOOLS, type ReadTool } from "./tools.js";
+import {
+  AiEditWireSchema,
+  AiOperationWireSchema,
+  AiOrderWireSchema,
+  AiPlanWireSchema,
+  editFromWire,
+  operationFromWire,
+  orderFromWire,
+  planFromWire,
+  wireCount,
+} from "./wire.js";
 
 /**
  * Haiku: a plan is a small structured list that Garrison validates and a person
@@ -199,11 +210,13 @@ export const AiChatSchema = z.object({
   plan_summary: z
     .string()
     .describe("When you draft a plan: one short sentence describing it. Otherwise empty."),
-  order: AiPlanSchema.shape.order,
-  edits: AiPlanSchema.shape.edits,
-  operations: AiPlanSchema.shape.operations.describe(
-    "The plan's operations when you draft one now. Empty while you're still asking.",
-  ),
+  // The wire forms: nothing nullable but three fields, so the schema stays inside the API's
+  // limits (wire.ts). Read back with planFromWire's parts below.
+  order: z.array(AiOrderWireSchema).describe(AiPlanSchema.shape.order.description ?? ""),
+  edits: z.array(AiEditWireSchema).describe(AiPlanSchema.shape.edits.description ?? ""),
+  operations: z
+    .array(AiOperationWireSchema)
+    .describe("The plan's operations when you draft one now. Empty while you're still asking."),
   plan_notes: z
     .string()
     .describe("With a plan: what you left out or would add next. Otherwise empty."),
@@ -249,8 +262,9 @@ export const AiChatSchema = z.object({
           ),
         style: z
           .enum(["buttons", "dropdown"])
-          .nullable()
-          .describe("new_role_menu: buttons (up to 15 roles) or a dropdown (up to 25). Else null."),
+          .describe(
+            "new_role_menu: buttons (up to 15 roles) or a dropdown (up to 25). Else buttons.",
+          ),
         items: z
           .array(
             z.object({
@@ -278,17 +292,12 @@ export const AiChatSchema = z.object({
           .describe(
             "new_giveaway: the text channel's id, or the ref of one this plan makes. Else empty.",
           ),
-        winners: z
-          .number()
-          .int()
-          .nullable()
-          .describe("new_giveaway: how many win, 1-20. Else null."),
+        winners: z.number().int().describe("new_giveaway: how many win, 1-20. Else 0."),
         duration_minutes: z
           .number()
           .int()
-          .nullable()
           .describe(
-            "new_giveaway: minutes until the draw: 30, 60, 360, 720, 1440, 4320, 10080 or 20160. Else null.",
+            "new_giveaway: minutes until the draw: 30, 60, 360, 720, 1440, 4320, 10080 or 20160. Else 0.",
           ),
       }),
     )
@@ -505,6 +514,13 @@ function contextBlocks(input: Omit<PlannerInput, "request">) {
   return blocks;
 }
 
+/** The API's own explanation of an error, from its JSON body. */
+function apiErrorMessage(error: InstanceType<typeof Anthropic.APIError>) {
+  const body = error.error as { error?: { message?: unknown } } | undefined;
+  const message = body?.error?.message;
+  return typeof message === "string" ? message.replace(/\s+/g, " ").trim() : "";
+}
+
 /** Turn an API error into a plain message; anything unexpected is rethrown. */
 function apiError(error: unknown): { ok: false; error: string } {
   if (error instanceof Anthropic.RateLimitError)
@@ -515,20 +531,31 @@ function apiError(error: unknown): { ok: false; error: string } {
   )
     return {
       ok: false,
-      error: "The AI assistant's Claude API key was rejected. The bot's operator needs to fix it.",
+      error: "Bastion's AI key was rejected. The bot's operator needs to fix it.",
     };
-  if (error instanceof Anthropic.APIError)
-    return { ok: false, error: "Claude had a problem with that. Try again shortly." };
+  if (error instanceof Anthropic.APIError) {
+    // A refusal before the model ran (a 4xx) is Garrison's own bug, not something a retry
+    // fixes: say what the AI service said, so it can't hide the way a schema limit did.
+    const status = error.status ?? 0;
+    if (status >= 400 && status < 500) {
+      const said = apiErrorMessage(error).slice(0, 160);
+      return {
+        ok: false,
+        error: `Bastion couldn't answer: the AI service refused the request (${status}${said ? `: ${said}` : ""}). Garrison's team needs to fix this; trying again won't help.`,
+      };
+    }
+    return { ok: false, error: "Bastion had a problem with that. Try again shortly." };
+  }
   // The SDK's own errors, such as an answer that doesn't fit the schema.
   if (error instanceof Anthropic.AnthropicError)
-    return { ok: false, error: "Claude's answer didn't come back in the right shape. Try again." };
+    return { ok: false, error: "Bastion's answer didn't come back in the right shape. Try again." };
   throw error;
 }
 
 /** The longest one chat message may take with Claude, every round and retry included. */
 export const CHAT_DEADLINE_MS = 150_000;
 export const CHAT_TOO_SLOW =
-  "Claude took too long to answer. Try again, or ask for a smaller piece at a time.";
+  "Bastion took too long to answer. Try again, or ask for a smaller piece at a time.";
 
 /** The least output a request runs with: below it, an answer can't be useful. */
 export const MIN_ROUND_OUTPUT = 1024;
@@ -663,7 +690,7 @@ export class ClaudePlanner implements Planner {
     const budget = input.budgetMicros ?? Number.POSITIVE_INFINITY;
     const output_config = {
       effort: "medium" as const,
-      format: betaZodOutputFormat(AiPlanSchema),
+      format: betaZodOutputFormat(AiPlanWireSchema),
     };
     const messages: Anthropic.Beta.BetaMessageParam[] = [{ role: "user", content: blocks }];
     const fitted = await this.fit(
@@ -697,10 +724,10 @@ export class ClaudePlanner implements Planner {
     if (!response.parsed_output)
       return {
         ok: false,
-        error: "Claude's plan didn't come back in the right shape. Try again.",
+        error: "Bastion's plan didn't come back in the right shape. Try again.",
         usage,
       };
-    return { ok: true, plan: response.parsed_output, model: response.model, usage };
+    return { ok: true, plan: planFromWire(response.parsed_output), model: response.model, usage };
   }
 
   async chat(input: ChatInput): Promise<ChatResult> {
@@ -824,7 +851,7 @@ export class ClaudePlanner implements Planner {
         if (!out)
           return {
             ok: false,
-            error: "Claude's answer didn't come back in the right shape.",
+            error: "Bastion's answer didn't come back in the right shape.",
             usage,
           };
         const settings = out.settings.map((x) => ({
@@ -843,12 +870,12 @@ export class ClaudePlanner implements Planner {
           name: x.name,
           title: x.title,
           body: x.body,
-          ...(x.style ? { style: x.style } : {}),
+          ...(x.target === "new_role_menu" ? { style: x.style } : {}),
           items: x.items ?? [],
           staffRoles: x.staff_roles ?? [],
           ...(x.channel ? { channel: x.channel } : {}),
-          winners: x.winners ?? null,
-          durationMinutes: x.duration_minutes ?? null,
+          winners: wireCount(x.winners),
+          durationMinutes: wireCount(x.duration_minutes),
         }));
         return {
           ok: true,
@@ -863,9 +890,9 @@ export class ClaudePlanner implements Planner {
             writes.length
               ? {
                   summary: out.plan_summary,
-                  operations: out.operations,
-                  order: out.order,
-                  edits: out.edits,
+                  operations: out.operations.map(operationFromWire),
+                  order: out.order.map(orderFromWire),
+                  edits: out.edits.map(editFromWire),
                   notes: out.plan_notes,
                   settings,
                   posts,
@@ -973,7 +1000,7 @@ function asParam(block: Anthropic.Beta.BetaContentBlock): Anthropic.Beta.BetaCon
 
 function stopError(reason: string | null) {
   if (reason === "refusal")
-    return "Claude declined that. Try describing the channels and roles you want.";
+    return "Bastion declined that. Try describing the channels and roles you want.";
   if (reason === "max_tokens") return "That's too big to plan in one go. Ask for fewer changes.";
   return null;
 }
