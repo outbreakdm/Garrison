@@ -1397,4 +1397,6 @@ Decided (2026-11-12, owner):
   pools Pro 2,500 and Agency 11,000 (from 3,000 and 13,000), packs 800 and 4,000 supplies at
   the same prices, and plan cards in supplies only. Worst case is now 59%+ on every plan and
   pack before hosting. Pack sizes go on the Checkout session so a pack bought mid-change gets
-  what it said. Lint, type-check, 779 tests and `next build` pass. Not deployed.
+  what it said. Lint, type-check, 779 tests and `next build` pass. Deployed `118d863` (run #61,
+  `everything`); the live Plan page shows 2,500 / 11,000 and packs of 800 and 4,000, and the
+  new bot started at 02:32:44 UTC.
