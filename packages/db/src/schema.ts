@@ -2162,6 +2162,46 @@ export const alertState = pgTable(
 
 export type AlertStateRow = typeof alertState.$inferSelect;
 
+/**
+ * Twitch subscriber roles (best bot item 10): the streamer a server connected, and the role its
+ * subscribers get. The streamer's own token is used once, at connecting, and never stored;
+ * Twitch then tells Garrison about new and ended subscriptions (EventSub).
+ */
+export const twitchSubRoles = pgTable(
+  "twitch_sub_roles",
+  {
+    guildId: text("guild_id")
+      .primaryKey()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    broadcasterId: text("broadcaster_id").notNull(),
+    broadcasterLogin: text("broadcaster_login").notNull(),
+    /** Given to members whose linked Twitch account subscribes. Null: none yet. */
+    roleId: text("role_id"),
+    /** active, or revoked when the streamer took Garrison's access away on Twitch. */
+    status: text("status").notNull().default("active"),
+    connectedBy: text("connected_by").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("twitch_sub_roles_broadcaster").on(t.broadcasterId),
+    check("twitch_sub_roles_status", sql`${t.status} IN ('active', 'revoked')`),
+  ],
+).enableRLS();
+export type TwitchSubRole = typeof twitchSubRoles.$inferSelect;
+
+/** Who subscribes to a connected streamer, by Twitch user ID, as Twitch last said. */
+export const twitchSubscribers = pgTable(
+  "twitch_subscribers",
+  {
+    broadcasterId: text("broadcaster_id").notNull(),
+    userId: text("user_id").notNull(),
+    /** 1000, 2000 or 3000. */
+    tier: text("tier").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.broadcasterId, t.userId] })],
+).enableRLS();
+
 // ---------------------------------------------------------------------------
 // Giveaways (Spoils)
 // ---------------------------------------------------------------------------

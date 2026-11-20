@@ -61,6 +61,7 @@ export * from "./repo/stats";
 export * from "./repo/suggestions";
 export * from "./repo/templates";
 export * from "./repo/tickets";
+export * from "./repo/twitch-subs";
 export * from "./repo/utilities";
 export * from "./repo/verify";
 export * from "./repo/voice";

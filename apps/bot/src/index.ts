@@ -18,6 +18,7 @@ import { watchDatabase } from "./lib/liveness.js";
 import { createLogger } from "./lib/logger.js";
 import { Metrics, maybePruneOperations } from "./lib/metrics.js";
 import { sweepAlerts } from "./modules/alerts/service.js";
+import { sweepSubRoles } from "./modules/alerts/sub-roles.js";
 import { maybePruneApplications } from "./modules/applications/service.js";
 import { type GameStatKeys, refreshOsrs } from "./modules/barracks/refresh.js";
 import { sweepStatRoles } from "./modules/barracks/stat-roles.js";
@@ -272,6 +273,7 @@ client.once(Events.ClientReady, async (ready) => {
       sweepEconomy(ctx, ready);
       await step("Scheduled messages", () => sweepMessages(ctx, ready));
       await step("Alert sweep", () => sweepAlerts(ctx, ready, alertKeys));
+      await step("Subscriber roles", () => sweepSubRoles(ctx, ready));
       await step("Weekly backups", () => sweepWeeklyBackups(ctx, ready));
       await step("Temporary ban sweep", () => liftExpiredBans(ctx, ready));
       await step("Giveaway sweep", () => sweepGiveaways(ctx, ready));

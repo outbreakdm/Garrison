@@ -101,6 +101,9 @@ jobs:
           DISCORD_CLIENT_SECRET: ${{ secrets.DISCORD_CLIENT_SECRET }}
           BNET_CLIENT_ID: ${{ secrets.BNET_CLIENT_ID }}
           BNET_CLIENT_SECRET: ${{ secrets.BNET_CLIENT_SECRET }}
+          TWITCH_CLIENT_ID: ${{ secrets.TWITCH_CLIENT_ID }}
+          TWITCH_CLIENT_SECRET: ${{ secrets.TWITCH_CLIENT_SECRET }}
+          TWITCH_EVENTSUB_SECRET: ${{ secrets.TWITCH_EVENTSUB_SECRET }}
           TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
           TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
           # Billing (optional until checkout opens): see docs/pricing.md, "Turning checkout on".
@@ -116,6 +119,9 @@ jobs:
           printf '%s' "$DISCORD_CLIENT_SECRET" | npx wrangler secret put DISCORD_CLIENT_SECRET
           if [ -n "$BNET_CLIENT_ID" ]; then printf '%s' "$BNET_CLIENT_ID" | npx wrangler secret put BNET_CLIENT_ID; fi
           if [ -n "$BNET_CLIENT_SECRET" ]; then printf '%s' "$BNET_CLIENT_SECRET" | npx wrangler secret put BNET_CLIENT_SECRET; fi
+          if [ -n "$TWITCH_CLIENT_ID" ]; then printf '%s' "$TWITCH_CLIENT_ID" | npx wrangler secret put TWITCH_CLIENT_ID; fi
+          if [ -n "$TWITCH_CLIENT_SECRET" ]; then printf '%s' "$TWITCH_CLIENT_SECRET" | npx wrangler secret put TWITCH_CLIENT_SECRET; fi
+          if [ -n "$TWITCH_EVENTSUB_SECRET" ]; then printf '%s' "$TWITCH_EVENTSUB_SECRET" | npx wrangler secret put TWITCH_EVENTSUB_SECRET; fi
           if [ -n "$TURNSTILE_SITE_KEY" ]; then printf '%s' "$TURNSTILE_SITE_KEY" | npx wrangler secret put TURNSTILE_SITE_KEY; fi
           if [ -n "$TURNSTILE_SECRET" ]; then printf '%s' "$TURNSTILE_SECRET" | npx wrangler secret put TURNSTILE_SECRET; fi
           for v in STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET STRIPE_PRICE_PRO_MONTHLY STRIPE_PRICE_PRO_YEARLY STRIPE_PRICE_AGENCY_MONTHLY STRIPE_PRICE_AGENCY_YEARLY BILLING_DATABASE_URL; do

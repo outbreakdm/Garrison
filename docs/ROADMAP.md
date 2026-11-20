@@ -60,7 +60,15 @@ then updates **Status** and the **Log** before stopping.
      invite, and (its own switch) the leveling leaderboard: names, levels and XP, top 25 on
      Free, 100 on Pro. Off, unknown and left servers are all a plain 404. **Migration 0084**
      (member_pages columns, a unique name, grants).
-  10. [ ] Patreon and Twitch subscriber roles.
+  10. [x] Twitch subscriber roles (Pro), on Stream alerts: a manager connects their channel;
+     members whose Twitch (linked from Discord Connections, now offered) subscribes get the role,
+     every 5 minutes. The streamer's token is used once and never stored: Twitch EventSub
+     webhooks (`/api/twitch/eventsub`, HMAC-checked, 10-minute window) report new and ended
+     subscriptions, and a revoke stops it. **Migration 0085**. **Owner:** dashboard secrets
+     `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, `TWITCH_EVENTSUB_SECRET`, and
+     `APP_URL/auth/twitch/callback` added as a redirect URL in the Twitch console. **Not built:
+     Patreon.** It needs a Patreon client of the owner's and its own creator connection and
+     webhooks, and Patreon already gives Discord roles itself; worth deciding whether it's wanted.
   11. [ ] Other languages (Spanish, Portuguese, German, French first).
   12. [ ] Fun extras: birthdays, trivia, counting.
 - **AI assistant v2 (planned 2026-11-19), next up:** `docs/AI_ASSISTANT.md`, "Assistant v2". Owner chose Haiku (Fast) and Sonnet (Smart, Pro and Agency only), supplies at each model's real cost, every coverage gap (writing, more modules, insight, how-to help), and a "Your server" workspace with hand edits (rename, drag to reorder) and an Apply build button. Phase 1 first: a message's hold assumes 12,000 input tokens a round but nothing enforces it, so a big server can cost more than it held. **Phases 1 to 8A built** (not deployed; migrations 0076 to 0079). The eval has never run on the real models: it needs `ANTHROPIC_API_KEY` and the owner's yes (about $6.20 for both models, 3 runs). Phases 5 to 8A (how-to help, server insight, writing, more settings and forum and announcement channels) are done too; 8B is built too (role menus, ticket panels, stream alerts, giveaways, the economy and shop, LFG templates, invite labels, server stats counters). **Deployed 2026-11-19** (`9c003e1`, run #54, migrations 0076 to 0079). What's left needs the owner: the first real-model eval run.
@@ -1563,3 +1571,9 @@ Decided (2026-11-12, owner):
   name, About and invite; `/s/iron-vanguard` and `/s/<id>` showed the server and a 5-member
   leaderboard (sample rows in the local database); an unknown name and a server with it off
   both 404. Lint, type-check, 832 tests pass. Not deployed.
+- 2026-11-20: Best bot item 10, Twitch subscriber roles (web `lib/twitch.ts`,
+  `auth/twitch/*`, `api/twitch/eventsub`, bot `modules/alerts/sub-roles.ts`). Kept the "no
+  tokens stored" rule by using EventSub instead of keeping the streamer's refresh token. Not
+  tried against Twitch (no keys here): the webhook signature check, the list's storage with each
+  login's grants, and the role changes are tested; the card shows "Waiting for Garrison's
+  Twitch keys" on the local preview. Lint, type-check, 837 tests pass. Not deployed.

@@ -7,12 +7,14 @@ import {
   feedLimit,
   getAlertFeeds,
   getGuildPlan,
+  getTwitchSubRole,
   isFeedPaused,
   listAlertState,
   readAlertFeeds,
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ProTag } from "@/components/cards/CardEditor";
 import { HowItWorks } from "@/components/HowItWorks";
 import { LibraryItem } from "@/components/Library";
 import { ListHead } from "@/components/ListHead";
@@ -21,13 +23,15 @@ import { PlansLink } from "@/components/ProUpsell";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { FormPanel } from "@/components/settings";
 import { getDb } from "@/lib/db";
-import { listNotifiableRoles, listTextChannels } from "@/lib/discord";
+import { listGuildRoles, listNotifiableRoles, listTextChannels } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
+import { isDangerousRole } from "@/lib/permissions";
 import { requireGuildAccess } from "@/lib/session";
 import { ago } from "../parley/when";
 import { requestAction } from "../requests";
 import { addFeed, removeFeed, saveFeed } from "./actions";
 import { FeedEditor } from "./FeedEditor";
+import { disconnectSubRole, saveSubRole } from "./sub-roles";
 
 export const metadata: Metadata = { title: "Stream alerts" };
 
@@ -55,6 +59,17 @@ export default async function AlertsPage({
     listNotifiableRoles(guild.id).catch(() => []),
     readFlash(),
   ]);
+  const [subRole, allRoles] = await Promise.all([
+    getTwitchSubRole(db, guild.id),
+    listGuildRoles(guild.id).catch(() => []),
+  ]);
+  const givable = allRoles.filter((r) => !r.managed && !isDangerousRole(r.permissions));
+  const twitchReady = Boolean(
+    process.env.TWITCH_CLIENT_ID &&
+      process.env.TWITCH_CLIENT_SECRET &&
+      process.env.TWITCH_EVENTSUB_SECRET,
+  );
+  const twitchResult = typeof query.twitch === "string" ? query.twitch : null;
   const ent = entitlements(plan);
   const feeds = readAlertFeeds(raw);
   const limit = feedLimit(ent);
@@ -279,6 +294,93 @@ export default async function AlertsPage({
           </FormPanel>
         )}
       </div>
+
+      <section className="g-card card-col" id="sub-roles" aria-labelledby="sub-roles-title">
+        <div className="card-head">
+          <h2 className="card-title" id="sub-roles-title">
+            Twitch subscriber role
+          </h2>
+          <ProTag on={ent["alerts.subRoles"]} />
+        </div>
+        <p className="g-help">
+          Members who subscribe to your Twitch channel get a role. They link Twitch to Garrison from
+          Discord Connections on their Account page; Garrison never sees your Twitch password, and
+          your sign-in is used once, to read who subscribes now, then dropped. Twitch tells Garrison
+          when subscriptions start and end.
+        </p>
+        {twitchResult === "connected" ? (
+          <p className="notice notice--ok" role="status">
+            Connected. {typeof query.subs === "string" ? `${query.subs} subscribers found.` : ""}
+          </p>
+        ) : twitchResult === "denied" ? (
+          <p className="notice" role="alert">
+            Twitch didn't give Garrison permission to read subscribers. Try again and allow it.
+          </p>
+        ) : twitchResult === "pro" ? (
+          <p className="notice" role="alert">
+            Subscriber roles are part of Garrison Pro.
+          </p>
+        ) : twitchResult === "error" ? (
+          <p className="notice" role="alert">
+            Twitch didn't answer. Nothing changed; try again in a minute.
+          </p>
+        ) : null}
+        {subRole ? (
+          <>
+            <p>
+              Connected to <strong>{subRole.broadcasterLogin}</strong>
+              {subRole.status === "revoked"
+                ? ". Twitch says the access was taken away: connect again to keep the role working."
+                : "."}
+            </p>
+            <form action={saveSubRole} className="field-row">
+              <input type="hidden" name="guildId" value={guild.id} />
+              <label className="g-field" htmlFor="sub-role">
+                <span>Role for subscribers</span>
+                <select
+                  className="g-input"
+                  id="sub-role"
+                  name="roleId"
+                  defaultValue={subRole.roleId ?? ""}
+                  disabled={!ent["alerts.subRoles"]}
+                >
+                  <option value="">None</option>
+                  {givable.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      @{r.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="submit"
+                className="g-btn g-btn--primary"
+                disabled={!ent["alerts.subRoles"]}
+              >
+                Save
+              </button>
+            </form>
+            <form action={disconnectSubRole}>
+              <input type="hidden" name="guildId" value={guild.id} />
+              <button type="submit" className="g-btn g-btn--ghost g-btn--sm">
+                Disconnect Twitch
+              </button>
+            </form>
+          </>
+        ) : !twitchReady ? (
+          <p className="g-help">
+            Waiting for Garrison's Twitch keys: the bot's owner sets them up.
+          </p>
+        ) : ent["alerts.subRoles"] ? (
+          <a className="g-btn g-btn--secondary" href={`/auth/twitch/login?guild=${guild.id}`}>
+            Connect your Twitch channel
+          </a>
+        ) : (
+          <p className="g-help">
+            Comes with Garrison Pro. <PlansLink guildId={guild.id} />
+          </p>
+        )}
+      </section>
 
       {feeds.length ? (
         <p className="g-help">

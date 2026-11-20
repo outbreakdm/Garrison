@@ -219,6 +219,12 @@ export const FEATURES = {
     free: 1,
     pro: 10,
   },
+  "alerts.subRoles": {
+    module: "alerts",
+    about: "A role for members who subscribe to the server's Twitch channel",
+    free: false,
+    pro: true,
+  },
   "members.publicSlug": {
     module: "members",
     about: "A public page with a name of its own (/s/raid-team) and the top 100 on its leaderboard",

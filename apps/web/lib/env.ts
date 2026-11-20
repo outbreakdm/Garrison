@@ -34,6 +34,24 @@ const schema = z.object({
     .min(1)
     .optional()
     .or(z.literal("").transform(() => undefined)),
+  /** The Twitch app (the bot's alerts use the same one), for subscriber roles. Optional. */
+  TWITCH_CLIENT_ID: z
+    .string()
+    .min(1)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  TWITCH_CLIENT_SECRET: z
+    .string()
+    .min(1)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  /** Signs Twitch's subscriber webhooks (EventSub): 10 to 100 characters of your choosing. */
+  TWITCH_EVENTSUB_SECRET: z
+    .string()
+    .min(10)
+    .max(100)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
 });
 
 let cached: z.infer<typeof schema> | undefined;

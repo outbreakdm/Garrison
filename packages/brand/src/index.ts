@@ -199,6 +199,7 @@ export const linkProviders = {
   epicgames: { label: "Epic Games", via: "discord" },
   bungie: { label: "Bungie", via: "discord" },
   roblox: { label: "Roblox", via: "discord" },
+  twitch: { label: "Twitch", via: "discord" },
   osrs: { label: "Old School RuneScape", via: "claimed" },
   rs3: { label: "RuneScape", via: "claimed" },
   wow: { label: "World of Warcraft", via: "battlenet" },

@@ -250,6 +250,10 @@ cd ../..
 
 Optional, only if you set up World of Warcraft linking: `BNET_CLIENT_ID` and `BNET_CLIENT_SECRET`.
 
+Optional, only for Twitch subscriber roles: `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` (the same
+Twitch app as the bot's alerts) and `TWITCH_EVENTSUB_SECRET` (10 to 100 random characters you make
+up). In the Twitch developer console, add `APP_URL/auth/twitch/callback` as a redirect URL.
+
 ### 6e. Deploy
 
 ```sh
