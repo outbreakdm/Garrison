@@ -8,6 +8,12 @@ import {
   rosterShares,
 } from "../schema";
 
+/**
+ * A removed link keeps only its account ID and dates (re-linking brings it back): the name
+ * and details shown on rosters and rank cards are wiped when it's removed.
+ */
+const FORGET = () => ({ removedAt: new Date(), displayName: "", details: {} });
+
 export interface LinkInput {
   userId: string;
   provider: string;
@@ -74,7 +80,7 @@ export async function syncLinksFromSource(
   if (stale.length) {
     await db
       .update(linkedAccounts)
-      .set({ removedAt: new Date() })
+      .set(FORGET())
       .where(
         inArray(
           linkedAccounts.id,
@@ -97,7 +103,7 @@ export async function listLinks(db: Db, userId: string) {
 export async function removeLink(db: Db, userId: string, linkId: string) {
   const [row] = await db
     .update(linkedAccounts)
-    .set({ removedAt: new Date() })
+    .set(FORGET())
     .where(
       and(
         eq(linkedAccounts.id, linkId),
@@ -113,7 +119,7 @@ export async function removeLink(db: Db, userId: string, linkId: string) {
 export async function removeProviderLinks(db: Db, userId: string, provider: string) {
   const rows = await db
     .update(linkedAccounts)
-    .set({ removedAt: new Date() })
+    .set(FORGET())
     .where(
       and(
         eq(linkedAccounts.userId, userId),

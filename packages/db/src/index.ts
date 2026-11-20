@@ -23,6 +23,7 @@ export * from "./rally";
 export * from "./rank-boosts";
 export * from "./rank-cards";
 export * from "./repo/access";
+export * from "./repo/account";
 export * from "./repo/actions";
 export * from "./repo/ai-usage";
 export * from "./repo/alerts";

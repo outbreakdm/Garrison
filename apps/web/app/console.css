@@ -4740,3 +4740,143 @@ a.item-tile:not([open]) > .panel__summary {
   border-radius: var(--radius-sm);
   background: var(--surface-raised);
 }
+
+/* --- Your account (2026-11-19): the person's own settings in four tabs ---------------------
+   Game accounts, Servers, Billing (only for someone who pays) and Privacy and data. The head is
+   who you are: your initial plate instead of the page gem, then Sign out on the right. */
+.account-head__id {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.account-head__id p {
+  margin-top: var(--space-1);
+}
+.main .account-head h1::before {
+  content: none;
+}
+.account [data-tab-panel] {
+  gap: var(--space-4);
+}
+.account [data-tab-panel].accounts-layout {
+  display: grid;
+}
+.account-foot {
+  max-width: none;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--line);
+}
+/* A server or plan row: its initial, its name and what it sees, then its actions. */
+.game-row.acct-server {
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+}
+.acct-server__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: flex-end;
+}
+.acct-server__actions form {
+  margin: 0;
+}
+/* Sign-ins: a go dot for this browser, a ring for the others (state by shape). */
+.game-row.acct-signin {
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  min-height: 60px;
+}
+.acct-signin__dot {
+  justify-self: center;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 2px var(--text-muted);
+}
+.acct-signin__dot.is-here {
+  background: var(--go);
+  box-shadow: none;
+}
+.acct-kept {
+  min-width: 560px;
+}
+.acct-kept tbody th {
+  font-weight: 600;
+  text-align: left;
+}
+.acct-kept td:last-child {
+  color: var(--text-muted);
+}
+#download > p,
+.acct-erase > p {
+  max-width: 72ch;
+  margin: 0;
+  line-height: 21px;
+}
+.acct-erase {
+  border-color: color-mix(in srgb, var(--alert) 32%, var(--line));
+}
+.acct-erase__confirm {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--alert) 8%, var(--surface-raised));
+}
+.acct-erase__confirm p {
+  margin: 0;
+}
+.link-option .field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.link-option .field-row .g-field {
+  flex: 1 1 160px;
+  max-width: 220px;
+}
+.game-row.game-row--plain {
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+}
+.game-row.acct-server .game-row__name span,
+.game-row.acct-signin .game-row__name span {
+  white-space: normal;
+}
+@media (max-width: 520px) {
+  /* What's kept reads as one block per kind of data, its two facts labelled. */
+  .acct-kept {
+    min-width: 0;
+  }
+  .acct-kept thead {
+    display: none;
+  }
+  .acct-kept tr {
+    display: grid;
+    gap: 2px;
+    padding: var(--space-3) var(--space-4);
+    border-top: 1px solid var(--line);
+  }
+  .acct-kept :is(th, td) {
+    padding: 0;
+    border: 0;
+  }
+  .acct-kept td::before {
+    content: attr(data-label) ": ";
+    color: var(--text-muted);
+  }
+  .acct-kept td:last-child {
+    color: var(--text);
+  }
+  .game-row.acct-server > .acct-server__actions {
+    grid-column: 2 / -1;
+    justify-content: flex-start;
+  }
+  .account-head__id .avatar--lg {
+    width: 44px;
+    height: 44px;
+    font-size: 19px;
+  }
+}

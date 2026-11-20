@@ -21,6 +21,7 @@ export default async function LoginPage({
   const params = await searchParams;
   const next = safeNext(params.next);
   const error = params.error ? ERRORS[params.error] : undefined;
+  const erased = params.done === "erased";
   return (
     <main className="center">
       <div className="g-card login">
@@ -32,6 +33,12 @@ export default async function LoginPage({
           You'll see servers where you have Manage Server.
         </p>
         {error ? <div className="notice">{error}</div> : null}
+        {erased ? (
+          <div className="notice notice--ok" role="status">
+            Erased: your linked accounts, what servers saw of them and your rank card details.
+            You're signed out everywhere.
+          </div>
+        ) : null}
         <a className="g-btn g-btn--primary" href={`/auth/login?next=${encodeURIComponent(next)}`}>
           Sign in with Discord
         </a>

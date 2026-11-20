@@ -13,6 +13,13 @@ then updates **Status** and the **Log** before stopping.
   new AI assistant clip, then Write it, Fix what needs you, It saves itself. All four clips and
   every landing mockup now show today's real UI (the clips are built from the dashboard's own
   DOM and CSS). Needs attention links straight to each fix and was restyled.
+- **Your account (2026-11-20), not deployed:** `/account` is the person's own settings in four
+  tabs: Game accounts, Servers (what each server sees, Your space, Stop sharing, rank card
+  details), Billing (Agency seats with Manage billing, Pro plans they pay for) and Privacy
+  (sign-ins with "Sign out everywhere else", Download your data as JSON, What Garrison keeps,
+  Erase your data). Removing a link now wipes its name and details. The member's You page shows
+  "Your game accounts here". No migration. The Privacy Policy still says data requests go by
+  email; adding the self-serve download and erase to it is the owner's call.
 - **Optimize and polish (2026-11-17):** 15 fewer database queries on every dashboard page (the
   menu's module settings in one query), faster AI assistant paint, no layout shift on Settings,
   24 px targets, unused CSS removed (see the Log). To run the Worker beside the database, set the
@@ -1438,3 +1445,16 @@ Decided (2026-11-12, owner):
 - 2026-11-20: Deployed `db83944` (run #62, `dashboard`, no command registration). garrisonbot.com
   shows Open dashboard and the AI assistant clip first; the served clips and posters match the
   build byte for byte.
+- 2026-11-20: Your account redone (`/account`, `app/account/export`, `packages/db/src/repo/account.ts`).
+  Four page tabs instead of one long page: Game accounts, Servers, Billing (only for someone who
+  pays) and Privacy. New: sign-ins with "Sign out everywhere else"; "Download your data" (one
+  JSON file of everything that's the person's own: links, shares, rank card details, levels,
+  wallets, entries, sign-ups, suggestions, appeals, plans, AI use); "What Garrison keeps";
+  "Erase your data" (links removed and wiped, every share stopped, rank card details cleared,
+  signed out everywhere; server records stay with each server, by email on request). Removing a
+  link (web, bot, or a Connections re-sync) now wipes its display name and details instead of
+  only hiding the row. Agency owners get Manage billing on Account. The member's You page lists
+  "Your game accounts here". `account.test.ts` runs it all as `garrison_web`, so the dashboard
+  role's grants are proven. Checked in the local preview at desktop and phone width. Biome (the
+  untouched CRLF files fail format as before), type-check, 783 tests and `next build` pass. Not
+  deployed.

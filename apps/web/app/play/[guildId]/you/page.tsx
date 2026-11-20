@@ -13,6 +13,7 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { GameMark, linkDetail, providerLabel } from "@/components/GameMark";
 import { getDb } from "@/lib/db";
 import { readFlash } from "@/lib/flash";
 import { memberSpace } from "@/lib/member";
@@ -117,6 +118,42 @@ export default async function YouPage({ params }: { params: Promise<{ guildId: s
             <Link href="/account">Change them on Account</Link>.
           </p>
         ) : null}
+      </section>
+
+      <section className="g-card table-card" id="accounts-here" aria-labelledby="here-title">
+        <div className="table-card__head card-head">
+          <h2 className="card-title" id="here-title">
+            Your game accounts here <span className="count">{links.length}</span>
+          </h2>
+          <Link className="g-btn g-btn--ghost g-btn--sm" href="/account?tab=servers">
+            Change on Account
+          </Link>
+        </div>
+        {links.length ? (
+          <ul className="game-list">
+            {links.map((l) => (
+              <li className="game-row game-row--plain" key={l.id}>
+                <GameMark provider={l.provider} />
+                <span className="game-row__name">
+                  <strong>{l.displayName}</strong>
+                  <span>
+                    {[providerLabel(l.provider), linkDetail(l.details)].filter(Boolean).join(" · ")}
+                  </span>
+                </span>
+                <span className={`g-badge ${l.verified ? "g-badge--go" : "g-badge--caution"}`}>
+                  {l.verified ? "Verified" : "Claimed"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="empty-block">
+            <p>
+              This server doesn't see your game accounts. Link them on{" "}
+              <Link href="/account">Account</Link>, then run /link here in Discord to share them.
+            </p>
+          </div>
+        )}
       </section>
 
       <section className="g-card table-card" aria-labelledby="board-title">
