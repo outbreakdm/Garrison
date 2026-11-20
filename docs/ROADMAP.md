@@ -1458,3 +1458,10 @@ Decided (2026-11-12, owner):
   role's grants are proven. Checked in the local preview at desktop and phone width. Biome (the
   untouched CRLF files fail format as before), type-check, 783 tests and `next build` pass. Not
   deployed.
+- 2026-11-20: Release-readiness audit, competitor comparison and AI cost model (artifact
+  https://claude.ai/artifact/UwdHSC75CbQ1C84eFH7eD3). Must fix: sales tax decision, support mail,
+  Discord portal (Public Bot is off), a verification plan for 75 servers, CI that never runs on the
+  default branch and a deploy that runs no checks, no alerting, Supabase backups and size, the
+  real-server release test, the first AI eval run, a legal read, purging removed links, Turnstile.
+  AI for 1,000 server owners: 70 to 78% margin expected at 5 to 10% Pro, 15 to 42% if every pool is
+  spent; Free is the swing cost, break-even about 3.9% conversion in the worst case.
