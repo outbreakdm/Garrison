@@ -17,6 +17,7 @@ export * from "./messages";
 export * from "./ops-calendar";
 export * from "./plans";
 export * from "./profile";
+export * from "./public-page";
 export * from "./qm-edits";
 export * from "./qm-settings";
 export * from "./qm-writes";

@@ -5,6 +5,8 @@ import {
   getMemberPages,
   getOpsTimezone,
   listSettingsChanges,
+  PUBLIC_ABOUT_MAX,
+  publicBoardSize,
   type SettingsChange,
   STAT_KINDS,
   STAT_SOURCES,
@@ -13,6 +15,7 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import { AutoSaveCard } from "@/components/AutoSave";
+import { ProTag } from "@/components/cards/CardEditor";
 import { formatTime } from "@/components/format";
 import { SetupLayout } from "@/components/PageLayouts";
 import { PageTabs, TabPanel } from "@/components/PageTabs";
@@ -21,12 +24,13 @@ import { SettingsNotice, Switch } from "@/components/settings";
 import { formAction } from "@/lib/autosave";
 import { getDb } from "@/lib/db";
 import { botLook, listGuildRoles, listTextChannels, searchMembers } from "@/lib/discord";
-import { readFlash } from "@/lib/flash";
+import { contentKey, readFlash } from "@/lib/flash";
+import { siteUrl } from "@/lib/hosts";
 import { requireGuildAccess } from "@/lib/session";
 import { FIELD_LABELS, ladderText, templatesChangeText } from "@/lib/settings-schema";
 import { requestAction } from "../requests";
 import { AccessPanel } from "./AccessPanel";
-import { saveMemberPages, saveOps, undoChange } from "./actions";
+import { saveMemberPages, saveOps, savePublicPage, undoChange } from "./actions";
 import { BotProfileForm } from "./BotProfileForm";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -209,6 +213,9 @@ export default async function SettingsPage({
   const roleNames = new Map(roles.map((r) => [r.id, r.name]));
   const undone = new Set(history.map((h) => h.revertsChangeId).filter(Boolean));
   const base = `/servers/${guild.id}`;
+  const ent = entitlements(plan);
+  const publicPath = `/s/${memberPages.publicSlug ?? guild.id}`;
+  const publicHref = `${siteUrl(process.env.APP_URL)}${publicPath}`;
 
   return (
     <>
@@ -292,6 +299,83 @@ export default async function SettingsPage({
               label="Your record: their own warnings, timeouts, kicks and bans"
               help="Each member sees only their own cases, never who acted, with your appeal page if it's on."
             />
+          </AutoSaveCard>
+          <AutoSaveCard
+            id="public-page"
+            title="Public page"
+            action={savePublicPage}
+            undo={undoChange}
+            guildId={guild.id}
+            stamp={contentKey(memberPages)}
+            saveLabel="Save public page"
+            need="manager"
+          >
+            <p className="g-help">
+              A page anyone can open, without signing in: the server's name, icon and member count,
+              your About text, a Join button and, if you allow it, the leaderboard.{" "}
+              {memberPages.publicPage ? (
+                <a href={publicHref} target="_blank" rel="noreferrer">
+                  Open it
+                </a>
+              ) : (
+                "Off until you turn it on."
+              )}
+            </p>
+            <Switch
+              name="publicPage"
+              defaultChecked={memberPages.publicPage}
+              label="Public page"
+              help={`At ${publicPath}.`}
+            />
+            <Switch
+              name="publicLeaderboard"
+              defaultChecked={memberPages.publicLeaderboard}
+              label="Show the leaderboard on it"
+              help={`The top ${publicBoardSize(ent)} by XP: their Discord names, levels and XP. Leave it off if your members wouldn't want that public.`}
+            />
+            <label className="g-field" htmlFor="publicSlug">
+              <span>
+                Its own name <ProTag on={ent["members.publicSlug"]} />
+              </span>
+              <input
+                className="g-input"
+                id="publicSlug"
+                name="publicSlug"
+                maxLength={32}
+                defaultValue={memberPages.publicSlug ?? ""}
+                placeholder="raid-team"
+                disabled={!ent["members.publicSlug"] && !memberPages.publicSlug}
+              />
+              <span className="g-help">
+                Lower-case letters, numbers and dashes. Without one, the page uses the server's ID.
+              </span>
+            </label>
+            <label className="g-field" htmlFor="publicAbout">
+              <span>About</span>
+              <textarea
+                className="g-input"
+                id="publicAbout"
+                name="publicAbout"
+                rows={3}
+                maxLength={PUBLIC_ABOUT_MAX}
+                defaultValue={memberPages.publicAbout ?? ""}
+                placeholder="A friendly raiding guild. Mythic+ every night, all welcome."
+              />
+            </label>
+            <label className="g-field" htmlFor="publicInvite">
+              <span>Invite link for the Join button</span>
+              <input
+                className="g-input"
+                id="publicInvite"
+                name="publicInvite"
+                maxLength={60}
+                defaultValue={
+                  memberPages.publicInvite ? `https://discord.gg/${memberPages.publicInvite}` : ""
+                }
+                placeholder="https://discord.gg/…"
+              />
+              <span className="g-help">Use one that doesn't expire. Empty: no Join button.</span>
+            </label>
           </AutoSaveCard>
         </SetupLayout>
       </TabPanel>

@@ -58,7 +58,8 @@ export function hostRedirect(
   if (h === hosts.site) {
     // The landing page's own pictures and recordings stay here: a redirect to the dashboard
     // host would also fail the page's img-src.
-    if (PUBLIC_PATHS.has(pathname) || /^\/(_next|media|art)\//.test(pathname)) return null;
+    // Servers' public pages (/s/...) are served here too: they need no sign-in.
+    if (PUBLIC_PATHS.has(pathname) || /^\/(_next|media|art|s)\//.test(pathname)) return null;
     return `https://${hosts.dashboard}${pathname}${search}`;
   }
   if (h === hosts.dashboard && pathname === "/") return `https://${hosts.dashboard}/servers`;

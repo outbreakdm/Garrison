@@ -2,9 +2,12 @@
 
 import {
   applySettingsChange,
+  checkPublicPage,
   checkVerifyQuestions,
   entitlements,
   getGuildPlan,
+  getMemberPages,
+  publicSlugTaken,
   type SettingsModule,
   undoSettingsChange,
 } from "@garrison/db";
@@ -59,6 +62,7 @@ const PLACES = {
   ops: { page: "settings", panel: "server" },
   history: { page: "settings", panel: "history" },
   members: { page: "settings", panel: "members" },
+  publicPage: { page: "settings", panel: "public-page" },
 } as const satisfies Record<string, Place>;
 
 /**
@@ -301,6 +305,40 @@ export async function undoChange(form: FormData): Promise<AutoResult> {
  * Which member pages show (docs/MEMBER_PAGES.md). A manager's call, like who has access: it
  * decides what members see about themselves, their own cases included.
  */
+/**
+ * The server's public page (packages/db public-page.ts): its switches, name, About text and
+ * invite. Managers only, like the member pages; a name another server has is refused.
+ */
+export async function savePublicPage(form: FormData): Promise<AutoResult> {
+  const guildId = String(form.get("guildId") ?? "");
+  const access = await checkGuildAccess(guildId, "manager");
+  if (!access) return failed(form, guildId, PLACES.publicPage, "forbidden");
+  const db = await getDb();
+  const [before, plan] = await Promise.all([
+    getMemberPages(db, guildId),
+    getGuildPlan(db, guildId),
+  ]);
+  const refuse = (message: string): AutoResult => {
+    if (isAuto(form)) return { status: "error", message };
+    redirect(`/servers/${guildId}/settings?edit=public-page#public-page`);
+  };
+  const checked = checkPublicPage(
+    {
+      publicPage: form.get("publicPage") === "on",
+      publicLeaderboard: form.get("publicLeaderboard") === "on",
+      publicSlug: form.get("publicSlug") ?? before.publicSlug ?? "",
+      publicAbout: form.get("publicAbout") ?? "",
+      publicInvite: form.get("publicInvite") ?? "",
+    },
+    entitlements(plan),
+    before,
+  );
+  if (!checked.ok) return refuse(checked.error);
+  if (checked.value.publicSlug && (await publicSlugTaken(db, checked.value.publicSlug, guildId)))
+    return refuse("Another server has that name. Try another.");
+  return save("members", form, { ...checked.value }, PLACES.publicPage, "publicPage");
+}
+
 export async function saveMemberPages(form: FormData): Promise<AutoResult> {
   const guildId = String(form.get("guildId") ?? "");
   const access = await checkGuildAccess(guildId, "manager");

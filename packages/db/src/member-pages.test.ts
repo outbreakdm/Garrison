@@ -21,7 +21,7 @@ afterAll(() => close());
 
 describe("member pages, as garrison_web", () => {
   it("shows You and hides Your record until an owner says otherwise", async () => {
-    expect(await getMemberPages(db, G)).toEqual({ showYou: true, showRecord: false });
+    expect(await getMemberPages(db, G)).toMatchObject({ showYou: true, showRecord: false });
   });
 
   it("saves the switches with history, and undo puts them back", async () => {
@@ -34,11 +34,11 @@ describe("member pages, as garrison_web", () => {
     expect(on).toMatchObject({ ok: true, change: { module: "members" } });
     if (!on.ok) return;
     expect(on.change.changes).toEqual({ showRecord: { from: false, to: true } });
-    expect(await getMemberPages(db, G)).toEqual({ showYou: true, showRecord: true });
+    expect(await getMemberPages(db, G)).toMatchObject({ showYou: true, showRecord: true });
 
     const back = await undoSettingsChange(db, G, on.change.id, owner, []);
     expect(back.ok).toBe(true);
-    expect(await getMemberPages(db, G)).toEqual({ showYou: true, showRecord: false });
+    expect(await getMemberPages(db, G)).toMatchObject({ showYou: true, showRecord: false });
   });
 
   it("lets only a manager undo it when told to (as for access)", async () => {
@@ -51,7 +51,7 @@ describe("member pages, as garrison_web", () => {
     if (!off.ok) throw new Error("save failed");
     const refused = await undoSettingsChange(db, G, off.change.id, owner, ["access", "members"]);
     expect(refused.ok).toBe(false);
-    expect(await getMemberPages(db, G)).toEqual({ showYou: false, showRecord: false });
+    expect(await getMemberPages(db, G)).toMatchObject({ showYou: false, showRecord: false });
   });
 });
 

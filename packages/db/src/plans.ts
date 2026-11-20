@@ -163,6 +163,7 @@ export type Module =
   | "suggestions"
   | "applications"
   | "utilities"
+  | "members"
   | "insights";
 
 interface Feature<T> {
@@ -217,6 +218,12 @@ export const FEATURES = {
     about: "Application and recruitment forms, reviewed by staff",
     free: 1,
     pro: 10,
+  },
+  "members.publicSlug": {
+    module: "members",
+    about: "A public page with a name of its own (/s/raid-team) and the top 100 on its leaderboard",
+    free: false,
+    pro: true,
   },
   "utilities.stickies": {
     module: "utilities",

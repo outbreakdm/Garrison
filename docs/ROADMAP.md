@@ -54,7 +54,12 @@ then updates **Status** and the **Log** before stopping.
      `RIOT_API_KEY`; Riot's development keys expire daily, so a live bot needs Riot's production
      approval. **Not built:** Valorant ranks, which need Riot Sign-On (RSO) approval on top. No
      migration.
-  9. [ ] Public server page and leaderboard.
+  9. [x] Public server page and leaderboard: `/s/<server ID>` (Pro: `/s/<its own name>`),
+     served on the public site with no sign-in, off until a manager turns it on in Settings →
+     Public page. It shows the name, icon and member count, an About text, a Join button from an
+     invite, and (its own switch) the leveling leaderboard: names, levels and XP, top 25 on
+     Free, 100 on Pro. Off, unknown and left servers are all a plain 404. **Migration 0084**
+     (member_pages columns, a unique name, grants).
   10. [ ] Patreon and Twitch subscriber roles.
   11. [ ] Other languages (Spanish, Portuguese, German, French first).
   12. [ ] Fun extras: birthdays, trivia, counting.
@@ -1553,3 +1558,8 @@ Decided (2026-11-12, owner):
   the next lookup 6 hours later; upsertLink now keeps them. Not tried against the real Steam
   or Riot APIs (no keys here); tested against recorded answers. Lint, type-check, 829 tests
   pass. Not deployed.
+- 2026-11-20: Best bot item 9, public server page (`packages/db/src/public-page.ts`, web
+  `app/s/[key]`, Settings → Public page). Checked on the local preview after 0084: saved with a
+  name, About and invite; `/s/iron-vanguard` and `/s/<id>` showed the server and a 5-member
+  leaderboard (sample rows in the local database); an unknown name and a server with it off
+  both 404. Lint, type-check, 832 tests pass. Not deployed.

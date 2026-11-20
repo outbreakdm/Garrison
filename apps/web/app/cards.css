@@ -2692,3 +2692,103 @@
     padding-left: 0;
   }
 }
+
+/* --- A server's public page (/s/...) -------------------------------------------------
+   No sign-in, nothing of the dashboard: the server's face, its words, and the board. */
+
+.public-server {
+  display: grid;
+  gap: var(--space-6);
+  max-width: 760px;
+  margin-inline: auto;
+  padding-block: var(--space-6);
+}
+.public-server__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+.public-server__icon {
+  flex: none;
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  object-fit: cover;
+  background: var(--surface-raised);
+}
+.public-server__icon--blank {
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 700;
+}
+.public-server__title {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.public-server__title h1 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.public-server__meta {
+  margin: var(--space-1) 0 0;
+  color: var(--text-muted);
+}
+.public-server__about {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 16px;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+.public-board {
+  display: grid;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.public-board__row {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr) auto auto;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  border-top: 1px solid var(--line);
+}
+.public-board__row:first-child {
+  border-top: 0;
+}
+.public-board__place {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+.public-board__row:nth-child(-n + 3) .public-board__place {
+  color: var(--accent-strong);
+}
+.public-board__name {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.public-board__level,
+.public-board__xp {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+@media (max-width: 520px) {
+  .public-board__row {
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
+  }
+  .public-board__level {
+    display: none;
+  }
+}
+.public-server__foot {
+  margin: 0;
+}

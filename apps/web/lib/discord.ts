@@ -116,6 +116,7 @@ function shared<T>(store: Map<string, Shared<T>>, key: string, load: () => Promi
 interface RawGuild {
   id: string;
   owner_id: string;
+  icon?: string | null;
   /** With `with_counts`: members, and members online right now (approximate). */
   approximate_member_count?: number;
   approximate_presence_count?: number;
@@ -461,6 +462,25 @@ export async function guildCounts(
     online: g.approximate_presence_count ?? null,
     boosts: g.premium_subscription_count ?? null,
   };
+}
+
+/**
+ * What a server's public page shows of it from Discord: its icon and about how many members it
+ * has. Cached 30 s with every other read of the server. Null when Discord can't say.
+ */
+export async function publicGuildLook(
+  guildId: string,
+): Promise<{ iconUrl: string | null; members: number | null } | null> {
+  try {
+    const g = await rawGuild(guildId);
+    const icon = g.icon && /^(a_)?[0-9a-f]{32}$/.test(g.icon) ? g.icon : null;
+    return {
+      iconUrl: icon ? `https://cdn.discordapp.com/icons/${guildId}/${icon}.png?size=128` : null,
+      members: g.approximate_member_count ?? null,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function guildOwnerId(guildId: string): Promise<string> {

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, getTableName, isNotNull, notInArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableName, isNotNull, isNull, notInArray, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import {
   alertSettings,
@@ -86,7 +86,16 @@ export const EDITABLE_FIELDS = {
   // Who else may use the dashboard; checked with checkAccessGrants before it gets here.
   access: ["grants"],
   // Which member pages show (docs/MEMBER_PAGES.md).
-  members: ["showYou", "showRecord"],
+  // The public page's fields are checked with checkPublicPage before they get here.
+  members: [
+    "showYou",
+    "showRecord",
+    "publicPage",
+    "publicLeaderboard",
+    "publicSlug",
+    "publicAbout",
+    "publicInvite",
+  ],
   // Cards are checked with checkWelcome before they get here.
   welcome: [
     "joinEnabled",
@@ -693,5 +702,50 @@ export async function listSettingsChanges(db: Db, guildId: string, limit = 20) {
 /** Which member pages this server shows: "You" on and "Your record" off until set. */
 export async function getMemberPages(db: Db, guildId: string) {
   const [row] = await db.select().from(memberPages).where(eq(memberPages.guildId, guildId));
-  return { showYou: row?.showYou ?? true, showRecord: row?.showRecord ?? false };
+  return {
+    showYou: row?.showYou ?? true,
+    showRecord: row?.showRecord ?? false,
+    publicPage: row?.publicPage ?? false,
+    publicLeaderboard: row?.publicLeaderboard ?? false,
+    publicSlug: row?.publicSlug ?? null,
+    publicAbout: row?.publicAbout ?? null,
+    publicInvite: row?.publicInvite ?? null,
+  };
+}
+
+/**
+ * A public page by its name or its server's ID, only while it's on and Garrison is still in
+ * the server. Null otherwise, so a page that's off can't be told apart from one never made.
+ */
+export async function getPublicPage(db: Db, key: string) {
+  const k = key.toLowerCase();
+  if (!/^[a-z0-9-]{3,32}$/.test(k) && !/^\d{17,20}$/.test(k)) return null;
+  const [row] = await db
+    .select({
+      guildId: memberPages.guildId,
+      name: guilds.name,
+      publicLeaderboard: memberPages.publicLeaderboard,
+      publicSlug: memberPages.publicSlug,
+      publicAbout: memberPages.publicAbout,
+      publicInvite: memberPages.publicInvite,
+    })
+    .from(memberPages)
+    .innerJoin(guilds, eq(guilds.id, memberPages.guildId))
+    .where(
+      and(
+        eq(memberPages.publicPage, true),
+        isNull(guilds.leftAt),
+        /^\d+$/.test(k) ? eq(memberPages.guildId, k) : eq(memberPages.publicSlug, k),
+      ),
+    );
+  return row ?? null;
+}
+
+/** Whether another server already has this public page name. */
+export async function publicSlugTaken(db: Db, slug: string, guildId: string) {
+  const [row] = await db
+    .select({ guildId: memberPages.guildId })
+    .from(memberPages)
+    .where(eq(memberPages.publicSlug, slug));
+  return !!row && row.guildId !== guildId;
 }

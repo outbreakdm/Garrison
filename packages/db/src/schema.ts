@@ -560,14 +560,28 @@ export const dashboardAccess = pgTable(
  * card ("You", on by default) and their own cases ("Your record", off until an owner turns it
  * on). Only the dashboard reads or writes it, through Settings history.
  */
-export const memberPages = pgTable("member_pages", {
-  guildId: text("guild_id")
-    .primaryKey()
-    .references(() => guilds.id, { onDelete: "cascade" }),
-  showYou: boolean("show_you").notNull().default(true),
-  showRecord: boolean("show_record").notNull().default(false),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}).enableRLS();
+export const memberPages = pgTable(
+  "member_pages",
+  {
+    guildId: text("guild_id")
+      .primaryKey()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    showYou: boolean("show_you").notNull().default(true),
+    showRecord: boolean("show_record").notNull().default(false),
+    /** The server's public page (public-page.ts): off until the owner turns it on. */
+    publicPage: boolean("public_page").notNull().default(false),
+    publicLeaderboard: boolean("public_leaderboard").notNull().default(false),
+    /** Pro: the page's own name, /s/<slug>. Lower case. */
+    publicSlug: text("public_slug"),
+    publicAbout: text("public_about"),
+    publicInvite: text("public_invite"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("member_pages_public_slug").on(t.publicSlug),
+    check("member_pages_public_about", sql`char_length(${t.publicAbout}) <= 300`),
+  ],
+).enableRLS();
 export type SettingsModule = (typeof settingsModule.enumValues)[number];
 
 // ---------------------------------------------------------------------------
