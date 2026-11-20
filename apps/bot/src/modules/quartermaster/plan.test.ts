@@ -247,8 +247,10 @@ describe("orders", () => {
       { id: "300000000000000001", name: "chat", parentId: "100000000000000001" },
       { id: "300000000000000002", name: "rules", parentId: "100000000000000001" },
       { id: "300000000000000003", name: "lfg", parentId: "100000000000000002" },
+      { id: "300000000000000004", name: "lobby", parentId: null },
+      { id: "300000000000000005", name: "memes", parentId: null },
     ],
-    channelCount: 6,
+    channelCount: 8,
     roleCount: 7,
   };
   const withOrder = (order: AiPlan["order"], operations: Op[] = []) => ({
@@ -280,6 +282,28 @@ describe("orders", () => {
       ["rules", "chat"],
       ["VIP", "Pings"],
     ]);
+  });
+
+  it("orders the channels outside any category, and up to 12 lists in one plan", () => {
+    const loose = validatePlan(
+      withOrder([
+        { scope: "channels", parent: null, items: ["300000000000000005", "300000000000000004"] },
+      ]),
+      laddered,
+    );
+    expect(loose.ok).toBe(true);
+    if (!loose.ok) return;
+    expect(loose.orders[0]).toMatchObject({ parent: null, names: ["memes", "lobby"] });
+    // A whole-server tidy: more lists than the old limit of 6.
+    const swap = {
+      scope: "roles" as const,
+      parent: null,
+      items: ["200000000000000012", "200000000000000011"],
+    };
+    const many = validatePlan(withOrder(Array.from({ length: 8 }, () => swap)), laddered);
+    expect(many.ok).toBe(true);
+    const tooMany = validatePlan(withOrder(Array.from({ length: 13 }, () => swap)), laddered);
+    expect(!tooMany.ok && tooMany.errors).toContainEqual("A plan can set 12 orders at most.");
   });
 
   it("orders what the plan makes by ref, in its own category", () => {

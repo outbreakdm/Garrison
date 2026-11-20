@@ -351,7 +351,7 @@ How Discord lays a server out (design with this in mind):
 - Names: up to 100 characters. Text channel names are lowercase with hyphens.
 
 Ordering:
-- An order entry lists items top to bottom: scope "categories" (category ids or refs), "channels" with parent set to one category (the channels in it, ids or refs of channels this plan creates there), or "roles" (role ids or refs).
+- An order entry lists items top to bottom: scope "categories" (category ids or refs), "channels" with parent set to one category (the channels in it, ids or refs of channels this plan creates there) or null (the channels outside any category), or "roles" (role ids or refs).
 - The items swap among the places they hold now, so list only what should move, in the order you want; anything not listed stays put. Two or more items per entry.
 - Roles marked editable: false (staff powers, bot roles, roles above Garrison) never go in an order, and you can't put a role above them. Say so if the admin wants them moved; they move them in Server Settings.
 - Each order entry counts as one change. Use one entry per list you reorder (all categories, one category's channels, the roles).

@@ -140,8 +140,11 @@ export type ValidationResult =
     }
   | { ok: false; errors: string[] };
 
-/** The most orders one plan sets (all categories, a few categories' channels, the roles). */
-export const MAX_ORDERS = 6;
+/**
+ * The most orders one plan sets: all categories, the roles, and the channels of each category
+ * (and those outside any). Six refused a whole-server tidy of a server with five categories.
+ */
+export const MAX_ORDERS = 12;
 
 /**
  * Turn model output into a plan Garrison will run, or explain why not. A plan
@@ -339,7 +342,9 @@ function validateOrders(
     let parent: string | null = null;
     if (o.scope === "channels") {
       const p = (o.parent ?? "").trim();
-      if (made.get(p.toLowerCase())?.kind === "create_category") parent = p.toLowerCase();
+      // No parent: the channels outside any category.
+      if (!p || p.toLowerCase() === "null" || p.toLowerCase() === "none") parent = null;
+      else if (made.get(p.toLowerCase())?.kind === "create_category") parent = p.toLowerCase();
       else if (categories.has(p)) parent = p;
       else {
         errors.push(`${n}: "${p.slice(0, 40)}" isn't a category in this plan or the server.`);
