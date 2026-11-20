@@ -8,6 +8,12 @@ then updates **Status** and the **Log** before stopping.
 ## Pick up here
 
 - **AI assistant v2 (planned 2026-11-19), next up:** `docs/AI_ASSISTANT.md`, "Assistant v2". Owner chose Haiku (Fast) and Sonnet (Smart, Pro and Agency only), supplies at each model's real cost, every coverage gap (writing, more modules, insight, how-to help), and a "Your server" workspace with hand edits (rename, drag to reorder) and an Apply build button. Phase 1 first: a message's hold assumes 12,000 input tokens a round but nothing enforces it, so a big server can cost more than it held. **Phases 1 to 8A built** (not deployed; migrations 0076 to 0079). The eval has never run on the real models: it needs `ANTHROPIC_API_KEY` and the owner's yes (about $6.20 for both models, 3 runs). Phases 5 to 8A (how-to help, server insight, writing, more settings and forum and announcement channels) are done too; 8B is built too (role menus, ticket panels, stream alerts, giveaways, the economy and shop, LFG templates, invite labels, server stats counters). **Deployed 2026-11-19** (`9c003e1`, run #54, migrations 0076 to 0079). What's left needs the owner: the first real-model eval run.
+- **Landing refresh and Needs attention (2026-11-20), not deployed:** hero buttons are Add to
+  Discord, Open dashboard, See it in action (now to "Watch it work"); Watch it work opens with a
+  new AI assistant clip, then Write it, Fix what needs you, It saves itself. All four clips and
+  every landing mockup now show today's real UI (the clips are built from the dashboard's own
+  DOM and CSS). Needs attention links straight to each fix and was restyled. Deploy when the
+  owner says so.
 - **Optimize and polish (2026-11-17):** 15 fewer database queries on every dashboard page (the
   menu's module settings in one query), faster AI assistant paint, no layout shift on Settings,
   24 px targets, unused CSS removed (see the Log). To run the Worker beside the database, set the
@@ -1400,3 +1406,33 @@ Decided (2026-11-12, owner):
   what it said. Lint, type-check, 779 tests and `next build` pass. Deployed `118d863` (run #61,
   `everything`); the live Plan page shows 2,500 / 11,000 and packs of 800 and 4,000, and the
   new bot started at 02:32:44 UTC.
+- 2026-11-20: Landing refresh. Hero: Add to Discord, Open dashboard, See it in action (which now
+  goes to "Watch it work", the section it names). Watch it work: a new first clip, the AI
+  assistant (type a request, pick Smart, the reply, Your server marking the Valorant category,
+  three channels and Gold+ as New, Apply 5 changes, "Applied: 5 changes made."), then Write it,
+  Fix what needs you (was first), It saves itself. All four clips were remade from the real
+  dashboard: `promo/landing/real/` (outside git) snapshots each page's finished DOM and the
+  dashboard's CSS and fonts from the local preview (`dump.mjs`, with a preview session cookie),
+  stacks them in the HyperFrames stage and animates between them (`build.mjs`, then
+  `hyperframes render --fps 60 --crf 21` in each clip folder, re-encoded at CRF 24 with
+  faststart: 1.8 to 3.1 MB each). Landing mockups redone against the real pages: the AI
+  assistant is now the page's chat, the Bastion v1 Fast | Smart picker and the Your server panel
+  with marked changes and Apply, in a full-width row (`components/AssistantShot.tsx`, the
+  dashboard's own classes); the hero's Lockdown card has its header badge, duration bar and
+  reason field; Insights has the tab bar, the range pills and four tiles in the page's own
+  words; the ladder has its help line; the group card has Join. Product windows take their
+  page's accent, as the dashboard's shell does.
+- 2026-11-20: Needs attention checked with every kind of problem seeded on the preview (lockdown,
+  quarantine, failing health check, waiting plan, short raid, four blocked modules, a stuck and
+  a failed request): the right ones show, alerts first. Links fixed: a blocked module now goes
+  to the field that fixes it (the page's `#section`, which opens its tab: Moderation log to
+  Escalation and appeals, Logs to Setup) or to Discord's permission page, with the page's own
+  words ("Pick a channel", "Give Move Members"); the raid goes to the Raids tab, lockdown and
+  quarantine to their panels (Quarantined got an id), and request kinds that had no page
+  (economy, templates, AI hand edits, seasons, verification answers) now have one. The plan
+  line says "applies" instead of "builds". Restyled with the impeccable polish pass: a header
+  bar with a warning tile, "3 happening now · 5 not working · 3 to look at", marks by shape
+  (filled triangle now, outlined triangle broken like the menu, ring waiting), the fix as a
+  quiet button, most urgent first, five rows shown and the rest behind "Show N more". DESIGN.md
+  has the rules. Biome (only four untouched CRLF files fail format, as before), type-check,
+  779 tests from the repo root and `next build` pass. Not deployed.

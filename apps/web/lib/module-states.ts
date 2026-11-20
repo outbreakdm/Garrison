@@ -28,6 +28,12 @@ export interface ModuleStatus {
   state: ModuleState;
   /** For blocked: what's wrong, in a sentence. */
   reason?: string;
+  /**
+   * For blocked: where it's fixed and the words for the link, as the page's own head note
+   * says them. A "#section" on the module's page (its tab opens by itself), or "permissions"
+   * for Discord's page that gives Garrison a permission it lacks.
+   */
+  fix?: { to: `#${string}` | "permissions"; action: string };
 }
 
 /** What the checks know about the server right now; null where Discord didn't answer. */
@@ -58,12 +64,22 @@ type Check = (
 ) => Omit<ModuleStatus, "name" | "href">;
 
 const switchWithChannel =
-  (flag: string, channel: string, what: string): Check =>
+  (flag: string, channel: string, what: string, at: `#${string}` = "#settings"): Check =>
   (v, facts) => {
     if (v[flag] !== true) return { state: "off" };
     const id = str(v[channel]);
-    if (!id) return { state: "blocked", reason: `On, but no ${what} channel is picked.` };
-    if (gone(facts, id)) return { state: "blocked", reason: `Its ${what} channel was deleted.` };
+    if (!id)
+      return {
+        state: "blocked",
+        reason: `On, but no ${what} channel is picked.`,
+        fix: { to: at, action: "Pick a channel" },
+      };
+    if (gone(facts, id))
+      return {
+        state: "blocked",
+        reason: `Its ${what} channel was deleted.`,
+        fix: { to: at, action: "Pick another" },
+      };
     return { state: "on" };
   };
 
@@ -76,7 +92,11 @@ const MODULES: { name: string; href: string; module: SettingsModule; check: Chec
       const id = str(v.logChannelId);
       if (!id) return { state: "off" };
       return gone(f, id)
-        ? { state: "blocked", reason: "The moderation log's channel was deleted." }
+        ? {
+            state: "blocked",
+            reason: "The moderation log's channel was deleted.",
+            fix: { to: "#settings", action: "Pick another" },
+          }
         : { state: "on" };
     },
   },
@@ -105,14 +125,18 @@ const MODULES: { name: string; href: string; module: SettingsModule; check: Chec
     module: "ledger",
     check: (v, f) =>
       gone(f, str(v.channelId))
-        ? { state: "blocked", reason: "Its log channel was deleted, so nothing is posted." }
+        ? {
+            state: "blocked",
+            reason: "Its log channel was deleted, so nothing is posted.",
+            fix: { to: "#settings", action: "Pick another" },
+          }
         : { state: "on" },
   },
   {
     name: "Welcome",
     href: "/herald",
     module: "welcome",
-    check: switchWithChannel("joinEnabled", "joinChannelId", "welcome"),
+    check: switchWithChannel("joinEnabled", "joinChannelId", "welcome", "#join"),
   },
   {
     // A menu works once it's posted in Discord.
@@ -169,9 +193,17 @@ const MODULES: { name: string; href: string; module: SettingsModule; check: Chec
     check: (v, f) => {
       if (v.enabled !== true) return { state: "off" };
       if (!has(v.creatorChannelIds))
-        return { state: "blocked", reason: "On, but no “New room” channel is picked." };
+        return {
+          state: "blocked",
+          reason: "On, but no “New room” channel is picked.",
+          fix: { to: "#settings", action: "Pick one" },
+        };
       if (f.perms !== null && (f.perms & (MOVE_MEMBERS | ADMINISTRATOR)) === 0n)
-        return { state: "blocked", reason: "Garrison can't move members: it needs Move Members." };
+        return {
+          state: "blocked",
+          reason: "Garrison can't move members: it needs Move Members.",
+          fix: { to: "permissions", action: "Give Move Members" },
+        };
       return { state: "on" };
     },
   },
@@ -187,11 +219,17 @@ const MODULES: { name: string; href: string; module: SettingsModule; check: Chec
     module: "stats",
     check: (v, f) => {
       if (v.enabled !== true) return { state: "off" };
-      if (!has(v.counters)) return { state: "blocked", reason: "On, but there are no counters." };
+      if (!has(v.counters))
+        return {
+          state: "blocked",
+          reason: "On, but there are no counters.",
+          fix: { to: "#settings", action: "Add one" },
+        };
       if (f.perms !== null && (f.perms & (MANAGE_CHANNELS | ADMINISTRATOR)) === 0n)
         return {
           state: "blocked",
           reason: "Garrison can't make channels: it needs Manage Channels.",
+          fix: { to: "permissions", action: "Give Manage Channels" },
         };
       return { state: "on" };
     },

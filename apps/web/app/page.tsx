@@ -6,17 +6,17 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Art } from "@/components/Art";
+import { AssistantShot } from "@/components/AssistantShot";
 import { BuildBox } from "@/components/BuildBox";
 import { DemoClip } from "@/components/DemoClip";
+import { DurationBar } from "@/components/DurationBar";
 import { Sparkline } from "@/components/insights/Sparkline";
 import { Logo } from "@/components/Logo";
-import { ServerPreview } from "@/components/ServerPreview";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { BUILD_IDEAS } from "@/lib/build-prompt";
 import { siteUrl } from "@/lib/hosts";
 import { LEGAL } from "@/lib/legal";
 import { publicMetrics } from "@/lib/public-metrics";
-import type { ServerPreview as Preview } from "@/lib/qm-preview";
 import { SESSION_COOKIE } from "@/lib/session";
 import { currentTheme } from "@/lib/theme";
 import "./landing.css";
@@ -177,87 +177,42 @@ const FAQ: { q: string; a: string }[] = [
 
 const COST_ANSWER = `Every module works on Free, for any number of servers, and everything a server needs to stay safe stays free. Pro adds your own look, higher limits and history for one server; Agency covers up to five you run. A new subscription can be refunded within ${LEGAL.refundDays} days, as the Refund Policy explains.`;
 
-/** The example server in the AI assistant shot: today's channels plus one plan's additions. */
-const DEMO_PREVIEW: Preview = {
-  loose: [],
-  categories: [
-    {
-      key: "town",
-      name: "Town Square",
-      isNew: false,
-      touched: false,
-      channels: [
-        { key: "general", name: "general", kind: "text", locked: false, isNew: false, details: [] },
-        { key: "clips", name: "clips", kind: "text", locked: false, isNew: false, details: [] },
-        { key: "lounge", name: "Lounge", kind: "voice", locked: false, isNew: false, details: [] },
-      ],
-    },
-    {
-      key: "val",
-      name: "Valorant",
-      isNew: true,
-      touched: true,
-      channels: [
-        {
-          key: "casual",
-          name: "casual-lfg",
-          kind: "text",
-          locked: false,
-          isNew: true,
-          details: ["slowmode 30 s"],
-        },
-        {
-          key: "ranked",
-          name: "ranked-lfg",
-          kind: "text",
-          locked: true,
-          isNew: true,
-          details: ["only Gold+ can see it"],
-        },
-        {
-          key: "stack",
-          name: "Stack 1",
-          kind: "voice",
-          locked: false,
-          isNew: true,
-          details: ["5 people"],
-        },
-      ],
-    },
-  ],
-  roles: [
-    { key: "gold", name: "Gold+", color: 0xffc83a, isNew: true, details: ["no permissions"] },
-    { key: "mods", name: "Mods", color: 0x5ab0ff, isNew: false, details: [] },
-    { key: "raiders", name: "Raiders", color: 0x2bd99f, isNew: false, details: [] },
-  ],
-  added: { categories: 1, channels: 3, roles: 1 },
-};
-
 /** The Insights shot: an example server's month, as the page's own stat tiles draw it. */
-const DEMO_STATS: { label: string; value: string; delta: number; sub: string; trend: number[] }[] =
-  [
-    {
-      label: "Messages",
-      value: "48,210",
-      delta: 18,
-      sub: "in 30 days",
-      trend: [1210, 1340, 1290, 1480, 1420, 1610, 1580, 1720, 1690, 1850, 1810, 1960],
-    },
-    {
-      label: "Active members",
-      value: "1,284",
-      delta: 9,
-      sub: "sent a message or talked",
-      trend: [980, 1010, 1040, 1020, 1090, 1110, 1150, 1140, 1190, 1220, 1250, 1284],
-    },
-    {
-      label: "Joined, net",
-      value: "+212",
-      delta: -4,
-      sub: "joins minus leaves",
-      trend: [22, 19, 25, 17, 21, 18, 16, 20, 15, 17, 14, 16],
-    },
-  ];
+const DEMO_STATS: {
+  label: string;
+  value: string;
+  delta?: number;
+  tone?: "go";
+  sub: string;
+  trend?: number[];
+}[] = [
+  {
+    label: "Messages",
+    value: "48,210",
+    delta: 18,
+    sub: "1,607 a day",
+    trend: [1210, 1340, 1290, 1480, 1420, 1610, 1580, 1720, 1690, 1850, 1810, 1960],
+  },
+  {
+    label: "Active members",
+    value: "1,284",
+    delta: 9,
+    sub: "Posted at least once · 312 a day",
+    trend: [980, 1010, 1040, 1020, 1090, 1110, 1150, 1140, 1190, 1220, 1250, 1284],
+  },
+  {
+    label: "Joined, net",
+    value: "+212",
+    tone: "go",
+    sub: "486 joined · 274 left",
+    trend: [22, 19, 25, 17, 21, 18, 16, 20, 15, 17, 14, 16],
+  },
+  {
+    label: "Stayed a week",
+    value: "64%",
+    sub: "311 of 486 who joined over a week ago",
+  },
+];
 
 /** The Discord shot: real commands, as Discord's picker lists them after a "/". */
 const DEMO_COMMANDS: [name: string, what: string][] = [
@@ -269,7 +224,7 @@ const DEMO_COMMANDS: [name: string, what: string][] = [
 ];
 
 /**
- * "Watch it work": three short 1080p60 clips of the dashboard's real screens, labels and steps,
+ * "Watch it work": four short 1080p60 clips of the dashboard's real screens, labels and steps,
  * made in HyperFrames, each with a poster of where it ends.
  */
 const WATCH: {
@@ -282,13 +237,13 @@ const WATCH: {
   alt: string;
 }[] = [
   {
-    id: "fix",
-    tab: "Fix what needs you",
-    title: "See what needs you, and fix it there.",
-    line: "The Overview lists what's switched on but can't work, and why. One click to the page, one pick, and its light turns green.",
-    video: "/media/garrison-fix-it.mp4",
-    poster: "/media/garrison-fix-it.webp",
-    alt: "The Overview lists Suggestions as on but unable to work. Fix it opens Suggestions; the pointer picks #suggestions from the channel list, it saves, the warning clears, its light in the menu turns green and a toast offers Undo.",
+    id: "ai",
+    tab: "Ask the AI assistant",
+    title: "Say what you need. See it before it happens.",
+    line: "Type it in plain words and pick Fast or Smart. Your server marks every channel and role the draft adds, and nothing changes in Discord until you press Apply.",
+    video: "/media/garrison-ai-assistant.mp4",
+    poster: "/media/garrison-ai-assistant.webp",
+    alt: "On the AI assistant page, a request for a Valorant section is typed and sent with Bastion v1 Smart. The reply describes the plan, and the Your server panel beside the chat marks the new Valorant category, its three channels and the Gold+ role as New. The pointer presses Apply 5 changes, and a toast says the changes are built.",
   },
   {
     id: "preview",
@@ -298,6 +253,15 @@ const WATCH: {
     video: "/media/garrison-live-preview.mp4",
     poster: "/media/garrison-live-preview.webp",
     alt: "Typing a new welcome card title, then @ and Name to add the member's name. The Discord preview beside the editor changes with every letter, and the card saves itself.",
+  },
+  {
+    id: "fix",
+    tab: "Fix what needs you",
+    title: "See what needs you, and fix it there.",
+    line: "The Overview lists what's switched on but can't work, and why. One click to the page, one pick, and its light turns green.",
+    video: "/media/garrison-fix-it.mp4",
+    poster: "/media/garrison-fix-it.webp",
+    alt: "The Overview lists Suggestions as on but unable to work. Fix it opens Suggestions; the pointer picks #suggestions from the channel list, it saves, the warning clears, its light in the menu turns green and a toast offers Undo.",
   },
   {
     id: "saves",
@@ -451,6 +415,7 @@ function Feature({
   children,
   visual,
   flip = false,
+  wide = false,
 }: {
   id: string;
   icon: string;
@@ -458,9 +423,14 @@ function Feature({
   children: ReactNode;
   visual: ReactNode;
   flip?: boolean;
+  /** The copy above and the shot across the whole row, for a page that needs the width. */
+  wide?: boolean;
 }) {
   return (
-    <article className={`lp-feature ${flip ? "lp-feature--flip" : ""}`} id={id}>
+    <article
+      className={`lp-feature${flip ? " lp-feature--flip" : ""}${wide ? " lp-feature--wide" : ""}`}
+      id={id}
+    >
       <div className="lp-feature__copy">
         <Art slot={icon} className="lp-feature__icon" decorative />
         <h3>{title}</h3>
@@ -562,12 +532,14 @@ export default async function Home() {
                 <a className="lp-btn lp-btn--primary" href={invite}>
                   Add to Discord
                 </a>
-              ) : (
-                <Link className="lp-btn lp-btn--ghost" href={dashboard}>
-                  {openLabel}
-                </Link>
-              )}
-              <a className="lp-btn lp-btn--ghost" href="#demo">
+              ) : null}
+              <Link
+                className={`lp-btn ${invite ? "lp-btn--ghost" : "lp-btn--primary"}`}
+                href={dashboard}
+              >
+                Open dashboard
+              </Link>
+              <a className="lp-btn lp-btn--ghost" href="#watch">
                 See it in action
                 <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
                   <path
@@ -593,22 +565,37 @@ export default async function Home() {
                 </div>
                 <div className="lp-app__grid">
                   {/* Two states of the same card: before the press, and the locked card it becomes. */}
-                  <div className="g-card card-col lp-lock">
-                    <h3 className="card-title">Lockdown</h3>
-                    <div className="lp-lock__states">
-                      <div className="card-col lp-lock__before" aria-hidden="true">
-                        <span className="muted">
-                          Not locked. Locking stops @everyone talking in every channel; staff roles
-                          keep talking.
+                  <div className="g-card card-col gate-lockdown lp-lock">
+                    <div className="card-head">
+                      <h3 className="card-title">Lockdown</h3>
+                      <span className="lp-lock__badge">
+                        <span
+                          className="g-badge g-badge--off lp-lock__badge-off"
+                          aria-hidden="true"
+                        >
+                          Not locked
                         </span>
+                        <span className="g-badge g-badge--alert lp-lock__badge-on">Active</span>
+                      </span>
+                    </div>
+                    <div className="lp-lock__states">
+                      <div className="card-col lp-lock__before" aria-hidden="true" inert>
+                        <p className="g-help">
+                          Locking stops @everyone talking in every channel; staff roles keep
+                          talking.
+                        </p>
                         <div className="lp-lock__form">
                           <span className="g-field">
                             <span>Lift automatically after</span>
                             <span className="g-input lp-fake-select">15 minutes</span>
                           </span>
-                          <span className="check">
-                            <span className="lp-fake-check" aria-hidden="true" />
-                            Pause invites
+                          <label className="check">
+                            <input type="checkbox" defaultChecked tabIndex={-1} />
+                            <span>Pause invites too</span>
+                          </label>
+                          <span className="g-field">
+                            <span>Reason (shown in the alert)</span>
+                            <span className="g-input">Raid in progress</span>
                           </span>
                         </div>
                         <span className="g-btn g-btn--danger lp-lock__btn">
@@ -621,7 +608,6 @@ export default async function Home() {
                         </span>
                       </div>
                       <div className="card-col lp-lock__after">
-                        <span className="g-badge g-badge--alert">Active</span>
                         <div>
                           <div className="list-row">
                             <span className="muted">Started</span>
@@ -631,16 +617,25 @@ export default async function Home() {
                             <span className="muted">Lifts</span>
                             <span className="mono">9:19 PM</span>
                           </div>
+                        </div>
+                        <DurationBar
+                          value={0}
+                          max={15}
+                          label="Lockdown time served, out of its length"
+                          text="Lifts in 15 min"
+                          tone="alert"
+                        />
+                        <div>
                           <div className="list-row">
                             <span className="muted">Invites</span>
                             <span className="mono">Paused</span>
                           </div>
                           <div className="list-row">
                             <span className="muted">Reason</span>
-                            <span className="mono">Locked from the dashboard</span>
+                            <span className="mono">Raid in progress</span>
                           </div>
                         </div>
-                        <span className="g-btn g-btn--primary">Lift lockdown</span>
+                        <span className="g-btn g-btn--primary lp-lock__lift">Lift lockdown</span>
                       </div>
                     </div>
                   </div>
@@ -648,6 +643,9 @@ export default async function Home() {
                     <div className="g-card table-card lp-req">
                       <div className="table-card__head row-between">
                         <h3 className="card-title">Requests</h3>
+                        <span className="g-help">
+                          Garrison does these in Discord, usually within seconds.
+                        </span>
                       </div>
                       <div className="lp-req__row">
                         <span className="lp-req__badge">
@@ -667,6 +665,9 @@ export default async function Home() {
                             </span>
                           </span>
                         </span>
+                        <span className="lp-req__when">
+                          mira <span className="mono">9:04 PM</span>
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -682,7 +683,7 @@ export default async function Home() {
                   "Invites are paused.",
                   "Lifts in 15 minutes, or run /lockdown end.",
                 ]}
-                field={["Reason", "Locked from the dashboard"]}
+                field={["Reason", "Raid in progress"]}
                 foot="Security · lockdown 3f2a9c"
               />
             </DiscordWindow>
@@ -740,22 +741,18 @@ export default async function Home() {
             id="ai-builder"
             icon="lp-icon-quartermaster"
             title="Describe the channels you want. Review. Build. Undo."
+            wide
             visual={
               <AppWindow path="AI assistant" className="lp-win--qm" tint="steel">
-                <div className="lp-app lp-app--stack">
-                  <p className="lp-qm-ask">
-                    “A Valorant section with ranked and casual LFG, a voice room, and a Gold+ role
-                    that's the only one who can see ranked.”
-                  </p>
-                  <ServerPreview name="Example server" preview={DEMO_PREVIEW} planned />
-                </div>
+                <AssistantShot />
               </AppWindow>
             }
           >
             <p>
-              The AI assistant turns a sentence into a plan and shows your server with the changes
-              before anything happens. It only adds channels and roles, new roles get no
-              permissions, and any build can be undone, even after a partial failure.
+              Tell the AI assistant what your server needs, in plain words, and pick Bastion v1's
+              Fast or Smart mode. Your server, beside the chat, marks every change before anything
+              happens; Apply builds it. New roles get no permissions, and any build can be undone,
+              even after a partial failure.
             </p>
           </Feature>
 
@@ -767,23 +764,46 @@ export default async function Home() {
             visual={
               <AppWindow path="Insights" tint="steel">
                 <div className="lp-app lp-app--stack">
+                  <div className="ins-bar">
+                    <span className="ins-tabs">
+                      <span className="ins-tab" aria-current="page">
+                        Overview
+                      </span>
+                      <span className="ins-tab">Activity</span>
+                      <span className="ins-tab">Members</span>
+                    </span>
+                    <span className="list-head__filters lp-hide-sm">
+                      <span className="list-pill">7 days</span>
+                      <span className="list-pill" aria-current="true">
+                        30 days
+                      </span>
+                      <span className="list-pill">90 days</span>
+                      <span className="list-pill">1 year</span>
+                    </span>
+                  </div>
                   <div className="stat-tiles lp-stats">
                     {DEMO_STATS.map((t) => (
                       <div className="g-card stat-tile" key={t.label}>
                         <span className="stat-tile__label">{t.label}</span>
-                        <span className="stat-tile__value">{t.value}</span>
+                        <span className={`stat-tile__value${t.tone ? ` tone-${t.tone}` : ""}`}>
+                          {t.value}
+                        </span>
                         <span className="stat-tile__foot">
-                          <span
-                            className={`stat-tile__delta ${t.delta > 0 ? "tone-go" : "tone-caution"}`}
-                          >
-                            {t.delta > 0 ? "▲" : "▼"} {Math.abs(t.delta)}%
-                          </span>
+                          {t.delta ? (
+                            <span
+                              className={`stat-tile__delta ${t.delta > 0 ? "tone-go" : "tone-caution"}`}
+                            >
+                              {t.delta > 0 ? "▲" : "▼"} {Math.abs(t.delta)}%
+                            </span>
+                          ) : null}
                           <span className="g-help">{t.sub}</span>
                         </span>
-                        <Sparkline
-                          values={t.trend}
-                          label={`${t.label} over the month: ${t.delta > 0 ? "up" : "down"} ${Math.abs(t.delta)}%`}
-                        />
+                        {t.trend ? (
+                          <Sparkline
+                            values={t.trend}
+                            label={`${t.label} over the month, from ${t.trend[0]} to ${t.trend.at(-1)}`}
+                          />
+                        ) : null}
                       </div>
                     ))}
                   </div>
@@ -846,7 +866,13 @@ export default async function Home() {
                 <AppWindow path="Moderation" tint="cobalt">
                   <div className="lp-app lp-app--stack">
                     <div className="g-card card-col">
-                      <h3 className="card-title">Escalation ladder</h3>
+                      <div>
+                        <h3 className="card-title">Escalation ladder</h3>
+                        <div className="g-help">
+                          Applied automatically when a member's active warnings reach a step. Undone
+                          warnings don't count.
+                        </div>
+                      </div>
                       <div className="ladder">
                         <div className="ladder__step">
                           <span className="mono">1–2 warnings</span>
@@ -896,7 +922,7 @@ export default async function Home() {
                         <h3 className="card-title">Mythic+ 12 · Ara-Kara</h3>
                         <div className="lfg__meta">io 2500+ · Thu, 9:30 PM</div>
                       </div>
-                      <span className="g-badge g-badge--accent">1 open</span>
+                      <span className="g-badge g-badge--accent">1 left</span>
                     </div>
                     <ul className="seats">
                       <li className="seat-row">
@@ -932,6 +958,12 @@ export default async function Home() {
                         </span>
                       </li>
                     </ul>
+                    <div className="lfg__actions">
+                      <span className="act-row">
+                        <span className="g-input g-input--sm lp-fake-select">DPS</span>
+                        <span className="g-btn g-btn--secondary">Join</span>
+                      </span>
+                    </div>
                   </article>
                 </div>
               </AppWindow>

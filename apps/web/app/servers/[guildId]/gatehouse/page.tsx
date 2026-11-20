@@ -232,7 +232,11 @@ export default async function GatehousePage({
                   </>
                 )}
               </section>
-              <section className="g-card card-col" aria-labelledby="quarantine-title">
+              <section
+                className="g-card card-col"
+                id="quarantine"
+                aria-labelledby="quarantine-title"
+              >
                 <h2 className="card-title" id="quarantine-title">
                   Quarantined <span className="count">{quarantines.length}</span>
                 </h2>

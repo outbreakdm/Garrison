@@ -447,6 +447,26 @@ button.lp-btn {
   color: var(--text);
   font-family: var(--font-sans);
 }
+/* The window takes its page's color the way the dashboard's shell does (app.css, "color
+   identities"): its switches, selected options and marks. */
+.lp-win[data-tint] {
+  --accent: var(--id);
+  --accent-ink: var(--id-ink);
+  --accent-strong: var(--id-text);
+  --focus: var(--id-text);
+}
+.lp-win[data-tint="cobalt"] {
+  --id-ink: var(--cobalt-ink);
+}
+.lp-win[data-tint="orchid"] {
+  --id-ink: var(--orchid-ink);
+}
+.lp-win[data-tint="volt"] {
+  --id-ink: var(--volt-ink);
+}
+.lp-win[data-tint="steel"] {
+  --id-ink: var(--steel-ink);
+}
 .lp-win__bar {
   display: flex;
   align-items: center;
@@ -535,24 +555,6 @@ button.lp-btn {
   background-size: 5px 5px;
   background-repeat: no-repeat;
 }
-.lp-fake-check {
-  position: relative;
-  width: 36px;
-  height: 20px;
-  border: 1px solid var(--accent-strong);
-  border-radius: var(--radius-sm);
-  background: var(--accent);
-}
-.lp-fake-check::after {
-  content: "";
-  position: absolute;
-  top: 3px;
-  left: 19px;
-  width: 12px;
-  height: 12px;
-  border-radius: var(--radius-sm);
-  background: var(--accent-ink);
-}
 .lp-lock__btn {
   position: relative;
   align-self: flex-start;
@@ -560,7 +562,7 @@ button.lp-btn {
 }
 .lp-req__row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: var(--space-3);
   align-items: start;
   padding: var(--space-3) var(--space-4);
@@ -582,8 +584,21 @@ button.lp-btn {
   color: var(--text-muted);
 }
 .lp-req__queued,
-.lp-req__waiting {
+.lp-req__waiting,
+.lp-lock__badge-off {
   opacity: 0;
+}
+.lp-req__when {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+/* The Lockdown head's badge: Not locked, then Active as the card flips. */
+.lp-lock__badge {
+  display: grid;
+  justify-items: end;
+}
+.lp-lock__badge > * {
+  grid-area: 1 / 1;
 }
 
 /* Discord's message layout */
@@ -772,16 +787,51 @@ button.lp-btn {
   bottom: 0;
   width: min(380px, 72%);
 }
-.lp-qm-ask {
-  margin: 0;
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid color-mix(in srgb, var(--accent-strong) 45%, var(--line));
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  font-size: 15px;
+/* A wide row: the title and its words side by side above, the shot across the whole row. */
+.lp-feature--wide {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
 }
-.lp-win--qm .sp__pane {
+.lp-feature--wide .lp-feature__copy {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 0 72px;
+  align-items: end;
+}
+.lp-feature--wide .lp-feature__copy > * {
+  grid-column: 1;
+}
+.lp-feature--wide .lp-feature__copy > p {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+.lp-feature--wide .lp-feature__copy h3 {
+  margin-bottom: 0;
+}
+
+/* The AI assistant shot: the page's chat beside its Your server panel, as the dashboard lays
+   them out on a wide screen, at their natural height instead of the screen's. */
+.lp-qm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: var(--space-4);
+  align-items: start;
+}
+.lp-qm .qm-chat {
+  height: auto;
+  min-height: 0;
+}
+.lp-qm .qm-chat__log {
+  flex: none;
+  overflow: visible;
+}
+.lp-qm .qm-plan {
+  position: static;
   max-height: none;
+}
+.lp-qm__input {
+  display: block;
+  color: var(--text-muted);
 }
 
 /* Every module, grouped like the dashboard menu: a quiet reference after the showcase */
@@ -847,7 +897,7 @@ button.lp-btn {
 
 /* Insights shot: the dashboard's own stat tiles, three across. */
 .lp-stats {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 /* "Run it from Discord": Discord's command picker over the message box. */
@@ -1507,6 +1557,12 @@ button.lp-btn {
 .lp-stage .lp-lock__after {
   animation: lp-in 0.4s var(--ease-out) 2.95s backwards;
 }
+.lp-stage .lp-lock__badge-off {
+  animation: lp-out 0.3s ease-out 2.85s backwards;
+}
+.lp-stage .lp-lock__badge-on {
+  animation: lp-pop 0.36s var(--ease-snap) 2.95s backwards;
+}
 @media (prefers-reduced-motion: reduce) {
   .lp-cursor {
     display: none;
@@ -1571,6 +1627,15 @@ button.lp-btn {
   }
   .lp-feature--flip .lp-feature__copy {
     order: 0;
+  }
+  .lp-feature--wide .lp-feature__copy {
+    display: block;
+  }
+  .lp-feature--wide .lp-feature__copy h3 {
+    margin-bottom: 16px;
+  }
+  .lp-qm {
+    grid-template-columns: minmax(0, 1fr);
   }
   .lp-catalog__group {
     grid-template-columns: minmax(0, 1fr);
@@ -1664,8 +1729,8 @@ button.lp-btn {
   /* Each shot keeps only the element that proves its point. */
   .lp-hide-sm,
   .lp-stage .lp-app__head,
-  .lp-win--qm .sp__pane--roles,
-  .lp-win--qm .lp-qm-ask {
+  .lp-qm__choices,
+  .lp-qm .qm-model__price {
     display: none;
   }
   .lp-hero__art,

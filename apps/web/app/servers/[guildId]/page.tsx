@@ -79,23 +79,28 @@ const BUILD_WORDS: Record<string, string> = {
   undone: "undone",
 };
 
-/** Which page shows a request's outcome, so a failure links to where it can be retried. */
+/**
+ * Where a request's outcome shows, so a failure links to where it can be retried: the page,
+ * and its tab or section when that isn't the first thing the page shows. A request kind
+ * missing here links to the Overview's own Requests panel.
+ */
 const REQUEST_PAGE: Record<string, string> = {
-  create_raid: "/rally",
-  move_signup: "/rally",
-  call_signups: "/rally",
-  cancel_raid: "/rally",
+  create_raid: "/rally?tab=raids",
+  move_signup: "/rally?tab=raids",
+  call_signups: "/rally?tab=raids",
+  cancel_raid: "/rally?tab=raids",
+  raid_signup: "/rally?tab=raids",
+  raid_withdraw: "/rally?tab=raids",
   close_lfg: "/rally",
   create_lfg: "/rally",
   lfg_join: "/rally",
   lfg_leave: "/rally",
-  raid_signup: "/rally",
-  raid_withdraw: "/rally",
-  lockdown_start: "/gatehouse",
-  lockdown_end: "/gatehouse",
-  release_quarantine: "/gatehouse",
-  post_verify_panel: "/gatehouse",
-  anti_nuke: "/gatehouse",
+  lockdown_start: "/gatehouse#lockdown",
+  lockdown_end: "/gatehouse#lockdown",
+  release_quarantine: "/gatehouse#quarantine",
+  post_verify_panel: "/gatehouse?tab=verification",
+  verify_decide: "/gatehouse#answers",
+  anti_nuke: "/gatehouse?tab=antinuke",
   undo_case: "/watch",
   mod_action: "/watch",
   purge: "/watch",
@@ -103,7 +108,11 @@ const REQUEST_PAGE: Record<string, string> = {
   qm_chat: "/quartermaster",
   qm_apply: "/quartermaster",
   qm_cancel: "/quartermaster",
-  undo_build: "/quartermaster",
+  qm_edit: "/quartermaster",
+  qm_remove: "/quartermaster",
+  undo_build: "/quartermaster?tab=history",
+  template_save: "/quartermaster?tab=templates",
+  template_apply: "/quartermaster?tab=templates",
   post_role_menu: "/insignia",
   bot_profile: "/settings#profile",
   post_message: "/dispatch",
@@ -115,11 +124,19 @@ const REQUEST_PAGE: Record<string, string> = {
   test_alert: "/beacon",
   backup_create: "/gatehouse#backups",
   backup_restore: "/gatehouse#backups",
-  run_health: "#requests",
+  season_start: "/ranks#seasons",
+  economy_adjust: "/economy",
+  economy_buy: "/economy",
+  economy_purchase: "/economy",
 };
 
+/**
+ * One thing that needs someone. Its mark says how much, by shape as well as color: alert (a
+ * filled red triangle) is happening now; caution (an amber triangle, as the menu marks a
+ * module) is broken until someone fixes it; waiting (an amber ring) only needs a look.
+ */
 interface Attention {
-  tone: "alert" | "caution";
+  tone: "alert" | "caution" | "waiting";
   title: string;
   detail: string;
   href: string;
@@ -127,6 +144,31 @@ interface Attention {
 }
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+/** How many the strip shows before "Show more"; every alert shows, however many. */
+const ATTENTION_SHOWN = 5;
+
+function AttentionRow({ a, i }: { a: Attention; i: number }) {
+  return (
+    <li>
+      <a
+        className={`attention__item attention__item--${a.tone}`}
+        href={a.href}
+        aria-label={`${a.title}. ${a.go}`}
+        aria-describedby={`attn-${i}`}
+      >
+        <span className="attention__mark" aria-hidden="true" />
+        <span className="attention__text">
+          <strong>{a.title}</strong>
+          <span id={`attn-${i}`}>{a.detail}</span>
+        </span>
+        <span className="attention__go" aria-hidden="true">
+          {a.go}
+          <span className="cue" />
+        </span>
+      </a>
+    </li>
+  );
+}
 const num = (n: number) => n.toLocaleString("en-US");
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 /** "Nov 14" from "2026-11-14", in UTC like the counts. */
@@ -242,24 +284,28 @@ export default async function OverviewPage({
   const seated = nextSignups.filter((x) => !x.bench);
   const g = o.gatehouse;
   const base = `/servers/${guild.id}`;
+  const requestHref = (kind: string) => {
+    const page = REQUEST_PAGE[kind];
+    return page ? `${base}${page}` : "#requests";
+  };
 
-  // What needs someone, most urgent first. Nothing shows when nothing does.
+  // What needs someone (sorted most urgent first below). Nothing shows when nothing does.
   const attention: Attention[] = [];
   if (o.activeLockdown)
     attention.push({
       tone: "alert",
       title: "The server is locked down",
       detail: "@everyone can't post until the lockdown is lifted. Staff roles still can.",
-      href: `${base}/gatehouse`,
-      go: "Security",
+      href: `${base}/gatehouse#lockdown`,
+      go: "Lockdown",
     });
   if (o.quarantines24h > 0)
     attention.push({
       tone: "alert",
       title: `${plural(o.quarantines24h, "member", "members")} quarantined by anti-nuke`,
       detail: "Their roles were removed and saved. Restore them if it was a mistake.",
-      href: `${base}/gatehouse`,
-      go: "Security",
+      href: `${base}/gatehouse#quarantine`,
+      go: "Quarantined",
     });
   const failing = health?.checks.filter((c) => c.status !== "ok") ?? [];
   if (failing.length)
@@ -274,10 +320,10 @@ export default async function OverviewPage({
     build?.status === "pending" && now - build.createdAt.getTime() < QM_PLAN_TTL_MS;
   if (planWaiting && build)
     attention.push({
-      tone: "caution",
+      tone: "waiting",
       title: `AI assistant plan v${build.version} is waiting`,
-      detail: "Nothing changes in Discord until someone builds it. Plans expire after 15 minutes.",
-      href: `${base}/quartermaster`,
+      detail: `Nothing changes in Discord until someone applies it. Plans expire after ${QM_PLAN_TTL_MS / 60_000} minutes.`,
+      href: `${base}/quartermaster#qm-plan`,
       go: "Review plan",
     });
   const untilRaid = o.nextOp ? o.nextOp.startsAt.getTime() - now : null;
@@ -287,13 +333,13 @@ export default async function OverviewPage({
       .filter((s) => s.n > 0);
     if (short.length)
       attention.push({
-        tone: "caution",
+        tone: "waiting",
         title: `${o.nextOp.title} is ${short.reduce((t, s) => t + s.n, 0)} short`,
         detail: `${formatTime(o.nextOp.startsAt, o.nextOp.timezone)} · ${short
           .map((s) => `${s.n} ${s.name}`)
           .join(", ")}`,
-        href: `${base}/rally`,
-        go: "Groups and raids",
+        href: `${base}/rally?tab=raids`,
+        go: "Raids",
       });
   }
   for (const m of mods.filter((x) => x.state === "blocked"))
@@ -301,8 +347,12 @@ export default async function OverviewPage({
       tone: "caution",
       title: `${m.name} is on but can't work`,
       detail: m.reason ?? "Something it needs is missing.",
-      href: `${base}${m.href}`,
-      go: "Fix it",
+      // Straight to the field or permission that fixes it, in the page's own words.
+      href:
+        m.fix?.to === "permissions"
+          ? (fixUrl ?? `${base}${m.href}`)
+          : `${base}${m.href}${m.fix?.to ?? ""}`,
+      go: m.fix?.action ?? "Fix it",
     });
   const stuck = actions.filter(
     (a) =>
@@ -311,12 +361,12 @@ export default async function OverviewPage({
   );
   if (stuck[0])
     attention.push({
-      tone: "caution",
+      tone: "waiting",
       title: `${plural(stuck.length, "request has", "requests have")} waited over 10 minutes`,
       detail: live
         ? `${ACTION_KIND[stuck[0].kind] ?? "A request"}, asked ${ago(stuck[0].createdAt)}. Garrison may be busy; it runs them in order.`
         : "Garrison hasn't checked in lately, so requests wait until it's back. See the status page.",
-      href: live ? `${base}${(REQUEST_PAGE[stuck[0].kind] ?? "").replace(/^#.*/, "")}` : "/status",
+      href: live ? requestHref(stuck[0].kind) : "/status",
       go: live ? "Open" : "Status",
     });
   const failed = actions.filter(
@@ -327,11 +377,17 @@ export default async function OverviewPage({
       tone: "caution",
       title: `${plural(failed.length, "request", "requests")} failed in the last day`,
       detail: `${ACTION_KIND[failed[0].kind] ?? failed[0].kind}: ${failed[0].message ?? "no reason given"}`,
-      href: (REQUEST_PAGE[failed[0].kind] ?? "").startsWith("#")
-        ? (REQUEST_PAGE[failed[0].kind] as string)
-        : `${base}${REQUEST_PAGE[failed[0].kind] ?? ""}`,
+      href: requestHref(failed[0].kind),
       go: "Open",
     });
+
+  // Most urgent first: what's happening now, then what's broken, then what's waiting.
+  const rank = { alert: 0, caution: 1, waiting: 2 } as const;
+  attention.sort((x, y) => rank[x.tone] - rank[y.tone]);
+  const urgent = attention.filter((a) => a.tone === "alert").length;
+  const broken = attention.filter((a) => a.tone === "caution").length;
+  const waiting = attention.length - urgent - broken;
+  const shown = Math.max(ATTENTION_SHOWN, urgent);
 
   return (
     <>
@@ -412,15 +468,42 @@ export default async function OverviewPage({
         aria-labelledby="attention-title"
       >
         <div className="attention__head">
-          <h2 className="card-title" id="attention-title">
+          {attention.length ? (
+            <span className={`attention__tile${urgent ? " attention__tile--alert" : ""}`}>
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true">
+                <path
+                  d="M8 2.2 14.2 13H1.8z"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinejoin="round"
+                />
+                <path d="M8 6.4v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <circle cx="8" cy="11.2" r=".85" fill="currentColor" />
+              </svg>
+            </span>
+          ) : null}
+          <div className="attention__heading">
+            <h2 className="card-title" id="attention-title">
+              {attention.length ? (
+                <>
+                  Needs attention <span className="count">{attention.length}</span>
+                </>
+              ) : (
+                "All clear"
+              )}
+            </h2>
             {attention.length ? (
-              <>
-                Needs attention <span className="count">{attention.length}</span>
-              </>
-            ) : (
-              "All clear"
-            )}
-          </h2>
+              <span className="attention__sum">
+                {[
+                  urgent ? `${urgent} happening now` : "",
+                  broken ? `${broken} not working` : "",
+                  waiting ? `${waiting} to look at` : "",
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </span>
+            ) : null}
+          </div>
           <div className="attention__check">
             <span>{health ? `Health check ${ago(health.computedAt)}` : "No health check yet"}</span>
             <form action={requestAction}>
@@ -434,27 +517,27 @@ export default async function OverviewPage({
           </div>
         </div>
         {attention.length ? (
-          <ul className="attention__list">
-            {attention.map((a, i) => (
-              <li key={a.title}>
-                <a
-                  className={`attention__item ${a.tone === "alert" ? "attention__item--alert" : ""}`}
-                  href={a.href}
-                  aria-label={`${a.title}. ${a.go}`}
-                  aria-describedby={`attn-${i}`}
-                >
-                  <span className="attention__text">
-                    <strong>{a.title}</strong>
-                    <span id={`attn-${i}`}>{a.detail}</span>
-                  </span>
-                  <span className="attention__go">
-                    {a.go}
-                    <span className="cue" aria-hidden="true" />
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul className="attention__list">
+              {attention.slice(0, shown).map((a, i) => (
+                <AttentionRow a={a} i={i} key={a.title} />
+              ))}
+            </ul>
+            {attention.length > shown ? (
+              <details className="attention__more">
+                <summary>
+                  <span className="attention__more-show">Show {attention.length - shown} more</span>
+                  <span className="attention__more-hide">Show fewer</span>
+                  <span className="cue" aria-hidden="true" />
+                </summary>
+                <ul className="attention__list">
+                  {attention.slice(shown).map((a, i) => (
+                    <AttentionRow a={a} i={i + shown} key={a.title} />
+                  ))}
+                </ul>
+              </details>
+            ) : null}
+          </>
         ) : (
           <p className="attention__clear">Every module that's on works.</p>
         )}
