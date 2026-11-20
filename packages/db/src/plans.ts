@@ -210,6 +210,12 @@ export const FEATURES = {
     free: 3,
     pro: 50,
   },
+  "messages.responders": {
+    module: "messages",
+    about: "Auto-responders and /tag commands: replies to a word, a phrase or a tag",
+    free: 10,
+    pro: 100,
+  },
   "messages.extras": {
     module: "messages",
     about: "Repeating schedules and link buttons on messages",

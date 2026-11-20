@@ -309,6 +309,8 @@ export const FIELD_LABELS: Record<string, string> = {
   "starboard.selfStar": "Count the author's reaction",
   "starboard.ignoredChannelIds": "Starboard skips",
   "starboard.accent": "Starboard color",
+  "messages.messages": "Saved messages",
+  "messages.responders": "Auto-responders and tags",
   "tickets.staffRoleIds": "Ticket staff roles",
   "tickets.logChannelId": "Ticket log channel",
   parentId: "Tickets open in",

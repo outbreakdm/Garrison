@@ -18,7 +18,10 @@ then updates **Status** and the **Log** before stopping.
      builder's request. Protect and Welcome go through checkQmSettings and Settings history.
      Garrison says hello once when first added, with a link to the card. AI moderation is now a
      setting the AI assistant can change too: **migration 0080** grants the bot `ai_enabled`.
-  3. [ ] Custom commands and auto-responders (reply cards on a word, a command or a button).
+  3. [x] Custom commands and auto-responders, on the Messages page: Garrison answers a whole word
+     or a phrase (optional channels, a wait between replies, never pinging) and posts tags with
+     `/tag` (autocomplete). Free 10, Pro 100. Runs after automod and skips what it removed.
+     **Migration 0081** (`message_settings.responders`); **deploy with register_commands** for /tag.
   4. [ ] Applications and recruitment forms, reviewed on the dashboard; accepting gives roles.
   5. [ ] AI help in tickets: a summary, a suggested reply from the server's rules and FAQ.
   6. [ ] Small role tools: roles back on rejoin, timed roles, sticky messages, self-clearing channels.
@@ -1497,3 +1500,6 @@ Decided (2026-11-12, owner):
   the bot's login couldn't change `automod_settings.ai_enabled`, so migration 0080 grants it.
   Checked on the local preview: Turn on protection saved and ticked off, Build opened a fresh
   AI chat with the Gaming clan request. Lint, type-check, 792 tests pass. Not deployed.
+- 2026-11-20: Best bot item 3, auto-responders and /tag (`packages/db/src/responders.ts`, bot
+  `modules/responders`, `components/RespondersPanel.tsx`). Checked on the local preview after
+  applying 0080 and 0081: a word responder saved and listed. Lint, type-check, 798 tests pass.

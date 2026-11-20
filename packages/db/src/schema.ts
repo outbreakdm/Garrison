@@ -31,6 +31,7 @@ import type { QmWrite } from "./qm-writes";
 import type { RallyTemplate, RallyWording } from "./rally";
 import type { RankBoost } from "./rank-boosts";
 import type { RankCardStyle } from "./rank-cards";
+import type { Responder } from "./responders";
 import type { RoleMenu } from "./role-menus";
 import type { StatCounter } from "./server-stats";
 import type { StatRole } from "./stat-roles";
@@ -1732,12 +1733,18 @@ export const messageSettings = pgTable(
       .primaryKey()
       .references(() => guilds.id, { onDelete: "cascade" }),
     messages: jsonb("messages").$type<SavedMessage[]>().notNull().default(sql`'[]'::jsonb`),
+    /** Auto-responders and /tag commands (responders.ts). */
+    responders: jsonb("responders").$type<Responder[]>().notNull().default(sql`'[]'::jsonb`),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     check(
       "messages_list",
       sql`jsonb_typeof(${t.messages}) = 'array' AND jsonb_array_length(${t.messages}) <= 50`,
+    ),
+    check(
+      "responders_list",
+      sql`jsonb_typeof(${t.responders}) = 'array' AND jsonb_array_length(${t.responders}) <= 100`,
     ),
   ],
 ).enableRLS();

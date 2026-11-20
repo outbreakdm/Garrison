@@ -3,12 +3,14 @@ import {
   getGuildPlan,
   getMessages,
   getOpsTimezone,
+  getResponders,
   lastSends,
   MESSAGE_LIMITS,
   MESSAGE_PRESETS,
   nextOccurrence,
   pausedSchedules,
   readMessages,
+  readResponders,
   SCHEDULED_HARD_MAX,
 } from "@garrison/db";
 import type { Metadata } from "next";
@@ -18,6 +20,7 @@ import { ListHead } from "@/components/ListHead";
 import { HeadStatus } from "@/components/ModuleHead";
 import { PlansLink } from "@/components/ProUpsell";
 import { RequestsPanel } from "@/components/RequestsPanel";
+import { RespondersPanel } from "@/components/RespondersPanel";
 import { FormPanel } from "@/components/settings";
 import { formAction } from "@/lib/autosave";
 import { getDb } from "@/lib/db";
@@ -53,13 +56,14 @@ export default async function MessagesPage({
   const { guild } = await requireGuildAccess(guildId);
   const query = await searchParams;
   const db = await getDb();
-  const [raw, plan, tz, last, channels, roles] = await Promise.all([
+  const [raw, plan, tz, last, channels, roles, rawResponders] = await Promise.all([
     getMessages(db, guild.id),
     getGuildPlan(db, guild.id),
     getOpsTimezone(db, guild.id),
     lastSends(db, guild.id),
     listPostTargets(guild.id).catch(() => []),
     listGuildRoles(guild.id).catch(() => []),
+    getResponders(db, guild.id),
   ]);
   const ent = entitlements(plan);
   const messages = readMessages(raw);
@@ -278,6 +282,15 @@ export default async function MessagesPage({
           </FormPanel>
         )}
       </div>
+
+      <RespondersPanel
+        guildId={guild.id}
+        list={readResponders(rawResponders)}
+        limit={ent["messages.responders"]}
+        channels={channels
+          .filter((c) => c.kind === "text")
+          .map((c) => ({ id: c.id, name: c.name }))}
+      />
     </>
   );
 }

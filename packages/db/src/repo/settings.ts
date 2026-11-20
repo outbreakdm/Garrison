@@ -76,7 +76,7 @@ export const EDITABLE_FIELDS = {
   // Role menus are checked with checkRoleMenus before they get here.
   roles: ["menus"],
   // Saved messages are checked with checkMessages before they get here.
-  messages: ["messages"],
+  messages: ["messages", "responders"],
   // Who else may use the dashboard; checked with checkAccessGrants before it gets here.
   access: ["grants"],
   // Which member pages show (docs/MEMBER_PAGES.md).

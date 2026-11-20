@@ -47,6 +47,7 @@ describe("command definitions", () => {
       "ticket",
       "giveaway",
       "suggest",
+      "tag",
     ]);
     expect(new Set(names).size).toBe(names.length);
   });
@@ -69,6 +70,8 @@ describe("command definitions", () => {
       "pay",
       "shop",
       "buy",
+      // A server's own saved replies, for anyone to post.
+      "tag",
     ]);
     for (const { data } of commands) {
       expect(data.contexts).toEqual([0]);

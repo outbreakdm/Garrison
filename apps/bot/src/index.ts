@@ -45,6 +45,7 @@ import { ClaudePlanner } from "./modules/quartermaster/planner.js";
 import { sweepRally } from "./modules/rally/service.js";
 import { handleMessage } from "./modules/ranks/service.js";
 import { sweepVoiceXp } from "./modules/ranks/voice.js";
+import { onResponderMessage } from "./modules/responders/service.js";
 import { onStarReaction } from "./modules/starboard/service.js";
 import { sweepServerStats } from "./modules/stats/service.js";
 import { onDirectMessage } from "./modules/tickets/modmail.js";
@@ -57,7 +58,7 @@ import {
   sweepTickets,
 } from "./modules/tickets/service.js";
 import { onVoiceRoomUpdate, sweepVoiceRooms } from "./modules/voice/service.js";
-import { onAutomodMessage } from "./modules/watch/automod.js";
+import { onAutomodMessage, wasRemovedByAutomod } from "./modules/watch/automod.js";
 import { onPatternBlock, sweepPatterns } from "./modules/watch/patterns.js";
 import { liftExpiredBans } from "./modules/watch/service.js";
 import { welcomeJoin, welcomeLeave } from "./modules/welcome/service.js";
@@ -331,9 +332,11 @@ client.on(Events.MessageCreate, (message) => {
   onEconomyMessage(ctx, message).catch((error) =>
     logger.warn("Economy failed", { guildId: message.guildId, error }),
   );
-  onAutomodMessage(ctx, message, automodKeys).catch((error) =>
-    logger.warn("Automod failed", { guildId: message.guildId, error }),
-  );
+  // Auto-responders after automod, so a removed message gets no reply.
+  onAutomodMessage(ctx, message, automodKeys)
+    .catch((error) => logger.warn("Automod failed", { guildId: message.guildId, error }))
+    .then(() => onResponderMessage(ctx, message, wasRemovedByAutomod(message.id)))
+    .catch((error) => logger.warn("Auto-responder failed", { guildId: message.guildId, error }));
   onTicketMessage(ctx, message).catch((error) =>
     logger.error("Ticket transcript failed", { guildId: message.guildId, error }),
   );

@@ -234,12 +234,16 @@ export const HELP = {
     title: "Messages",
     page: "Messages",
     path: "/dispatch",
-    about: "Announcements, rules and reminders as cards, posted now or on a schedule.",
+    about:
+      "Announcements, rules and reminders as cards, posted now or on a schedule; and auto-responders: Garrison answers a word or a phrase, or posts a tag with /tag.",
     steps: [
       "Messages → New message: write it in the card editor, then post it now or schedule it.",
+      "Messages → Auto-responders and tags → Add a responder: pick a word, a phrase or a /tag name, write the reply, and optionally the channels and a wait between replies.",
+      "Free keeps 10 responders and tags, Pro 100.",
     ],
     modules: ["messages"],
-    keywords: "messages announcements embeds rules schedule reminders post",
+    keywords:
+      "messages announcements embeds rules schedule reminders post auto-responder autoresponder trigger custom command tag tags faq reply",
   },
   giveaways: {
     title: "Giveaways",

@@ -37,6 +37,16 @@ async function automod(ctx: BotContext, guildId: string) {
   return value;
 }
 
+/**
+ * Messages automod removed in the last minute, so an auto-responder doesn't answer one
+ * (responders/service.ts runs after automod on each message).
+ */
+const removed = new Map<string, number>();
+export function wasRemovedByAutomod(messageId: string, now = Date.now()) {
+  for (const [id, at] of removed) if (now - at > 60_000) removed.delete(id);
+  return removed.has(messageId);
+}
+
 /** Recent message times per member, for spam. */
 const recent = new Map<string, number[]>();
 /** At most one automod case per member every 30 s, so a burst is one warning, not ten. */
@@ -240,7 +250,10 @@ export async function onAutomodMessage(ctx: BotContext, message: Message, keys: 
 
   const me = message.guild.members.me ?? (await message.guild.members.fetchMe());
   const canDelete = message.channel.permissionsFor(me)?.has(PermissionFlagsBits.ManageMessages);
-  if (canDelete) await message.delete().catch(() => null);
+  if (canDelete) {
+    removed.set(message.id, Date.now());
+    await message.delete().catch(() => null);
+  }
 
   if (config.action === "delete" || now - (lastCase.get(key) ?? 0) < CASE_GAP_MS) {
     await logToWatch(ctx, said(message), "Automod removed a message", `For ${reason}.`);

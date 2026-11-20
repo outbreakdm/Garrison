@@ -49,7 +49,10 @@ export const MODULE_GUIDE: Record<ReadableModule, { page: string; about: string 
   starboard: { page: "Starboard", about: "reposting messages that get enough stars" },
   suggestions: { page: "Suggestions", about: "suggestion channel with voting" },
   alerts: { page: "Stream alerts", about: "Twitch and YouTube go-live and upload alerts" },
-  messages: { page: "Messages", about: "saved messages and embeds to post" },
+  messages: {
+    page: "Messages",
+    about: "saved messages and embeds to post, and auto-responders and /tag commands",
+  },
   rally: { page: "Groups and raids", about: "LFG and raid templates" },
   ops: { page: "Groups and raids", about: "server timezone, raid attendance tracking" },
   voice: { page: "Voice rooms", about: "join-to-create voice rooms" },

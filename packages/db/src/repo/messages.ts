@@ -11,6 +11,15 @@ export async function getMessages(db: Db, guildId: string): Promise<unknown[]> {
   return Array.isArray(row?.messages) ? row.messages : [];
 }
 
+/** A server's auto-responders, unchecked. Run them through readResponders or checkResponders. */
+export async function getResponders(db: Db, guildId: string): Promise<unknown[]> {
+  const [row] = await db
+    .select({ responders: messageSettings.responders })
+    .from(messageSettings)
+    .where(eq(messageSettings.guildId, guildId));
+  return Array.isArray(row?.responders) ? row.responders : [];
+}
+
 /** Bot side: the lists of servers that have anything scheduled, for the minute sweep. */
 export async function listScheduledMessages(
   db: Db,

@@ -10,6 +10,7 @@ import { opsButtons, opsModals, raid } from "../modules/ops/commands.js";
 import { qm, qmButtons } from "../modules/quartermaster/commands.js";
 import { lfg, rallyButtons } from "../modules/rally/commands.js";
 import { leaderboard, rank, rankcard, rankcardModals, ranks } from "../modules/ranks/commands.js";
+import { tag } from "../modules/responders/commands.js";
 import { roleMenuButtons, roleMenuSelects } from "../modules/roles/handlers.js";
 import { suggest, suggestionButtons } from "../modules/suggestions/commands.js";
 import { ticket, ticketButtons, ticketModals } from "../modules/tickets/handlers.js";
@@ -35,6 +36,7 @@ export const commands: Command[] = [
   ticket,
   giveaway,
   suggest,
+  tag,
 ];
 export const buttons: ButtonHandler[] = [
   ...watchButtons,

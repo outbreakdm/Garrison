@@ -62,6 +62,7 @@ export * from "./repo/verify";
 export * from "./repo/voice";
 export * from "./repo/web";
 export * from "./repo/welcome";
+export * from "./responders";
 export * from "./role";
 export * from "./role-menus";
 export * from "./scam-links";

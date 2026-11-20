@@ -5024,3 +5024,87 @@ a.item-tile:not([open]) > .panel__summary {
     font-size: 19px;
   }
 }
+
+/* Auto-responders and tags on the Messages page: a list of folded rows, each opening to its form. */
+.resp {
+  display: grid;
+  gap: var(--space-3);
+}
+.resp__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.resp__item + .resp__item {
+  border-top: 1px solid var(--line);
+}
+.resp__item.is-off .resp__name {
+  color: var(--text-muted);
+}
+.resp__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+.resp__summary::-webkit-details-marker {
+  display: none;
+}
+.resp__name {
+  font-weight: 650;
+}
+.resp__when {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.resp__form {
+  display: grid;
+  gap: var(--space-3);
+  padding: 4px 14px 14px;
+}
+.resp__fields {
+  display: grid;
+  gap: var(--space-3);
+}
+.resp__trigger,
+.resp__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+}
+.resp__channels {
+  min-height: 6.5rem;
+}
+.resp__do {
+  display: flex;
+  gap: 8px;
+}
+.resp__remove {
+  padding: 0 14px 14px;
+}
+.resp__empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13.5px;
+}
+.resp__new > summary {
+  list-style: none;
+  width: max-content;
+}
+.resp__new > summary::-webkit-details-marker {
+  display: none;
+}
+.resp__new[open] > .resp__form {
+  margin-top: var(--space-3);
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
