@@ -32,7 +32,8 @@ export const QM_CHANGES_PER_PLAN = 20;
  * at least 59% before hosting (docs/pricing.md, 2026-11-20; it was 52% on yearly plans).
  */
 export const AI_SUPPLIES_PER_MONTH = {
-  free: 200,
+  // 100 since 2026-11-20 (from 200): Free brings in nothing, and runs on Fast only.
+  free: 100,
   pro: 2500,
   agency: 11_000,
 } as const satisfies Record<AiTier, number>;
@@ -93,7 +94,7 @@ export const PRICING = {
     highlights: [
       "Moderation, anti-raid, anti-nuke, verification and logs, in full",
       "Every module with the standard look and sensible limits",
-      "AI assistant: 200 supplies a month",
+      "AI assistant: 100 supplies a month, on Fast",
       "Undo and history on every change",
     ],
   },
@@ -386,7 +387,7 @@ export const FEATURES = {
   "qm.supplies": {
     module: "qm",
     about:
-      "AI assistant supplies a month: a message costs what its AI really uses, on Fast or Smart, and each change a plan makes costs 1 (Agency: 11,000 shared by its servers; Free: 200 per person across all their servers)",
+      "AI assistant supplies a month: a message costs what its AI really uses, on Fast or Smart, and each change a plan makes costs 1 (Agency: 11,000 shared by its servers; Free: 100 per person across all their servers, Fast only)",
     free: AI_SUPPLIES_PER_MONTH.free,
     pro: AI_SUPPLIES_PER_MONTH.pro,
   },

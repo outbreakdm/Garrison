@@ -39,7 +39,7 @@ them together. Below $8 it reads as a hobby add-on; above $10 it competes with M
 
 AI is the only cost that grows with use (`docs/ai-costs.md`). Since supplies v2 (2026-11-15,
 `docs/AI_SUPPLIES_V2.md`) the AI assistant runs on **supplies** from a monthly pool
-(`AI_SUPPLIES_PER_MONTH` in `packages/db/src/plans.ts`): Free 200 per person, Pro 2,500 per
+(`AI_SUPPLIES_PER_MONTH` in `packages/db/src/plans.ts`): Free 100 per person (200 until 2026-11-20; Fast only), Pro 2,500 per
 server, Agency 11,000 shared (3,000 and 13,000 until 2026-11-20). A supply is $0.001 of AI:
 every AI call is charged what it really cost, rounded up, and every change a plan makes costs
 1\. So a pool can never cost more than its size in tenths of a cent, whatever the use.
@@ -65,7 +65,7 @@ on) and disputes:
 | Agency yearly | $29.17/mo | $28.30/mo | $11.00 | 59% |
 | Pack, 800 supplies | $2.99 | $2.60 | $0.80 | 60% |
 | Pack, 4,000 supplies | $11.99 | $11.34 | $4.00 | 61% |
-| Free, a month per person | $0 | $0 | $0.20 | n/a |
+| Free, a month per person | $0 | $0 | $0.10 | n/a |
 
 Before this (3,000 and 13,000, packs of 1,000 and 5,000) yearly plans sat at 52%, and the
 packs at 53 to 54%. The pool sizes are the lever; the price per supply never changes.
@@ -152,11 +152,11 @@ of the price, so a message now costs a quarter to a half of the $0.0026 measured
 4. **Price:** no longer needed for safety, since metering caps the cost. Pool sizes and pack
    prices live in `plans.ts` (`AI_SUPPLIES_PER_MONTH`, `SUPPLY_PACKS`).
 
-**Free** brings in nothing, so it's counted per person: 200 supplies a month across every Free
+**Free** brings in nothing, so it's counted per person, and runs on Fast only: 100 supplies a month (200 until 2026-11-20) across every Free
 server someone asks from (and the same per server), so making more servers doesn't make more
-free AI. At worst that's $0.20 a month per active person. The global daily budget is a circuit
-breaker for a runaway, not an allowance: `QM_DAILY_BUDGET_USD` (default $2) plus $0.30 a day per
-Pro server, $1.30 per Agency plan and everything in packs bought that week, so normal use can't
+free AI. At worst that's $0.10 a month per active person. The global daily budget is a circuit
+breaker for a runaway, not an allowance: `QM_DAILY_BUDGET_USD` (default $2) plus $0.25 a day per
+Pro server, $1.10 per Agency plan and everything in packs bought that week, so normal use can't
 trip it. If Free ever crowds paid servers out of it, split it into a Free pool and a paid pool;
 not built, as per-person limits make it unlikely.
 

@@ -1,4 +1,5 @@
 import {
+  AI_SUPPLIES_PER_MONTH,
   aiAllowance,
   aiSpendSince,
   applySettingsChange,
@@ -216,6 +217,8 @@ const asker = (f: { guild: { id: string } }) => ({
   id: `9${f.guild.id.slice(1)}`,
   tag: f.guild.id,
 });
+/** Free's monthly supplies: tests leave a set number of them by spending the rest. */
+const FREE = AI_SUPPLIES_PER_MONTH.free;
 /** Supplies this person already used on this server this month, as one earlier AI call. */
 async function used(f: { guild: { id: string } }, person: { id: string }, supplies: number) {
   await upsertGuild(ctx.db, { id: f.guild.id, name: f.guild.id });
@@ -406,7 +409,7 @@ describe("Quartermaster end to end", () => {
   it("counts supplies: a typical message is 3, each change 1, and the rest carry over", async () => {
     const f = fakeGuild("q4");
     const a = asker(f);
-    await used(f, a, 160);
+    await used(f, a, FREE - 40);
     const first = await planBuild(ctx, stub(rolesPlan(10)), f.guild, a, "x");
     expect(first).toMatchObject({ ok: true, suppliesLeft: 27 });
     const small = await planBuild(ctx, stub(rolesPlan(3)), f.guild, a, "x");
@@ -422,14 +425,14 @@ describe("Quartermaster end to end", () => {
     });
     const none = await planBuild(ctx, stub(rolesPlan(1)), f.guild, a, "x");
     expect(!none.ok && none.error).toMatch(
-      /this month's 200 AI assistant supplies on Free servers\. They renew <t:\d+:R>.*Garrison Pro gives a server 2,500 supplies a month/,
+      /this month's 100 AI assistant supplies on Free servers\. They renew <t:\d+:R>.*Garrison Pro gives a server 2,500 supplies a month/,
     );
   });
 
   it("gives the planner what's left after the message as its limit", async () => {
     const f = fakeGuild("q12");
     const a = asker(f);
-    await used(f, a, 160);
+    await used(f, a, FREE - 40);
     expect((await planBuild(ctx, stub(rolesPlan(20)), f.guild, a, "x")).ok).toBe(true);
     expect((await planBuild(ctx, stub(rolesPlan(9)), f.guild, a, "x")).ok).toBe(true);
     let limit: number | undefined;
@@ -449,12 +452,12 @@ describe("Quartermaster end to end", () => {
   it("counts Free per person across all their Free servers", async () => {
     const [one, two, three] = [fakeGuild("q8"), fakeGuild("q9"), fakeGuild("q10")];
     const owner = { id: "98000", tag: "owner" };
-    await used(one, owner, 160);
+    await used(one, owner, FREE - 40);
     expect((await planBuild(ctx, stub(rolesPlan(20)), one.guild, owner, "x")).ok).toBe(true);
     const second = await planBuild(ctx, stub(rolesPlan(14)), two.guild, owner, "x");
     expect(second).toMatchObject({ ok: true, suppliesLeft: 0 });
     const third = await planBuild(ctx, stub(sectionPlan), three.guild, owner, "x");
-    expect(!third.ok && third.error).toMatch(/this month's 200 AI assistant supplies on Free/);
+    expect(!third.ok && third.error).toMatch(/this month's 100 AI assistant supplies on Free/);
     // Someone else can still use the third server's own supplies.
     const other = { id: "98001", tag: "other" };
     expect((await planBuild(ctx, stub(sectionPlan), three.guild, other, "x")).ok).toBe(true);
@@ -463,11 +466,11 @@ describe("Quartermaster end to end", () => {
   it("charges for every message, so many tiny plans can't run up the AI bill", async () => {
     const f = fakeGuild("q14");
     const a = asker(f);
-    await used(f, a, 160);
+    await used(f, a, FREE - 40);
     for (let i = 0; i < 10; i++)
       expect((await planBuild(ctx, stub(rolesPlan(1)), f.guild, a, "x")).ok).toBe(true);
     const eleventh = await planBuild(ctx, stub(rolesPlan(1)), f.guild, a, "x");
-    expect(!eleventh.ok && eleventh.error).toMatch(/this month's 200 AI assistant supplies/);
+    expect(!eleventh.ok && eleventh.error).toMatch(/this month's 100 AI assistant supplies/);
   });
 
   it("gives an Agency plan one pool of 11,000 a month, shared by its servers", async () => {
@@ -510,8 +513,8 @@ describe("Quartermaster end to end", () => {
     const v2 = await planBuild(ctx, reviser, f.guild, a, "add two more roles", {
       continues: v1.build,
     });
-    // v1's 4 changes are given back; both messages count: 200 - 3 - 3 - 6.
-    expect(v2).toMatchObject({ ok: true, suppliesLeft: 188 });
+    // v1's 4 changes are given back; both messages count: the pool - 3 - 3 - 6.
+    expect(v2).toMatchObject({ ok: true, suppliesLeft: FREE - 12 });
     if (!v2.ok) return;
     expect(v2.build.continuesId).toBe(v1.build.id);
     expect(v2.replaced).toMatchObject({ id: v1.build.id, status: "cancelled" });
@@ -840,7 +843,7 @@ describe("AI assistant chat", () => {
   it("charges a typical message 3 supplies, and says so in the chat when they run out", async () => {
     const f = fakeGuild("q19");
     const me = asker(f);
-    await used(f, me, 160);
+    await used(f, me, FREE - 40);
     const bot = scripted([{ reply: "Sure." }]);
     let thread: string | undefined;
     for (let i = 0; i < 13; i++) {
@@ -848,10 +851,10 @@ describe("AI assistant chat", () => {
       if (!turn.ok) throw new Error(`stopped at ${i}: ${turn.error}`);
       thread = turn.threadId;
     }
-    expect(await suppliesUsed(ctx.db, { guildId: "q19" })).toBe(199);
+    expect(await suppliesUsed(ctx.db, { guildId: "q19" })).toBe(FREE - 1);
     const out = await chatTurn(ctx, bot, f.guild, me, { message: "hi", threadId: thread });
     expect(!out.ok && out.error).toMatch(
-      /200 AI assistant supplies.*Plans you've drafted can still be built/,
+      /100 AI assistant supplies.*Plans you've drafted can still be built/,
     );
     const { listQmThread } = await import("@garrison/db");
     const log = await listQmThread(ctx.db, "q19", me.id, thread ?? "");
@@ -894,7 +897,7 @@ describe("AI assistant chat", () => {
     };
     expect((await chatTurn(ctx, bot, f.guild, asker(f), { message: "what's on?" })).ok).toBe(true);
     const overview = JSON.parse(looked.overview ?? "{}");
-    expect(overview).toMatchObject({ plan: "free", supplies_left: 200, supplies_in_pool: 200 });
+    expect(overview).toMatchObject({ plan: "free", supplies_left: FREE, supplies_in_pool: FREE });
     expect(overview.modules).toContainEqual({
       module: "suggestions",
       page: "Suggestions",

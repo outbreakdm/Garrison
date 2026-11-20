@@ -204,15 +204,15 @@ describe("AI supplies", () => {
     // 17 November: a day of its own, so the budget test's day doesn't see this spend.
     const now = at(120);
     await exec("RESET ROLE");
-    // 198 of this month's 200 used, and a 1,000-supply pack bought.
+    // All but 2 of this month's Free supplies used, and a 1,000-supply pack bought.
     await db.insert(aiUsage).values({
       guildId: "k1",
       feature: "qm_chat",
       requestedBy: "110",
       model,
       reservedMicros: 0,
-      costMicros: 198_000,
-      supplies: 198,
+      costMicros: (AI_SUPPLIES_PER_MONTH.free - 2) * 1000,
+      supplies: AI_SUPPLIES_PER_MONTH.free - 2,
       ok: true,
       createdAt: now,
     });
