@@ -1,6 +1,7 @@
 import {
   aiAllowance,
   describeEdits,
+  engineLabel,
   entitlements,
   getGuildPlan,
   latestQmThread,
@@ -492,7 +493,7 @@ export default async function QuartermasterPage({
                         <p className="qm-msg__text">{m.text}</p>
                         {m.role === "assistant" && m.supplies != null ? (
                           <span className="qm-msg__cost">
-                            {isSmart(m.model) ? "Smart · " : ""}
+                            {engineLabel(isSmart(m.model) ? "smart" : "fast")} ·{" "}
                             {m.supplies
                               ? `Used ${plural(m.supplies, "supply", "supplies")}`
                               : "Free"}

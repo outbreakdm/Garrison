@@ -4429,6 +4429,11 @@ a.item-tile:not([open]) > .panel__summary {
   padding: 0;
   border: 0;
 }
+.qm-model__engine {
+  color: var(--text);
+  font: 700 12px / 20px var(--font-display);
+  letter-spacing: 0.02em;
+}
 .qm-model__switch {
   display: flex;
   padding: 2px;

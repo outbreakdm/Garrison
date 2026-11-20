@@ -342,7 +342,7 @@ export const HELP = {
     page: "AI assistant",
     path: "/quartermaster",
     about:
-      "Describe what you need in plain words; the assistant drafts it (channels, roles, permissions, order, some settings and posts), you see every change in Your server, and nothing happens until you apply it. Every build can be undone. Fast (every plan) or Smart (Pro) costs supplies at its real price; changes you make by hand are free.",
+      "Describe what you need in plain words; the assistant drafts it (channels, roles, permissions, order, some settings and posts), you see every change in Your server, and nothing happens until you apply it. Every build can be undone. It runs on Bastion v1, Garrison's AI engine: Fast (every plan) or Smart (Pro), each costing supplies at its real price; changes you make by hand are free.",
     steps: [
       "Ask in the chat, or rename and drag in Your server.",
       "Review the changes, then Apply. Undo any build from History.",

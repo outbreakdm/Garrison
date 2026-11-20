@@ -1,9 +1,10 @@
 "use client";
 
+import { AI_ENGINE, AI_MODES } from "@garrison/db/cards";
 import { useEffect, useRef, useState } from "react";
 
 /**
- * Fast or Smart for the AI assistant's next message, in the composer. Shows what a message
+ * Bastion v1's mode, Fast or Smart, for the AI assistant's next message, in the composer. Shows what a message
  * costs on each and about how many are left, and the first time Smart is sent from this
  * browser asks once, since one Smart message can hold up to a few hundred supplies. Smart is
  * Pro and Agency; on Free it's shown locked with Upgrade. The choice is a radio named
@@ -82,7 +83,8 @@ export function ModelPicker({
 
   return (
     <fieldset className="qm-model" ref={root}>
-      <legend className="sr-only">Model for this message</legend>
+      <legend className="sr-only">{AI_ENGINE} mode for this message</legend>
+      <span className="qm-model__engine">{AI_ENGINE}</span>
       <div className="qm-model__switch">
         <label className="qm-model__opt">
           <input
@@ -111,10 +113,9 @@ export function ModelPicker({
         </label>
       </div>
       <p className="qm-model__price">
-        {model === "smart" ? "Smart: Claude Sonnet, for big designs and tricky permissions. " : ""}
-        About {price.typical} {price.typical === 1 ? "supply" : "supplies"} a message, up to{" "}
-        {price.hold} · about {left.toLocaleString("en-US")} {left === 1 ? "message" : "messages"}{" "}
-        left
+        {AI_MODES[model].label}: {AI_MODES[model].about}. About {price.typical}{" "}
+        {price.typical === 1 ? "supply" : "supplies"} a message, up to {price.hold} · about{" "}
+        {left.toLocaleString("en-US")} {left === 1 ? "message" : "messages"} left
         {smartAllowed ? null : (
           <>
             {" · "}

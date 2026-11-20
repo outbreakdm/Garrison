@@ -4,6 +4,7 @@
  */
 
 export * from "./access";
+export * from "./ai-engine";
 export * from "./ai-usage";
 export * from "./alerts";
 export * from "./automod";
