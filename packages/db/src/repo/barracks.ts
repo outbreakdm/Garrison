@@ -25,19 +25,25 @@ export interface LinkInput {
 }
 
 /** Add or refresh a link. Re-linking a removed account brings it back. */
+/**
+ * Add or update a link. One that comes without stats (a Discord connection: Steam, Riot) keeps
+ * the stats the bot looked up and when it did, so signing in again doesn't wipe them (and the
+ * roles that follow them); a new one is due for its first lookup straight away.
+ */
 export async function upsertLink(db: Db, input: LinkInput) {
   const now = new Date();
+  const hasStats = Object.keys(input.details ?? {}).length > 0;
   const [row] = await db
     .insert(linkedAccounts)
-    .values({ ...input, details: input.details ?? {}, refreshedAt: now })
+    .values({ ...input, details: input.details ?? {}, refreshedAt: hasStats ? now : new Date(0) })
     .onConflictDoUpdate({
       target: [linkedAccounts.userId, linkedAccounts.provider, linkedAccounts.accountId],
       set: {
         displayName: input.displayName,
         verified: input.verified,
         source: input.source,
-        details: input.details ?? {},
-        refreshedAt: now,
+        details: hasStats ? (input.details ?? {}) : sql`${linkedAccounts.details}`,
+        refreshedAt: hasStats ? now : sql`${linkedAccounts.refreshedAt}`,
         removedAt: null,
       },
     })
@@ -212,7 +218,17 @@ export async function getRoster(db: Db, guildId: string, provider?: string) {
 }
 
 /** Links due a refresh, oldest first. */
-export async function listLinksToRefresh(db: Db, provider: string, olderThan: Date, limit = 20) {
+/**
+ * The links of one provider whose stats are oldest. Claimed names (OSRS, RS3) by default;
+ * `verified: true` for Discord connections whose stats Garrison looks up (Steam, Riot).
+ */
+export async function listLinksToRefresh(
+  db: Db,
+  provider: string,
+  olderThan: Date,
+  limit = 20,
+  opts: { verified?: boolean } = {},
+) {
   return db
     .select()
     .from(linkedAccounts)
@@ -220,7 +236,9 @@ export async function listLinksToRefresh(db: Db, provider: string, olderThan: Da
       and(
         eq(linkedAccounts.provider, provider),
         isNull(linkedAccounts.removedAt),
-        notInArray(linkedAccounts.source, ["discord"]),
+        opts.verified
+          ? eq(linkedAccounts.source, "discord")
+          : notInArray(linkedAccounts.source, ["discord"]),
       ),
     )
     .orderBy(asc(linkedAccounts.refreshedAt))

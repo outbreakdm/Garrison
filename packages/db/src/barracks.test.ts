@@ -3,11 +3,13 @@ import type { Db } from "./client";
 import {
   getRoster,
   listLinks,
+  listLinksToRefresh,
   listSharesForUser,
   removeLink,
   removeProviderLinks,
   setRosterShare,
   syncLinksFromSource,
+  updateLinkDetails,
   upsertLink,
 } from "./repo/barracks";
 import { upsertGuild } from "./repo/guilds";
@@ -111,6 +113,22 @@ describe("barracks, as garrison_web", () => {
     expect(r.removed).toBe(1);
     // The claimed OSRS link from another source is untouched.
     expect((await listLinks(db, "u1")).map((l) => l.provider).sort()).toEqual(["osrs", "steam"]);
+  });
+
+  it("keeps the stats the bot looked up when the member signs in again", async () => {
+    await exec("RESET ROLE");
+    await exec("SET ROLE garrison_bot");
+    const [first] = await listLinksToRefresh(db, "steam", new Date(), 5, { verified: true });
+    expect(first?.accountId).toBe("1");
+    await updateLinkDetails(db, first?.id ?? "", { level: 42, games: 310 });
+    expect(
+      await listLinksToRefresh(db, "steam", new Date(Date.now() - 60_000), 5, { verified: true }),
+    ).toEqual([]);
+    await exec("RESET ROLE");
+    await exec("SET ROLE garrison_web");
+    await syncLinksFromSource(db, "u1", "discord", ["steam", "xbox"], [steam("1", "taner_s")]);
+    const again = (await listLinks(db, "u1")).find((l) => l.provider === "steam");
+    expect(again?.details).toEqual({ level: 42, games: 310 });
   });
 
   it("lets a member remove only their own links", async () => {

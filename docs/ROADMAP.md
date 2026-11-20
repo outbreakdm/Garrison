@@ -47,7 +47,13 @@ then updates **Status** and the **Log** before stopping.
      reads from servers (429, or a redirect to its login), checked 2026-11-20. Without keys,
      those feeds show "Waiting for Garrison's Kick keys" or "Reddit keys". Reddit's API terms
      want approval for commercial use; worth reading before turning it on. No migration.
-  8. [ ] Riot and Steam stat roles (Valorant and League ranks; Riot's production key needs applying).
+  8. [x] Riot and Steam stat roles: Steam level and games owned, and League solo queue rank
+     (a tier, Iron to Challenger) for accounts linked through Discord Connections, looked up
+     every 6 hours (5 links a minute per provider). Signing in again now keeps a link's looked-up
+     stats instead of wiping them. **Owner:** `STEAM_API_KEY` (steamcommunity.com/dev) and
+     `RIOT_API_KEY`; Riot's development keys expire daily, so a live bot needs Riot's production
+     approval. **Not built:** Valorant ranks, which need Riot Sign-On (RSO) approval on top. No
+     migration.
   9. [ ] Public server page and leaderboard.
   10. [ ] Patreon and Twitch subscriber roles.
   11. [ ] Other languages (Spanish, Portuguese, German, French first).
@@ -1541,3 +1547,9 @@ Decided (2026-11-12, owner):
   posts from bsky.app) and RSS (20 from the Cloudflare blog) work; `http://localhost` is refused;
   Reddit's public feed answered 429, so Reddit moved to its app-only OAuth. On the local
   preview an RSS alert saved, with a post preview. Lint, type-check, 824 tests pass. Not deployed.
+- 2026-11-20: Best bot item 8, Steam and League stat roles (`packages/db/src/stat-roles.ts`,
+  bot `modules/barracks/game-stats.ts`). Found while building: every Discord sign-in reset a
+  connection link's details to {}, which would have wiped looked-up stats (and the roles) until
+  the next lookup 6 hours later; upsertLink now keeps them. Not tried against the real Steam
+  or Riot APIs (no keys here); tested against recorded answers. Lint, type-check, 829 tests
+  pass. Not deployed.

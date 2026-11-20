@@ -185,6 +185,10 @@ if (env) {
   else warn("KICK_CLIENT_ID and KICK_CLIENT_SECRET aren't both set: Kick alerts stay off.");
   if (env.REDDIT_CLIENT_ID && env.REDDIT_CLIENT_SECRET) ok("Reddit alerts are on");
   else warn("REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET aren't both set: Reddit alerts stay off.");
+  if (env.STEAM_API_KEY) ok("Steam stat roles are on");
+  else warn("STEAM_API_KEY isn't set: roles from Steam stats stay off.");
+  if (env.RIOT_API_KEY) ok("League rank roles are on");
+  else warn("RIOT_API_KEY isn't set: roles from League ranks stay off.");
 }
 console.log(failed ? "\nFix the ✗ items, then run this again." : "\nAll set. Start Garrison.");
 process.exit(failed ? 1 : 0);

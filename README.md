@@ -101,6 +101,7 @@ After pulling this change, run `pnpm commands:deploy` once: `/lfg create` has a 
 - **Claimed, Old School RuneScape:** `/link osrs name:Zezima` shows total and combat level from the public hiscores, refreshed every 6 h. OSRS can't prove ownership, so it's labeled claimed.
 - **Claimed, RuneScape 3:** `/link rs3 name:` shows total level from the public hiscores, refreshed every 6 h with OSRS.
 - **Roles from game stats (Pro):** on the dashboard's Barracks page, up to 10 rules like "OSRS total level 2000+ → @Maxed" (also OSRS combat level, RuneScape total level and WoW character level). Members get the role while an account they share with the server meets a rule and lose it when none does or they stop sharing; checked every 30 minutes and right after `/link`. Roles with admin or moderation powers are never given. Claimed accounts count, so these are for flair, not access.
+- **Steam and League stats:** for accounts linked through Discord Connections, the bot looks up Steam level and games owned (`STEAM_API_KEY`; games need a public profile) and the League solo queue rank of the Riot ID (`RIOT_API_KEY`), every 6 hours, so rules like "Steam level 50+" or "League Gold+" work. Signing in again keeps the stats. Riot development keys expire daily; a live bot needs Riot's production approval. Valorant ranks need Riot Sign-On approval and aren't built.
 - `/roster [game]` lists what members shared; the dashboard's Barracks page shows the same with verified or claimed badges. No Discord or Battle.net token is ever stored.
 
 ### Quartermaster

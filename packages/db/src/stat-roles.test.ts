@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { checkStatRoles, meetsStatRole, readStatRoles, statRoleChanges } from "./stat-roles";
+import {
+  checkStatRoles,
+  meetsStatRole,
+  readStatRoles,
+  statRoleChanges,
+  statValueLabel,
+} from "./stat-roles";
 
 const MAXED = "100000000000000001";
 const VETERAN = "100000000000000002";
@@ -17,6 +23,16 @@ describe("roles from game stats", () => {
     expect(checkStatRoles([{ source: "steam:hours", min: 10, roleId: MAXED }]).ok).toBe(false);
     expect(checkStatRoles([{ source: "wow:level", min: 80, roleId: "@everyone" }]).ok).toBe(false);
     expect(readStatRoles({})).toEqual([]);
+    // League's "at least" is a tier, 1 Iron to 10 Challenger.
+    expect(checkStatRoles([{ source: "riotgames:lolTier", min: 4, roleId: MAXED }]).ok).toBe(true);
+    expect(checkStatRoles([{ source: "riotgames:lolTier", min: 11, roleId: MAXED }])).toMatchObject(
+      {
+        ok: false,
+        error: expect.stringMatching(/lowest league solo queue rank/),
+      },
+    );
+    expect(statValueLabel("riotgames:lolTier", 4)).toBe("Gold");
+    expect(statValueLabel("steam:games", 1200)).toBe("1,200");
   });
 
   it("matches on any shared account of that game", () => {

@@ -3,6 +3,7 @@ import {
   getGuildPlan,
   getRoster,
   getStatRoles,
+  LOL_TIERS,
   readStatRoles,
   STAT_ROLES_MAX,
   STAT_SOURCES,
@@ -158,7 +159,10 @@ export default async function BarracksPage({ params }: { params: Promise<{ guild
               </p>
               <HowItWorks>
                 They lose it when none does, or when they stop sharing. Checked every 30 minutes and
-                whenever someone links.
+                whenever someone links. Steam and League come from the accounts members link through
+                Discord (verified), refreshed every 6 hours; Steam's games count needs a public
+                profile. For League solo queue rank, "at least" is a tier:{" "}
+                {LOL_TIERS.map((t, n) => `${n + 1} ${t}`).join(", ")}.
               </HowItWorks>
               <div className="boost-rows" id="stat-rows">
                 {Array.from({ length: Math.min(STAT_ROLES_MAX, rules.length + 2) }, (_, i) => {
@@ -188,7 +192,7 @@ export default async function BarracksPage({ params }: { params: Promise<{ guild
                         name={`rule${i}_min`}
                         type="number"
                         min={1}
-                        max={3000}
+                        max={100_000}
                         aria-label={`Rule ${i + 1} at least`}
                         placeholder="At least"
                         defaultValue={r?.min ?? ""}

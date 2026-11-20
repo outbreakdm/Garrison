@@ -59,6 +59,18 @@ const schema = z.object({
     .min(1)
     .optional()
     .or(z.literal("").transform(() => undefined)),
+  /** A Steam Web API key (steamcommunity.com/dev), for roles from Steam level and games owned. */
+  STEAM_API_KEY: z
+    .string()
+    .min(1)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  /** A Riot API key, for roles from League ranks. Development keys expire daily; a live bot needs Riot's production approval. */
+  RIOT_API_KEY: z
+    .string()
+    .min(1)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
   /** OpenAI key for AI moderation (Pro). Its moderation endpoint is free; without a key AI moderation stays off. */
   OPENAI_API_KEY: z
     .string()

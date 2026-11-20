@@ -19,7 +19,7 @@ import { createLogger } from "./lib/logger.js";
 import { Metrics, maybePruneOperations } from "./lib/metrics.js";
 import { sweepAlerts } from "./modules/alerts/service.js";
 import { maybePruneApplications } from "./modules/applications/service.js";
-import { refreshOsrs } from "./modules/barracks/refresh.js";
+import { type GameStatKeys, refreshOsrs } from "./modules/barracks/refresh.js";
 import { sweepStatRoles } from "./modules/barracks/stat-roles.js";
 import { processDashboardActions } from "./modules/dashboard/actions.js";
 import { sweepMessages } from "./modules/dispatch/service.js";
@@ -130,6 +130,12 @@ const alertKeys = {
       ? { clientId: env.REDDIT_CLIENT_ID, secret: env.REDDIT_CLIENT_SECRET }
       : null,
 };
+const gameStatKeys: GameStatKeys = {
+  steam: env.STEAM_API_KEY ?? null,
+  riot: env.RIOT_API_KEY ?? null,
+};
+if (!gameStatKeys.steam) logger.info("Steam stat roles are off: set STEAM_API_KEY");
+if (!gameStatKeys.riot) logger.info("League rank roles are off: set RIOT_API_KEY");
 const automodKeys = { openai: env.OPENAI_API_KEY ?? null };
 if (!automodKeys.openai) logger.info("AI moderation is off: set OPENAI_API_KEY to enable it");
 if (!alertKeys.twitch)
@@ -276,7 +282,7 @@ client.once(Events.ClientReady, async (ready) => {
       await step("Applications prune", () => maybePruneApplications(ctx));
       await step("Insights prune", () => maybePruneInsights(ctx));
       await step("Operations prune", () => maybePruneOperations(ctx));
-      await step("OSRS refresh", () => refreshOsrs(ctx));
+      await step("Game stats refresh", () => refreshOsrs(ctx, gameStatKeys));
       if (Date.now() - lastHealthSnapshot > HEALTH_EVERY_MS) {
         lastHealthSnapshot = Date.now();
         await step("Health snapshot", () => snapshotAllHealth(ctx, ready.guilds.cache.values()));

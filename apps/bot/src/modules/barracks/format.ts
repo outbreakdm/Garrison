@@ -19,6 +19,12 @@ export function plainLink(l: LinkFacts, opts: { proof?: boolean } = {}) {
     if (d.flavor === "classic") parts.push("Classic");
     if (d.flavor === "era") parts.push("Classic Era");
   }
+  if (l.provider === "steam" && typeof d.level === "number") {
+    parts.push(`level ${d.level}`);
+    if (typeof d.games === "number") parts.push(`${d.games.toLocaleString("en-US")} games`);
+  }
+  if (l.provider === "riotgames" && typeof d.lolRank === "string")
+    parts.push(`League ${d.lolRank}`);
   if (opts.proof !== false) parts.push(l.verified ? "verified" : "claimed");
   return parts.join(" · ");
 }

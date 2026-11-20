@@ -302,6 +302,8 @@ npx wrangler secret put KICK_CLIENT_ID       # optional: Kick live alerts (kick.
 npx wrangler secret put KICK_CLIENT_SECRET   # optional: the same Kick app's secret
 npx wrangler secret put REDDIT_CLIENT_ID     # optional: Reddit alerts (reddit.com/prefs/apps)
 npx wrangler secret put REDDIT_CLIENT_SECRET # optional: the same Reddit app's secret
+npx wrangler secret put STEAM_API_KEY        # optional: roles from Steam level and games (steamcommunity.com/dev)
+npx wrangler secret put RIOT_API_KEY         # optional: roles from League ranks (developer.riotgames.com)
 npx wrangler secret put OPENAI_API_KEY       # optional: AI moderation (Pro); the moderation endpoint is free
 cd ../..
 ```

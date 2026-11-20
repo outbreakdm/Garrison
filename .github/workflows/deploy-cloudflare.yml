@@ -150,6 +150,8 @@ jobs:
           KICK_CLIENT_SECRET: ${{ secrets.KICK_CLIENT_SECRET }}
           REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
           REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+          STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
+          RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           printf '%s' "$DISCORD_TOKEN" | npx wrangler secret put DISCORD_TOKEN
@@ -161,6 +163,8 @@ jobs:
           if [ -n "$KICK_CLIENT_SECRET" ]; then printf '%s' "$KICK_CLIENT_SECRET" | npx wrangler secret put KICK_CLIENT_SECRET; fi
           if [ -n "$REDDIT_CLIENT_ID" ]; then printf '%s' "$REDDIT_CLIENT_ID" | npx wrangler secret put REDDIT_CLIENT_ID; fi
           if [ -n "$REDDIT_CLIENT_SECRET" ]; then printf '%s' "$REDDIT_CLIENT_SECRET" | npx wrangler secret put REDDIT_CLIENT_SECRET; fi
+          if [ -n "$STEAM_API_KEY" ]; then printf '%s' "$STEAM_API_KEY" | npx wrangler secret put STEAM_API_KEY; fi
+          if [ -n "$RIOT_API_KEY" ]; then printf '%s' "$RIOT_API_KEY" | npx wrangler secret put RIOT_API_KEY; fi
           if [ -n "$OPENAI_API_KEY" ]; then printf '%s' "$OPENAI_API_KEY" | npx wrangler secret put OPENAI_API_KEY; fi
 
       - name: Done

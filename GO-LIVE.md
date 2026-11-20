@@ -152,6 +152,8 @@ github.com/outbreakdm/Garrison → **Settings** (top tab) → left menu
 | `KICK_CLIENT_SECRET`    | optional: the same Kick app's client secret             |
 | `REDDIT_CLIENT_ID`      | optional: Reddit new-post alerts (a Reddit app's client ID) |
 | `REDDIT_CLIENT_SECRET`  | optional: the same Reddit app's secret                  |
+| `STEAM_API_KEY`         | optional: roles from Steam level and games owned (steamcommunity.com/dev) |
+| `RIOT_API_KEY`          | optional: roles from League ranks; needs Riot's production approval for a live bot |
 | `OPENAI_API_KEY`        | optional: AI moderation on Pro (free moderation endpoint) |
 | `TURNSTILE_SITE_KEY`    | optional: captcha on the website verify page (Cloudflare Turnstile) |
 | `TURNSTILE_SECRET`      | optional: the same Turnstile widget's secret key        |
