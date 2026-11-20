@@ -8,12 +8,11 @@ then updates **Status** and the **Log** before stopping.
 ## Pick up here
 
 - **AI assistant v2 (planned 2026-11-19), next up:** `docs/AI_ASSISTANT.md`, "Assistant v2". Owner chose Haiku (Fast) and Sonnet (Smart, Pro and Agency only), supplies at each model's real cost, every coverage gap (writing, more modules, insight, how-to help), and a "Your server" workspace with hand edits (rename, drag to reorder) and an Apply build button. Phase 1 first: a message's hold assumes 12,000 input tokens a round but nothing enforces it, so a big server can cost more than it held. **Phases 1 to 8A built** (not deployed; migrations 0076 to 0079). The eval has never run on the real models: it needs `ANTHROPIC_API_KEY` and the owner's yes (about $6.20 for both models, 3 runs). Phases 5 to 8A (how-to help, server insight, writing, more settings and forum and announcement channels) are done too; 8B is built too (role menus, ticket panels, stream alerts, giveaways, the economy and shop, LFG templates, invite labels, server stats counters). **Deployed 2026-11-19** (`9c003e1`, run #54, migrations 0076 to 0079). What's left needs the owner: the first real-model eval run.
-- **Landing refresh and Needs attention (2026-11-20), not deployed:** hero buttons are Add to
+- **Landing refresh and Needs attention (2026-11-20), deployed** (`db83944`, run #62, dashboard): hero buttons are Add to
   Discord, Open dashboard, See it in action (now to "Watch it work"); Watch it work opens with a
   new AI assistant clip, then Write it, Fix what needs you, It saves itself. All four clips and
   every landing mockup now show today's real UI (the clips are built from the dashboard's own
-  DOM and CSS). Needs attention links straight to each fix and was restyled. Deploy when the
-  owner says so.
+  DOM and CSS). Needs attention links straight to each fix and was restyled.
 - **Optimize and polish (2026-11-17):** 15 fewer database queries on every dashboard page (the
   menu's module settings in one query), faster AI assistant paint, no layout shift on Settings,
   24 px targets, unused CSS removed (see the Log). To run the Worker beside the database, set the
@@ -1436,3 +1435,6 @@ Decided (2026-11-12, owner):
   quiet button, most urgent first, five rows shown and the rest behind "Show N more". DESIGN.md
   has the rules. Biome (only four untouched CRLF files fail format, as before), type-check,
   779 tests from the repo root and `next build` pass. Not deployed.
+- 2026-11-20: Deployed `db83944` (run #62, `dashboard`, no command registration). garrisonbot.com
+  shows Open dashboard and the AI assistant clip first; the served clips and posters match the
+  build byte for byte.
