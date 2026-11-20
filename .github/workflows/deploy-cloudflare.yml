@@ -81,7 +81,17 @@ jobs:
       - name: Deploy dashboard
         if: inputs.target != 'bot'
         working-directory: apps/web
-        run: pnpm cf:deploy
+        # Cloudflare sometimes can't find a version it has just uploaded (code 100146) for longer
+        # than Wrangler waits (workers-sdk #16717). Only that error is retried, after a pause.
+        run: |
+          set -o pipefail
+          for attempt in 1 2 3 4; do
+            if pnpm cf:deploy 2>&1 | tee deploy.log; then exit 0; fi
+            grep -q "code: 100146" deploy.log || exit 1
+            echo "::warning::Cloudflare couldn't find the new version yet (100146); retrying in 30 s ($attempt of 4)"
+            sleep 30
+          done
+          exit 1
 
       - name: Dashboard secrets
         if: inputs.target != 'bot'
@@ -115,7 +125,17 @@ jobs:
       - name: Deploy bot (builds the container image)
         if: inputs.target != 'dashboard'
         working-directory: apps/bot-cloudflare
-        run: pnpm cf:deploy
+        # Cloudflare sometimes can't find a version it has just uploaded (code 100146) for longer
+        # than Wrangler waits (workers-sdk #16717). Only that error is retried, after a pause.
+        run: |
+          set -o pipefail
+          for attempt in 1 2 3 4; do
+            if pnpm cf:deploy 2>&1 | tee deploy.log; then exit 0; fi
+            grep -q "code: 100146" deploy.log || exit 1
+            echo "::warning::Cloudflare couldn't find the new version yet (100146); retrying in 30 s ($attempt of 4)"
+            sleep 30
+          done
+          exit 1
 
       - name: Bot secrets
         if: inputs.target != 'dashboard'
