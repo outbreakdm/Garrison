@@ -24,7 +24,7 @@
     "cf:bot:logs": "pnpm --filter @garrison/bot-cloudflare run cf:tail"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.6.6",
+    "@biomejs/biome": "^2.6.8",
     "@types/node": "^22.20.5",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0"
