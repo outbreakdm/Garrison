@@ -2,6 +2,7 @@ import { and, asc, desc, eq, getTableName, isNotNull, notInArray, sql } from "dr
 import type { Db } from "../client";
 import {
   alertSettings,
+  applicationSettings,
   automodSettings,
   barracksSettings,
   dashboardAccess,
@@ -77,6 +78,8 @@ export const EDITABLE_FIELDS = {
   roles: ["menus"],
   // Saved messages are checked with checkMessages before they get here.
   messages: ["messages", "responders"],
+  // Application forms are checked with checkApplicationForms before they get here.
+  applications: ["forms"],
   // Who else may use the dashboard; checked with checkAccessGrants before it gets here.
   access: ["grants"],
   // Which member pages show (docs/MEMBER_PAGES.md).
@@ -275,6 +278,7 @@ const TABLES = {
   stats: statsSettings,
   invites: inviteSettings,
   economy: economySettings,
+  applications: applicationSettings,
 } as const;
 
 /** Modules whose settings row is created on first use, by the bot or the dashboard. */
@@ -298,6 +302,7 @@ const LAZY = new Set<SettingsModule>([
   "stats",
   "invites",
   "economy",
+  "applications",
 ]);
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -546,6 +551,12 @@ async function writeRow(tx: Tx, module: SettingsModule, guildId: string, values:
         .update(roleMenuSettings)
         .set(set as Partial<typeof roleMenuSettings.$inferInsert>)
         .where(eq(roleMenuSettings.guildId, guildId));
+      return;
+    case "applications":
+      await tx
+        .update(applicationSettings)
+        .set(set as Partial<typeof applicationSettings.$inferInsert>)
+        .where(eq(applicationSettings.guildId, guildId));
       return;
   }
 }

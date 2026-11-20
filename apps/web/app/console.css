@@ -5108,3 +5108,142 @@ a.item-tile:not([open]) > .panel__summary {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
 }
+
+/* Applications: forms folded into rows, each opening to post and edit; the review list on top. */
+.appl {
+  display: grid;
+  gap: var(--space-3);
+}
+.appl__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.appl__list > li + li {
+  border-top: 1px solid var(--line);
+}
+.appl__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+.appl__summary::-webkit-details-marker {
+  display: none;
+}
+.appl__name {
+  font-weight: 650;
+}
+.appl__post {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 4px 14px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.appl__edit {
+  display: grid;
+  gap: var(--space-3);
+  padding: 12px 14px;
+}
+.appl__fields {
+  display: grid;
+  gap: var(--space-3);
+}
+.appl__pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+}
+.appl__questions {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.appl__q {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto;
+  gap: 8px;
+}
+.appl__roles {
+  min-height: 6.5rem;
+}
+.appl__do {
+  display: flex;
+  gap: 8px;
+}
+.appl__remove {
+  padding: 0 14px 14px;
+}
+.appl__empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13.5px;
+}
+.appl__app {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+}
+.appl__who {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+}
+.appl__answers {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+.appl__answers dt {
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.appl__answers dd {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.appl__decide {
+  display: flex;
+  gap: 8px;
+}
+.appl__past summary,
+.appl__new > summary {
+  cursor: pointer;
+  width: max-content;
+}
+.appl__new > summary {
+  list-style: none;
+}
+.appl__new > summary::-webkit-details-marker {
+  display: none;
+}
+.appl__new[open] > .appl__edit {
+  margin-top: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+.appl__done {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+@media (max-width: 640px) {
+  .appl__q {
+    grid-template-columns: 1fr;
+  }
+}

@@ -107,6 +107,8 @@ const REQUEST_PAGE: Record<string, string> = {
   release_quarantine: "/gatehouse#quarantine",
   post_verify_panel: "/gatehouse?tab=verification",
   verify_decide: "/gatehouse#answers",
+  post_application_panel: "/applications",
+  application_decide: "/applications#review",
   anti_nuke: "/gatehouse?tab=antinuke",
   undo_case: "/watch",
   mod_action: "/watch",

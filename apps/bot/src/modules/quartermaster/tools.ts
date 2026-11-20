@@ -69,6 +69,10 @@ export const MODULE_GUIDE: Record<ReadableModule, { page: string; about: string 
     about: "voice channels named with live counts (members, bots, a role)",
   },
   barracks: { page: "Game accounts", about: "roles from linked game accounts (ranks, classes)" },
+  applications: {
+    page: "Applications",
+    about: "application and recruitment forms: questions, the staff channel, roles given on accept",
+  },
 };
 
 const MODULES = (Object.keys(EDITABLE_FIELDS) as SettingsModule[]).filter(

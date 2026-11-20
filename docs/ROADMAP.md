@@ -22,7 +22,11 @@ then updates **Status** and the **Log** before stopping.
      or a phrase (optional channels, a wait between replies, never pinging) and posts tags with
      `/tag` (autocomplete). Free 10, Pro 100. Runs after automod and skips what it removed.
      **Migration 0081** (`message_settings.responders`); **deploy with register_commands** for /tag.
-  4. [ ] Applications and recruitment forms, reviewed on the dashboard; accepting gives roles.
+  4. [x] Applications and recruitment forms (new Applications page under Support): a panel's
+     Apply button opens Discord's form (up to five questions), answers go to a staff channel with
+     Accept and Decline (or the dashboard's review list), one decision lands, accepting gives the
+     form's roles (never staff, bot or higher roles) and the applicant gets a DM. Free 1 form,
+     Pro 10; kept 90 days. **Migration 0082** (tables, enum values, grants).
   5. [ ] AI help in tickets: a summary, a suggested reply from the server's rules and FAQ.
   6. [ ] Small role tools: roles back on rejoin, timed roles, sticky messages, self-clearing channels.
   7. [ ] More alert sources: Kick, Reddit, RSS, Bluesky.
@@ -1503,3 +1507,7 @@ Decided (2026-11-12, owner):
 - 2026-11-20: Best bot item 3, auto-responders and /tag (`packages/db/src/responders.ts`, bot
   `modules/responders`, `components/RespondersPanel.tsx`). Checked on the local preview after
   applying 0080 and 0081: a word responder saved and listed. Lint, type-check, 798 tests pass.
+- 2026-11-20: Best bot item 4, applications (`packages/db/src/applications.ts`, bot
+  `modules/applications`, web `applications/`). Checked on the local preview after 0082: a form
+  with two questions saved, and posting its panel queued the request. The Discord side (button,
+  form, staff card) needs the deployed bot. Lint, type-check, 804 tests pass.

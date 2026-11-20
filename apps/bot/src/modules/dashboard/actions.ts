@@ -28,6 +28,7 @@ import type { BotContext } from "../../commands/types.js";
 import { cardMessage } from "../../lib/card.js";
 import { safeText } from "../../lib/text.js";
 import { doTestAlert } from "../alerts/service.js";
+import { doApplicationDecide, doPostApplicationPanel } from "../applications/service.js";
 import { postMessageNow } from "../dispatch/service.js";
 import { buy, decidePurchase, staffAdjust } from "../economy/service.js";
 import { restoreQuarantine } from "../gatehouse/anti-nuke.js";
@@ -611,6 +612,10 @@ export async function runDashboardAction(
       return doTemplateSave(ctx, guild, member, action.payload);
     case "template_apply":
       return doTemplateApply(ctx, guild, member, action.payload);
+    case "post_application_panel":
+      return doPostApplicationPanel(ctx, guild, member, action.payload);
+    case "application_decide":
+      return doApplicationDecide(ctx, guild, member, action.payload);
     case "suggestion_status":
       return doSuggestionStatus(ctx, guild, member, action.payload);
     default:

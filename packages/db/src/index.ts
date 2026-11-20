@@ -2,6 +2,7 @@ export * from "./access";
 export * from "./ai-engine";
 export * from "./ai-usage";
 export * from "./alerts";
+export * from "./applications";
 export * from "./automod";
 export * from "./backups";
 export * from "./cards";
@@ -27,6 +28,7 @@ export * from "./repo/account";
 export * from "./repo/actions";
 export * from "./repo/ai-usage";
 export * from "./repo/alerts";
+export * from "./repo/applications";
 export * from "./repo/attendance";
 export * from "./repo/automod";
 export * from "./repo/backups";
@@ -69,6 +71,7 @@ export * from "./scam-links";
 export type {
   AlertStateRow,
   Appeal,
+  ApplicationRow,
   AutomodRule,
   BotProfilePayload,
   CallSignupsPayload,

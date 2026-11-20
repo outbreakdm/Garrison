@@ -7,6 +7,7 @@ export * from "./access";
 export * from "./ai-engine";
 export * from "./ai-usage";
 export * from "./alerts";
+export * from "./applications";
 export * from "./automod";
 export * from "./cards";
 export * from "./economy";

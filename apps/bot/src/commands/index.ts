@@ -1,3 +1,8 @@
+import {
+  applicationModals,
+  applyButtons,
+  decideApplicationButtons,
+} from "../modules/applications/service.js";
 import { link, roster, unlink } from "../modules/barracks/commands.js";
 import { economyCommands, purchaseButtons } from "../modules/economy/commands.js";
 import { gatehouseButtons, gatehouseCommands } from "../modules/gatehouse/commands/index.js";
@@ -49,8 +54,16 @@ export const buttons: ButtonHandler[] = [
   ticketButtons,
   giveawayButtons,
   suggestionButtons,
+  applyButtons,
+  decideApplicationButtons,
 ];
 export const selects: SelectHandler[] = [roleMenuSelects];
-export const modals: ModalHandler[] = [opsModals, ticketModals, rankcardModals, questionModals];
+export const modals: ModalHandler[] = [
+  opsModals,
+  ticketModals,
+  rankcardModals,
+  questionModals,
+  applicationModals,
+];
 
 export const commandsByName = new Map(commands.map((c) => [c.data.name, c]));

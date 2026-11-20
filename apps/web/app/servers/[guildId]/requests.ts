@@ -9,7 +9,10 @@ import {
   ECONOMY_LIMITS,
   entitlements,
   findSendByDiscordId,
+  formOpen,
   getAlertFeeds,
+  getApplication,
+  getApplicationForms,
   getBackup,
   getCase,
   getGiveaway,
@@ -36,6 +39,7 @@ import {
   type QueueInput,
   queueDashboardAction,
   readAlertFeeds,
+  readApplicationForms,
   readMessages,
   readRoleMenus,
   SEASON_NAME_MAX,
@@ -63,6 +67,7 @@ import { slotsText } from "@/lib/slots";
 
 const PAGES = new Set([
   "",
+  "applications",
   "gatehouse",
   "watch",
   "rally",
@@ -290,6 +295,29 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       return {
         ok: true,
         input: { kind, payload: { id: p.id, done: field(form, "op") === "done" } },
+      };
+    }
+    case "post_application_panel": {
+      const formId = field(form, "formId");
+      const channelId = field(form, "channelId");
+      const [raw, plan, channels] = await Promise.all([
+        getApplicationForms(db, guildId),
+        getGuildPlan(db, guildId),
+        listTextChannels(guildId).catch(() => []),
+      ]);
+      const forms = readApplicationForms(raw);
+      if (!forms.some((f) => f.id === formId)) return { ok: false, error: "not_found" };
+      if (!formOpen(forms, formId, entitlements(plan))) return { ok: false, error: "form_paused" };
+      if (!channels.some((c) => c.id === channelId)) return { ok: false, error: "channel" };
+      return { ok: true, input: { kind, payload: { formId, channelId } } };
+    }
+    case "application_decide": {
+      const id = field(form, "id");
+      const a = uuid.safeParse(id).success ? await getApplication(db, guildId, id) : null;
+      if (a?.status !== "waiting") return { ok: false, error: "not_found" };
+      return {
+        ok: true,
+        input: { kind, payload: { id: a.id, accept: field(form, "op") === "accept" } },
       };
     }
     case "verify_decide": {

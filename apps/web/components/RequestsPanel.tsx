@@ -29,6 +29,7 @@ export const REQUEST_ERRORS: Record<string, string> = {
   profile_pro: "Garrison's own avatar, banner and bio in your server are part of Garrison Pro.",
   menu_empty: "Add at least one role and save the menu before posting it.",
   menu_paused: "This menu is paused: the server has more menus than its plan runs.",
+  form_paused: "This form is paused: the server has more forms than its plan runs.",
   panel_empty: "Add a topic and save the panel before posting it.",
   panel_paused: "This panel is paused: the server has more panels than its plan runs.",
   giveaway:

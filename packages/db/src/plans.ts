@@ -161,6 +161,7 @@ export type Module =
   | "invites"
   | "economy"
   | "suggestions"
+  | "applications"
   | "insights";
 
 interface Feature<T> {
@@ -209,6 +210,12 @@ export const FEATURES = {
     about: "Scheduled messages",
     free: 3,
     pro: 50,
+  },
+  "applications.forms": {
+    module: "applications",
+    about: "Application and recruitment forms, reviewed by staff",
+    free: 1,
+    pro: 10,
   },
   "messages.responders": {
     module: "messages",

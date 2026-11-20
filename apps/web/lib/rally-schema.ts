@@ -76,6 +76,8 @@ export const ACTION_KIND: Record<string, string> = {
   giveaway_action: "Giveaway",
   suggestion_status: "Suggestion decision",
   verify_decide: "Verification decision",
+  post_application_panel: "Post application form",
+  application_decide: "Application decision",
   economy_adjust: "Give or take coins",
   economy_buy: "Buy from the shop",
   economy_purchase: "Shop purchase decision",

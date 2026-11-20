@@ -183,6 +183,20 @@ export const HELP = {
     modules: ["tickets"],
     keywords: "tickets support modmail help desk panel transcript",
   },
+  applications: {
+    title: "Applications",
+    page: "Applications",
+    path: "/applications",
+    about:
+      "Recruitment and staff forms: a panel's Apply button opens Discord's form, the answers go to your staff channel with Accept and Decline, and accepting gives the form's roles.",
+    steps: [
+      "Applications → New form: name it, write the panel, add up to five questions, pick the staff channel and the roles accepting gives.",
+      "Post its panel in a channel. Staff accept or decline on the card in Discord or under Waiting for staff; the applicant gets a DM either way.",
+      "Free runs one form, Pro up to ten. Applications are kept 90 days.",
+    ],
+    modules: ["applications"],
+    keywords: "applications apply recruitment recruit form staff application guild join team",
+  },
   leveling: {
     title: "Leveling",
     page: "Leveling",

@@ -256,6 +256,7 @@ export const FIELD_LABELS: Record<string, string> = {
   "voice.userLimit": "Voice rooms: member limit",
   "voice.categoryId": "Voice rooms: category",
   "invites.labels": "Invite labels",
+  "applications.forms": "Application forms",
   "economy.enabled": "Economy",
   "economy.currency": "Economy: currency",
   "economy.earn": "Economy: earning",

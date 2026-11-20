@@ -20,6 +20,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { AccessGrant } from "./access";
 import type { AlertFeed } from "./alerts";
+import type { ApplicationForm } from "./applications";
 import type { ServerBackup } from "./backups";
 import type { CustomCard } from "./cards";
 import type { Currency, EarnRules, ShopItem } from "./economy";
@@ -494,6 +495,7 @@ export const settingsModule = pgEnum("settings_module", [
   "stats",
   "invites",
   "economy",
+  "applications",
 ]);
 
 /** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */
@@ -1290,6 +1292,8 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "economy_adjust",
   "economy_buy",
   "economy_purchase",
+  "post_application_panel",
+  "application_decide",
 ]);
 
 /**
@@ -1726,6 +1730,56 @@ export type RoleMenuPost = typeof roleMenuPosts.$inferSelect;
 // ---------------------------------------------------------------------------
 
 /** A server's saved messages, edited on the dashboard as one value (with history and undo). */
+/** Applications and recruitment forms (applications.ts); the dashboard edits them. */
+export const applicationSettings = pgTable(
+  "application_settings",
+  {
+    guildId: text("guild_id")
+      .primaryKey()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    forms: jsonb("forms").$type<ApplicationForm[]>().notNull().default(sql`'[]'::jsonb`),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      "application_forms_list",
+      sql`jsonb_typeof(${t.forms}) = 'array' AND jsonb_array_length(${t.forms}) <= 10`,
+    ),
+  ],
+).enableRLS();
+
+/**
+ * One member's application, kept 90 days. The bot writes it (and the decision, from the
+ * card's buttons or a dashboard request); the dashboard reads it for the review list.
+ */
+export const applications = pgTable(
+  "applications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    formId: text("form_id").notNull(),
+    formName: text("form_name").notNull(),
+    userId: text("user_id").notNull(),
+    username: text("username").notNull(),
+    answers: jsonb("answers").$type<VerifyAnswer[]>().notNull(),
+    /** waiting for staff; accepted or declined by them. */
+    status: text("status").notNull().default("waiting"),
+    decidedBy: text("decided_by"),
+    channelId: text("channel_id"),
+    messageId: text("message_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+  },
+  (t) => [
+    check("applications_status", sql`${t.status} IN ('waiting', 'accepted', 'declined')`),
+    index("applications_guild").on(t.guildId, t.createdAt),
+  ],
+).enableRLS();
+
+export type ApplicationRow = typeof applications.$inferSelect;
+
 export const messageSettings = pgTable(
   "message_settings",
   {
