@@ -134,6 +134,27 @@ const PHRASES = {
     de: "Ein Mitglied",
     fr: "Un membre",
   },
+  happyBirthday: {
+    en: "Happy birthday, {users}!",
+    es: "¡Feliz cumpleaños, {users}!",
+    pt: "Feliz aniversário, {users}!",
+    de: "Alles Gute zum Geburtstag, {users}!",
+    fr: "Joyeux anniversaire, {users} !",
+  },
+  countWrong: {
+    en: "{user} broke the count at {count}: the next number was {expected}. Start again from 1.",
+    es: "{user} rompió la cuenta en {count}: tocaba el {expected}. Empezad de nuevo desde 1.",
+    pt: "{user} quebrou a contagem em {count}: o próximo era {expected}. Recomecem do 1.",
+    de: "{user} hat bei {count} verzählt: {expected} wäre dran gewesen. Fangt wieder bei 1 an.",
+    fr: "{user} a cassé le compte à {count} : il fallait {expected}. On recommence à 1.",
+  },
+  countTwice: {
+    en: "{user} counted twice in a row, breaking the count at {count}. Start again from 1.",
+    es: "{user} contó dos veces seguidas y rompió la cuenta en {count}. Empezad de nuevo desde 1.",
+    pt: "{user} contou duas vezes seguidas e quebrou a contagem em {count}. Recomecem do 1.",
+    de: "{user} hat zweimal hintereinander gezählt und bei {count} verzählt. Fangt wieder bei 1 an.",
+    fr: "{user} a compté deux fois de suite et cassé le compte à {count}. On recommence à 1.",
+  },
 } satisfies Record<string, Phrase>;
 export type PhraseKey = keyof typeof PHRASES;
 
@@ -349,6 +370,18 @@ export const COMMAND_DESCRIPTIONS: Record<string, Omit<Phrase, "en">> = {
     pt: "Postar uma das respostas salvas do servidor.",
     de: "Poste eine der gespeicherten Antworten des Servers.",
     fr: "Publier une des réponses enregistrées du serveur.",
+  },
+  birthday: {
+    es: "Guarda tu cumpleaños para que el servidor lo celebre.",
+    pt: "Salve seu aniversário para o servidor comemorar.",
+    de: "Speichere deinen Geburtstag, damit der Server ihn feiern kann.",
+    fr: "Enregistre ton anniversaire pour que le serveur le fête.",
+  },
+  trivia: {
+    es: "Lanza una pregunta de trivia: gana la primera respuesta correcta.",
+    pt: "Faça uma pergunta de trivia: a primeira resposta certa vence.",
+    de: "Stelle eine Quizfrage: Die erste richtige Antwort gewinnt.",
+    fr: "Poser une question de quiz : la première bonne réponse gagne.",
   },
   temprole: {
     es: "Da un rol a un miembro durante un tiempo.",

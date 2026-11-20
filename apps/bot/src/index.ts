@@ -25,6 +25,7 @@ import { sweepStatRoles } from "./modules/barracks/stat-roles.js";
 import { processDashboardActions } from "./modules/dashboard/actions.js";
 import { sweepMessages } from "./modules/dispatch/service.js";
 import { onEconomyMessage, sweepEconomy } from "./modules/economy/service.js";
+import { onCountingMessage, sweepBirthdays } from "./modules/fun/service.js";
 import { handleAuditLogEntry } from "./modules/gatehouse/anti-nuke.js";
 import { sweepWeeklyBackups } from "./modules/gatehouse/backup.js";
 import { maybePruneAnswers } from "./modules/gatehouse/questions.js";
@@ -279,6 +280,7 @@ client.once(Events.ClientReady, async (ready) => {
       await step("Giveaway sweep", () => sweepGiveaways(ctx, ready));
       await step("Ticket sweep", () => sweepTickets(ctx, ready));
       await step("Utilities sweep", () => sweepUtilities(ctx, ready));
+      await step("Birthdays", () => sweepBirthdays(ctx, ready));
       await step("Ledger prune", () => maybePruneLedger(ctx));
       await step("Verification answers prune", () => maybePruneAnswers(ctx));
       await step("Applications prune", () => maybePruneApplications(ctx));
@@ -367,6 +369,9 @@ client.on(Events.MessageCreate, (message) => {
     .catch((error) => logger.warn("Auto-responder failed", { guildId: message.guildId, error }));
   onTicketMessage(ctx, message).catch((error) =>
     logger.error("Ticket transcript failed", { guildId: message.guildId, error }),
+  );
+  onCountingMessage(ctx, message).catch((error) =>
+    logger.warn("Counting failed", { guildId: message.guildId, error }),
   );
   onStickyMessage(ctx, message).catch((error) =>
     logger.warn("Sticky message failed", { guildId: message.guildId, error }),

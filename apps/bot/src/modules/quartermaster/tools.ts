@@ -78,6 +78,10 @@ export const MODULE_GUIDE: Record<ReadableModule, { page: string; about: string 
     about:
       "roles back when a member rejoins, sticky messages kept at the bottom of a channel, and self-clearing channels",
   },
+  fun: {
+    page: "Fun",
+    about: "birthday greetings and a birthday role, and a counting channel",
+  },
 };
 
 const MODULES = (Object.keys(EDITABLE_FIELDS) as SettingsModule[]).filter(

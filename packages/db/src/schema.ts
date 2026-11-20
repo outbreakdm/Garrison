@@ -500,6 +500,7 @@ export const settingsModule = pgEnum("settings_module", [
   "economy",
   "applications",
   "utilities",
+  "fun",
 ]);
 
 /** Field-level before/after, e.g. { dmMembers: { from: true, to: false } }. */
@@ -1858,6 +1859,54 @@ export const timedRoles = pgTable(
   ],
 ).enableRLS();
 export type TimedRole = typeof timedRoles.$inferSelect;
+
+/** Fun extras (fun.ts): birthdays and a counting channel. The dashboard edits them. */
+export const funSettings = pgTable("fun_settings", {
+  guildId: text("guild_id")
+    .primaryKey()
+    .references(() => guilds.id, { onDelete: "cascade" }),
+  birthdaysEnabled: boolean("birthdays_enabled").notNull().default(false),
+  birthdayChannelId: text("birthday_channel_id"),
+  /** Given for the day. Null: no role. */
+  birthdayRoleId: text("birthday_role_id"),
+  countingEnabled: boolean("counting_enabled").notNull().default(false),
+  countingChannelId: text("counting_channel_id"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
+export type FunSettings = typeof funSettings.$inferSelect;
+
+/** A member's birthday in one server: month and day, never the year. */
+export const birthdays = pgTable(
+  "birthdays",
+  {
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    month: smallint("month").notNull(),
+    day: smallint("day").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.guildId, t.userId] }),
+    index("birthdays_day").on(t.guildId, t.month, t.day),
+    check("birthdays_date", sql`${t.month} BETWEEN 1 AND 12 AND ${t.day} BETWEEN 1 AND 31`),
+  ],
+).enableRLS();
+
+/** What the bot keeps between messages: the count, and the last birthday day it ran. */
+export const funState = pgTable("fun_state", {
+  guildId: text("guild_id")
+    .primaryKey()
+    .references(() => guilds.id, { onDelete: "cascade" }),
+  count: integer("count").notNull().default(0),
+  lastUserId: text("last_user_id"),
+  best: integer("best").notNull().default(0),
+  /** The server's local date birthdays last ran for, YYYY-MM-DD. */
+  birthdayDate: text("birthday_date"),
+  /** Who has the birthday role today, so it comes off tomorrow. */
+  birthdayHolders: text("birthday_holders").array().notNull().default(sql`'{}'::text[]`),
+}).enableRLS();
+export type FunState = typeof funState.$inferSelect;
 
 /** The sticky message Garrison last posted in a channel, so the next post replaces it. */
 export const stickyPosts = pgTable("sticky_posts", {

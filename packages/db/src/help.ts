@@ -184,6 +184,20 @@ export const HELP = {
     modules: ["tickets"],
     keywords: "tickets support modmail help desk panel transcript",
   },
+  fun: {
+    title: "Fun",
+    page: "Fun",
+    path: "/fun",
+    about:
+      "Birthday greetings with an optional birthday role, a counting channel, and /trivia rounds.",
+    steps: [
+      "Fun → Birthdays: turn greetings on, pick the channel and (if you like) a role for the day. Members save theirs with /birthday set.",
+      "Fun → Counting: pick a channel. Members count up one at a time; a wrong number starts again from 1.",
+      "Anyone can run /trivia: four answers, 30 seconds, the first right answer wins.",
+    ],
+    commands: ["/birthday set", "/birthday list", "/trivia"],
+    keywords: "birthday birthdays counting count game trivia quiz fun minigame",
+  },
   utilities: {
     title: "Utilities",
     page: "Utilities",

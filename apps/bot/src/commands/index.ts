@@ -6,6 +6,8 @@ import {
 } from "../modules/applications/service.js";
 import { link, roster, unlink } from "../modules/barracks/commands.js";
 import { economyCommands, purchaseButtons } from "../modules/economy/commands.js";
+import { birthday } from "../modules/fun/birthday.js";
+import { trivia, triviaButtons } from "../modules/fun/trivia.js";
 import { gatehouseButtons, gatehouseCommands } from "../modules/gatehouse/commands/index.js";
 import { questionModals } from "../modules/gatehouse/questions.js";
 import { giveaway } from "../modules/giveaways/commands.js";
@@ -45,6 +47,8 @@ export const commands: Command[] = [
   suggest,
   tag,
   temprole,
+  birthday,
+  trivia,
 ];
 export const buttons: ButtonHandler[] = [
   ...watchButtons,
@@ -59,6 +63,7 @@ export const buttons: ButtonHandler[] = [
   suggestionButtons,
   applyButtons,
   decideApplicationButtons,
+  triviaButtons,
 ];
 export const selects: SelectHandler[] = [roleMenuSelects];
 export const modals: ModalHandler[] = [

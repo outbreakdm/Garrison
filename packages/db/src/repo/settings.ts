@@ -9,6 +9,7 @@ import {
   type EscalationRule,
   economySettings,
   escalationRules,
+  funSettings,
   gatehouseSettings,
   guilds,
   inviteSettings,
@@ -83,6 +84,14 @@ export const EDITABLE_FIELDS = {
   applications: ["forms"],
   // Stickies and self-clearing channels are checked with checkStickies and checkClearRules.
   utilities: ["restoreRoles", "restoreSkipRoleIds", "stickies", "clearing"],
+  // Channels and roles are checked against the server before they get here.
+  fun: [
+    "birthdaysEnabled",
+    "birthdayChannelId",
+    "birthdayRoleId",
+    "countingEnabled",
+    "countingChannelId",
+  ],
   // Who else may use the dashboard; checked with checkAccessGrants before it gets here.
   access: ["grants"],
   // Which member pages show (docs/MEMBER_PAGES.md).
@@ -292,6 +301,7 @@ const TABLES = {
   economy: economySettings,
   applications: applicationSettings,
   utilities: utilitySettings,
+  fun: funSettings,
 } as const;
 
 /** Modules whose settings row is created on first use, by the bot or the dashboard. */
@@ -317,6 +327,7 @@ const LAZY = new Set<SettingsModule>([
   "economy",
   "applications",
   "utilities",
+  "fun",
 ]);
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -577,6 +588,12 @@ async function writeRow(tx: Tx, module: SettingsModule, guildId: string, values:
         .update(utilitySettings)
         .set(set as Partial<typeof utilitySettings.$inferInsert>)
         .where(eq(utilitySettings.guildId, guildId));
+      return;
+    case "fun":
+      await tx
+        .update(funSettings)
+        .set(set as Partial<typeof funSettings.$inferInsert>)
+        .where(eq(funSettings.guildId, guildId));
       return;
   }
 }

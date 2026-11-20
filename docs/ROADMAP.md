@@ -78,7 +78,19 @@ then updates **Status** and the **Log** before stopping.
      tickets, giveaways, applications), and subcommand and option descriptions: the strings are
      inline everywhere, so each needs moving into `packages/db/src/i18n.ts`. Translations were
      written here, not by a native speaker; worth a check before announcing them.
-  12. [ ] Fun extras: birthdays, trivia, counting.
+  12. [x] Fun extras, on a new Fun page under Engagement: birthdays (`/birthday set|remove|list`,
+     a greeting that pings them at midnight in the server's time zone, an optional role for the
+     day; Feb 29 celebrated on Feb 28 in other years), a counting channel (one number at a time,
+     never twice in a row, a wrong number restarts from 1, best kept), and `/trivia` (40
+     questions, four buttons, 30 seconds, one guess each, first right answer wins; English only).
+     Free. **Migration 0087**; **deploy with register_commands** for /birthday and /trivia.
+- **Deploying all twelve (when the owner says deploy):** apply migrations **0080 to 0087** to
+  production and record each in drizzle.__drizzle_migrations (git-blob sha256 and the journal's
+  "when"), then deploy target=everything with **register_commands=true** (/tag, /ticket assist,
+  /temprole, /birthday, /trivia and every command's translations). New optional secrets, all off
+  until set: bot `KICK_CLIENT_ID`/`KICK_CLIENT_SECRET`, `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET`,
+  `STEAM_API_KEY`, `RIOT_API_KEY`; dashboard `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`,
+  `TWITCH_EVENTSUB_SECRET` (and `APP_URL/auth/twitch/callback` in the Twitch console).
 - **AI assistant v2 (planned 2026-11-19), next up:** `docs/AI_ASSISTANT.md`, "Assistant v2". Owner chose Haiku (Fast) and Sonnet (Smart, Pro and Agency only), supplies at each model's real cost, every coverage gap (writing, more modules, insight, how-to help), and a "Your server" workspace with hand edits (rename, drag to reorder) and an Apply build button. Phase 1 first: a message's hold assumes 12,000 input tokens a round but nothing enforces it, so a big server can cost more than it held. **Phases 1 to 8A built** (not deployed; migrations 0076 to 0079). The eval has never run on the real models: it needs `ANTHROPIC_API_KEY` and the owner's yes (about $6.20 for both models, 3 runs). Phases 5 to 8A (how-to help, server insight, writing, more settings and forum and announcement channels) are done too; 8B is built too (role menus, ticket panels, stream alerts, giveaways, the economy and shop, LFG templates, invite labels, server stats counters). **Deployed 2026-11-19** (`9c003e1`, run #54, migrations 0076 to 0079). What's left needs the owner: the first real-model eval run.
 - **Landing refresh and Needs attention (2026-11-20), deployed** (`db83944`, run #62, dashboard): hero buttons are Add to
   Discord, Open dashboard, See it in action (now to "Watch it work"); Watch it work opens with a
@@ -1589,3 +1601,7 @@ Decided (2026-11-12, owner):
   local preview after 0086: picking Español in Settings → Server saved, and the public page
   read "128 miembros en Discord", "Clasificación", "Nivel 32", "48.210 XP". Lint, type-check,
   841 tests pass. Not deployed.
+- 2026-11-20: Best bot item 12, fun extras (`packages/db/src/fun.ts`, bot `modules/fun`, web
+  `fun/`). Checked on the local preview after 0087: birthdays and counting saved with their
+  channels. The Discord side (greetings, counting, trivia) needs the deployed bot. All twelve
+  best-bot items are built and committed. Lint, type-check, 849 tests pass. Not deployed.
