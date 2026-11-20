@@ -1012,6 +1012,150 @@ a.g-btn--primary:hover {
   color: var(--text-muted);
   font-size: 12px;
 }
+/* Set up in three clicks: three numbered rows, each with its one action on the right. */
+.setup {
+  display: grid;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--go) 28%, var(--line));
+}
+.setup__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--go) 8%, transparent), transparent 70%),
+    var(--surface);
+}
+.setup__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+}
+.setup__sub {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.setup__steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.setup__step {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 14px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--line);
+}
+.setup__step:first-child {
+  border-top: 0;
+}
+.setup__n {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.setup__step.is-done .setup__n {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--go) 18%, transparent);
+  color: var(--go);
+}
+.setup__name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+}
+.setup__step.is-done .setup__name {
+  color: var(--text-muted);
+}
+.setup__about {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  max-width: 62ch;
+}
+.setup__state {
+  color: var(--go);
+  font-size: 12.5px;
+  font-weight: 650;
+}
+.setup__do {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.setup__select {
+  min-width: 11rem;
+}
+.setup__do--presets {
+  grid-column: 2 / -1;
+  justify-content: flex-start;
+}
+.setup__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.setup__preset {
+  position: relative;
+  display: grid;
+  gap: 1px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  cursor: pointer;
+}
+.setup__preset input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.setup__preset:has(input:checked) {
+  border-color: var(--go);
+  background: color-mix(in srgb, var(--go) 10%, var(--surface-raised));
+}
+.setup__preset:has(input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.setup__preset-name {
+  font-size: 13px;
+  font-weight: 650;
+}
+.setup__preset-about {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+@media (max-width: 640px) {
+  .setup__step {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+  .setup__do {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+}
 /* This week's numbers: four cells in one panel, split by hairlines. */
 .ov-stats {
   display: grid;

@@ -161,6 +161,15 @@ export async function listQmBuilds(db: Db, guildId: string, limit = 20) {
     .limit(limit);
 }
 
+/** Whether an AI assistant build was ever applied on a server (setup's Build step). */
+export async function hasAppliedQmBuild(db: Db, guildId: string) {
+  const [row] = await db
+    .select({ n: count() })
+    .from(qmBuilds)
+    .where(and(eq(qmBuilds.guildId, guildId), sql`${qmBuilds.appliedAt} is not null`));
+  return (row?.n ?? 0) > 0;
+}
+
 /** A person's newest draft still waiting to be built on a server, or null. */
 export async function latestWaitingQmBuild(
   db: Db,

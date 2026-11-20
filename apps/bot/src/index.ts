@@ -13,6 +13,7 @@ import { handleInteraction } from "./interactions.js";
 
 import { ensureGuild, forgetGuild } from "./lib/guild-registry.js";
 import { startHealthServer } from "./lib/health.js";
+import { sayHello } from "./lib/hello.js";
 import { watchDatabase } from "./lib/liveness.js";
 import { createLogger } from "./lib/logger.js";
 import { Metrics, maybePruneOperations } from "./lib/metrics.js";
@@ -404,9 +405,15 @@ client.on(Events.VoiceStateUpdate, (before, after) =>
 
 client.on(Events.GuildCreate, async (guild) => {
   logger.info("Joined server", { guildId: guild.id, members: guild.memberCount });
-  await upsertGuild(db, { id: guild.id, name: guild.name }).catch((error) =>
-    logger.error("Could not register guild", { guildId: guild.id, error }),
-  );
+  const joined = await upsertGuild(db, { id: guild.id, name: guild.name }).catch((error) => {
+    logger.error("Could not register guild", { guildId: guild.id, error });
+    return null;
+  });
+  // A first join says hello with the setup link; a rejoin or a restart doesn't.
+  if (joined?.created)
+    await sayHello(guild, env.APP_URL).catch((error) =>
+      logger.warn("Couldn't say hello in a new server", { guildId: guild.id, error }),
+    );
 });
 
 client.on(Events.GuildDelete, async (guild) => {

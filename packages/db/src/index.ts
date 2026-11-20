@@ -146,6 +146,7 @@ export type {
 export * as schema from "./schema";
 export * from "./server-stats";
 export * from "./server-templates";
+export * from "./setup";
 export * from "./starboard";
 export * from "./stat-roles";
 export * from "./suggestions";

@@ -6,24 +6,31 @@ import {
   getHealthSnapshot,
   getInsights,
   getOverview,
+  hasAppliedQmBuild,
   listDashboardActions,
   listQmBuilds,
   listRecentCases,
   listSignups,
   QM_PLAN_TTL_MS,
+  readSettings,
+  setupProgress,
 } from "@garrison/db";
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { ViewTransition } from "react";
 import { DurationBar, untilText } from "@/components/DurationBar";
 import { ActionBadge, formatTime, plainMentions } from "@/components/format";
 import { Bars } from "@/components/insights/Bars";
 import { RequestsPanel } from "@/components/RequestsPanel";
+import { SetupCard } from "@/components/SetupCard";
 import { getDb } from "@/lib/db";
-import { channelNames, guildCounts } from "@/lib/discord";
+import { channelNames, guildCounts, listTextChannels } from "@/lib/discord";
+import { readFlash } from "@/lib/flash";
 import { moduleStates } from "@/lib/module-states";
 import { ACTION_KIND } from "@/lib/rally-schema";
 import { requireGuildAccess } from "@/lib/session";
+import { setupHiddenCookie } from "@/lib/setup";
 import { requestAction } from "./requests";
 
 const WEEK_MS = 7 * 86_400_000;
@@ -254,6 +261,24 @@ export default async function OverviewPage({
         .then((b) => b.status)
         .catch(() => null),
     ]);
+  // Set up in three clicks: until every step is done, or the card is hidden for this server.
+  const setupHidden = (await cookies()).get(setupHiddenCookie(guild.id))?.value === "1";
+  const [automodRow, gateRow, welcomeRow, built, textChannels, flash] = await Promise.all([
+    setupHidden ? null : readSettings(db, guild.id, "automod"),
+    setupHidden ? null : readSettings(db, guild.id, "gatehouse"),
+    setupHidden ? null : readSettings(db, guild.id, "welcome"),
+    setupHidden ? true : hasAppliedQmBuild(db, guild.id),
+    setupHidden ? [] : listTextChannels(guild.id).catch(() => []),
+    readFlash(),
+  ]);
+  const setup = setupProgress({
+    automodOn: automodRow?.enabled === true,
+    antiRaidOn: gateRow?.antiRaidEnabled !== false,
+    welcomeOn: welcomeRow?.joinEnabled === true,
+    built,
+  });
+  const showSetup = !setupHidden && !Object.values(setup).every(Boolean);
+
   // This week against last: messages, members posting each day, joins less leaves.
   const week = ins.daily.slice(-7);
   const before = ins.daily.slice(-14, -7);
@@ -439,7 +464,24 @@ export default async function OverviewPage({
         </div>
       </section>
 
-      {build ? null : (
+      {flash?.ok ? (
+        <div className="notice notice--ok" role="status">
+          {flash.ok}
+        </div>
+      ) : null}
+      {flash?.error ? (
+        <div className="notice" role="alert">
+          {flash.error}
+        </div>
+      ) : null}
+
+      {showSetup ? (
+        <SetupCard
+          guildId={guild.id}
+          done={setup}
+          channels={textChannels.map((c) => ({ id: c.id, name: c.name }))}
+        />
+      ) : build ? null : (
         <section className="g-card ov-ai" aria-labelledby="ov-ai-title">
           <div className="ov-ai__text">
             <h2 className="ov-ai__title" id="ov-ai-title">

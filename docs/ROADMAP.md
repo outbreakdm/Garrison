@@ -13,8 +13,11 @@ then updates **Status** and the **Log** before stopping.
      self-harm, Balanced); choosing what it looks for and how strict stays Pro (`automod.aiTuning`).
      Free 20 AI checks a minute per server, Pro 60; a 429 from OpenAI pauses every server's checks
      for as long as it asks. Built, not deployed.
-  2. [ ] Setup in three clicks: a first-run checklist with presets (gaming clan, creator, study
-     group) that turns on safety, welcome and roles, then hands off to the AI builder.
+  2. [x] Setup in three clicks: a card on the Overview (Protect, Welcome, Build) until all three
+     are done or it's hidden; presets Gaming clan, Creator community, Study group write the AI
+     builder's request. Protect and Welcome go through checkQmSettings and Settings history.
+     Garrison says hello once when first added, with a link to the card. AI moderation is now a
+     setting the AI assistant can change too: **migration 0080** grants the bot `ai_enabled`.
   3. [ ] Custom commands and auto-responders (reply cards on a word, a command or a button).
   4. [ ] Applications and recruitment forms, reviewed on the dashboard; accepting gives roles.
   5. [ ] AI help in tickets: a summary, a suggested reply from the server's rules and FAQ.
@@ -1489,3 +1492,8 @@ Decided (2026-11-12, owner):
   dashboard and bot (`e0fb77b`, not deployed). Best bot item 1, Free AI moderation, built and
   tested on the local preview as a Free server: the switch saves, what it looks for and how
   strict show Requires Pro. Lint, type-check, 785 tests and `next build` pass. Not deployed.
+- 2026-11-20: Best bot item 2, setup in three clicks (`packages/db/src/setup.ts`,
+  `components/SetupCard.tsx`, `setup-actions.ts`, bot `lib/hello.ts`). Found while testing:
+  the bot's login couldn't change `automod_settings.ai_enabled`, so migration 0080 grants it.
+  Checked on the local preview: Turn on protection saved and ticked off, Build opened a fresh
+  AI chat with the Gaming clan request. Lint, type-check, 792 tests pass. Not deployed.

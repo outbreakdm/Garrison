@@ -151,6 +151,12 @@ export const QM_SETTINGS = {
         about: "remove known scam and phishing links",
       },
       invites: { label: "Invites", kind: "bool", about: "remove invites to other servers" },
+      aiEnabled: {
+        label: "AI moderation",
+        kind: "bool",
+        about:
+          "OpenAI's moderation model also reads messages for harassment, hate, sexual content and self-harm (every plan; Pro chooses what it looks for)",
+      },
       mentionLimit: {
         label: "Mention limit",
         kind: "int",
