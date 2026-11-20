@@ -399,7 +399,7 @@ describe("AI assistant settings that add items", () => {
       db,
       "s4",
       [
-        p("alerts", "feeds", [{ provider: "kick", handle: "x", channelId: TEXT, roleId: null }]),
+        p("alerts", "feeds", [{ provider: "tiktok", handle: "x", channelId: TEXT, roleId: null }]),
         p("economy", "shop", [{ name: "Mod", price: 5, kind: "role", roleId: MODS }]),
         p("invites", "labels", [
           { code: "zzz999", name: "Elsewhere", category: null, roleId: null },
@@ -409,7 +409,7 @@ describe("AI assistant settings that add items", () => {
       free,
     );
     expect(!out.ok && out.errors).toEqual([
-      expect.stringMatching(/twitch or youtube/),
+      expect.stringMatching(/twitch, kick, youtube, reddit, bluesky or rss/),
       expect.stringMatching(/@Mods has moderation or admin powers/),
       expect.stringMatching(/zzz999 isn't one of this server's invites/),
     ]);

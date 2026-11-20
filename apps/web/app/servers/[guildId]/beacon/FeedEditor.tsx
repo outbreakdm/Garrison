@@ -1,9 +1,11 @@
 "use client";
 
 import {
+  ALERT_BUTTON,
   ALERT_LIMITS,
   ALERT_PROVIDERS,
   type AlertFeed,
+  type AlertProvider,
   alertHeading,
   DEFAULT_ALERT_TEXT,
   type Entitlements,
@@ -18,9 +20,32 @@ import { CardPreview, PreviewLinkButtons } from "@/components/cards/CardPreview"
 type Action = (form: FormData) => Promise<void>;
 type Choice = { id: string; name: string };
 
-const SAMPLE = {
-  twitch: { title: "Ranked grind to Diamond", game: "Valorant" },
-  youtube: { title: "Raid night highlights", game: "" },
+const SAMPLE: Record<AlertProvider, { name?: string; title: string; game: string; url: string }> = {
+  twitch: { title: "Ranked grind to Diamond", game: "Valorant", url: "https://www.twitch.tv/" },
+  kick: { title: "Ranked grind to Diamond", game: "Valorant", url: "https://kick.com/" },
+  youtube: {
+    name: "Your channel",
+    title: "Raid night highlights",
+    game: "",
+    url: "https://youtu.be/",
+  },
+  reddit: { title: "Patch notes are out", game: "u/someone", url: "https://www.reddit.com/" },
+  bluesky: {
+    name: "Your account",
+    title: "Server event tonight at 8. Bring snacks.",
+    game: "",
+    url: "https://bsky.app/",
+  },
+  rss: { name: "Your feed", title: "Patch 2.4 is live", game: "", url: "https://example.com/" },
+};
+/** What a sample alert shows, by provider: a stream, a video or a post. */
+const SAMPLE_KIND: Record<AlertProvider, string> = {
+  twitch: "stream",
+  kick: "stream",
+  youtube: "video",
+  reddit: "post",
+  bluesky: "post",
+  rss: "post",
 };
 
 /** One alert: where it posts, who it pings and (Pro) its words and color, beside a preview. */
@@ -75,10 +100,9 @@ export function FeedEditor({
       text: feed.message || DEFAULT_ALERT_TEXT[feed.provider],
       accent: feed.accent ?? STANDARD_ACCENT,
     };
-    const name = feed.provider === "twitch" ? feed.handle : "Your channel";
     const sample = SAMPLE[feed.provider];
-    const url =
-      feed.provider === "twitch" ? `https://www.twitch.tv/${feed.handle}` : "https://youtu.be/…";
+    const name = sample.name ?? feed.handle;
+    const url = sample.url;
     return {
       card: {
         title: alertHeading(feed.provider, name),
@@ -122,7 +146,16 @@ export function FeedEditor({
           <div className="editor-fields">
             <div className="field-row">
               <label className="g-field" htmlFor={id("handle")}>
-                <span>{ALERT_PROVIDERS[feed.provider].label} channel</span>
+                <span>
+                  {ALERT_PROVIDERS[feed.provider].label}{" "}
+                  {feed.provider === "rss"
+                    ? "address"
+                    : feed.provider === "reddit"
+                      ? "subreddit"
+                      : feed.provider === "bluesky"
+                        ? "account"
+                        : "channel"}
+                </span>
                 <input
                   className={`g-input${handleOk ? "" : " g-input--invalid"}`}
                   id={id("handle")}
@@ -235,22 +268,18 @@ export function FeedEditor({
           <div className="preview-pane">
             <div className="preview-pane__head">
               <span className="g-label">Preview in Discord</span>
-              <span className="g-help">
-                With a sample {feed.provider === "twitch" ? "stream" : "video"}
-              </span>
+              <span className="g-help">With a sample {SAMPLE_KIND[feed.provider]}</span>
             </div>
             {preview.ping ? <p className="preview-ping mono">@{preview.ping}</p> : null}
             <CardPreview
               card={preview.card}
               channel={names.channels.get(feed.channelId) ?? null}
               names={names}
-              controls={
-                <PreviewLinkButtons
-                  labels={[feed.provider === "twitch" ? "Watch on Twitch" : "Watch on YouTube"]}
-                />
-              }
+              controls={<PreviewLinkButtons labels={[ALERT_BUTTON[feed.provider]]} />}
             />
-            <p className="g-help">The stream's or video's thumbnail shows under the text.</p>
+            <p className="g-help">
+              The {SAMPLE_KIND[feed.provider]}'s picture shows under the text, when it has one.
+            </p>
           </div>
         </div>
       </form>

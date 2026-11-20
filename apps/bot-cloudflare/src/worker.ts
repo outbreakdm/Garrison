@@ -24,6 +24,10 @@ interface Env {
   ANTHROPIC_API_KEY?: string;
   TWITCH_CLIENT_ID?: string;
   TWITCH_CLIENT_SECRET?: string;
+  KICK_CLIENT_ID?: string;
+  KICK_CLIENT_SECRET?: string;
+  REDDIT_CLIENT_ID?: string;
+  REDDIT_CLIENT_SECRET?: string;
   OPENAI_API_KEY?: string;
   // Plain settings, from wrangler.jsonc vars:
   DISCORD_CLIENT_ID: string;
@@ -53,6 +57,10 @@ export class GarrisonBot extends Container<Env> {
     if (env.ANTHROPIC_API_KEY) vars.ANTHROPIC_API_KEY = env.ANTHROPIC_API_KEY;
     if (env.TWITCH_CLIENT_ID) vars.TWITCH_CLIENT_ID = env.TWITCH_CLIENT_ID;
     if (env.TWITCH_CLIENT_SECRET) vars.TWITCH_CLIENT_SECRET = env.TWITCH_CLIENT_SECRET;
+    if (env.KICK_CLIENT_ID) vars.KICK_CLIENT_ID = env.KICK_CLIENT_ID;
+    if (env.KICK_CLIENT_SECRET) vars.KICK_CLIENT_SECRET = env.KICK_CLIENT_SECRET;
+    if (env.REDDIT_CLIENT_ID) vars.REDDIT_CLIENT_ID = env.REDDIT_CLIENT_ID;
+    if (env.REDDIT_CLIENT_SECRET) vars.REDDIT_CLIENT_SECRET = env.REDDIT_CLIENT_SECRET;
     if (env.OPENAI_API_KEY) vars.OPENAI_API_KEY = env.OPENAI_API_KEY;
     if (env.QM_MODEL) vars.QM_MODEL = env.QM_MODEL;
     if (env.QM_SMART_MODEL) vars.QM_SMART_MODEL = env.QM_SMART_MODEL;

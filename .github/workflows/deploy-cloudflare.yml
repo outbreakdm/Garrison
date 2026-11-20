@@ -146,6 +146,10 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TWITCH_CLIENT_ID: ${{ secrets.TWITCH_CLIENT_ID }}
           TWITCH_CLIENT_SECRET: ${{ secrets.TWITCH_CLIENT_SECRET }}
+          KICK_CLIENT_ID: ${{ secrets.KICK_CLIENT_ID }}
+          KICK_CLIENT_SECRET: ${{ secrets.KICK_CLIENT_SECRET }}
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           printf '%s' "$DISCORD_TOKEN" | npx wrangler secret put DISCORD_TOKEN
@@ -153,6 +157,10 @@ jobs:
           if [ -n "$ANTHROPIC_API_KEY" ]; then printf '%s' "$ANTHROPIC_API_KEY" | npx wrangler secret put ANTHROPIC_API_KEY; fi
           if [ -n "$TWITCH_CLIENT_ID" ]; then printf '%s' "$TWITCH_CLIENT_ID" | npx wrangler secret put TWITCH_CLIENT_ID; fi
           if [ -n "$TWITCH_CLIENT_SECRET" ]; then printf '%s' "$TWITCH_CLIENT_SECRET" | npx wrangler secret put TWITCH_CLIENT_SECRET; fi
+          if [ -n "$KICK_CLIENT_ID" ]; then printf '%s' "$KICK_CLIENT_ID" | npx wrangler secret put KICK_CLIENT_ID; fi
+          if [ -n "$KICK_CLIENT_SECRET" ]; then printf '%s' "$KICK_CLIENT_SECRET" | npx wrangler secret put KICK_CLIENT_SECRET; fi
+          if [ -n "$REDDIT_CLIENT_ID" ]; then printf '%s' "$REDDIT_CLIENT_ID" | npx wrangler secret put REDDIT_CLIENT_ID; fi
+          if [ -n "$REDDIT_CLIENT_SECRET" ]; then printf '%s' "$REDDIT_CLIENT_SECRET" | npx wrangler secret put REDDIT_CLIENT_SECRET; fi
           if [ -n "$OPENAI_API_KEY" ]; then printf '%s' "$OPENAI_API_KEY" | npx wrangler secret put OPENAI_API_KEY; fi
 
       - name: Done

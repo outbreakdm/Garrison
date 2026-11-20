@@ -1,5 +1,8 @@
+import { lookup } from "node:dns/promises";
 import {
+  ALERT_BUTTON,
   type AlertFeed,
+  type AlertProvider,
   type AlertStateRow,
   alertHeading,
   alertLook,
@@ -34,8 +37,13 @@ import {
 import type { BotContext } from "../../commands/types.js";
 import { safeText } from "../../lib/text.js";
 import {
+  blueskyPosts,
+  kickLive,
   type LiveStream,
+  type Post,
+  redditPosts,
   resolveYoutubeHandle,
+  rssPosts,
   twitchLive,
   type Video,
   youtubeThumbnail,
@@ -51,10 +59,17 @@ import {
 
 export interface AlertKeys {
   twitch: { clientId: string; secret: string } | null;
+  /** Kick's public API needs an app too (KICK_CLIENT_ID and KICK_CLIENT_SECRET). */
+  kick?: { clientId: string; secret: string } | null;
+  /** Reddit refuses anonymous reads from servers: an app's keys (REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET). */
+  reddit?: { clientId: string; secret: string } | null;
 }
 
 const TWITCH_EVERY_MS = 2 * 60_000;
 const YOUTUBE_EVERY_MS = 5 * 60_000;
+/** Reddit, Bluesky and RSS: new posts are checked every 10 minutes, to be a polite reader. */
+const POSTS_EVERY_MS = 10 * 60_000;
+let lastPosts = 0;
 /** A video older than this when first noticed is recorded, not announced. */
 const FRESH_MS = 24 * 3_600_000;
 let lastTwitch = 0;
@@ -96,7 +111,7 @@ export function alertMessage(feed: AlertFeed, ent: Entitlements, item: AlertItem
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)
           .setURL(item.url)
-          .setLabel(feed.provider === "twitch" ? "Watch on Twitch" : "Watch on YouTube"),
+          .setLabel(ALERT_BUTTON[feed.provider]),
       ),
     );
   const components = feed.roleId
@@ -148,15 +163,29 @@ async function watched(ctx: BotContext, client: Client<true>): Promise<Watched[]
 const key = (w: Watched) => ({ guildId: w.guild.id, feedId: w.feed.id });
 
 export async function sweepTwitch(ctx: BotContext, list: Watched[], keys: AlertKeys) {
-  const feeds = list.filter((w) => w.feed.provider === "twitch");
+  await sweepLive(ctx, list, "twitch", keys.twitch, twitchLive);
+}
+
+/** Twitch or Kick: each live stream is announced once, in every server that watches it. */
+async function sweepLive(
+  ctx: BotContext,
+  list: Watched[],
+  provider: "twitch" | "kick",
+  app: { clientId: string; secret: string } | null | undefined,
+  fetchLive: (
+    app: { clientId: string; secret: string },
+    handles: string[],
+  ) => Promise<Map<string, LiveStream>>,
+) {
+  const feeds = list.filter((w) => w.feed.provider === provider);
   if (!feeds.length) return;
-  if (!keys.twitch) {
+  if (!app) {
     for (const w of feeds)
       if (w.state?.problem !== "not_configured")
         await noteAlertCheck(ctx.db, key(w), { problem: "not_configured" });
     return;
   }
-  const live = await twitchLive(keys.twitch, [...new Set(feeds.map((w) => w.feed.handle))]);
+  const live = await fetchLive(app, [...new Set(feeds.map((w) => w.feed.handle))]);
   for (const w of feeds) {
     const stream: LiveStream | undefined = live.get(w.feed.handle);
     if (!stream) {
@@ -177,11 +206,112 @@ export async function sweepTwitch(ctx: BotContext, list: Watched[], keys: AlertK
       name: stream.name,
       title: stream.title,
       game: stream.game,
-      url: `https://www.twitch.tv/${stream.login}`,
+      url:
+        provider === "twitch"
+          ? `https://www.twitch.tv/${stream.login}`
+          : `https://kick.com/${stream.login}`,
       thumbnail: stream.thumbnail ? `${stream.thumbnail}?t=${Date.now()}` : "",
     }).catch((error: unknown) =>
-      ctx.logger.warn("Twitch alert failed to post", { guildId: w.guild.id, error }),
+      ctx.logger.warn("Live alert failed to post", { provider, guildId: w.guild.id, error }),
     );
+  }
+}
+
+/** A feed's posts as one shape: who the heading names, and the newest posts first. */
+type PostFeed = { name: string; posts: Post[] } | null;
+
+/**
+ * Where each new-post provider reads from. RSS refuses any address inside a network.
+ * "not_configured": Reddit has no app keys, so it can't be read at all.
+ */
+const POST_SOURCES: Partial<
+  Record<AlertProvider, (handle: string, keys: AlertKeys) => Promise<PostFeed | "not_configured">>
+> = {
+  reddit: async (sub, keys) => {
+    if (!keys.reddit) return "not_configured";
+    const posts = await redditPosts(keys.reddit, sub);
+    return posts && { name: sub, posts };
+  },
+  bluesky: async (actor) => {
+    const posts = await blueskyPosts(actor);
+    return posts && { name: posts[0]?.author ?? actor, posts };
+  },
+  rss: (address) =>
+    rssPosts(address, async (host) =>
+      (await lookup(host, { all: true, verbatim: true })).map((a) => a.address),
+    ),
+};
+
+/** The posts a feed hasn't announced yet, oldest first, and whether to announce them. */
+export function unseenPosts<T extends { id: string }>(items: T[], last: string | null) {
+  const newest = items[0];
+  if (!newest) return { unseen: [] as T[], announce: false };
+  const known = last ? items.findIndex((v) => v.id === last) : -1;
+  // First look, or a post we can't place (deleted): record the newest, announce only if fresh.
+  return {
+    unseen: known === -1 ? (last === newest.id ? [] : [newest]) : items.slice(0, known).reverse(),
+    announce: last !== null,
+  };
+}
+
+/** Reddit, Bluesky and RSS: each feed read once however many servers watch it. */
+export async function sweepPosts(
+  ctx: BotContext,
+  list: Watched[],
+  keys: AlertKeys,
+  now = new Date(),
+) {
+  const feeds = list.filter((w) => POST_SOURCES[w.feed.provider]);
+  const read = new Map<string, PostFeed | "not_configured" | undefined>();
+  const idOf = (w: Watched) => `${w.feed.provider}:${w.feed.handle.toLowerCase()}`;
+  for (const w of feeds) {
+    if (read.has(idOf(w))) continue;
+    const source = POST_SOURCES[w.feed.provider];
+    read.set(
+      idOf(w),
+      await source?.(w.feed.handle, keys).catch((error: unknown) => {
+        ctx.logger.warn("Alert feed failed", { provider: w.feed.provider, error });
+        return undefined;
+      }),
+    );
+  }
+  for (const w of feeds) {
+    const got = read.get(idOf(w));
+    if (got === undefined) continue; // Didn't answer: try again next time.
+    if (got === "not_configured") {
+      if (w.state?.problem !== "not_configured")
+        await noteAlertCheck(ctx.db, key(w), { problem: "not_configured" });
+      continue;
+    }
+    if (got === null) {
+      if (w.state?.problem !== "not_found")
+        await noteAlertCheck(ctx.db, key(w), { problem: "not_found" });
+      continue;
+    }
+    const { unseen, announce } = unseenPosts(got.posts, w.state?.lastItemId ?? null);
+    if (!unseen.length) {
+      if (w.state?.problem) await noteAlertCheck(ctx.db, key(w), { problem: null });
+      continue;
+    }
+    for (const p of unseen.slice(-3)) {
+      const fresh = now.getTime() - p.published.getTime() < FRESH_MS;
+      const claimed = await claimAlertItem(ctx.db, key(w), p.id, { post: announce && fresh });
+      if (!claimed || !announce || !fresh || !p.url) continue;
+      await post(w.guild, w.feed, w.ent, {
+        id: p.id,
+        name: w.feed.provider === "bluesky" ? p.author || got.name : got.name,
+        title: p.title || "New post",
+        game: p.author,
+        url: p.url,
+        thumbnail: p.thumbnail,
+      }).catch((error: unknown) =>
+        ctx.logger.warn("Alert failed to post", {
+          provider: w.feed.provider,
+          guildId: w.guild.id,
+          error,
+        }),
+      );
+    }
   }
 }
 
@@ -244,6 +374,15 @@ export async function sweepYoutube(ctx: BotContext, list: Watched[], now = new D
   }
 }
 
+const TEST_URL: Record<AlertProvider, (handle: string) => string> = {
+  twitch: (h) => `https://www.twitch.tv/${h}`,
+  kick: (h) => `https://kick.com/${h}`,
+  youtube: () => "https://www.youtube.com/",
+  reddit: (h) => `https://www.reddit.com/r/${h}/`,
+  bluesky: (h) => `https://bsky.app/profile/${h}`,
+  rss: (h) => h,
+};
+
 /** "Send a test alert" from the dashboard: a sample in the feed's channel, without its ping. */
 export async function doTestAlert(
   ctx: BotContext,
@@ -266,24 +405,14 @@ export async function doTestAlert(
   const needed = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages];
   if (!channel.permissionsFor(member)?.has(needed))
     return { ok: false, message: "You can't post in that channel." };
-  const sample: AlertItem =
-    feed.provider === "twitch"
-      ? {
-          id: "test",
-          name: feed.handle,
-          title: "This is a test alert from the dashboard",
-          game: "Just Chatting",
-          url: `https://www.twitch.tv/${feed.handle}`,
-          thumbnail: "",
-        }
-      : {
-          id: "test",
-          name: feed.handle,
-          title: "This is a test alert from the dashboard",
-          game: "",
-          url: "https://www.youtube.com/",
-          thumbnail: "",
-        };
+  const sample: AlertItem = {
+    id: "test",
+    name: feed.provider === "rss" ? new URL(feed.handle).hostname : feed.handle,
+    title: "This is a test alert from the dashboard",
+    game: feed.provider === "twitch" || feed.provider === "kick" ? "Just Chatting" : "Garrison",
+    url: TEST_URL[feed.provider](feed.handle),
+    thumbnail: "",
+  };
   const posted = await post(guild, { ...feed, roleId: null }, ent, sample).catch(() => false);
   return posted
     ? {
@@ -302,12 +431,22 @@ export async function sweepAlerts(
 ) {
   const dueTwitch = now - lastTwitch >= TWITCH_EVERY_MS;
   const dueYoutube = now - lastYoutube >= YOUTUBE_EVERY_MS;
-  if (!dueTwitch && !dueYoutube) return;
+  const duePosts = now - lastPosts >= POSTS_EVERY_MS;
+  if (!dueTwitch && !dueYoutube && !duePosts) return;
   const list = await watched(ctx, client);
   if (dueTwitch) {
     lastTwitch = now;
     await sweepTwitch(ctx, list, keys).catch((error: unknown) =>
       ctx.logger.warn("Twitch alerts failed", { error }),
+    );
+    await sweepLive(ctx, list, "kick", keys.kick, kickLive).catch((error: unknown) =>
+      ctx.logger.warn("Kick alerts failed", { error }),
+    );
+  }
+  if (duePosts) {
+    lastPosts = now;
+    await sweepPosts(ctx, list, keys, new Date(now)).catch((error: unknown) =>
+      ctx.logger.warn("Post alerts failed", { error }),
     );
   }
   if (dueYoutube) {

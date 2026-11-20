@@ -2,6 +2,8 @@
 
 import { randomInt } from "node:crypto";
 import {
+  ALERT_PROVIDER_LIST,
+  ALERT_PROVIDERS,
   type AlertFeed,
   applySettingsChange,
   checkAlertFeeds,
@@ -76,16 +78,17 @@ const crypto01 = () => randomInt(0, 1_000_000) / 1_000_000;
 
 export async function addFeed(form: FormData) {
   const ctx = await load(form);
-  const provider = form.get("provider") === "youtube" ? "youtube" : "twitch";
+  const provider =
+    ALERT_PROVIDER_LIST.find((p) => p === form.get("provider")) ?? ("twitch" as const);
   const handle = normalizeHandle(provider, String(form.get("handle") ?? ""));
   if (!handle)
     return back(
       ctx.guild.id,
       {
         error:
-          provider === "twitch"
-            ? "Enter a Twitch username, like shroud."
-            : "Enter a YouTube @handle or a channel link.",
+          provider === "rss"
+            ? "Enter the feed's address, starting https://. Addresses inside a network aren't allowed."
+            : `Enter a ${ALERT_PROVIDERS[provider].example}.`,
       },
       "new",
     );

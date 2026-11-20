@@ -181,6 +181,10 @@ if (env) {
   else warn("OPENAI_API_KEY isn't set: AI moderation stays off.");
   if (env.TWITCH_CLIENT_ID && env.TWITCH_CLIENT_SECRET) ok("Twitch alerts are on");
   else warn("TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET aren't both set: Twitch alerts stay off.");
+  if (env.KICK_CLIENT_ID && env.KICK_CLIENT_SECRET) ok("Kick alerts are on");
+  else warn("KICK_CLIENT_ID and KICK_CLIENT_SECRET aren't both set: Kick alerts stay off.");
+  if (env.REDDIT_CLIENT_ID && env.REDDIT_CLIENT_SECRET) ok("Reddit alerts are on");
+  else warn("REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET aren't both set: Reddit alerts stay off.");
 }
 console.log(failed ? "\nFix the ✗ items, then run this again." : "\nAll set. Start Garrison.");
 process.exit(failed ? 1 : 0);

@@ -1,4 +1,5 @@
 import {
+  ALERT_PROVIDER_LIST,
   ALERT_PROVIDERS,
   type AlertFeed,
   checkAlertFeeds,
@@ -393,7 +394,7 @@ export const QM_SETTINGS = {
       feeds: {
         label: "New alerts",
         kind: "alertFeeds",
-        about: `alerts to add (the saved ones stay): up to ${QM_ADD_MAX} of { provider twitch|youtube, handle (a Twitch username, or a YouTube @handle or UC… channel id), channelId (text channel), roleId (a role to ping, or null) }; a post when the channel goes live or uploads`,
+        about: `alerts to add (the saved ones stay): up to ${QM_ADD_MAX} of { provider twitch|kick|youtube|reddit|bluesky|rss, handle (a Twitch or Kick username, a YouTube @handle or UC… channel id, a subreddit name, a Bluesky handle like name.bsky.social, or an RSS feed's https address), channelId (text channel), roleId (a role to ping, or null) }; a post when the channel goes live or uploads, or the subreddit, account or feed has a new post`,
       },
     },
   },
@@ -870,8 +871,9 @@ function shapeItems(
   const out: Values[] = [];
   for (const r of list) {
     if (f.kind === "alertFeeds") {
-      const provider = r.provider === "twitch" || r.provider === "youtube" ? r.provider : null;
-      if (!provider) return `${name}: each alert is for twitch or youtube.`;
+      const provider = ALERT_PROVIDER_LIST.find((p) => p === r.provider) ?? null;
+      if (!provider)
+        return `${name}: each alert is for twitch, kick, youtube, reddit, bluesky or rss.`;
       const handle = normalizeHandle(provider, str(r.handle));
       if (!handle)
         return `${name}: "${str(r.handle).slice(0, 40)}" isn't a ${ALERT_PROVIDERS[provider].example}.`;
@@ -1122,7 +1124,7 @@ export function qmSettingValueText(
     const v = value as Values[];
     const text = v.map((x) => {
       if (kind === "alertFeeds")
-        return `${x.provider === "youtube" ? "YouTube" : "Twitch"} ${x.handle} in ${name(String(x.channelId))}${x.roleId ? `, pings ${name(String(x.roleId))}` : ""}`;
+        return `${ALERT_PROVIDERS[x.provider as AlertFeed["provider"]]?.label ?? "Alert"} ${x.handle} in ${name(String(x.channelId))}${x.roleId ? `, pings ${name(String(x.roleId))}` : ""}`;
       if (kind === "shopItems")
         return `${x.name} for ${Number(x.price).toLocaleString("en-US")}${x.roleId ? `, gives ${name(String(x.roleId))}` : ", staff-handled"}`;
       if (kind === "lfgTemplates")

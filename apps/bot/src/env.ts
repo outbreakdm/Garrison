@@ -37,6 +37,28 @@ const schema = z.object({
     .min(1)
     .optional()
     .or(z.literal("").transform(() => undefined)),
+  /** A Kick app's client ID and secret (kick.com developer settings). Without both, Kick alerts stay off. */
+  KICK_CLIENT_ID: z
+    .string()
+    .min(1)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  KICK_CLIENT_SECRET: z
+    .string()
+    .min(1)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  /** A Reddit app's client ID and secret (reddit.com/prefs/apps, a "script" or "web" app). Without both, Reddit alerts stay off. */
+  REDDIT_CLIENT_ID: z
+    .string()
+    .min(1)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  REDDIT_CLIENT_SECRET: z
+    .string()
+    .min(1)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
   /** OpenAI key for AI moderation (Pro). Its moderation endpoint is free; without a key AI moderation stays off. */
   OPENAI_API_KEY: z
     .string()

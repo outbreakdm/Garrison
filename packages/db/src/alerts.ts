@@ -1,7 +1,9 @@
 /**
- * Stream and video alerts (module "Beacon"): a feed watches one Twitch channel
- * (live) or YouTube channel (new videos) and posts a card in a Discord channel,
- * optionally pinging one role. Pure and shared (`@garrison/db/cards`).
+ * Stream and video alerts (module "Beacon"): a feed watches one Twitch or Kick channel
+ * (live), YouTube channel (new videos), subreddit, RSS or Atom feed, or Bluesky account
+ * (new posts) and posts a card in a Discord channel, optionally pinging one role. Pure and
+ * shared (`@garrison/db/cards`). Kick, Reddit, RSS and Bluesky since 2026-11-20 (best bot
+ * item 7).
  *
  * Free: 3 feeds, the standard alert. Pro: 25 feeds, your own message and color.
  * Over the limit after a downgrade, the extra feeds pause; nothing is deleted.
@@ -11,12 +13,25 @@ import { ACCENT, STANDARD_ACCENT } from "./cards";
 import { type Entitlements, FEATURES } from "./plans";
 import type { Parsed } from "./rally";
 
-export type AlertProvider = "twitch" | "youtube";
+export const ALERT_PROVIDER_LIST = [
+  "twitch",
+  "kick",
+  "youtube",
+  "reddit",
+  "bluesky",
+  "rss",
+] as const;
+export type AlertProvider = (typeof ALERT_PROVIDER_LIST)[number];
+/** Providers that announce a live stream; the rest announce new posts. */
+export const LIVE_PROVIDERS = new Set<AlertProvider>(["twitch", "kick"]);
 
 export interface AlertFeed {
   id: string;
   provider: AlertProvider;
-  /** A Twitch login, or a YouTube channel ID (UC…) or @handle. */
+  /**
+   * A Twitch login or Kick slug, a YouTube channel ID (UC…) or @handle, a subreddit's name,
+   * a Bluesky handle or DID, or an RSS or Atom feed's address.
+   */
   handle: string;
   channelId: string;
   /** One role to ping. Null: no ping. Never @everyone. */
@@ -34,16 +49,28 @@ export const ALERT_PROVIDERS: Record<
   { label: string; verb: string; example: string }
 > = {
   twitch: { label: "Twitch", verb: "goes live", example: "Twitch username, like shroud" },
+  kick: { label: "Kick", verb: "goes live", example: "Kick username, like xqc" },
   youtube: {
     label: "YouTube",
     verb: "posts a video",
     example: "YouTube @handle or channel link",
   },
+  reddit: { label: "Reddit", verb: "gets a new post", example: "subreddit, like r/valorant" },
+  bluesky: {
+    label: "Bluesky",
+    verb: "posts",
+    example: "Bluesky handle, like name.bsky.social",
+  },
+  rss: { label: "RSS", verb: "has a new post", example: "feed address, starting https://" },
 };
 /** What the standard alert says under its heading. */
 export const DEFAULT_ALERT_TEXT: Record<AlertProvider, string> = {
   twitch: "**{title}**\nPlaying {game}",
+  kick: "**{title}**\nPlaying {game}",
   youtube: "**{title}**",
+  reddit: "**{title}**\nPosted by {game}",
+  bluesky: "{title}",
+  rss: "**{title}**",
 };
 
 const ID = /^[a-z0-9]{6,16}$/;
@@ -51,6 +78,34 @@ const SNOWFLAKE = /^\d{17,20}$/;
 const TWITCH_LOGIN = /^[a-z0-9_]{3,25}$/;
 const YT_CHANNEL = /^UC[A-Za-z0-9_-]{22}$/;
 const YT_HANDLE = /^@[A-Za-z0-9._-]{3,30}$/;
+const KICK_SLUG = /^[a-z0-9_-]{3,25}$/;
+const SUBREDDIT = /^[A-Za-z0-9_]{2,21}$/;
+const BSKY_HANDLE = /^(?=.{3,253}$)([a-z0-9-]{1,63}\.)+[a-z][a-z0-9-]{0,62}$/;
+const BSKY_DID = /^did:plc:[a-z2-7]{24}$/;
+export const FEED_URL_MAX = 500;
+
+/**
+ * Whether a feed address may be fetched at all: https or http, a public host name (no
+ * addresses, localhost or internal names), no login in it. The bot checks where the name
+ * points too, before every fetch.
+ */
+export function publicFeedUrl(raw: string): string | null {
+  let u: URL;
+  try {
+    u = new URL(raw.trim());
+  } catch {
+    return null;
+  }
+  if (u.protocol !== "https:" && u.protocol !== "http:") return null;
+  if (u.username || u.password) return null;
+  if (u.port && u.port !== "443" && u.port !== "80") return null;
+  const host = u.hostname.toLowerCase();
+  if (!host.includes(".") || host.startsWith("[") || /^[\d.]+$/.test(host)) return null;
+  if (/(^|\.)(localhost|local|internal|lan|home|intranet|corp)$/.test(host)) return null;
+  u.hash = "";
+  const out = u.toString();
+  return out.length <= FEED_URL_MAX ? out : null;
+}
 
 export const feedLimit = (ent: Entitlements) => ent["alerts.feeds"];
 export const isFeedPaused = (index: number, ent: Entitlements) => index >= feedLimit(ent);
@@ -61,14 +116,19 @@ export const isFeedPaused = (index: number, ent: Entitlements) => index >= feedL
  */
 export function normalizeHandle(provider: AlertProvider, raw: string): string | null {
   let s = raw.trim();
+  if (provider === "rss") return publicFeedUrl(s);
   try {
     if (/^https?:\/\//i.test(s)) {
       const u = new URL(s);
-      const host = u.hostname.replace(/^(www|m)\./, "");
+      const host = u.hostname.replace(/^(www|m|old|new)\./, "");
       const path = u.pathname.split("/").filter(Boolean);
       if (provider === "twitch" && host === "twitch.tv") s = path[0] ?? "";
+      else if (provider === "kick" && host === "kick.com") s = path[0] ?? "";
       else if (provider === "youtube" && host === "youtube.com")
         s = path[0] === "channel" ? (path[1] ?? "") : (path[0] ?? "");
+      else if (provider === "reddit" && host === "reddit.com" && path[0] === "r") s = path[1] ?? "";
+      else if (provider === "bluesky" && host === "bsky.app" && path[0] === "profile")
+        s = path[1] ?? "";
       else return null;
     }
   } catch {
@@ -77,6 +137,18 @@ export function normalizeHandle(provider: AlertProvider, raw: string): string | 
   if (provider === "twitch") {
     const login = s.toLowerCase();
     return TWITCH_LOGIN.test(login) ? login : null;
+  }
+  if (provider === "kick") {
+    const slug = s.toLowerCase();
+    return KICK_SLUG.test(slug) ? slug : null;
+  }
+  if (provider === "reddit") {
+    const name = s.replace(/^\/?r\//i, "");
+    return SUBREDDIT.test(name) ? name : null;
+  }
+  if (provider === "bluesky") {
+    const h = s.replace(/^@/, "").toLowerCase();
+    return BSKY_DID.test(h) || BSKY_HANDLE.test(h) ? h : null;
   }
   if (YT_CHANNEL.test(s)) return s;
   const handle = s.startsWith("@") ? s : `@${s}`;
@@ -89,9 +161,9 @@ export function parseAlertFeed(raw: unknown, index = 0): Parsed<AlertFeed> {
   const r = raw as Record<string, unknown>;
   if (typeof r.id !== "string" || !ID.test(r.id))
     return { ok: false, error: `${where} has no valid ID.` };
-  if (r.provider !== "twitch" && r.provider !== "youtube")
-    return { ok: false, error: `${where}: pick Twitch or YouTube.` };
-  const provider = r.provider;
+  const provider = ALERT_PROVIDER_LIST.find((p) => p === r.provider);
+  if (!provider)
+    return { ok: false, error: `${where}: pick Twitch, Kick, YouTube, Reddit, Bluesky or RSS.` };
   const handle = typeof r.handle === "string" ? normalizeHandle(provider, r.handle) : null;
   if (!handle)
     return {
@@ -203,5 +275,29 @@ export function fillAlert(
 }
 
 /** The heading over an alert: "shroud is live on Twitch". */
-export const alertHeading = (provider: AlertProvider, name: string) =>
-  provider === "twitch" ? `${name} is live on Twitch` : `${name} posted a new video`;
+export function alertHeading(provider: AlertProvider, name: string) {
+  switch (provider) {
+    case "twitch":
+      return `${name} is live on Twitch`;
+    case "kick":
+      return `${name} is live on Kick`;
+    case "youtube":
+      return `${name} posted a new video`;
+    case "reddit":
+      return `New post in r/${name}`;
+    case "bluesky":
+      return `${name} posted on Bluesky`;
+    case "rss":
+      return `New from ${name}`;
+  }
+}
+
+/** The link button under an alert. */
+export const ALERT_BUTTON: Record<AlertProvider, string> = {
+  twitch: "Watch on Twitch",
+  kick: "Watch on Kick",
+  youtube: "Watch on YouTube",
+  reddit: "Open on Reddit",
+  bluesky: "Open on Bluesky",
+  rss: "Read it",
+};

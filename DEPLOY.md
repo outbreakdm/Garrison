@@ -298,6 +298,10 @@ npx wrangler secret put DATABASE_URL        # the bot's string from Step 3.4 (po
 npx wrangler secret put ANTHROPIC_API_KEY   # optional: only if you want /qm build (Claude Haiku 5.5, $5/day cap by default)
 npx wrangler secret put TWITCH_CLIENT_ID     # optional: Twitch live alerts (dev.twitch.tv/console)
 npx wrangler secret put TWITCH_CLIENT_SECRET # optional: the same Twitch app's secret
+npx wrangler secret put KICK_CLIENT_ID       # optional: Kick live alerts (kick.com developer settings)
+npx wrangler secret put KICK_CLIENT_SECRET   # optional: the same Kick app's secret
+npx wrangler secret put REDDIT_CLIENT_ID     # optional: Reddit alerts (reddit.com/prefs/apps)
+npx wrangler secret put REDDIT_CLIENT_SECRET # optional: the same Reddit app's secret
 npx wrangler secret put OPENAI_API_KEY       # optional: AI moderation (Pro); the moderation endpoint is free
 cd ../..
 ```

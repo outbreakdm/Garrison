@@ -38,7 +38,15 @@ then updates **Status** and the **Log** before stopping.
      settles) and self-clearing channels (every 10 minutes, 1 hour to 14 days, pins kept).
      Free 1 sticky, 1 self-clearing channel, 25 timed roles; Pro 10, 10, 1,000.
      **Migration 0083** (tables, enum value, grants); **deploy with register_commands** for /temprole.
-  7. [ ] More alert sources: Kick, Reddit, RSS, Bluesky.
+  7. [x] More alert sources on Stream alerts: Kick (live, every 2 minutes), and new posts from
+     a subreddit, a Bluesky account or any RSS or Atom feed (every 10 minutes). Bluesky and RSS
+     need nothing. RSS is fetched only from the public internet (each host looked up and refused
+     if it points inside a network, redirects followed by hand, 2 MB cap). **Owner:** Kick needs
+     `KICK_CLIENT_ID`/`KICK_CLIENT_SECRET` (a kick.com developer app), and Reddit needs
+     `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET` (reddit.com/prefs/apps): Reddit refuses anonymous
+     reads from servers (429, or a redirect to its login), checked 2026-11-20. Without keys,
+     those feeds show "Waiting for Garrison's Kick keys" or "Reddit keys". Reddit's API terms
+     want approval for commercial use; worth reading before turning it on. No migration.
   8. [ ] Riot and Steam stat roles (Valorant and League ranks; Riot's production key needs applying).
   9. [ ] Public server page and leaderboard.
   10. [ ] Patreon and Twitch subscriber roles.
@@ -1528,3 +1536,8 @@ Decided (2026-11-12, owner):
   `modules/utilities`, web `utilities/`). Checked on the local preview after 0083: a sticky in
   #general, roles back on rejoin with @Mods skipped, and a 3-day self-clearing channel all saved.
   Lint, type-check, 817 tests pass. The Discord side needs the deployed bot. Not deployed.
+- 2026-11-20: Best bot item 7, more alert sources (`packages/db/src/alerts.ts`, bot
+  `modules/alerts/providers.ts` and `service.ts`). Read live from this machine: Bluesky (5
+  posts from bsky.app) and RSS (20 from the Cloudflare blog) work; `http://localhost` is refused;
+  Reddit's public feed answered 429, so Reddit moved to its app-only OAuth. On the local
+  preview an RSS alert saved, with a post preview. Lint, type-check, 824 tests pass. Not deployed.

@@ -137,7 +137,8 @@ After pulling this change, run `pnpm commands:deploy` once: `/lfg create` has a 
 ### Beacon (stream alerts)
 
 - Watches a **Twitch** channel (goes live) or a **YouTube** channel (new video) and posts a card with the thumbnail and a Watch button, optionally pinging one role (never @everyone). Each stream and video is announced once: its ID is swapped in with a conditional update before posting, and a feed's first check only records what's there.
-- YouTube uses the channel's public feed (no key). Twitch needs a Twitch app: set `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` (dev.twitch.tv/console); without them Twitch alerts stay off and the dashboard says so.
+- YouTube uses the channel's public feed (no key). Twitch needs a Twitch app: set `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` (dev.twitch.tv/console); without them Twitch alerts stay off and the dashboard says so. Kick works the same way with `KICK_CLIENT_ID` and `KICK_CLIENT_SECRET` (an app from kick.com's developer settings).
+- New posts from a subreddit (Reddit refuses anonymous reads from servers, so it needs a Reddit app: `REDDIT_CLIENT_ID` and `REDDIT_CLIENT_SECRET`; NSFW and pinned posts are skipped), a Bluesky account (Bluesky's public API) or any RSS or Atom feed, checked every 10 minutes, no keys. RSS addresses are fetched only from the public internet: each host is looked up first and refused if it points inside a network, redirects are followed by hand, and feeds over 2 MB are dropped.
 - Twitch is checked every 2 minutes and YouTube every 5, once per watched channel however many servers watch it. Every request has a timeout; provider text is made inert before it's posted.
 - Free: 3 alerts with the standard look. Pro: 25, with your own message (`{name}`, `{title}`, `{game}`, `{url}`) and color. Set up on the dashboard's Alerts page with a live preview.
 

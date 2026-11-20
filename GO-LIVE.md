@@ -148,6 +148,10 @@ github.com/outbreakdm/Garrison → **Settings** (top tab) → left menu
 | `ANTHROPIC_API_KEY`     | optional: only if you want the AI assistant. Each server's AI is capped by its monthly supplies (a supply is $0.001 of AI); a global circuit breaker of $2 a day plus each paying server's share stops a runaway. Change the base with the `QM_DAILY_BUDGET_USD` var |
 | `TWITCH_CLIENT_ID`      | optional: Twitch live alerts (a Twitch app's client ID) |
 | `TWITCH_CLIENT_SECRET`  | optional: the same Twitch app's client secret           |
+| `KICK_CLIENT_ID`        | optional: Kick live alerts (a Kick app's client ID)     |
+| `KICK_CLIENT_SECRET`    | optional: the same Kick app's client secret             |
+| `REDDIT_CLIENT_ID`      | optional: Reddit new-post alerts (a Reddit app's client ID) |
+| `REDDIT_CLIENT_SECRET`  | optional: the same Reddit app's secret                  |
 | `OPENAI_API_KEY`        | optional: AI moderation on Pro (free moderation endpoint) |
 | `TURNSTILE_SITE_KEY`    | optional: captcha on the website verify page (Cloudflare Turnstile) |
 | `TURNSTILE_SECRET`      | optional: the same Turnstile widget's secret key        |

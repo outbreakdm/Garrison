@@ -1,5 +1,7 @@
 import {
+  ALERT_PROVIDER_LIST,
   ALERT_PROVIDERS,
+  type AlertProvider,
   entitlements,
   FEED_HARD_MAX,
   feedLimit,
@@ -30,7 +32,7 @@ import { FeedEditor } from "./FeedEditor";
 export const metadata: Metadata = { title: "Stream alerts" };
 
 /** The list filters (?show=), in pill order. */
-const SHOWS = ["all", "twitch", "youtube"] as const;
+const SHOWS = ["all", ...ALERT_PROVIDER_LIST] as const;
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
@@ -70,12 +72,19 @@ export default async function AlertsPage({
   const base = `/servers/${guild.id}/beacon`;
 
   /** What a feed is doing, in a few words. */
-  const status = (feedId: string) => {
-    const s = stateOf.get(feedId);
+  const status = (feed: { id: string; provider: AlertProvider }) => {
+    const s = stateOf.get(feed.id);
     if (!s?.checkedAt) return { text: "Checks within a few minutes", tone: "" };
     if (s.problem === "not_configured")
-      return { text: "Waiting for Garrison's Twitch keys", tone: "g-badge--caution" };
-    if (s.problem === "not_found") return { text: "Channel not found", tone: "g-badge--alert" };
+      return {
+        text: `Waiting for Garrison's ${ALERT_PROVIDERS[feed.provider].label} keys`,
+        tone: "g-badge--caution",
+      };
+    if (s.problem === "not_found")
+      return {
+        text: feed.provider === "rss" ? "Feed not found" : "Not found",
+        tone: "g-badge--alert",
+      };
     if (s.liveSince) return { text: "Live now", tone: "g-badge--go" };
     if (s.postedAt) return { text: `Last alert ${ago(s.postedAt)}`, tone: "" };
     return { text: "Watching", tone: "" };
@@ -86,7 +95,10 @@ export default async function AlertsPage({
       <div className="page-head">
         <div>
           <h1>Stream alerts</h1>
-          <p>A post when a Twitch channel goes live or a YouTube channel posts a video.</p>
+          <p>
+            A post when a Twitch or Kick channel goes live, a YouTube channel posts a video, or a
+            subreddit, Bluesky account or RSS feed has something new.
+          </p>
           <HowItWorks>
             It pings the role you pick, and each stream and video is announced once.
           </HowItWorks>
@@ -144,7 +156,7 @@ export default async function AlertsPage({
 
       <div className="item-grid">
         {shown.map(({ feed, index }) => {
-          const st = status(feed.id);
+          const st = status(feed);
           const facts = [
             ALERT_PROVIDERS[feed.provider].label,
             `#${channelName.get(feed.channelId) ?? "deleted-channel"}`,
@@ -200,32 +212,34 @@ export default async function AlertsPage({
             hint={
               full
                 ? `${limit} of ${limit} alerts used${plan === "pro" ? "" : `. Pro runs ${FEED_HARD_MAX}.`}`
-                : "A Twitch or YouTube channel, and where to post"
+                : "A channel, subreddit, account or feed to watch, and where to post"
             }
             open={feeds.length === 0 || editing === "new"}
           >
             <form action={addFeed} className="card-col">
               <input type="hidden" name="guildId" value={guild.id} />
               <div className="segmented" role="radiogroup" aria-label="Watch">
-                {(["twitch", "youtube"] as const).map((p, i) => (
-                  <label className="segmented__item" key={p}>
+                {ALERT_PROVIDER_LIST.map((p, i) => (
+                  <label
+                    className="segmented__item"
+                    key={p}
+                    title={`When it ${ALERT_PROVIDERS[p].verb}`}
+                  >
                     <input type="radio" name="provider" value={p} defaultChecked={i === 0} />
-                    <span>
-                      {ALERT_PROVIDERS[p].label}: when it {ALERT_PROVIDERS[p].verb}
-                    </span>
+                    <span>{ALERT_PROVIDERS[p].label}</span>
                   </label>
                 ))}
               </div>
               <div className="field-row">
                 <label className="g-field" htmlFor="new-handle">
-                  <span>Channel to watch</span>
+                  <span>What to watch</span>
                   <input
                     className="g-input"
                     id="new-handle"
                     name="handle"
                     required
-                    maxLength={120}
-                    placeholder="shroud, @handle or a channel link"
+                    maxLength={500}
+                    placeholder="shroud, @handle, r/valorant, name.bsky.social or https://…"
                   />
                 </label>
                 <label className="g-field" htmlFor="new-channel">
@@ -270,7 +284,8 @@ export default async function AlertsPage({
         <p className="g-help">
           Every change is in{" "}
           <Link href={`/servers/${guild.id}/settings#history`}>Settings history</Link> and can be
-          undone. YouTube is checked every 5 minutes, Twitch every 2.
+          undone. Twitch and Kick are checked every 2 minutes, YouTube every 5, and Reddit, Bluesky
+          and RSS every 10.
         </p>
       ) : null}
     </>

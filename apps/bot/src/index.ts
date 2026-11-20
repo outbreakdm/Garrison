@@ -121,11 +121,22 @@ const alertKeys = {
     env.TWITCH_CLIENT_ID && env.TWITCH_CLIENT_SECRET
       ? { clientId: env.TWITCH_CLIENT_ID, secret: env.TWITCH_CLIENT_SECRET }
       : null,
+  kick:
+    env.KICK_CLIENT_ID && env.KICK_CLIENT_SECRET
+      ? { clientId: env.KICK_CLIENT_ID, secret: env.KICK_CLIENT_SECRET }
+      : null,
+  reddit:
+    env.REDDIT_CLIENT_ID && env.REDDIT_CLIENT_SECRET
+      ? { clientId: env.REDDIT_CLIENT_ID, secret: env.REDDIT_CLIENT_SECRET }
+      : null,
 };
 const automodKeys = { openai: env.OPENAI_API_KEY ?? null };
 if (!automodKeys.openai) logger.info("AI moderation is off: set OPENAI_API_KEY to enable it");
 if (!alertKeys.twitch)
   logger.info("Twitch alerts are off: set TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET");
+if (!alertKeys.kick) logger.info("Kick alerts are off: set KICK_CLIENT_ID and KICK_CLIENT_SECRET");
+if (!alertKeys.reddit)
+  logger.info("Reddit alerts are off: set REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET");
 
 // Guild Members is privileged: turn on "Server Members Intent" in the Developer Portal.
 // Gatehouse needs it to see joins, and Guild Moderation (not privileged) for the
