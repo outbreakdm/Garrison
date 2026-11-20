@@ -647,10 +647,53 @@ export async function processDashboardActions(ctx: BotContext, client: Client<tr
   );
 }
 
+/**
+ * How long a request may run before the page is told it failed, rather than waiting until it
+ * expires. An AI assistant message makes up to four calls of 90 s at most; everything else
+ * takes seconds. The work isn't stopped: a reply that lands later still shows in the chat.
+ */
+export const ACTION_DEADLINE_MS = { ai: 6 * 60_000, other: 2 * 60_000 } as const;
+const AI_KINDS = new Set<string>(["qm_chat", "qm_plan", "qm_apply"]);
+
+export function actionDeadline(kind: string) {
+  return AI_KINDS.has(kind) ? ACTION_DEADLINE_MS.ai : ACTION_DEADLINE_MS.other;
+}
+
+/** The request's work, or a failure when it runs past its deadline. */
+export async function withinDeadline(
+  work: Promise<Outcome>,
+  ms: number,
+  late: () => Outcome,
+): Promise<Outcome> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<Outcome>((resolve) => {
+    timer = setTimeout(() => resolve(late()), ms);
+  });
+  try {
+    return await Promise.race([work, deadline]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function runAndFinish(ctx: BotContext, client: Client<true>, action: DashboardAction) {
   let outcome: Outcome;
   try {
-    outcome = await runDashboardAction(ctx, client, action);
+    outcome = await withinDeadline(
+      runDashboardAction(ctx, client, action),
+      actionDeadline(action.kind),
+      () => {
+        ctx.logger.error("Dashboard request ran past its deadline", {
+          actionId: action.id,
+          kind: action.kind,
+        });
+        return fail(
+          action.kind === "qm_chat"
+            ? "The AI assistant is taking too long to answer. Try again; if a reply shows up first, it finished after all."
+            : "Garrison is taking too long on this. Try again in a minute.",
+        );
+      },
+    );
   } catch (error) {
     ctx.logger.error("Dashboard action failed", {
       actionId: action.id,

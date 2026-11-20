@@ -71,8 +71,20 @@ const logger = createLogger(env.LOG_LEVEL);
  * minutes after every start. Renewing well before that means no connection gets that old;
  * postgres-js lets a running transaction finish before it renews one.
  */
+/**
+ * And a query still waiting after a minute is on a connection the network dropped (the role's
+ * statement timeout is 30 s, so no real one runs that long): the pool is replaced and the
+ * stuck queries fail, instead of hanging until the request expires (packages/db watchdog.ts).
+ */
+const DB_STUCK_AFTER_MS = 60_000;
 const { db, close } = createDb(env.DATABASE_URL, {
   maxLifetimeSeconds: () => 600 + Math.random() * 300,
+  watchdog: {
+    stuckAfterMs: DB_STUCK_AFTER_MS,
+    checkEveryMs: 5_000,
+    onRecycle: (info) =>
+      logger.error("A database query hung; replaced the connection pool", { ...info }),
+  },
 });
 // Fail closed: never run with a login that skips the database's own protections.
 const problem = roleProblem(await describeDbRole(db), "garrison_bot");

@@ -2,6 +2,7 @@ import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
+import { type WatchdogOptions, type WatchedClient, watchClient } from "./watchdog";
 
 /** Any Drizzle Postgres database using Garrison's schema (postgres-js in prod, PGlite in tests). */
 export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
@@ -23,6 +24,11 @@ export interface CreateDbOptions {
    * so connections renew at different times.
    */
   maxLifetimeSeconds?: number | (() => number);
+  /**
+   * Replace the pool when a query hangs this long (watchdog.ts). For a long-running process
+   * whose role has a statement timeout well under this; off by default.
+   */
+  watchdog?: Omit<WatchdogOptions, "now">;
 }
 
 /** Give up on opening a connection after this long, instead of postgres-js's 30 s. */
@@ -39,18 +45,25 @@ export const DB_IDLE_TIMEOUT_S = 60;
  * (Supavisor, port 6543): prepared statements are off so transaction mode works.
  */
 export function createDb(url: string, options: CreateDbOptions = {}) {
-  const sql = postgres(url, {
-    max: options.max ?? 5,
-    prepare: false,
-    connect_timeout: DB_CONNECT_TIMEOUT_S,
-    idle_timeout: DB_IDLE_TIMEOUT_S,
-    fetch_types: options.fetchTypes ?? true,
-    // postgres-js's types say a number, but it calls a function once per connection (its own
-    // default is one: postgres/src/connection.js timer()).
-    ...(options.maxLifetimeSeconds !== undefined
-      ? { max_lifetime: options.maxLifetimeSeconds as unknown as number }
-      : {}),
-  });
+  const open = () =>
+    postgres(url, {
+      max: options.max ?? 5,
+      prepare: false,
+      connect_timeout: DB_CONNECT_TIMEOUT_S,
+      idle_timeout: DB_IDLE_TIMEOUT_S,
+      fetch_types: options.fetchTypes ?? true,
+      // postgres-js's types say a number, but it calls a function once per connection (its own
+      // default is one: postgres/src/connection.js timer()).
+      ...(options.maxLifetimeSeconds !== undefined
+        ? { max_lifetime: options.maxLifetimeSeconds as unknown as number }
+        : {}),
+    });
+  if (options.watchdog) {
+    const dog = watchClient(open as unknown as () => WatchedClient, options.watchdog);
+    const db = drizzle(dog.client as unknown as ReturnType<typeof open>, { schema });
+    return { db: db as unknown as Db, close: () => dog.close(5) };
+  }
+  const sql = open();
   const db = drizzle(sql, { schema });
   return { db: db as unknown as Db, close: () => sql.end({ timeout: 5 }) };
 }
