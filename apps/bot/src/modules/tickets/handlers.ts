@@ -3,6 +3,7 @@ import { MessageFlags } from "discord.js";
 import { guildCommand } from "../../commands/builders.js";
 import type { ButtonHandler, Command, ModalHandler } from "../../commands/types.js";
 import { type Card, cardMessage, cardReply } from "../../lib/card.js";
+import { assistTicket } from "./assist.js";
 import { closeForm, isTicketStaff, parseTicketId, TICKET_PREFIX, ticketForm } from "./panel.js";
 import {
   checkStart,
@@ -133,6 +134,11 @@ export const ticket: Command = {
     .addSubcommand((s) => s.setName("claim").setDescription("Take this ticket (staff)"))
     .addSubcommand((s) =>
       s
+        .setName("assist")
+        .setDescription("Bastion reads this ticket and drafts a summary and a reply (staff, Pro)"),
+    )
+    .addSubcommand((s) =>
+      s
         .setName("add")
         .setDescription("Let someone else see and write in this ticket (staff)")
         .addUserOption((o) => o.setName("member").setDescription("Who to add").setRequired(true)),
@@ -179,6 +185,16 @@ export const ticket: Command = {
       return;
     }
     const config = await ticketConfig(ctx, interaction.guildId);
+    if (sub === "assist") {
+      if (!isTicketStaff(interaction.member, config)) {
+        await interaction.reply(cardReply(note("Staff only", "Assist is for the ticket's staff.")));
+        return;
+      }
+      await interaction.deferReply(ephemeral);
+      const card = await assistTicket(ctx, t, { id: interaction.user.id });
+      await interaction.editReply(cardMessage(card)).catch(() => null);
+      return;
+    }
     if (!isTicketStaff(interaction.member, config)) {
       await interaction.reply(cardReply(note("Staff only", "Ask the staff to add someone.")));
       return;

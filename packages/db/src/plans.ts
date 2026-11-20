@@ -289,6 +289,12 @@ export const FEATURES = {
     free: false,
     pro: true,
   },
+  "tickets.aiAssist": {
+    module: "tickets",
+    about: "/ticket assist: Bastion reads a ticket and drafts a summary and a reply for staff",
+    free: false,
+    pro: true,
+  },
   "tickets.historyDays": {
     module: "tickets",
     about: "Days a closed ticket's transcript is kept",

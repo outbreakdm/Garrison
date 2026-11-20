@@ -178,8 +178,9 @@ export const HELP = {
     steps: [
       "Tickets → Panels: make a panel, its topics and the staff roles who see tickets.",
       "Post the panel in a channel (or ask the AI assistant to). Turn on modmail in Tickets settings if you want it.",
+      "With Pro, staff run /ticket assist in a ticket: Bastion reads it and your tags, and privately drafts a summary and a reply, using a few supplies.",
     ],
-    commands: ["/ticket close", "/ticket claim", "/ticket add", "/ticket remove"],
+    commands: ["/ticket close", "/ticket claim", "/ticket assist", "/ticket add", "/ticket remove"],
     modules: ["tickets"],
     keywords: "tickets support modmail help desk panel transcript",
   },

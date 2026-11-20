@@ -27,7 +27,11 @@ then updates **Status** and the **Log** before stopping.
      Accept and Decline (or the dashboard's review list), one decision lands, accepting gives the
      form's roles (never staff, bot or higher roles) and the applicant gets a DM. Free 1 form,
      Pro 10; kept 90 days. **Migration 0082** (tables, enum values, grants).
-  5. [ ] AI help in tickets: a summary, a suggested reply from the server's rules and FAQ.
+  5. [x] AI help in tickets: staff run `/ticket assist` in an open ticket and Bastion (Fast)
+     privately drafts a summary and a reply from the ticket (latest 40 messages, form answers)
+     and the server's tags and auto-responder answers, which it's told are data, not orders.
+     Pro (`tickets.aiAssist`); charged in supplies like any AI call (feature `ticket_assist`,
+     30 an hour per server). No migration; **deploy with register_commands** for the subcommand.
   6. [ ] Small role tools: roles back on rejoin, timed roles, sticky messages, self-clearing channels.
   7. [ ] More alert sources: Kick, Reddit, RSS, Bluesky.
   8. [ ] Riot and Steam stat roles (Valorant and League ranks; Riot's production key needs applying).
@@ -1511,3 +1515,7 @@ Decided (2026-11-12, owner):
   `modules/applications`, web `applications/`). Checked on the local preview after 0082: a form
   with two questions saved, and posting its panel queued the request. The Discord side (button,
   form, staff card) needs the deployed bot. Lint, type-check, 804 tests pass.
+- 2026-11-20: Best bot item 5, AI help in tickets (bot `modules/tickets/assist.ts`, a plain
+  `complete()` on the planner that is counted and fitted inside its hold like a chat round).
+  Never posts on its own: the card is only for the staff member who asked. Lint, type-check,
+  808 tests pass. The real call needs the deployed bot. Not deployed.

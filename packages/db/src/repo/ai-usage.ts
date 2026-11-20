@@ -11,7 +11,7 @@ import type { Db } from "../client";
 import { AI_SUPPLIES_PER_MONTH, type AiTier } from "../plans";
 
 /** Kinds of AI call: a one-shot plan, or a message in the builder's chat. */
-export type AiFeature = "qm" | "qm_chat";
+export type AiFeature = "qm" | "qm_chat" | "ticket_assist";
 
 import { aiUsage, guildPlans, planBundles, qmBuilds, supplyGrants } from "../schema";
 import { qmChangesMade, qmChangesUsed } from "./quartermaster";

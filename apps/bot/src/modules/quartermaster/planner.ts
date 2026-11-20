@@ -150,7 +150,23 @@ export interface Planner {
   plan(input: PlannerInput): Promise<PlannerResult>;
   /** One reply in the builder's chat: an answer, questions, or a drafted plan. */
   chat?(input: ChatInput): Promise<ChatResult>;
+  /**
+   * One plain-text answer to a prompt (ticket help), counted first and fitted inside
+   * `budgetMicros` like a chat round, so it never costs more than it held.
+   */
+  complete?(input: CompleteInput): Promise<CompleteResult>;
 }
+
+export interface CompleteInput {
+  system: string;
+  prompt: string;
+  /** The most this call may cost. */
+  budgetMicros: number;
+  maxTokens: number;
+}
+export type CompleteResult =
+  | { ok: true; text: string; usage: PlannerUsage }
+  | { ok: false; error: string; usage?: PlannerUsage };
 
 /** One message in a builder conversation, oldest first; the last is the admin's. */
 export interface ChatTurn {
@@ -607,6 +623,41 @@ export class ClaudePlanner implements Planner {
         await new Promise((r) => setTimeout(r, this.retryDelayMs * 2 ** attempt));
       }
     }
+  }
+
+  async complete(input: CompleteInput): Promise<CompleteResult> {
+    const system: Anthropic.Beta.BetaTextBlockParam[] = [{ type: "text", text: input.system }];
+    const messages: Anthropic.Beta.BetaMessageParam[] = [{ role: "user", content: input.prompt }];
+    const fitted = await this.fit(input.budgetMicros, () => ({ system, messages }), 0);
+    if (!fitted) return { ok: false, error: CHAT_TOO_BIG };
+    const max_tokens = Math.min(fitted.output, input.maxTokens);
+    const worst = roundWorstMicros(this.model, fitted.input, max_tokens, this.attempts);
+    const sent = await this.call(
+      () =>
+        this.client.beta.messages.create({
+          model: this.model,
+          max_tokens,
+          output_config: { effort: "low" },
+          system,
+          messages,
+        }),
+      worst,
+    );
+    if ("error" in sent) {
+      const failed = apiError(sent.error);
+      return sent.worst ? { ...failed, usage: unknownUsage(this.model, sent.worst) } : failed;
+    }
+    const response = sent.response;
+    const usage = usageOf(response);
+    const stopped = stopError(response.stop_reason);
+    if (stopped && response.stop_reason !== "max_tokens")
+      return { ok: false, error: stopped, usage };
+    const text = response.content
+      .flatMap((b) => (b.type === "text" ? [b.text] : []))
+      .join("")
+      .trim();
+    if (!text) return { ok: false, error: "Bastion had nothing to say. Try again.", usage };
+    return { ok: true, text, usage };
   }
 
   async plan(input: PlannerInput): Promise<PlannerResult> {
