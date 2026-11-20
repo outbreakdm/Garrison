@@ -182,13 +182,16 @@ export async function chatTurn(
 
     let reply = result.reply.trim() || "Here's what I've got.";
     let build: QmBuild | null = null;
-    if (result.plan) {
+    if (result.plan || result.planProblem) {
       // A plan that was drafted but can't be stored: the message is free.
       refused = true;
       if (room < 1) reply = `${reply} ${suppliesMessage(allowance)}`;
       else {
         input.onStep?.("Checking the draft");
-        let checked = await checkDraft(ctx, guild, result.plan, snap.server, maxOperations);
+        // A plan whose JSON didn't match the format is refused the same way, with what's wrong.
+        let checked: Awaited<ReturnType<typeof checkDraft>> = result.plan
+          ? await checkDraft(ctx, guild, result.plan, snap.server, maxOperations)
+          : { ok: false, errors: [result.planProblem?.error ?? "The plan was empty."] };
         // Refused: show the model Garrison's reasons and its own draft once, and take the
         // corrected plan, instead of telling the admin about a plan that won't build. Only
         // with what's left of this message's hold: one that doesn't fit isn't sent.
@@ -198,19 +201,22 @@ export async function chatTurn(
             errors: checked.errors,
           });
           const draft = result.plan;
+          const draftText = draft
+            ? JSON.stringify({
+                operations: draft.operations,
+                edits: draft.edits ?? [],
+                order: draft.order ?? [],
+                settings: draft.settings,
+                posts: draft.posts,
+              })
+            : (result.planProblem?.json ?? "");
           input.onStep?.("Fixing what Garrison's checks refused");
           const retry = await ask(
             [
               ...turns,
               {
                 role: "assistant",
-                text: `${result.reply}\n<draft>${JSON.stringify({
-                  operations: draft.operations,
-                  edits: draft.edits ?? [],
-                  order: draft.order ?? [],
-                  settings: draft.settings,
-                  posts: draft.posts,
-                })}</draft>`,
+                text: `${result.reply}\n<draft>${draftText}</draft>`,
               },
               {
                 role: "user",
@@ -219,7 +225,7 @@ export async function chatTurn(
                   .map((e) => `- ${e}`)
                   .join(
                     "\n",
-                  )}\nSend the corrected plan in full. Keep what was fine, fix or drop what was refused, and make the reply describe the corrected plan. If it can't be fixed, leave the plan empty and say why in one sentence.</garrison_check>`,
+                  )}\nSend the corrected plan in full, in plan_json. Keep what was fine, fix or drop what was refused, and make the reply describe the corrected plan. If it can't be fixed, leave the plan empty and say why in one sentence.</garrison_check>`,
               },
             ],
             false,
@@ -242,6 +248,7 @@ export async function chatTurn(
             reply = retry.reply.trim() || reply;
             if (retry.plan)
               checked = await checkDraft(ctx, guild, retry.plan, snap.server, maxOperations);
+            else if (retry.planProblem) checked = { ok: false, errors: [retry.planProblem.error] };
             else checked = { ok: false, errors: [] };
           }
         }

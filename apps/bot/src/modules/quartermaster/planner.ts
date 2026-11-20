@@ -7,12 +7,7 @@ import {
   isPricedModel,
   outputThatFits,
   QM_MAX_OUTPUT_TOKENS,
-  QM_POST_KINDS,
-  QM_POSTS_MAX,
   QM_ROLE_PERMISSION_KEYS,
-  QM_SETTINGS_MODULES,
-  QM_WRITE_TARGETS,
-  QM_WRITES_MAX,
   type QmPostProposal,
   type QmSettingProposal,
   type QmWriteProposal,
@@ -23,7 +18,6 @@ import { z } from "zod";
 import { type AiEdit, type ChannelKind, MAX_DELETES } from "./edits.js";
 import {
   type AiPlan,
-  AiPlanSchema,
   MAX_OPERATIONS,
   MAX_ORDERS,
   MAX_PRIVATE_ROLES,
@@ -31,14 +25,14 @@ import {
 } from "./plan.js";
 import { MODULE_GUIDE, QM_CHAT_ROUNDS, READ_TOOLS, type ReadTool } from "./tools.js";
 import {
-  AiEditWireSchema,
-  AiOperationWireSchema,
-  AiOrderWireSchema,
+  AiDraftWireSchema,
   AiPlanWireSchema,
   editFromWire,
+  formatText,
   operationFromWire,
   orderFromWire,
   planFromWire,
+  readPlanJson,
   wireCount,
 } from "./wire.js";
 
@@ -191,11 +185,17 @@ export type ChatResult = (
       model: string;
       /** The read tools the model used for this reply, in order. */
       reads?: string[];
+      /** A plan whose JSON didn't match the plan format: what's wrong, and what it sent. */
+      planProblem?: { error: string; json: string };
     }
   | { ok: false; error: string }
 ) & { usage?: PlannerUsage };
 
-/** What the chat model returns: a reply, quick replies, and (when it drafts one) a plan. */
+/**
+ * What the chat model returns: a reply, quick replies, and (when it drafts one) the plan as
+ * JSON. The plan isn't part of the grammar: a schema that size is refused by the API (wire.ts),
+ * so its shape is in the instructions and Garrison checks it on the way back.
+ */
 export const AiChatSchema = z.object({
   reply: z
     .string()
@@ -207,101 +207,16 @@ export const AiChatSchema = z.object({
     .describe(
       "Up to 4 short quick replies the admin can tap (2 to 6 words each), or empty when none fit.",
     ),
-  plan_summary: z
+  plan_json: z
     .string()
-    .describe("When you draft a plan: one short sentence describing it. Otherwise empty."),
-  // The wire forms: nothing nullable but three fields, so the schema stays inside the API's
-  // limits (wire.ts). Read back with planFromWire's parts below.
-  order: z.array(AiOrderWireSchema).describe(AiPlanSchema.shape.order.description ?? ""),
-  edits: z.array(AiEditWireSchema).describe(AiPlanSchema.shape.edits.description ?? ""),
-  operations: z
-    .array(AiOperationWireSchema)
-    .describe("The plan's operations when you draft one now. Empty while you're still asking."),
-  plan_notes: z
-    .string()
-    .describe("With a plan: what you left out or would add next. Otherwise empty."),
-  settings: z
-    .array(
-      z.object({
-        module: z.enum(QM_SETTINGS_MODULES as [string, ...string[]]),
-        field: z.string(),
-        value_json: z
-          .string()
-          .describe('The new value as JSON: true, 5, "channel-ref", ["123"], null.'),
-      }),
-    )
-    .describe("Settings the plan changes, one per field. Empty when it changes none."),
-  posts: z
-    .array(
-      z.object({
-        kind: z.enum(QM_POST_KINDS),
-        item_id: z.string().describe("The saved item's id, from server_overview."),
-        channel: z.string().describe("A text channel id, or the ref of one this plan creates."),
-      }),
-    )
-    .describe(`Saved items the plan posts, at most ${QM_POSTS_MAX}. Empty when it posts none.`),
-  writes: z
-    .array(
-      z.object({
-        target: z.enum(QM_WRITE_TARGETS),
-        message_id: z
-          .string()
-          .describe(
-            "edit_message: the saved message's id from server_overview. new_message: a short ref (like 'rules') a post in this plan can use as its item_id. Else empty.",
-          ),
-        name: z
-          .string()
-          .describe(
-            "new_message: its name on the Messages page (40 characters at most). Else empty.",
-          ),
-        title: z.string().describe("The card's title: one line, 150 characters at most."),
-        body: z
-          .string()
-          .describe(
-            "The card's text in Discord markdown, paragraphs separated by a blank line, 3000 characters at most. Welcome cards can use {user}, {name}, {server} and {count}.",
-          ),
-        style: z
-          .enum(["buttons", "dropdown"])
-          .describe(
-            "new_role_menu: buttons (up to 15 roles) or a dropdown (up to 25). Else buttons.",
-          ),
-        items: z
-          .array(
-            z.object({
-              role: z
-                .string()
-                .describe(
-                  "new_role_menu: the role's id, or the ref of one this plan makes. Else empty.",
-                ),
-              label: z
-                .string()
-                .describe("The button label, or the ticket topic (80 characters at most)."),
-              emoji: z.string().describe("One standard emoji, or empty."),
-            }),
-          )
-          .describe(
-            "new_role_menu: the roles members pick. new_ticket_panel: its topics, one button each. Else empty.",
-          ),
-        staff_roles: z
-          .array(z.string())
-          .describe(
-            "new_ticket_panel: role ids or refs that see and answer its tickets (added to the server's ticket staff). Else empty.",
-          ),
-        channel: z
-          .string()
-          .describe(
-            "new_giveaway: the text channel's id, or the ref of one this plan makes. Else empty.",
-          ),
-        winners: z.number().int().describe("new_giveaway: how many win, 1-20. Else 0."),
-        duration_minutes: z
-          .number()
-          .int()
-          .describe(
-            "new_giveaway: minutes until the draw: 30, 60, 360, 720, 1440, 4320, 10080 or 20160. Else 0.",
-          ),
-      }),
-    )
-    .describe(`Text the plan writes, at most ${QM_WRITES_MAX}. Empty when it writes nothing.`),
+    .describe(
+      "Empty while you're still asking or just answering. When you draft or change a plan: the whole plan as one JSON object in the <plan_format> shape, nothing else.",
+    ),
+});
+
+/** What the one-shot planner returns: the plan as JSON in the <plan_format> shape. */
+const AiPlanOnlySchema = z.object({
+  plan_json: z.string().describe("The plan as one JSON object in the <plan_format> shape."),
 });
 
 /**
@@ -379,7 +294,12 @@ const SYSTEM = `You are the AI assistant inside Garrison, a Discord bot for gami
 
 A server admin describes what they want, and you return a plan.
 
-${DESIGN}`;
+${DESIGN}
+
+The plan goes in plan_json as one JSON object in this shape (a JSON Schema; fields with a default can be left out, and mean "not set"):
+<plan_format>
+${formatText(AiPlanWireSchema)}
+</plan_format>`;
 
 const CHAT_SYSTEM = `You are the AI assistant inside Garrison, a Discord bot for gaming communities, talking with a server admin in the Garrison dashboard. You design Discord servers the way an experienced community manager would, and you're friendly, quick and practical: a helpful teammate, not a form.
 You run on Bastion v1, Garrison's AI engine, in Fast or Smart mode. If asked what you are or what powers you, say that. Don't name the company or model underneath; if pressed, say Garrison doesn't share how Bastion is built.
@@ -415,7 +335,12 @@ Garrison's settings:
 ${qmSettingsGuide()}
 </settings_you_can_change>
 
-${DESIGN}`;
+${DESIGN}
+
+When you draft or change a plan, put the whole plan in plan_json as one JSON object in this shape (a JSON Schema; fields with a default can be left out, and mean "not set"). Leave plan_json empty while you're still asking or only answering:
+<plan_format>
+${formatText(AiDraftWireSchema)}
+</plan_format>`;
 
 /**
  * The instructions as a cached block. They're the same on every call and come first (after
@@ -690,7 +615,7 @@ export class ClaudePlanner implements Planner {
     const budget = input.budgetMicros ?? Number.POSITIVE_INFINITY;
     const output_config = {
       effort: "medium" as const,
-      format: betaZodOutputFormat(AiPlanWireSchema),
+      format: betaZodOutputFormat(AiPlanOnlySchema),
     };
     const messages: Anthropic.Beta.BetaMessageParam[] = [{ role: "user", content: blocks }];
     const fitted = await this.fit(
@@ -727,7 +652,14 @@ export class ClaudePlanner implements Planner {
         error: "Bastion's plan didn't come back in the right shape. Try again.",
         usage,
       };
-    return { ok: true, plan: planFromWire(response.parsed_output), model: response.model, usage };
+    const read = readPlanJson(AiPlanWireSchema, response.parsed_output.plan_json);
+    if (!read.ok)
+      return {
+        ok: false,
+        error: "Bastion's plan didn't come back in the right shape. Try again.",
+        usage,
+      };
+    return { ok: true, plan: planFromWire(read.value), model: response.model, usage };
   }
 
   async chat(input: ChatInput): Promise<ChatResult> {
@@ -854,54 +786,70 @@ export class ClaudePlanner implements Planner {
             error: "Bastion's answer didn't come back in the right shape.",
             usage,
           };
-        const settings = out.settings.map((x) => ({
+        const said = {
+          reply: out.reply,
+          choices: out.choices,
+          model: response.model,
+          reads,
+          usage,
+        };
+        if (!out.plan_json.trim()) return { ok: true, ...said, plan: null };
+        // The plan's JSON, checked against its format: a problem goes back to the model with
+        // what's wrong, like a plan Garrison's checks refuse (chat.ts).
+        const drafted = readPlanJson(AiDraftWireSchema, out.plan_json);
+        if (!drafted.ok)
+          return {
+            ok: true,
+            ...said,
+            plan: null,
+            planProblem: { error: drafted.error, json: out.plan_json.slice(0, 6000) },
+          };
+        const d = drafted.value;
+        const settings = d.settings.map((x) => ({
           module: x.module,
           field: x.field,
           value: parseValue(x.value_json),
         }));
-        const posts = out.posts.map((x) => ({
+        const posts = d.posts.map((x) => ({
           kind: x.kind,
           itemId: x.item_id,
           channel: x.channel,
         }));
-        const writes = (out.writes ?? []).map((x) => ({
+        const writes = d.writes.map((x) => ({
           target: x.target,
           messageId: x.message_id,
           name: x.name,
           title: x.title,
           body: x.body,
           ...(x.target === "new_role_menu" ? { style: x.style } : {}),
-          items: x.items ?? [],
-          staffRoles: x.staff_roles ?? [],
+          items: x.items,
+          staffRoles: x.staff_roles,
           ...(x.channel ? { channel: x.channel } : {}),
           winners: wireCount(x.winners),
           durationMinutes: wireCount(x.duration_minutes),
         }));
+        const empty =
+          !d.operations.length &&
+          !d.order.length &&
+          !d.edits.length &&
+          !settings.length &&
+          !posts.length &&
+          !writes.length;
         return {
           ok: true,
-          reply: out.reply,
-          choices: out.choices,
-          plan:
-            out.operations.length ||
-            out.order.length ||
-            out.edits.length ||
-            settings.length ||
-            posts.length ||
-            writes.length
-              ? {
-                  summary: out.plan_summary,
-                  operations: out.operations.map(operationFromWire),
-                  order: out.order.map(orderFromWire),
-                  edits: out.edits.map(editFromWire),
-                  notes: out.plan_notes,
-                  settings,
-                  posts,
-                  writes,
-                }
-              : null,
-          model: response.model,
-          reads,
-          usage,
+          ...said,
+          plan: empty
+            ? null
+            : {
+                summary: d.plan_summary,
+                operations: d.operations.map(operationFromWire),
+                order: d.order.map(orderFromWire),
+                edits: d.edits.map(editFromWire),
+                notes: d.plan_notes,
+                settings,
+                posts,
+                writes,
+              },
         };
       }
     } catch (error) {

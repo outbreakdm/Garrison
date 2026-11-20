@@ -1,5 +1,6 @@
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import { AiChatSchema } from "./planner.js";
 import { READ_TOOLS } from "./tools.js";
 import {
@@ -27,19 +28,20 @@ function load(schema: Parameters<typeof betaZodOutputFormat>[0], tools = READ_TO
 describe("what the AI is asked to write stays inside the API's schema limits", () => {
   // On 2026-11-19 the chat schema had 25 nullable fields; the API refuses over 16 with a 400
   // before the model runs, so every AI assistant message failed.
-  it("the chat: few nullable and no optional parameters, with its tools", () => {
+  // Then the API refused the slimmer schema too: "The compiled grammar is too large". The plan
+  // left the grammar; what's compiled now is the reply, the quick replies and plan_json.
+  it("the chat's grammar is small: no nullable or optional parameters, with its tools", () => {
     const { nullable, optional } = load(AiChatSchema);
     expect(nullable.length).toBeLessThanOrEqual(WIRE_MAX_NULLABLE);
-    // Room to grow: a new nullable field should be a choice, not an accident.
-    expect(nullable.length).toBeLessThanOrEqual(4);
     expect(optional.length).toBeLessThanOrEqual(WIRE_MAX_OPTIONAL);
+    expect(nullable).toEqual([]);
     expect(optional).toEqual([]);
+    const size = JSON.stringify((betaZodOutputFormat(AiChatSchema) as { schema: unknown }).schema);
+    expect(size.length).toBeLessThan(1500);
   });
 
-  it("the one-shot plan too", () => {
-    const { nullable, optional } = load(AiPlanWireSchema, []);
-    expect(nullable.length).toBeLessThanOrEqual(4);
-    expect(optional).toEqual([]);
+  it("the plan format keeps its nullable fields to the three that need it", () => {
+    expect(schemaLoad(z.toJSONSchema(AiPlanWireSchema)).nullable).toHaveLength(3);
   });
 });
 

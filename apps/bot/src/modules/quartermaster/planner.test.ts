@@ -72,18 +72,7 @@ const answer = (reply: string) => ({
   content: [
     {
       type: "text",
-      text: JSON.stringify({
-        reply,
-        choices: [],
-        plan_summary: "",
-        operations: [],
-        order: [],
-        edits: [],
-        plan_notes: "",
-        settings: [],
-        posts: [],
-        writes: [],
-      }),
+      text: JSON.stringify({ reply, choices: [], plan_json: "" }),
     },
   ],
   stop_reason: "end_turn",
@@ -331,7 +320,12 @@ describe("a message never costs more than it holds", () => {
   it("fits a one-shot plan inside its hold too", async () => {
     const plan = { summary: "x", operations: [], notes: "" };
     const { planner, sent } = fakeApi(
-      [{ content: [{ type: "text", text: JSON.stringify(plan) }], stop_reason: "end_turn" }],
+      [
+        {
+          content: [{ type: "text", text: JSON.stringify({ plan_json: JSON.stringify(plan) }) }],
+          stop_reason: "end_turn",
+        },
+      ],
       { inputTokens: 20_000 },
     );
     await planner.plan({ ...input(), request: "A clips channel", budgetMicros: 4000 });
@@ -388,5 +382,61 @@ describe("a message never costs more than it holds", () => {
     });
     expect(steps).toEqual(["Looking up how Tickets and modmail works"]);
     expect(JSON.stringify(sent[1]?.messages.at(-1))).toContain("Ticket panels: Free 1, Pro 10");
+  });
+});
+
+describe("the plan comes back as JSON, checked on the way in", () => {
+  const withPlan = (plan_json: string) => ({
+    content: [
+      { type: "text", text: JSON.stringify({ reply: "Here's a plan.", choices: [], plan_json }) },
+    ],
+    stop_reason: "end_turn",
+  });
+
+  it("fills in what the model left out, as not set", async () => {
+    const { planner } = fakeApi([
+      withPlan(
+        JSON.stringify({
+          plan_summary: "Adds a news channel and reorders the roles",
+          operations: [{ kind: "create_text_channel", ref: "news", name: "news" }],
+          order: [{ scope: "channels", items: ["1", "2"] }],
+          edits: [{ kind: "edit_role", id: "9", hoist: "yes" }],
+        }),
+      ),
+    ]);
+    const out = await planner.chat(input());
+    if (!out.ok || !out.plan) throw new Error(JSON.stringify(out));
+    expect(out.plan.operations[0]).toMatchObject({
+      kind: "create_text_channel",
+      ref: "news",
+      parent: null,
+      topic: null,
+      private_to: [],
+      text_kind: null,
+    });
+    expect(out.plan.order?.[0]).toEqual({ scope: "channels", parent: null, items: ["1", "2"] });
+    expect(out.plan.edits?.[0]).toMatchObject({
+      id: "9",
+      name: null,
+      hoist: true,
+      mentionable: null,
+    });
+    expect(out.plan.settings).toEqual([]);
+  });
+
+  it("hands back what's wrong when the JSON doesn't fit, for the model to fix", async () => {
+    const { planner } = fakeApi([withPlan('{"operations": [{"kind": "create_moat"}]}')]);
+    const out = await planner.chat(input());
+    expect(out).toMatchObject({ ok: true, plan: null });
+    if (!out.ok) return;
+    expect(out.planProblem?.error).toMatch(/operations\.0\.kind/);
+    const broken = await fakeApi([withPlan("{not json")]).planner.chat(input());
+    expect(broken.ok && broken.planProblem?.error).toMatch(/isn't valid JSON/);
+  });
+
+  it("no plan when plan_json is empty", async () => {
+    const out = await fakeApi([answer("Suggestions are on.")]).planner.chat(input());
+    expect(out).toMatchObject({ ok: true, plan: null, reply: "Suggestions are on." });
+    expect(out.ok && out.planProblem).toBeUndefined();
   });
 });

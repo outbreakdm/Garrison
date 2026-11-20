@@ -1796,3 +1796,52 @@ describe("alerts, counters and giveaways the AI assistant sets up", () => {
     expect(JSON.stringify(out)).toMatch(/can run 2 giveaways at once/);
   });
 });
+
+describe("a plan in the wrong shape", () => {
+  it("goes back to the model once with what's wrong, and the fixed plan is drafted", async () => {
+    const f = fakeGuild("q97");
+    const asked: string[] = [];
+    let calls = 0;
+    const bot: Planner = {
+      model: "claude-haiku-5-5",
+      plan: async () => ({ ok: false, error: "not used" }),
+      chat: async (input) => {
+        calls++;
+        asked.push(input.history.at(-1)?.text ?? "");
+        if (calls === 1)
+          return {
+            ok: true,
+            reply: "Here's a lounge.",
+            choices: [],
+            model: "claude-haiku-5-5",
+            usage: TYPICAL,
+            plan: null,
+            planProblem: {
+              error: "plan_json doesn't match the plan format: operations.0.kind: Invalid option.",
+              json: '{"operations":[{"kind":"create_lounge"}]}',
+            },
+          };
+        return {
+          ok: true,
+          reply: "Here's a lounge channel.",
+          choices: [],
+          model: "claude-haiku-5-5",
+          usage: TYPICAL,
+          plan: {
+            summary: "A lounge",
+            notes: "",
+            operations: [op({ kind: "create_text_channel", ref: "lounge", name: "lounge" })],
+            settings: [],
+            posts: [],
+          },
+        };
+      },
+    };
+    const out = await chatTurn(ctx, bot, f.guild, asker(f), { message: "Add a lounge" });
+    expect(calls).toBe(2);
+    expect(asked[1]).toMatch(/operations\.0\.kind: Invalid option/);
+    expect(out).toMatchObject({ ok: true });
+    if (!out.ok) return;
+    expect(out.build?.plan.map((o) => o.name)).toEqual(["lounge"]);
+  });
+});
