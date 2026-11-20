@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   aiFlags,
+  aiSettingsFor,
   checkAutomod,
   checkMessageText,
   cleanWords,
@@ -72,10 +73,40 @@ describe("automod rules", () => {
     ]);
   });
 
-  it("keeps AI moderation and big word lists for Pro", () => {
+  it("gives AI moderation to every plan, and keeps tuning it and big word lists for Pro", () => {
     expect(checkAutomod(form(), free, DEFAULT_AUTOMOD).ok).toBe(true);
-    expect(checkAutomod(form({ aiEnabled: true }), free, DEFAULT_AUTOMOD).ok).toBe(false);
+    // Free turns it on with the standard set; choosing what it looks for, or how strict, is Pro.
+    const standard = { aiCategories: DEFAULT_AUTOMOD.aiCategories };
+    expect(checkAutomod(form({ aiEnabled: true, ...standard }), free, DEFAULT_AUTOMOD).ok).toBe(
+      true,
+    );
+    expect(checkAutomod(form({ aiEnabled: true }), free, DEFAULT_AUTOMOD)).toMatchObject({
+      ok: false,
+      error: expect.stringMatching(/part of Garrison Pro/),
+    });
+    expect(
+      checkAutomod(
+        form({ aiEnabled: true, ...standard, aiStrictness: "high" }),
+        free,
+        DEFAULT_AUTOMOD,
+      ).ok,
+    ).toBe(false);
     expect(checkAutomod(form({ aiEnabled: true }), pro, DEFAULT_AUTOMOD).ok).toBe(true);
+    // A server back on Free keeps what it chose on Pro, and the bot uses the standard set.
+    const chosen = {
+      ...DEFAULT_AUTOMOD,
+      aiEnabled: true,
+      aiCategories: ["hate" as const],
+      aiStrictness: "high" as const,
+    };
+    expect(checkAutomod(form({ aiEnabled: true, aiStrictness: "high" }), free, chosen).ok).toBe(
+      true,
+    );
+    expect(aiSettingsFor(chosen, free)).toEqual({
+      aiCategories: DEFAULT_AUTOMOD.aiCategories,
+      aiStrictness: "medium",
+    });
+    expect(aiSettingsFor(chosen, pro)).toEqual({ aiCategories: ["hate"], aiStrictness: "high" });
     const many = Array.from({ length: 30 }, (_, i) => `word${i}`).join("\n");
     expect(checkAutomod(form({ words: many }), free, DEFAULT_AUTOMOD).ok).toBe(false);
     expect(checkAutomod(form({ words: many }), pro, DEFAULT_AUTOMOD).ok).toBe(true);

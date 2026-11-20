@@ -248,6 +248,18 @@ export function checkAutomod(
     : [];
   if (aiEnabled && !aiCategories.length)
     return { ok: false, error: "Pick at least one thing for AI moderation to look for." };
+  const aiStrictnessIn = isStrictness(raw.aiStrictness) ? raw.aiStrictness : "medium";
+  // Only while it's on: the bot uses the standard set without Pro anyway (aiSettingsFor).
+  if (aiEnabled && !ent["automod.aiTuning"]) {
+    const same = (a: string[], b: string[]) =>
+      a.length === b.length && a.every((x) => b.includes(x));
+    if (!same(aiCategories, before.aiCategories) || aiStrictnessIn !== before.aiStrictness)
+      return {
+        ok: false,
+        error:
+          "Choosing what AI moderation looks for and how strict it is is part of Garrison Pro.",
+      };
+  }
   const regexPatterns = Array.isArray(raw.regexPatterns)
     ? [...new Set(raw.regexPatterns.map((x) => String(x).trim()).filter(Boolean))]
     : [];
@@ -289,7 +301,7 @@ export function checkAutomod(
       exemptChannelIds,
       aiEnabled,
       aiCategories,
-      aiStrictness: isStrictness(raw.aiStrictness) ? raw.aiStrictness : "medium",
+      aiStrictness: aiStrictnessIn,
       regexPatterns,
       regexAllow,
     },
@@ -343,6 +355,20 @@ export function isSpam(
 }
 
 /** Which of the server's categories OpenAI's scores flag, at its strictness. */
+/**
+ * What AI moderation looks for on this plan: the server's own choices on Pro, Garrison's
+ * standard set (harassment, hate, sexual content, self-harm, balanced) on Free. Choices made
+ * on Pro are kept and come back with it.
+ */
+export function aiSettingsFor(
+  config: Pick<AutomodConfig, "aiCategories" | "aiStrictness">,
+  ent: Entitlements,
+): Pick<AutomodConfig, "aiCategories" | "aiStrictness"> {
+  return ent["automod.aiTuning"]
+    ? { aiCategories: config.aiCategories, aiStrictness: config.aiStrictness }
+    : { aiCategories: DEFAULT_AUTOMOD.aiCategories, aiStrictness: DEFAULT_AUTOMOD.aiStrictness };
+}
+
 export function aiFlags(
   config: Pick<AutomodConfig, "aiCategories" | "aiStrictness">,
   scores: Record<string, number>,

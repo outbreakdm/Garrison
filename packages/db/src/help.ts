@@ -69,7 +69,7 @@ export const HELP = {
     steps: [
       "Moderation → Automod: switch on the checks you want and add blocked words.",
       "Pick what a hit does (remove only, warn, or time out) and any exempt roles and channels.",
-      "On Pro, AI moderation reads messages for harassment, hate and more, at the strictness you pick.",
+      "AI moderation reads messages for harassment, hate, sexual content and self-harm, on every plan; on Pro you choose what it looks for and how strict it is.",
     ],
     modules: ["automod"],
     keywords: "automod blocked words filter invites links spam mentions scam ai moderation regex",

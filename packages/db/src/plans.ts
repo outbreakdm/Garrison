@@ -92,7 +92,7 @@ export const PRICING = {
     servers: null,
     pitch: "Everything a server needs to stay safe, and every module to try.",
     highlights: [
-      "Moderation, anti-raid, anti-nuke, verification and logs, in full",
+      "Moderation with AI screening, anti-raid, anti-nuke, verification and logs, in full",
       "Every module with the standard look and sensible limits",
       "AI assistant: 100 supplies a month, on Fast",
       "Undo and history on every change",
@@ -332,7 +332,15 @@ export const FEATURES = {
   },
   "automod.ai": {
     module: "automod",
-    about: "AI moderation: OpenAI's moderation model reads messages for harassment, hate and more",
+    about:
+      "AI moderation: OpenAI's moderation model reads messages for harassment, hate and more (free to run, so on every plan since 2026-11-20)",
+    free: true,
+    pro: true,
+  },
+  "automod.aiTuning": {
+    module: "automod",
+    about:
+      "Choosing what AI moderation looks for and how strict it is (Free uses harassment, hate, sexual content and self-harm, balanced)",
     free: false,
     pro: true,
   },

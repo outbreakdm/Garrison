@@ -7,6 +7,24 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
+- **Best bot list (2026-11-20), in order, one item per step** (from the release audit's "What to
+  add to be the best bot", ranked by value for effort). Commit each before the next.
+  1. [x] Free AI moderation: on every plan with the standard set (harassment, hate, sexual,
+     self-harm, Balanced); choosing what it looks for and how strict stays Pro (`automod.aiTuning`).
+     Free 20 AI checks a minute per server, Pro 60; a 429 from OpenAI pauses every server's checks
+     for as long as it asks. Built, not deployed.
+  2. [ ] Setup in three clicks: a first-run checklist with presets (gaming clan, creator, study
+     group) that turns on safety, welcome and roles, then hands off to the AI builder.
+  3. [ ] Custom commands and auto-responders (reply cards on a word, a command or a button).
+  4. [ ] Applications and recruitment forms, reviewed on the dashboard; accepting gives roles.
+  5. [ ] AI help in tickets: a summary, a suggested reply from the server's rules and FAQ.
+  6. [ ] Small role tools: roles back on rejoin, timed roles, sticky messages, self-clearing channels.
+  7. [ ] More alert sources: Kick, Reddit, RSS, Bluesky.
+  8. [ ] Riot and Steam stat roles (Valorant and League ranks; Riot's production key needs applying).
+  9. [ ] Public server page and leaderboard.
+  10. [ ] Patreon and Twitch subscriber roles.
+  11. [ ] Other languages (Spanish, Portuguese, German, French first).
+  12. [ ] Fun extras: birthdays, trivia, counting.
 - **AI assistant v2 (planned 2026-11-19), next up:** `docs/AI_ASSISTANT.md`, "Assistant v2". Owner chose Haiku (Fast) and Sonnet (Smart, Pro and Agency only), supplies at each model's real cost, every coverage gap (writing, more modules, insight, how-to help), and a "Your server" workspace with hand edits (rename, drag to reorder) and an Apply build button. Phase 1 first: a message's hold assumes 12,000 input tokens a round but nothing enforces it, so a big server can cost more than it held. **Phases 1 to 8A built** (not deployed; migrations 0076 to 0079). The eval has never run on the real models: it needs `ANTHROPIC_API_KEY` and the owner's yes (about $6.20 for both models, 3 runs). Phases 5 to 8A (how-to help, server insight, writing, more settings and forum and announcement channels) are done too; 8B is built too (role menus, ticket panels, stream alerts, giveaways, the economy and shop, LFG templates, invite labels, server stats counters). **Deployed 2026-11-19** (`9c003e1`, run #54, migrations 0076 to 0079). What's left needs the owner: the first real-model eval run.
 - **Landing refresh and Needs attention (2026-11-20), deployed** (`db83944`, run #62, dashboard): hero buttons are Add to
   Discord, Open dashboard, See it in action (now to "Watch it work"); Watch it work opens with a
@@ -1465,3 +1483,9 @@ Decided (2026-11-12, owner):
   real-server release test, the first AI eval run, a legal read, purging removed links, Turnstile.
   AI for 1,000 server owners: 70 to 78% margin expected at 5 to 10% Pro, 15 to 42% if every pool is
   spent; Free is the swing cost, break-even about 3.9% conversion in the worst case.
+- 2026-11-20: Deployed `8527fce` (run #63: the dashboard on attempt 1; the bot failed on
+  Cloudflare's 100146 four times, then went out on a re-run at 12:47 UTC). Free AI supplies
+  100 a month (from 200), Fast only; Smart stays locked in the picker and refused by the
+  dashboard and bot (`e0fb77b`, not deployed). Best bot item 1, Free AI moderation, built and
+  tested on the local preview as a Free server: the switch saves, what it looks for and how
+  strict show Requires Pro. Lint, type-check, 785 tests and `next build` pass. Not deployed.

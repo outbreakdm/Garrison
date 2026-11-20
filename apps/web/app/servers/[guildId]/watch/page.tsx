@@ -802,27 +802,35 @@ export default async function WatchPage({
             guildId={guild.id}
             stamp={amStamp}
             saveLabel="Save AI moderation"
-            fields={["aiEnabled", "aiCategories", "aiStrictness"]}
+            // Without Pro the card saves only the switch: what it looks for keeps its value.
+            fields={
+              ent["automod.aiTuning"]
+                ? ["aiEnabled", "aiCategories", "aiStrictness"]
+                : ["aiEnabled"]
+            }
             aside={
-              <>
-                <ProTag on={ent["automod.ai"]} />
-                <HeaderSwitch
-                  name="aiEnabled"
-                  form="ai-form"
-                  defaultChecked={am.aiEnabled}
-                  label="AI moderation on"
-                  disabled={!ent["automod.ai"] && !am.aiEnabled}
-                />
-              </>
+              <HeaderSwitch
+                name="aiEnabled"
+                form="ai-form"
+                defaultChecked={am.aiEnabled}
+                label="AI moderation on"
+                disabled={!ent["automod.ai"] && !am.aiEnabled}
+              />
             }
           >
             <p className="g-help">
               Reads messages for what word lists can't catch. Their text is scored by OpenAI's
               moderation model and isn't kept by Garrison.
             </p>
-            <HowItWorks>It runs once Garrison's host has an OpenAI key.</HowItWorks>
-            <fieldset className="choice" disabled={!ent["automod.ai"] && !am.aiEnabled}>
-              <legend className="choice__legend">Look for</legend>
+            <HowItWorks>
+              It runs once Garrison's host has an OpenAI key. On every plan it looks for harassment,
+              hate, sexual content and self-harm at Balanced; choosing what it looks for and how
+              strict it is comes with Pro.
+            </HowItWorks>
+            <fieldset className="choice" disabled={!ent["automod.aiTuning"]}>
+              <legend className="choice__legend">
+                Look for <ProTag on={ent["automod.aiTuning"]} />
+              </legend>
               <div className="chip-row">
                 {(Object.keys(AI_CATEGORIES) as AiCategory[]).map((c) => (
                   <label className="check" key={c}>
@@ -837,7 +845,7 @@ export default async function WatchPage({
                 ))}
               </div>
             </fieldset>
-            <fieldset className="choice" disabled={!ent["automod.ai"] && !am.aiEnabled}>
+            <fieldset className="choice" disabled={!ent["automod.aiTuning"]}>
               <LevelCards
                 name="aiStrictness"
                 label="How strict"

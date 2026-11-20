@@ -2,6 +2,7 @@ import {
   type AiCategory,
   type AutomodConfig,
   aiFlags,
+  aiSettingsFor,
   checkMessageText,
   entitlements,
   findScamLink,
@@ -48,9 +49,26 @@ export function caseDue(guildId: string, userId: string, now = Date.now()) {
   lastCase.set(key, now);
   return true;
 }
-/** AI checks per server per minute, so a busy server can't run up the API. */
+/**
+ * AI checks per server per minute, so one busy server can't use up the account's rate limit
+ * for everyone. Free servers get fewer, since AI moderation is on every plan.
+ */
 const aiBudget = new Map<string, { minute: number; used: number }>();
-const AI_PER_MINUTE = 60;
+export const AI_PER_MINUTE = { free: 20, pro: 60 } as const;
+/**
+ * When OpenAI says to slow down (429), every server's AI checks pause until it says to try
+ * again. Messages are still checked by word lists, links and spam rules in the meantime.
+ */
+let aiPausedUntil = 0;
+const AI_PAUSE_DEFAULT_MS = 20_000;
+const AI_PAUSE_MAX_MS = 5 * 60_000;
+export const aiPaused = (now = Date.now()) => now < aiPausedUntil;
+/** How long OpenAI asked to wait, from its retry-after header, within sensible bounds. */
+export function pauseFor(retryAfter: string | null) {
+  const s = Number(retryAfter);
+  const ms = Number.isFinite(s) && s > 0 ? s * 1000 : AI_PAUSE_DEFAULT_MS;
+  return Math.min(AI_PAUSE_MAX_MS, Math.max(1000, ms));
+}
 
 export interface AutomodKeys {
   openai: string | null;
@@ -67,6 +85,10 @@ export async function moderateText(
     body: JSON.stringify({ model: "omni-moderation-latest", input: text.slice(0, 2000) }),
     signal: AbortSignal.timeout(6000),
   }).catch(() => null);
+  if (res?.status === 429) {
+    aiPausedUntil = Date.now() + pauseFor(res.headers.get("retry-after"));
+    return null;
+  }
   if (!res?.ok) return null;
   const body = (await res.json().catch(() => null)) as {
     results?: { category_scores?: Record<string, number> }[];
@@ -74,14 +96,15 @@ export async function moderateText(
   return body?.results?.[0]?.category_scores ?? null;
 }
 
-function takeAiBudget(guildId: string, now = Date.now()) {
+export function takeAiBudget(guildId: string, perMinute: number, now = Date.now()) {
+  if (aiPaused(now)) return false;
   const minute = Math.floor(now / 60_000);
   const b = aiBudget.get(guildId);
   if (!b || b.minute !== minute) {
     aiBudget.set(guildId, { minute, used: 1 });
     return true;
   }
-  if (b.used >= AI_PER_MINUTE) return false;
+  if (b.used >= perMinute) return false;
   b.used++;
   return true;
 }
@@ -196,9 +219,10 @@ export async function onAutomodMessage(ctx: BotContext, message: Message, keys: 
   let aiHits: AiCategory[] = [];
   if (!reason && config.aiEnabled && keys.openai && message.content.trim().length >= 4) {
     const ent = entitlements(await getGuildPlan(ctx.db, message.guildId));
-    if (ent["automod.ai"] && takeAiBudget(message.guildId)) {
+    const perMinute = ent["automod.aiTuning"] ? AI_PER_MINUTE.pro : AI_PER_MINUTE.free;
+    if (ent["automod.ai"] && takeAiBudget(message.guildId, perMinute)) {
       const scores = await moderateText(keys.openai, message.content);
-      if (scores) aiHits = aiFlags(config, scores);
+      if (scores) aiHits = aiFlags(aiSettingsFor(config, ent), scores);
     }
   }
   // Self-harm is a reason to check on someone, never to punish them.
