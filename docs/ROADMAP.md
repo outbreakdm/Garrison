@@ -1368,5 +1368,8 @@ Decided (2026-11-12, owner):
   (run #56). Cloudflare kept answering 100146 ("version could not be found") right after
   uploading; three failed attempts (run #55) took the bot down from 00:44 to 00:56 UTC, and
   the workflow now retries only that error, 30 s apart (`d9d31f3`). The engine is named
-  Bastion v1 in the picker, on replies, in Help and in the prompt (`3b82001`, not deployed).
+  Bastion v1 in the picker, on replies, in Help and in the prompt (`3b82001`).
   Still to do: confirm a real chat answers, and run the eval on real models (needs a key).
+- 2026-11-20: Deployed `1e0fe76` (run #57, `everything`, no command registration): Bastion v1
+  naming and the deploy retry, on top of the hang fix. No 100146 retries were needed; the new
+  bot started at 01:06:44 UTC and is checking in.
