@@ -1,16 +1,24 @@
 # Release checklist
 
-Everything left before the official release, in order. Written 2026-11-15. The code is
-release-ready: no page mentions early access, and every price and limit is published. What's
-left is owner setup in outside services. Tick items off here as they're done.
+Everything left before the official release, in order. Written 2026-11-15, re-checked
+2026-11-20 after the twelve "best bot" features shipped. The code is release-ready: no page
+mentions early access, and every price and limit is published. What's left is owner setup in
+outside services and a hands-on pass in Discord. Tick items off here as they're done.
 
-Checked on 2026-11-15:
+Checked on 2026-11-20 (live, from production and the deploy's preflight):
 
-- GitHub has `DISCORD_TOKEN`, `DISCORD_CLIENT_SECRET`, `DATABASE_URL`, `WEB_DATABASE_URL` and
-  the Cloudflare secrets. **Missing:** `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `TWITCH_*`,
-  `BNET_*`, `TURNSTILE_*`, every `STRIPE_*` and `BILLING_DATABASE_URL`.
-- Production has no AI builder usage at all, so it has most likely never had an Anthropic key.
-- The `garrison_billing` database role can't log in yet.
+- GitHub has every secret the release needs: Discord, both database URLs, Cloudflare, Anthropic,
+  OpenAI, Twitch, Battle.net, every `STRIPE_*` and `BILLING_DATABASE_URL`. **Missing (optional):**
+  `TURNSTILE_*`, and the new feature keys in section 3.
+- Discord: the token works, Server Members and Message Content intents are on, Public Bot is on,
+  and the dashboard's sign-in works (so its OAuth redirect is right).
+- Both database logins connect and the schema is current (migrations through 0087; **0088**
+  is waiting for the next deploy). Supabase's security advisor has no warnings.
+- The bot checks in every minute; `/healthz` and every public page answer 200; the link
+  preview (`og:image`) is set; garrisonbot.com has mail servers (IONOS).
+- AI works in production: assistant chats since the 2026-11-20 fix all went through.
+- Two servers have Garrison today. Their health checks flag only setup: one has no moderation
+  log channel, the other hasn't granted Move Members.
 
 ## 1. Blockers: the release doesn't work without these
 
@@ -48,7 +56,8 @@ be bought. Full steps in `docs/pricing.md`, "Turning checkout on". In **live** m
 - [x] `OPENAI_API_KEY`: AI moderation (Pro). The OpenAI moderation model is free to call.
 
 ### Support
-- [ ] `support@garrisonbot.com` receives mail. The Terms, Privacy and Refund pages all send
+- [ ] `support@garrisonbot.com` receives mail. The domain has mail servers (IONOS); send it a
+      test message to be sure the mailbox exists. The Terms, Privacy and Refund pages all send
       people there, and Stripe shows it on receipts.
 
 ## 2. Discord Developer Portal
@@ -74,8 +83,8 @@ Discord's 680×240 at 2x).
 
 **Bot**
 - [x] Icon: `avatar.png`. Banner: `banner.png`. Username: `Garrison`.
-- [ ] Public Bot on. Requires OAuth2 Code Grant off.
-- [ ] Privileged intents on: Server Members and Message Content (Presence stays off). The bot
+- [x] Public Bot on (checked 2026-11-20). Requires OAuth2 Code Grant off.
+- [x] Privileged intents on: Server Members and Message Content (Presence stays off). The bot
       uses Guilds, Members, Moderation, Invites, Voice States, Messages, Reactions, Direct
       Messages and Message Content.
 
@@ -92,7 +101,7 @@ Discord's 680×240 at 2x).
       Administrator. Servers that added Garrison before get a /health note to re-grant them.
 
 **OAuth2**
-- [ ] Redirect: `https://dash.garrisonbot.com/auth/callback`.
+- [x] Redirect: `https://dash.garrisonbot.com/auth/callback` (sign-in works).
 
 **Verification**
 - [ ] Apply for verification when Garrison reaches 75 servers. Discord stops new installs at
@@ -110,11 +119,27 @@ Discord's 680×240 at 2x).
       accounts on Game accounts. Without them the Battle.net button is hidden.
 - [ ] `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET` (Cloudflare Turnstile): a bot check on the
       web verification page. Without them verification still works, with no captcha.
+- [ ] Keys for the 2026-11-20 features. Each stays off, and says so on its page, until set:
+  - [ ] Bot: `KICK_CLIENT_ID` and `KICK_CLIENT_SECRET` (Kick alerts, a kick.com developer app).
+  - [ ] Bot: `REDDIT_CLIENT_ID` and `REDDIT_CLIENT_SECRET` (Reddit alerts, reddit.com/prefs/apps).
+        Reddit blocks anonymous reads from servers, and its API terms want approval for
+        commercial use: read them first.
+  - [ ] Bot: `STEAM_API_KEY` (Steam level and games roles, steamcommunity.com/dev).
+  - [ ] Bot: `RIOT_API_KEY` (League rank roles). A development key expires daily; apply for a
+        production key at developer.riotgames.com. Valorant ranks would need Riot Sign-On too.
+  - [ ] Dashboard: `TWITCH_EVENTSUB_SECRET` (10 to 100 random characters you make up) for
+        Twitch subscriber roles, and add `https://dash.garrisonbot.com/auth/twitch/callback`
+        as a redirect URL on the Twitch app. `TWITCH_CLIENT_ID`/`SECRET` are already set.
+- [ ] Have a native speaker check the Spanish, Portuguese, German and French text in
+      `packages/db/src/i18n.ts` (slash command descriptions, level-ups, alerts, public page).
 - [x] Free AI limit per person (built 2026-11-15): 2 plans a day across all of someone's Free
       servers, Pro 15 and Agency 20 per server. A separate Free budget pool is optional; see
       `docs/pricing.md`.
 - [ ] Ask existing servers to grant Move Members (voice rooms) or re-invite; `/health` flags it.
-- [ ] Have a lawyer read the Terms, Privacy and Refund pages.
+- [ ] Have a lawyer read the Terms, Privacy and Refund pages. The Privacy Policy was updated
+      2026-11-20 for birthdays, applications, kept roles, public leaderboards, Steam and Riot
+      lookups, Twitch subscriber lists and AI ticket help; "Download your data" and "Erase your
+      data" now cover birthdays.
 
 ## 4. Release day
 
@@ -125,3 +150,16 @@ Discord's 680×240 at 2x).
    cancel it from the Stripe dashboard.
 4. Ask the AI builder for a small plan, check it previews, build it, undo it.
 5. Paste `https://garrisonbot.com` in a Discord channel: the preview shows the new image.
+6. On a test server, try each 2026-11-20 feature once in Discord (none could be tried before
+   it was deployed):
+   - `/tag` and a word auto-responder (Messages page).
+   - Post an application panel, apply from a second account, accept it: the role lands.
+   - `/ticket assist` in an open ticket (Pro): a summary and a reply, a few supplies used.
+   - Utilities: a sticky message reposts after chat; a 1-hour self-clearing channel; leave
+     and rejoin with a second account to get roles back; `/temprole give ... 2m` and watch it
+     come off.
+   - Stream alerts: add an RSS feed and a Bluesky account; wait 10 minutes for a new post.
+   - Settings → Public page: turn it on and open `garrisonbot.com/s/<server ID>`.
+   - Settings → Server → Language: Español, then level up: the message is in Spanish.
+   - Fun: a counting channel (count, then break it), `/birthday set`, `/trivia`.
+   - "Set up in three clicks" on a new server's Overview.

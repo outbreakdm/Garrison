@@ -1909,14 +1909,18 @@ export const funState = pgTable("fun_state", {
 export type FunState = typeof funState.$inferSelect;
 
 /** The sticky message Garrison last posted in a channel, so the next post replaces it. */
-export const stickyPosts = pgTable("sticky_posts", {
-  channelId: text("channel_id").primaryKey(),
-  guildId: text("guild_id")
-    .notNull()
-    .references(() => guilds.id, { onDelete: "cascade" }),
-  messageId: text("message_id").notNull(),
-  postedAt: timestamp("posted_at", { withTimezone: true }).notNull().defaultNow(),
-}).enableRLS();
+export const stickyPosts = pgTable(
+  "sticky_posts",
+  {
+    channelId: text("channel_id").primaryKey(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    messageId: text("message_id").notNull(),
+    postedAt: timestamp("posted_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("sticky_posts_guild").on(t.guildId)],
+).enableRLS();
 
 export const messageSettings = pgTable(
   "message_settings",

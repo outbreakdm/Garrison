@@ -66,7 +66,19 @@ const sections: LegalSection[] = [
           <li>
             <strong>Things you send to Garrison:</strong> support tickets and modmail (the messages
             in them are kept as the ticket’s transcript), suggestions and your votes on them,
-            giveaway entries, group and event sign-ups, and the voice room you own.
+            giveaway entries, group and event sign-ups, the voice room you own, applications you
+            submit and your answers, and your birthday if you save it with <code>/birthday</code>{" "}
+            (month and day only, never the year).
+          </li>
+          <li>
+            <strong>Roles:</strong> if the server turns on “roles back on rejoin”, the roles you had
+            when you left, so they can be given back if you return; and timed roles staff give you,
+            with when they end.
+          </li>
+          <li>
+            <strong>The server’s public page:</strong> if the server’s managers turn on its public
+            page and its leaderboard, your username, level and XP on that leaderboard can be seen by
+            anyone on the web, without signing in.
           </li>
           <li>
             <strong>The server’s event log:</strong> joins, leaves, role and nickname changes, voice
@@ -83,7 +95,7 @@ const sections: LegalSection[] = [
         <h3>Message content</h3>
         <p>
           To do its job, Garrison reads messages as they’re sent: to run commands, count XP, block
-          scam links and banned words, and (on Pro servers that turn it on) check messages with AI
+          scam links and banned words, and (on servers that turn it on) check messages with AI
           moderation. Reading isn’t keeping. Garrison stores message text only in the places listed
           above: ticket and modmail transcripts, the event log when “keep message text” is on, and
           the suggestions and appeals you write. It does not store the server’s general chat.
@@ -96,8 +108,16 @@ const sections: LegalSection[] = [
           we receive the connections you’ve added to your Discord profile (only when you ask us to
           read them), your Battle.net BattleTag and World of Warcraft characters (the{" "}
           <code>wow.profile</code> scope), or a RuneScape name you type in, whose public hiscores we
-          look up. You decide which servers can see each link, and you can remove a link at any
-          time.
+          look up. For a Steam or Riot Games account linked through Discord, we look up its Steam
+          level and how many games it owns (only if your Steam profile is public), or its League of
+          Legends ranked tier, so servers can give roles from them. A Twitch account linked through
+          Discord lets a server give you its subscriber role when you subscribe to its channel. You
+          decide which servers can see each link, and you can remove a link at any time.
+        </p>
+        <p>
+          When a streamer connects their Twitch channel to a server, we keep the Twitch user IDs of
+          that channel’s subscribers, as Twitch reports them, to give the subscriber role. We use
+          the streamer’s Twitch sign-in once and never store it.
         </p>
 
         <h3>When you run a server with Garrison</h3>
@@ -246,8 +266,15 @@ const sections: LegalSection[] = [
                 </td>
               </tr>
               <tr>
+                <td>Anthropic</td>
+                <td>Ticket help (Pro, only when a staff member asks for it in a ticket)</td>
+                <td>
+                  That ticket’s recent messages and form answers, and the server’s saved replies
+                </td>
+              </tr>
+              <tr>
                 <td>OpenAI</td>
-                <td>AI moderation (Pro, only when a server turns it on)</td>
+                <td>AI moderation (only when a server turns it on)</td>
                 <td>The text of messages in that server, to be checked for harmful content</td>
               </tr>
               <tr>
@@ -261,9 +288,19 @@ const sections: LegalSection[] = [
                 <td>The RuneScape name being looked up</td>
               </tr>
               <tr>
-                <td>YouTube and Twitch</td>
-                <td>Stream and video alerts a server sets up</td>
-                <td>The public channel being followed, no member data</td>
+                <td>Valve (Steam) and Riot Games</td>
+                <td>Roles from game stats (only for accounts you link)</td>
+                <td>The Steam account ID or Riot ID being looked up</td>
+              </tr>
+              <tr>
+                <td>Twitch</td>
+                <td>Subscriber roles (only when a streamer connects their channel)</td>
+                <td>The streamer’s sign-in, used once; Twitch then reports subscriptions to us</td>
+              </tr>
+              <tr>
+                <td>YouTube, Twitch, Kick, Reddit, Bluesky and RSS feeds</td>
+                <td>Stream, video and post alerts a server sets up</td>
+                <td>The public channel, account or feed being followed, no member data</td>
               </tr>
             </tbody>
           </table>
@@ -316,6 +353,22 @@ const sections: LegalSection[] = [
               <tr>
                 <td>Linked game accounts</td>
                 <td>Until you remove the link</td>
+              </tr>
+              <tr>
+                <td>Applications and their answers</td>
+                <td>90 days</td>
+              </tr>
+              <tr>
+                <td>Your roles, kept for when you rejoin</td>
+                <td>180 days after you leave, or until given back</td>
+              </tr>
+              <tr>
+                <td>Your birthday</td>
+                <td>Until you remove it with /birthday remove, or erase your data</td>
+              </tr>
+              <tr>
+                <td>A streamer’s subscriber list</td>
+                <td>Until subscriptions end, or the streamer disconnects</td>
               </tr>
               <tr>
                 <td>Billing records</td>

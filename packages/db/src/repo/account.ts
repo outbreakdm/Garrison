@@ -3,6 +3,7 @@ import type { Db } from "../client";
 import {
   aiUsage,
   appeals,
+  birthdays,
   giveawayEntries,
   guildPlans,
   guilds,
@@ -104,6 +105,7 @@ export async function exportMyData(db: Db, userId: string) {
     proPlans,
     agencyPlans,
     ai,
+    birthdayRows,
   ] = await Promise.all([
     db
       .select({
@@ -258,6 +260,16 @@ export async function exportMyData(db: Db, userId: string) {
       .where(eq(aiUsage.requestedBy, userId))
       .orderBy(desc(aiUsage.createdAt))
       .limit(5000),
+    db
+      .select({
+        serverId: birthdays.guildId,
+        server: guilds.name,
+        month: birthdays.month,
+        day: birthdays.day,
+      })
+      .from(birthdays)
+      .innerJoin(guilds, eq(guilds.id, birthdays.guildId))
+      .where(eq(birthdays.userId, userId)),
   ]);
   return {
     signIns,
@@ -274,6 +286,7 @@ export async function exportMyData(db: Db, userId: string) {
     proPlansYouPayFor: proPlans,
     agencyPlans,
     aiAssistantUse: ai,
+    birthdays: birthdayRows,
   };
 }
 
@@ -299,9 +312,19 @@ export async function eraseMyData(db: Db, userId: string) {
     .set({ details: {}, updatedAt: now })
     .where(eq(rankProfiles.userId, userId))
     .returning({ guildId: rankProfiles.guildId });
+  // Birthdays are the member's own, saved with /birthday: gone from every server.
+  const birthdaysGone = await db
+    .delete(birthdays)
+    .where(eq(birthdays.userId, userId))
+    .returning({ guildId: birthdays.guildId });
   await db
     .update(webSessions)
     .set({ revokedAt: now })
     .where(and(eq(webSessions.userId, userId), isNull(webSessions.revokedAt)));
-  return { links: links.length, shares: shares.length, cards: cards.length };
+  return {
+    links: links.length,
+    shares: shares.length,
+    cards: cards.length,
+    birthdays: birthdaysGone.length,
+  };
 }

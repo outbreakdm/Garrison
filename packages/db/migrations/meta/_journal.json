@@ -617,6 +617,13 @@
       "when": 1795198745761,
       "tag": "0087_fun",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1795221988605,
+      "tag": "0088_erase_birthdays",
+      "breakpoints": true
     }
   ]
 }

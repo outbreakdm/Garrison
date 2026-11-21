@@ -523,8 +523,8 @@ export default async function AccountPage({
               <p>
                 One JSON file with everything that's yours: linked accounts (removed ones too),
                 which servers see them, rank card details, levels, wallets, giveaway entries, group
-                and raid sign-ups, suggestions, appeals, plans you pay for and your AI assistant
-                use.
+                and raid sign-ups, suggestions, appeals, birthdays, plans you pay for and your AI
+                assistant use.
               </p>
             </section>
 
@@ -597,8 +597,9 @@ export default async function AccountPage({
               </h2>
               <p>
                 Removes every linked game account and wipes its name and details, stops every server
-                seeing them, clears your rank card details everywhere and signs you out on every
-                browser. Your XP and anything a server's staff keep about you stay with that server.
+                seeing them, clears your rank card details everywhere, forgets the birthdays you
+                saved and signs you out on every browser. Your XP and anything a server's staff keep
+                about you stay with that server.
               </p>
               <p className="g-help">
                 To have those deleted too, email{" "}
