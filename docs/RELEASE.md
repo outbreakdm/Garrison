@@ -5,6 +5,9 @@ Everything left before the official release, in order. Written 2026-11-15, re-ch
 mentions early access, and every price and limit is published. What's left is owner setup in
 outside services and a hands-on pass in Discord. Tick items off here as they're done.
 
+- **Every key, where to get it and how to set it:** [`docs/KEYS.md`](KEYS.md).
+- **How to test every feature, automated and by hand:** [`docs/TESTING.md`](TESTING.md).
+
 Checked on 2026-11-20 (live, from production and the deploy's preflight):
 
 - GitHub has every secret the release needs: Discord, both database URLs, Cloudflare, Anthropic,
@@ -19,6 +22,11 @@ Checked on 2026-11-20 (live, from production and the deploy's preflight):
 - AI works in production: assistant chats since the 2026-11-20 fix all went through.
 - Two servers have Garrison today. Their health checks flag only setup: one has no moderation
   log channel, the other hasn't granted Move Members.
+- The dashboard, signed in as the owner on 2026-11-21: all 60 server pages (both servers,
+  every page and settings tab), the account tabs, member pages and status load without an
+  error; an off public page is a 404; Download your data works.
+- Stripe, live (2026-11-21): the four prices, the webhook (enabled, ten events, the right URL
+  and API version) and payments and payouts are on. Three tasks are open, below.
 
 ## 1. Blockers: the release doesn't work without these
 
@@ -38,11 +46,17 @@ be bought. Full steps in `docs/pricing.md`, "Turning checkout on". In **live** m
       monthly and yearly within that plan only (`docs/pricing.md` step 3).
 - [x] Restricted key (`rk_live_...`) with the permissions in `docs/pricing.md` step 5:
       Developers, API keys, Create restricted key.
+- [ ] **Stripe identity check is overdue**: it asks for a live photo of your ID. Until it's
+      done Stripe can pause payouts. Settings → Business → Verification, or the home banner.
 - [ ] Decide on Managed Payments (Stripe as seller of record, handles sales tax) or Stripe Tax
-      with your own registrations.
-- [ ] Settings, Public details: support email `support@garrisonbot.com`, website
-      `https://garrisonbot.com`, Terms `https://garrisonbot.com/terms`, Privacy
-      `https://garrisonbot.com/privacy`, Refunds `https://garrisonbot.com/refunds`.
+      with your own registrations. Stripe Tax is half set up (no head office address) and no
+      checkout collects tax yet; once you decide, the checkouts get automatic tax.
+- [ ] Settings, Public details: support email `support@garrisonbot.com` (empty in Stripe on
+      2026-11-21), website `https://garrisonbot.com` (set), Terms
+      `https://garrisonbot.com/terms`, Privacy `https://garrisonbot.com/privacy`, Refunds
+      `https://garrisonbot.com/refunds`.
+- [ ] Optional: Settings → Branding, the logo and color, so checkout and receipts look like
+      Garrison.
 - [x] Supabase SQL editor: `ALTER ROLE garrison_billing LOGIN PASSWORD '<long random>';`
       and build its connection string like the dashboard's.
 - [x] GitHub secrets: `STRIPE_SECRET_KEY` (the restricted key), `STRIPE_WEBHOOK_SECRET`, the
@@ -56,9 +70,7 @@ be bought. Full steps in `docs/pricing.md`, "Turning checkout on". In **live** m
 - [x] `OPENAI_API_KEY`: AI moderation (Pro). The OpenAI moderation model is free to call.
 
 ### Support
-- [ ] `support@garrisonbot.com` receives mail. The domain has mail servers (IONOS); send it a
-      test message to be sure the mailbox exists. The Terms, Privacy and Refund pages all send
-      people there, and Stripe shows it on receipts.
+- [x] `support@garrisonbot.com` receives mail (set up and tested by the owner, 2026-11-21).
 
 ## 2. Discord Developer Portal
 
@@ -119,7 +131,8 @@ Discord's 680×240 at 2x).
       accounts on Game accounts. Without them the Battle.net button is hidden.
 - [ ] `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET` (Cloudflare Turnstile): a bot check on the
       web verification page. Without them verification still works, with no captcha.
-- [ ] Keys for the 2026-11-20 features. Each stays off, and says so on its page, until set:
+- [ ] Keys for the 2026-11-20 features (step by step in [`docs/KEYS.md`](KEYS.md)). Each stays
+      off, and says so on its page, until set:
   - [ ] Bot: `KICK_CLIENT_ID` and `KICK_CLIENT_SECRET` (Kick alerts, a kick.com developer app).
   - [ ] Bot: `REDDIT_CLIENT_ID` and `REDDIT_CLIENT_SECRET` (Reddit alerts, reddit.com/prefs/apps).
         Reddit blocks anonymous reads from servers, and its API terms want approval for
@@ -150,8 +163,8 @@ Discord's 680×240 at 2x).
    cancel it from the Stripe dashboard.
 4. Ask the AI builder for a small plan, check it previews, build it, undo it.
 5. Paste `https://garrisonbot.com` in a Discord channel: the preview shows the new image.
-6. On a test server, try each 2026-11-20 feature once in Discord (none could be tried before
-   it was deployed):
+6. Run the hands-on pass in [`docs/TESTING.md`](TESTING.md). At the least, try each 2026-11-20
+   feature once in Discord (none could be tried before it was deployed):
    - `/tag` and a word auto-responder (Messages page).
    - Post an application panel, apply from a second account, accept it: the role lands.
    - `/ticket assist` in an open ticket (Pro): a summary and a reply, a few supplies used.
