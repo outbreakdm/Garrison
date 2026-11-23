@@ -9,6 +9,7 @@ import {
   STANDARD_ACCENT,
 } from "@garrison/db";
 import type { Metadata } from "next";
+import { AddRow } from "@/components/AddRow";
 import { ProTag } from "@/components/cards/CardEditor";
 import { HowItWorks } from "@/components/HowItWorks";
 import { ListHead } from "@/components/ListHead";
@@ -313,10 +314,10 @@ export default async function GiveawaysPage({
                 />
               </label>
             </div>
-            <div className="bonus-rows">
+            <div className="bonus-rows" id="bonus-rows">
               <span className="g-help">Bonus entries for roles, like boosters (up to 3).</span>
               {[0, 1, 2].map((i) => (
-                <div className="bonus-row" key={i}>
+                <div className="bonus-row" key={i} hidden={i > 0}>
                   <select
                     className="g-input"
                     name={`bonusRole${i}`}
@@ -345,6 +346,7 @@ export default async function GiveawaysPage({
                 </div>
               ))}
             </div>
+            <AddRow list="bonus-rows" label="Add a bonus role" />
             <label className="switch">
               <input type="checkbox" name="repeat" />
               <span className="switch__text">

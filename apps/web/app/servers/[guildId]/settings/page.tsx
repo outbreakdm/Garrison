@@ -262,35 +262,36 @@ export default async function SettingsPage({
             stamp={`${timezone}-${language}`}
             saveLabel="Save time zone"
           >
-            <label className="g-field" htmlFor="timezone">
-              <span>Time zone</span>
-              <input
-                className="g-input"
-                id="timezone"
-                name="timezone"
-                maxLength={64}
-                defaultValue={timezone}
-                placeholder="America/Chicago"
-              />
-              <span className="g-help">
-                Used when /raid create gets a date without a time zone.
-              </span>
-            </label>
-            <label className="g-field" htmlFor="language">
-              <span>Language</span>
-              <select className="g-input" id="language" name="language" defaultValue={language}>
-                {LANGUAGE_LIST.map((l) => (
-                  <option key={l} value={l}>
-                    {LANGUAGES[l].label}
-                  </option>
-                ))}
-              </select>
-              <span className="g-help">
-                What Garrison says to members: level-ups, stream and post alerts, and your public
-                page. Slash commands already show in each member's own Discord language. The
-                dashboard stays in English for now.
-              </span>
-            </label>
+            <div className="field-row field-row--top">
+              <label className="g-field" htmlFor="timezone">
+                <span>Time zone</span>
+                <input
+                  className="g-input"
+                  id="timezone"
+                  name="timezone"
+                  maxLength={64}
+                  defaultValue={timezone}
+                  placeholder="America/Chicago"
+                />
+                <span className="g-help">
+                  Used when /raid create gets a date without a time zone.
+                </span>
+              </label>
+              <label className="g-field" htmlFor="language">
+                <span>Language</span>
+                <select className="g-input" id="language" name="language" defaultValue={language}>
+                  {LANGUAGE_LIST.map((l) => (
+                    <option key={l} value={l}>
+                      {LANGUAGES[l].label}
+                    </option>
+                  ))}
+                </select>
+                <span className="g-help">
+                  What Garrison says to members: level-ups, alerts and your public page. Slash
+                  commands follow each member's own Discord language.
+                </span>
+              </label>
+            </div>
           </AutoSaveCard>
           <AutoSaveCard
             id="members"
@@ -352,23 +353,40 @@ export default async function SettingsPage({
               label="Show the leaderboard on it"
               help={`The top ${publicBoardSize(ent)} by XP: their Discord names, levels and XP. Leave it off if your members wouldn't want that public.`}
             />
-            <label className="g-field" htmlFor="publicSlug">
-              <span>
-                Its own name <ProTag on={ent["members.publicSlug"]} />
-              </span>
-              <input
-                className="g-input"
-                id="publicSlug"
-                name="publicSlug"
-                maxLength={32}
-                defaultValue={memberPages.publicSlug ?? ""}
-                placeholder="raid-team"
-                disabled={!ent["members.publicSlug"] && !memberPages.publicSlug}
-              />
-              <span className="g-help">
-                Lower-case letters, numbers and dashes. Without one, the page uses the server's ID.
-              </span>
-            </label>
+            <div className="field-row field-row--top">
+              <label className="g-field" htmlFor="publicSlug">
+                <span>
+                  Its own name <ProTag on={ent["members.publicSlug"]} />
+                </span>
+                <input
+                  className="g-input"
+                  id="publicSlug"
+                  name="publicSlug"
+                  maxLength={32}
+                  defaultValue={memberPages.publicSlug ?? ""}
+                  placeholder="raid-team"
+                  disabled={!ent["members.publicSlug"] && !memberPages.publicSlug}
+                />
+                <span className="g-help">
+                  Lower-case letters, numbers and dashes. Without one, the page uses the server's
+                  ID.
+                </span>
+              </label>
+              <label className="g-field" htmlFor="publicInvite">
+                <span>Invite link for the Join button</span>
+                <input
+                  className="g-input"
+                  id="publicInvite"
+                  name="publicInvite"
+                  maxLength={60}
+                  defaultValue={
+                    memberPages.publicInvite ? `https://discord.gg/${memberPages.publicInvite}` : ""
+                  }
+                  placeholder="https://discord.gg/…"
+                />
+                <span className="g-help">Use one that doesn't expire. Empty: no Join button.</span>
+              </label>
+            </div>
             <label className="g-field" htmlFor="publicAbout">
               <span>About</span>
               <textarea
@@ -380,20 +398,6 @@ export default async function SettingsPage({
                 defaultValue={memberPages.publicAbout ?? ""}
                 placeholder="A friendly raiding guild. Mythic+ every night, all welcome."
               />
-            </label>
-            <label className="g-field" htmlFor="publicInvite">
-              <span>Invite link for the Join button</span>
-              <input
-                className="g-input"
-                id="publicInvite"
-                name="publicInvite"
-                maxLength={60}
-                defaultValue={
-                  memberPages.publicInvite ? `https://discord.gg/${memberPages.publicInvite}` : ""
-                }
-                placeholder="https://discord.gg/…"
-              />
-              <span className="g-help">Use one that doesn't expire. Empty: no Join button.</span>
             </label>
           </AutoSaveCard>
         </SetupLayout>

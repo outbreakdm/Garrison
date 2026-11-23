@@ -467,7 +467,11 @@ export default async function GatehousePage({
                   max={1440}
                   defaultValue={g?.autoUnlockMinutes ?? 15}
                 />
-                <RecValue field="autoUnlockMinutes" value={15} />
+                <RecValue
+                  field="autoUnlockMinutes"
+                  value={15}
+                  initial={g?.autoUnlockMinutes ?? 15}
+                />
               </label>
               <label className="g-field" htmlFor="flagAccountAgeDays">
                 <span>Flag accounts under (days)</span>
@@ -480,7 +484,11 @@ export default async function GatehousePage({
                   max={365}
                   defaultValue={g?.flagAccountAgeDays ?? 7}
                 />
-                <RecValue field="flagAccountAgeDays" value={7} />
+                <RecValue
+                  field="flagAccountAgeDays"
+                  value={7}
+                  initial={g?.flagAccountAgeDays ?? 7}
+                />
               </label>
             </div>
             <span className="g-help">

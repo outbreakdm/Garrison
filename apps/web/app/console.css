@@ -3139,34 +3139,16 @@ form[data-locked] .seg__opt:has(input:disabled) {
 }
 
 /* --- Recommended: Garrison's own setting, marked, with a way back to it --------------- */
+/* Only while the choice is off Garrison's recommendation: the picked card's own tag says it
+   otherwise, so a "you're on it" line would only add a row to every choice. */
 .choice__rec {
+  animation: fade-in 0.18s var(--ease-out);
   display: block;
+  color: var(--text-muted);
   font-size: 12.5px;
   line-height: 18px;
 }
-.choice__rec-is {
-  animation: fade-in 0.18s var(--ease-out);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-muted);
-}
-.choice__rec-is::before {
-  content: "";
-  width: 9px;
-  height: 5px;
-  border-bottom: 1.5px solid var(--text-muted);
-  border-left: 1.5px solid var(--text-muted);
-  transform: rotate(-45deg) translateY(-2px);
-}
-.choice__rec-use {
-  animation: fade-in 0.18s var(--ease-out);
-  color: var(--text-muted);
-}
-
-/* Which half shows follows the radios, so it changes the moment you pick. */
-.choice:has([data-rec]:checked) .choice__rec-use,
-.choice:not(:has([data-rec]:checked)) .choice__rec-is {
+.choice:has([data-rec]:checked) .choice__rec {
   display: none;
 }
 /* The recommended segment carries a small dot. */
@@ -3223,19 +3205,6 @@ form[data-locked] .seg__opt:has(input:disabled) {
   color: var(--text-muted);
   font-size: 12.5px;
   line-height: 18px;
-}
-.rec-value--on {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.rec-value--on::before {
-  content: "";
-  width: 9px;
-  height: 5px;
-  border-bottom: 1.5px solid var(--text-muted);
-  border-left: 1.5px solid var(--text-muted);
-  transform: rotate(-45deg) translateY(-2px);
 }
 .rec-value__go {
   padding: 0;
@@ -3729,7 +3698,10 @@ form[data-locked] .seg__opt:has(input:disabled) {
    rules would otherwise beat the hidden attribute). */
 .reward-row[hidden],
 .boost-row[hidden],
-.stat-row[hidden] {
+.stat-row[hidden],
+.bonus-row[hidden],
+.pick-rows__row[hidden],
+.ladder-row[hidden] {
   display: none;
 }
 /* In the strip the reason may wrap to its own line, so no dot between. */
@@ -5246,4 +5218,153 @@ a.item-tile:not([open]) > .panel__summary {
   .appl__q {
     grid-template-columns: 1fr;
   }
+}
+
+/* --- Distill (2026-11-22): less scrolling for the same settings ----------------------------
+   Lists of short things flow into columns; repeating pickers show what's set plus one spare. */
+
+/* Blocked words, allowed words: short boxes side by side, so 40 words are 10 rows, not 40. */
+.list-rows--columns .list-rows__list {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+  column-gap: var(--space-3);
+}
+
+/* Pick several (staff roles, channels): names in columns, so the box shows three times as many
+   before it scrolls. */
+.checklist__box {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
+  align-content: start;
+}
+.checklist__item > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Repeating role pickers (roles on join): one picker a row, no "Role 1, Role 2" label above each. */
+.pick-rows {
+  display: grid;
+  gap: var(--space-2);
+}
+.pick-rows__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+.pick-rows__note {
+  flex-basis: 100%;
+}
+
+/* Set up in three clicks: the head on one line, a finished step one line, and on phones the
+   kinds of server as names only (the step's sentence already says what they're for). */
+.starter__head {
+  align-items: center;
+  min-height: 52px;
+  padding: 10px 18px;
+}
+.starter__head > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+}
+.starter__sub {
+  margin: 0;
+}
+.starter__step {
+  padding: 12px 18px;
+}
+.starter__step.is-done {
+  padding-block: 8px;
+}
+.starter__step.is-done .starter__about {
+  display: none;
+}
+@media (max-width: 640px) {
+  .starter__head,
+  .starter__step {
+    padding-inline: 14px;
+  }
+  .starter__step.is-done {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+  }
+  .starter__preset {
+    padding: 6px 10px;
+  }
+  .starter__preset-about {
+    display: none;
+  }
+}
+
+/* The server's own card on phones: its state on one line under the name, not stacked. */
+@media (max-width: 720px) {
+  .ov-hero {
+    gap: var(--space-3);
+    padding: 14px 16px;
+  }
+  .ov-hero__mark {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    font-size: 18px;
+  }
+  .ov-hero__name {
+    font-size: 19px;
+    line-height: 24px;
+  }
+  .ov-hero__side {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+  }
+}
+.ov-worth__link {
+  padding-block: 8px;
+}
+
+/* Two short fields side by side whose help lines differ in length: line up the tops, so each
+   input sits under its own label rather than at the bottom of the longer help. */
+.field-row--top {
+  align-items: start;
+}
+@media (max-width: 640px) {
+  .field-row--top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Fields that only matter after another choice show once it's made, from the first paint (the
+   radios and boxes are drawn with their saved values, so nothing shifts as the page loads). */
+/* Automod's timeout length: only when what happens next is "Time out". */
+#automod:not(:has(input[name="action"][value="timeout"]:checked)) .g-field:has(> #timeoutMinutes) {
+  display: none;
+}
+/* Patterns: until there's a pattern (or a saved exception), the exceptions and the tester have
+   nothing to act on. Only a list's first box has a placeholder, so an empty list is exactly one
+   box showing it. */
+#patterns:not(
+    :has(
+      input[name="regexPatterns"]:not(:placeholder-shown),
+      input[name="regexAllow"]:not(:placeholder-shown)
+    )
+  )
+  :is(.editor-group:has(input[name="regexAllow"]), .pattern-test) {
+  display: none;
+}
+/* The welcome picture's link: only once "Your image" is picked, as the rank card does. */
+.autosave:has(.swatch--image):not(:has(.swatch--image input:checked))
+  .g-field:has(> input[name="imageUrl"]) {
+  display: none;
+}
+/* Leveling's level-up channel: only for "One channel". */
+.autosave:has(input[name="announce"]):not(:has(input[name="announce"][value="channel"]:checked))
+  .g-field:has([name="announceChannelId"]) {
+  display: none;
+}
+/* Verification's age limit and website step: only once it gives a role (it's off without one). */
+#verification:has(#verifyRoleId option[value=""]:checked)
+  :is(.g-field:has(> #verifyMinAccountAgeDays), .switch:has(input[name="verifyWeb"])) {
+  display: none;
 }

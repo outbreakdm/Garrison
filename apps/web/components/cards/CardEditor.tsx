@@ -201,12 +201,16 @@ export function CardEditor({
   const usesLook = Boolean(
     card.author || card.url || card.accent || card.thumbnail || card.image || card.footer !== null,
   );
+  // Decided once, from the card as it opened: clearing the last look field while typing in the
+  // group must not fold it shut under the cursor.
+  const [lookOpen] = useState(usesLook);
   // Inside the folded group its one tag speaks for every field.
   const tag = (on: boolean) => (lookLocked ? null : <ProTag on={on} />);
   let textCount = 0;
   let fieldCount = 0;
 
-  // Author line, title link, accent, images and footer: open on Pro, one folded group on Free.
+  // Author line, title link, accent, images and footer: one folded group on every plan, open
+  // when the card already uses one, so the card's own words come first.
   const lookGroups = (
     <>
       <fieldset className="editor-group">
@@ -502,20 +506,16 @@ export function CardEditor({
         </p>
       </fieldset>
 
-      {lookLocked ? (
-        <details className="editor-group look-fold" open={usesLook}>
-          <summary className="look-fold__summary">
-            <span className="look-fold__title">Your own look</span>
-            <ProTag on={false} />
-            <span className="look-fold__what">
-              Author line, title link, accent color, images and footer
-            </span>
-          </summary>
-          <div className="look-fold__body">{lookGroups}</div>
-        </details>
-      ) : (
-        lookGroups
-      )}
+      <details className="editor-group look-fold" open={lookOpen}>
+        <summary className="look-fold__summary">
+          <span className="look-fold__title">Your own look</span>
+          {lookLocked ? <ProTag on={false} /> : null}
+          <span className="look-fold__what">
+            Author line, title link, accent color, images and footer
+          </span>
+        </summary>
+        <div className="look-fold__body">{lookGroups}</div>
+      </details>
     </>
   );
 }

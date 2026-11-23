@@ -265,7 +265,7 @@ export function CheckList({
                 value={o.id}
                 defaultChecked={value.includes(o.id)}
               />
-              <span>{o.label}</span>
+              <span title={o.label}>{o.label}</span>
             </label>
           ))
         ) : (

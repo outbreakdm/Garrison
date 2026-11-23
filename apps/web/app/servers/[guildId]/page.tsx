@@ -293,9 +293,10 @@ export default async function OverviewPage({
   // Garrison is live when it checked in within the last 3 minutes.
   const lastBeat = bot?.lastBeatAt.getTime() ?? null;
   const live = lastBeat !== null && Date.now() - lastBeat < 3 * 60_000;
-  // Off modules worth turning on, safety first; at most four, each with why.
+  // Off modules worth turning on, safety first; at most three, each with why. Its band's tiles
+  // share one height, so a fourth would stretch Security, raids and groups with it.
   const offByName = new Map(mods.filter((m) => m.state === "off").map((m) => [m.name, m]));
-  const worth = WORTH.filter((w) => offByName.has(w.name)).slice(0, 4);
+  const worth = WORTH.filter((w) => offByName.has(w.name)).slice(0, 3);
   const clientId = process.env.DISCORD_CLIENT_ID;
   const fixUrl = clientId && /^\d+$/.test(clientId) ? inviteUrl(clientId, guild.id) : null;
   const now = Date.now();

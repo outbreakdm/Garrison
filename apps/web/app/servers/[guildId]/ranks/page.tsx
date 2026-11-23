@@ -299,7 +299,6 @@ export default async function RanksPage({
                 channels={channels}
                 none="Pick a channel"
               />
-              <span className="g-help">For "One channel".</span>
             </label>
           </AutoSaveCard>
 

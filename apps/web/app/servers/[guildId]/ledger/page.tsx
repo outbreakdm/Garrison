@@ -333,7 +333,7 @@ export default async function LedgerPage({
                   max={365}
                   defaultValue={settings.retentionDays}
                 />
-                <RecValue field="retentionDays" value={30} />
+                <RecValue field="retentionDays" value={30} initial={settings.retentionDays} />
                 <span className="g-help">7 to 365. Older events are removed automatically.</span>
               </label>
             </div>

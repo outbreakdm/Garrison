@@ -18,6 +18,7 @@ import {
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AddRow } from "@/components/AddRow";
 import { AutoSaveCard } from "@/components/AutoSave";
 import { CopyButton } from "@/components/CopyButton";
 import { ProTag } from "@/components/cards/CardEditor";
@@ -662,7 +663,7 @@ export default async function WatchPage({
                   defaultValue={am.mentionLimit}
                 />
               </label>{" "}
-              people or roles. <RecValue field="mentionLimit" value={5} />
+              people or roles. <RecValue field="mentionLimit" value={5} initial={am.mentionLimit} />
             </p>
             <span className="g-help">0 turns a rule off.</span>
             <Segmented
@@ -687,7 +688,7 @@ export default async function WatchPage({
                 max={AUTOMOD_LIMITS.timeoutMinutes}
                 defaultValue={am.timeoutMinutes}
               />
-              <RecValue field="timeoutMinutes" value={10} />
+              <RecValue field="timeoutMinutes" value={10} initial={am.timeoutMinutes} />
             </label>
           </AutoSaveCard>
 
@@ -733,6 +734,7 @@ export default async function WatchPage({
               max={ent["automod.words"]}
               maxLength={AUTOMOD_LIMITS.word}
               placeholder="A word or phrase"
+              columns
             />
             <span className="g-help">
               Whole words, any case. Each one saves when you press Enter or move on.
@@ -790,6 +792,7 @@ export default async function WatchPage({
                 max={PATTERN_LIMITS.allow}
                 maxLength={PATTERN_LIMITS.allowLength}
                 placeholder="A word the patterns never block"
+                columns
               />
             </fieldset>
           </AutoSaveCard>
@@ -1008,66 +1011,74 @@ export default async function WatchPage({
                 Up to {LADDER_MAX_STEPS} steps. Leave a row's warnings blank to remove it. Every
                 change is in Settings history and can be undone there.
               </p>
-              {Array.from({ length: LADDER_MAX_STEPS }, (_, i) => {
-                const r = rules[i];
-                return (
-                  <fieldset key={r?.id ?? `new-${i}`} className="ladder-row">
-                    <legend className="sr-only">Step {i + 1}</legend>
-                    <label className="g-field">
-                      <span>Warnings</span>
-                      <input
-                        className="g-input"
-                        name={`step${i}_warns`}
-                        type="number"
-                        min={1}
-                        max={50}
-                        defaultValue={r?.warnCount ?? ""}
-                      />
-                    </label>
-                    <label className="g-field">
-                      <span>Within</span>
-                      <select
-                        className="g-input"
-                        name={`step${i}_window`}
-                        defaultValue={String(r?.windowMinutes ?? 1440)}
-                      >
-                        {LADDER_WINDOWS.map((m) => (
-                          <option key={m} value={m}>
-                            {windowText(m)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="g-field">
-                      <span>Then</span>
-                      <select
-                        className="g-input"
-                        name={`step${i}_action`}
-                        defaultValue={r?.action ?? ""}
-                      >
-                        <option value="">No step</option>
-                        <option value="timeout">Timeout</option>
-                        <option value="kick">Kick</option>
-                        <option value="ban">Ban</option>
-                      </select>
-                    </label>
-                    <label className="g-field">
-                      <span>Timeout for</span>
-                      <select
-                        className="g-input"
-                        name={`step${i}_duration`}
-                        defaultValue={String(r?.durationSeconds ?? 3600)}
-                      >
-                        {LADDER_DURATIONS.map((d) => (
-                          <option key={d} value={d}>
-                            {durationText(d)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </fieldset>
-                );
-              })}
+              {/* The steps set plus one spare; "Add a step" shows the next. */}
+              <div className="card-col" id="ladder-rows">
+                {Array.from({ length: LADDER_MAX_STEPS }, (_, i) => {
+                  const r = rules[i];
+                  return (
+                    <fieldset
+                      key={r?.id ?? `new-${i}`}
+                      className="ladder-row"
+                      hidden={i > rules.length}
+                    >
+                      <legend className="sr-only">Step {i + 1}</legend>
+                      <label className="g-field">
+                        <span>Warnings</span>
+                        <input
+                          className="g-input"
+                          name={`step${i}_warns`}
+                          type="number"
+                          min={1}
+                          max={50}
+                          defaultValue={r?.warnCount ?? ""}
+                        />
+                      </label>
+                      <label className="g-field">
+                        <span>Within</span>
+                        <select
+                          className="g-input"
+                          name={`step${i}_window`}
+                          defaultValue={String(r?.windowMinutes ?? 1440)}
+                        >
+                          {LADDER_WINDOWS.map((m) => (
+                            <option key={m} value={m}>
+                              {windowText(m)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="g-field">
+                        <span>Then</span>
+                        <select
+                          className="g-input"
+                          name={`step${i}_action`}
+                          defaultValue={r?.action ?? ""}
+                        >
+                          <option value="">No step</option>
+                          <option value="timeout">Timeout</option>
+                          <option value="kick">Kick</option>
+                          <option value="ban">Ban</option>
+                        </select>
+                      </label>
+                      <label className="g-field">
+                        <span>Timeout for</span>
+                        <select
+                          className="g-input"
+                          name={`step${i}_duration`}
+                          defaultValue={String(r?.durationSeconds ?? 3600)}
+                        >
+                          {LADDER_DURATIONS.map((d) => (
+                            <option key={d} value={d}>
+                              {durationText(d)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </fieldset>
+                  );
+                })}
+              </div>
+              <AddRow list="ladder-rows" label="Add a step" />
               <button type="submit" className="g-btn g-btn--primary">
                 Save ladder
               </button>

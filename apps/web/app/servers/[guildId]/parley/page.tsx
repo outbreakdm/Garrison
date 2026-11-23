@@ -321,39 +321,41 @@ export default async function TicketsPage({
                 </>
               }
             />
-            <label className="g-field" htmlFor="parentId">
-              <span>Open tickets in</span>
-              <select
-                className="g-input"
-                id="parentId"
-                name="parentId"
-                defaultValue={config.parentId ?? ""}
-              >
-                <option value="">No category (top of the list)</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-              <span className="g-help">Each ticket is its own channel, named ticket-0042.</span>
-            </label>
-            <label className="g-field" htmlFor="logChannelId">
-              <span>Post a summary when one closes</span>
-              <select
-                className="g-input"
-                id="logChannelId"
-                name="logChannelId"
-                defaultValue={config.logChannelId ?? ""}
-              >
-                <option value="">Don't post (dashboard only)</option>
-                {channels.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    #{c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="field-row field-row--top">
+              <label className="g-field" htmlFor="parentId">
+                <span>Open tickets in</span>
+                <select
+                  className="g-input"
+                  id="parentId"
+                  name="parentId"
+                  defaultValue={config.parentId ?? ""}
+                >
+                  <option value="">No category (top of the list)</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                <span className="g-help">Each ticket is its own channel, named ticket-0042.</span>
+              </label>
+              <label className="g-field" htmlFor="logChannelId">
+                <span>Post a summary when one closes</span>
+                <select
+                  className="g-input"
+                  id="logChannelId"
+                  name="logChannelId"
+                  defaultValue={config.logChannelId ?? ""}
+                >
+                  <option value="">Don't post (dashboard only)</option>
+                  {channels.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      #{c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
             <Segmented
               name="maxOpen"
               label="Open tickets per member"

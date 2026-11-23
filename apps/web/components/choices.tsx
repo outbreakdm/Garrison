@@ -10,9 +10,9 @@ import { RecUse } from "./RecUse";
  * - LevelCards: a scale, weakest to strongest, with a line under each (how strict).
  * - PresetCards: whole setups with a sentence each (how to answer a raid).
  *
- * One option can be Garrison's recommendation (its setting for a new server). It's marked,
- * and the line under the choice says so: a quiet check when it's picked, else "Recommended:
- * Balanced. Use it", where Use it is a button that picks that radio.
+ * One option can be Garrison's recommendation (its setting for a new server). Its card or
+ * segment is marked; a line under the choice appears only while something else is picked:
+ * "Recommended: Balanced. Use it", where Use it is a button that picks that radio.
  */
 
 export interface Choice {
@@ -25,16 +25,17 @@ export interface Choice {
 /** The radio's id, so "Use it" can point at it. Names are unique on a page. */
 export const choiceId = (name: string, value: string) => `choice-${name}-${value}`;
 
-/** Under a choice: whether it's on Garrison's recommendation, and a way back to it. */
+/**
+ * Under a choice that's off Garrison's recommendation: what it recommends, and a way back.
+ * Hidden by CSS while the recommended option is picked (its own tag already says so), so it
+ * follows the radios the moment you pick, before and after scripts load.
+ */
 export function RecLine({ name, options }: { name: string; options: Choice[] }) {
   const rec = options.find((o) => o.recommended);
   if (!rec) return null;
   return (
     <span className="choice__rec">
-      <span className="choice__rec-is">Recommended setting</span>
-      <span className="choice__rec-use">
-        Recommended: {rec.label}. <RecUse target={choiceId(name, rec.value)} />
-      </span>
+      Recommended: {rec.label}. <RecUse target={choiceId(name, rec.value)} />
     </span>
   );
 }

@@ -9,6 +9,7 @@ import {
   type WelcomeConfig,
 } from "@garrison/db";
 import type { Metadata } from "next";
+import { AddRow } from "@/components/AddRow";
 import { AutoSaveCard } from "@/components/AutoSave";
 import { BackgroundChip } from "@/components/cards/BackgroundChip";
 import { ProTag } from "@/components/cards/CardEditor";
@@ -175,7 +176,7 @@ export default async function WelcomePage({ params }: { params: Promise<{ guildI
               </label>
             </div>
             <label className="g-field" htmlFor="imageUrl">
-              <span>Image link (for "Your image")</span>
+              <span>Image link</span>
               <input
                 className="g-input"
                 id="imageUrl"
@@ -211,34 +212,40 @@ export default async function WelcomePage({ params }: { params: Promise<{ guildI
                 ? ` Free servers give ${roleLimit} role; Pro gives up to ${JOIN_ROLES_MAX}.`
                 : ""}
             </p>
-            {Array.from({ length: roleSlots }, (_, i) => {
-              const current = w.joinRoleIds[i] ?? "";
-              const role = roles.find((r) => r.id === current);
-              return (
-                // biome-ignore lint/suspicious/noArrayIndexKey: fixed slots
-                <label className="g-field" key={i}>
-                  <span>
-                    {roleSlots === 1 ? "Role" : `Role ${i + 1}`}
-                    {i >= roleLimit ? " (paused: Pro)" : ""}
-                  </span>
-                  <select className="g-input" name="joinRoleIds" defaultValue={current}>
-                    <option value="">None</option>
-                    {give.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        @{r.name}
-                        {botTop !== null && r.position >= botTop ? " (above Garrison)" : ""}
-                      </option>
-                    ))}
-                  </select>
-                  {role && botTop !== null && role.position >= botTop ? (
-                    <span className="g-help g-help--warn">
-                      Garrison's role sits below @{role.name}. Drag Garrison above it in Server
-                      Settings → Roles.
-                    </span>
-                  ) : null}
-                </label>
-              );
-            })}
+            {/* What's set plus one spare; the rest wait behind "Add a role". */}
+            <div className="pick-rows" id="join-role-rows">
+              {Array.from({ length: roleSlots }, (_, i) => {
+                const current = w.joinRoleIds[i] ?? "";
+                const role = roles.find((r) => r.id === current);
+                return (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: fixed slots
+                  <div className="pick-rows__row" key={i} hidden={i > w.joinRoleIds.length}>
+                    <select
+                      className="g-input"
+                      name="joinRoleIds"
+                      defaultValue={current}
+                      aria-label={`${roleSlots === 1 ? "Role" : `Role ${i + 1}`}${i >= roleLimit ? " (paused: Pro)" : ""}`}
+                    >
+                      <option value="">{i ? "No role" : "Pick a role"}</option>
+                      {give.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          @{r.name}
+                          {botTop !== null && r.position >= botTop ? " (above Garrison)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                    {i >= roleLimit ? <span className="g-help">Paused: Pro</span> : null}
+                    {role && botTop !== null && role.position >= botTop ? (
+                      <span className="g-help g-help--warn pick-rows__note">
+                        Garrison's role sits below @{role.name}. Drag Garrison above it in Server
+                        Settings → Roles.
+                      </span>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+            {roleSlots > 1 ? <AddRow list="join-role-rows" label="Add a role" /> : null}
             {verifyRole ? (
               <p className="g-help g-help--warn">
                 Verification is on (it gives @{verifyRole.name}). Roles on join are given before

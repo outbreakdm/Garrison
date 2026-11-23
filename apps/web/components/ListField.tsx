@@ -24,6 +24,8 @@ export interface ListRowsProps {
   inputMode?: "text" | "numeric";
   /** Shown before the add button, e.g. "Pro" when the list is locked. */
   disabled?: boolean;
+  /** Short items (words, IDs): the boxes flow into columns, so a long list stays short. */
+  columns?: boolean;
 }
 
 export function ListRows({
@@ -37,6 +39,7 @@ export function ListRows({
   placeholder,
   inputMode = "text",
   disabled,
+  columns,
 }: ListRowsProps) {
   // There is always one box to type in, even with nothing saved yet.
   const rows = items.length ? items : [""];
@@ -78,7 +81,7 @@ export function ListRows({
   const Noun = noun.charAt(0).toUpperCase() + noun.slice(1);
 
   return (
-    <div className="list-rows" ref={root}>
+    <div className={columns ? "list-rows list-rows--columns" : "list-rows"} ref={root}>
       <ol className="list-rows__list">
         {rows.map((value, i) => (
           // Rows have no stable id of their own; position is the identity while typing.

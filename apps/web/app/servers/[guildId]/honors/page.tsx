@@ -146,7 +146,7 @@ export default async function StarboardPage({ params }: { params: Promise<{ guil
                     defaultValue={config.threshold}
                     required
                   />
-                  <RecValue field="threshold" value={3} />
+                  <RecValue field="threshold" value={3} initial={config.threshold} />
                 </label>
               </div>
               <CheckList
