@@ -360,49 +360,6 @@ button.lp-btn {
 .lp-build__go {
   flex: none;
 }
-.lp-ideas {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 8px 10px;
-  margin-top: 16px;
-}
-.lp-ideas__label {
-  color: var(--lp-faint);
-  font-size: 13px;
-}
-.lp-ideas__list {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.lp-idea {
-  display: inline-flex;
-  align-items: center;
-  height: 32px;
-  padding: 0 14px;
-  border: 1px solid var(--lp-line-strong);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--lp-surface) 70%, transparent);
-  color: var(--lp-muted);
-  font-size: 13.5px;
-  font-weight: 500;
-  text-decoration: none;
-  transition:
-    color 0.15s var(--ease-out),
-    border-color 0.15s var(--ease-out),
-    background-color 0.15s var(--ease-out);
-}
-.lp a.lp-idea:hover {
-  border-color: var(--lp-faint);
-  background: var(--lp-surface-2);
-  color: var(--lp-text);
-}
 .lp-hero__actions {
   margin-top: 28px;
 }
@@ -711,7 +668,7 @@ button.lp-btn {
 .lp-section {
   max-width: var(--lp-max);
   margin: 0 auto;
-  padding: 120px 24px 0;
+  padding: 96px 24px 0;
   scroll-margin-top: 48px;
 }
 .lp-h2 {
@@ -723,7 +680,7 @@ button.lp-btn {
 }
 .lp-section__head {
   max-width: 720px;
-  margin: 0 auto 72px;
+  margin: 0 auto 48px;
   text-align: center;
 }
 .lp-section__head p {
@@ -738,7 +695,7 @@ button.lp-btn {
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   gap: 72px;
   align-items: center;
-  padding: 56px 0;
+  padding: 40px 0;
   scroll-margin-top: 64px;
 }
 .lp-feature + .lp-feature {
@@ -787,56 +744,9 @@ button.lp-btn {
   bottom: 0;
   width: min(380px, 72%);
 }
-/* A wide row: the title and its words side by side above, the shot across the whole row. */
-.lp-feature--wide {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 40px;
-}
-.lp-feature--wide .lp-feature__copy {
-  display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-  gap: 0 72px;
-  align-items: end;
-}
-.lp-feature--wide .lp-feature__copy > * {
-  grid-column: 1;
-}
-.lp-feature--wide .lp-feature__copy > p {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-}
-.lp-feature--wide .lp-feature__copy h3 {
-  margin-bottom: 0;
-}
-
-/* The AI assistant shot: the page's chat beside its Your server panel, as the dashboard lays
-   them out on a wide screen, at their natural height instead of the screen's. */
-.lp-qm {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
-  gap: var(--space-4);
-  align-items: start;
-}
-.lp-qm .qm-chat {
-  height: auto;
-  min-height: 0;
-}
-.lp-qm .qm-chat__log {
-  flex: none;
-  overflow: visible;
-}
-.lp-qm .qm-plan {
-  position: static;
-  max-height: none;
-}
-.lp-qm__input {
-  display: block;
-  color: var(--text-muted);
-}
-
 /* Every module, grouped like the dashboard menu: a quiet reference after the showcase */
 .lp-catalog {
-  margin-top: 112px;
+  margin-top: 64px;
 }
 .lp-catalog__head {
   display: flex;
@@ -862,7 +772,7 @@ button.lp-btn {
   display: grid;
   grid-template-columns: 168px minmax(0, 1fr);
   gap: 32px;
-  padding: 28px 0;
+  padding: 20px 0;
   border-top: 1px solid var(--lp-line);
 }
 .lp-catalog__name {
@@ -875,7 +785,7 @@ button.lp-btn {
 .lp-catalog__list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px 32px;
+  gap: 16px 32px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1628,15 +1538,6 @@ button.lp-btn {
   .lp-feature--flip .lp-feature__copy {
     order: 0;
   }
-  .lp-feature--wide .lp-feature__copy {
-    display: block;
-  }
-  .lp-feature--wide .lp-feature__copy h3 {
-    margin-bottom: 16px;
-  }
-  .lp-qm {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .lp-catalog__group {
     grid-template-columns: minmax(0, 1fr);
     gap: 16px;
@@ -1706,10 +1607,10 @@ button.lp-btn {
     width: auto;
   }
   .lp-section {
-    padding: 88px 16px 0;
+    padding: 64px 16px 0;
   }
   .lp-section__head {
-    margin-bottom: 40px;
+    margin-bottom: 28px;
   }
   /* The wall runs edge to edge; only its heading keeps the gutter. */
   .lp-wall {
@@ -1720,7 +1621,7 @@ button.lp-btn {
     padding: 0 16px;
   }
   .lp-feature {
-    padding: 40px 0;
+    padding: 28px 0;
   }
   .lp-win__body {
     zoom: 0.85;
@@ -1728,9 +1629,7 @@ button.lp-btn {
   }
   /* Each shot keeps only the element that proves its point. */
   .lp-hide-sm,
-  .lp-stage .lp-app__head,
-  .lp-qm__choices,
-  .lp-qm .qm-model__price {
+  .lp-stage .lp-app__head {
     display: none;
   }
   .lp-hero__art,
@@ -1756,11 +1655,23 @@ button.lp-btn {
     margin: -24px 8px 0;
   }
   .lp-catalog {
-    margin-top: 72px;
+    margin-top: 48px;
   }
+  /* Two to a row on a phone too: 17 modules are a reference, not a scroll. */
   .lp-catalog__list {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 20px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 16px;
+  }
+  .lp-catalog__list strong {
+    font-size: 14px;
+  }
+  .lp-catalog__list span {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .lp-catalog__group {
+    gap: 12px;
+    padding: 16px 0;
   }
   .lp-tier {
     padding: 28px 20px;
@@ -1790,48 +1701,116 @@ button.lp-btn {
   }
 }
 
-/* --- Watch it work: short recordings of the real dashboard, each beside what it shows ----- */
-.lp-watch .lp-section__head {
-  margin-bottom: 8px;
-}
-.lp-watch__row {
+/* --- Watch it work: one player for the dashboard's recordings ----------------------------
+   The steps on the left are radios: the picked one opens to its headline and line, and only its
+   recording shows on the right. A hidden recording isn't on screen, so it doesn't load or play. */
+.lp-watch__player {
   display: grid;
   grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
-  gap: 64px;
+  gap: 48px;
   align-items: center;
-  padding: 48px 0;
-  scroll-margin-top: 64px;
 }
-/* Every other row puts the recording first, so the eye zigzags down the page. */
-.lp-watch__row--flip {
-  grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
+.lp-watch__steps {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
-.lp-watch__row--flip .lp-watch__copy {
-  order: 2;
+.lp-watch__legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .lp-watch__step {
-  display: inline-flex;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 2px 10px;
   align-items: baseline;
-  margin-bottom: 14px;
+  padding: 12px 16px;
+  border-radius: var(--lp-r);
   color: var(--lp-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.2s var(--ease-out),
+    color 0.2s var(--ease-out);
+}
+.lp-watch__step:hover {
+  background: color-mix(in srgb, var(--lp-surface) 70%, transparent);
+  color: var(--lp-text);
+}
+.lp-watch__step:has(.lp-watch__pick:checked) {
+  background: var(--lp-surface);
+  box-shadow: inset 0 0 0 1px var(--lp-line-strong);
+  color: var(--lp-text);
+}
+.lp-watch__step:has(.lp-watch__pick:focus-visible) {
+  outline: 2px solid var(--lp-accent-text);
+  outline-offset: 2px;
+}
+.lp-watch__pick {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.lp-watch__num {
+  color: var(--lp-faint);
   font: 600 13px / 1.4 var(--lp-mono);
 }
-.lp-watch__step span {
+.lp-watch__step:has(.lp-watch__pick:checked) .lp-watch__num {
   color: var(--lp-accent-text);
 }
-.lp-watch__copy h3 {
-  margin: 0 0 14px;
-  font-size: clamp(24px, 2.3vw, 30px);
+.lp-watch__tab {
+  font-size: 16px;
+  font-weight: 600;
+}
+.lp-watch__more {
+  display: none;
+  grid-column: 2;
+  gap: 6px;
+  padding-top: 6px;
+}
+.lp-watch__step:has(.lp-watch__pick:checked) .lp-watch__more {
+  display: grid;
+}
+.lp-watch__title {
+  font-family: var(--lp-display);
+  font-size: clamp(21px, 1.9vw, 25px);
   font-weight: 800;
   line-height: 1.15;
   letter-spacing: -0.02em;
 }
 .lp-watch__line {
   max-width: 46ch;
-  margin: 0;
   color: var(--lp-muted);
-  font-size: 17px;
+  font-size: 15.5px;
+  line-height: 1.55;
+}
+.lp-watch__clip {
+  display: none;
+}
+.lp-watch__player:has([value="ai"]:checked) [data-clip="ai"],
+.lp-watch__player:has([value="preview"]:checked) [data-clip="preview"],
+.lp-watch__player:has([value="fix"]:checked) [data-clip="fix"],
+.lp-watch__player:has([value="saves"]:checked) [data-clip="saves"] {
+  display: block;
+}
+/* Phones and tablets: the recording first, then the steps under it. */
+@media (max-width: 900px) {
+  .lp-watch__player {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .lp-watch__win {
+    order: -1;
+  }
+  .lp-watch__step {
+    padding: 10px 12px;
+  }
 }
 /* The clip's own frame: the app window is inside the video, so this is just a lit card. */
 .lp-watch__win {
@@ -1844,18 +1823,6 @@ button.lp-btn {
     0 40px 90px -40px rgb(0 0 0 / 0.9),
     0 0 90px -30px rgb(212 255 58 / 0.28);
 }
-@media (max-width: 900px) {
-  .lp-watch__row,
-  .lp-watch__row--flip {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 24px;
-    padding: 32px 0;
-  }
-  .lp-watch__row--flip .lp-watch__copy {
-    order: 0;
-  }
-}
-
 /* A recording: 16:9, its poster until it plays, and a quiet pause button. */
 .demo-clip {
   position: relative;

@@ -6,7 +6,6 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Art } from "@/components/Art";
-import { AssistantShot } from "@/components/AssistantShot";
 import { BuildBox } from "@/components/BuildBox";
 import { DemoClip } from "@/components/DemoClip";
 import { DurationBar } from "@/components/DurationBar";
@@ -225,7 +224,8 @@ const DEMO_COMMANDS: [name: string, what: string][] = [
 
 /**
  * "Watch it work": four short 1080p60 clips of the dashboard's real screens, labels and steps,
- * made in HyperFrames, each with a poster of where it ends.
+ * made in HyperFrames, each with a poster of where it ends. One player shows them; each id has
+ * a rule in landing.css (.lp-watch__player) that shows its recording when its step is picked.
  */
 const WATCH: {
   id: string;
@@ -415,7 +415,6 @@ function Feature({
   children,
   visual,
   flip = false,
-  wide = false,
 }: {
   id: string;
   icon: string;
@@ -423,14 +422,9 @@ function Feature({
   children: ReactNode;
   visual: ReactNode;
   flip?: boolean;
-  /** The copy above and the shot across the whole row, for a page that needs the width. */
-  wide?: boolean;
 }) {
   return (
-    <article
-      className={`lp-feature${flip ? " lp-feature--flip" : ""}${wide ? " lp-feature--wide" : ""}`}
-      id={id}
-    >
+    <article className={`lp-feature${flip ? " lp-feature--flip" : ""}`} id={id}>
       <div className="lp-feature__copy">
         <Art slot={icon} className="lp-feature__icon" decorative />
         <h3>{title}</h3>
@@ -515,18 +509,6 @@ export default async function Home() {
               for.
             </p>
             <BuildBox action={`${app}/build`} signedIn={signedIn} />
-            <div className="lp-ideas">
-              <span className="lp-ideas__label">Or start from</span>
-              <ul className="lp-ideas__list">
-                {BUILD_IDEAS.slice(0, 4).map((idea) => (
-                  <li key={idea.name}>
-                    <a className="lp-idea" href={ideaHref(idea.prompt)}>
-                      {idea.name}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
             <div className="lp-actions lp-hero__actions">
               {invite ? (
                 <a className="lp-btn lp-btn--primary" href={invite}>
@@ -539,19 +521,6 @@ export default async function Home() {
               >
                 Open dashboard
               </Link>
-              <a className="lp-btn lp-btn--ghost" href="#watch">
-                See it in action
-                <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
-                  <path
-                    d="M8 3v10M4 9l4 4 4-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </a>
             </div>
             <p className="lp-assure">Every module free to start · Never asks for Administrator</p>
           </div>
@@ -697,21 +666,34 @@ export default async function Home() {
             </h2>
             <p>The dashboard's own screens and steps, up close, on a test server.</p>
           </div>
-          <div className="lp-watch__list">
-            {WATCH.map((w, i) => (
-              <article
-                className={`lp-watch__row${i % 2 ? " lp-watch__row--flip" : ""}`}
-                id={`watch-${w.id}`}
-                key={w.id}
-              >
-                <div className="lp-watch__copy">
-                  <span className="lp-watch__step">
-                    <span aria-hidden="true">{String(i + 1).padStart(2, "0")}</span> {w.tab}
+          {/* One player: pick a step, its recording shows. Radios underneath, so it works before
+              scripts load; a hidden recording isn't on screen, so it neither loads nor plays. */}
+          <div className="lp-watch__player">
+            <fieldset className="lp-watch__steps">
+              <legend className="lp-watch__legend">Pick a recording</legend>
+              {WATCH.map((w, i) => (
+                <label className="lp-watch__step" key={w.id}>
+                  <input
+                    className="lp-watch__pick"
+                    type="radio"
+                    name="watch"
+                    value={w.id}
+                    defaultChecked={i === 0}
+                  />
+                  <span className="lp-watch__num" aria-hidden="true">
+                    {String(i + 1).padStart(2, "0")}
                   </span>
-                  <h3>{w.title}</h3>
-                  <p className="lp-watch__line">{w.line}</p>
-                </div>
-                <div className="lp-watch__win">
+                  <span className="lp-watch__tab">{w.tab}</span>
+                  <span className="lp-watch__more">
+                    <span className="lp-watch__title">{w.title}</span>
+                    <span className="lp-watch__line">{w.line}</span>
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+            <div className="lp-watch__win">
+              {WATCH.map((w) => (
+                <div className="lp-watch__clip" data-clip={w.id} key={w.id}>
                   <DemoClip
                     src={w.video}
                     poster={w.poster}
@@ -721,8 +703,8 @@ export default async function Home() {
                     description={w.alt}
                   />
                 </div>
-              </article>
-            ))}
+              ))}
+            </div>
           </div>
         </section>
 
@@ -738,29 +720,9 @@ export default async function Home() {
           </div>
 
           <Feature
-            id="ai-builder"
-            icon="lp-icon-quartermaster"
-            title="Describe the channels you want. Review. Build. Undo."
-            wide
-            visual={
-              <AppWindow path="AI assistant" className="lp-win--qm" tint="steel">
-                <AssistantShot />
-              </AppWindow>
-            }
-          >
-            <p>
-              Tell the AI assistant what your server needs, in plain words, and pick Bastion v1's
-              Fast or Smart mode. Your server, beside the chat, marks every change before anything
-              happens; Apply builds it. New roles get no permissions, and any build can be undone,
-              even after a partial failure.
-            </p>
-          </Feature>
-
-          <Feature
             id="insights"
             icon="lp-icon-overview"
             title="Know what your server is doing"
-            flip
             visual={
               <AppWindow path="Insights" tint="steel">
                 <div className="lp-app lp-app--stack">
@@ -822,6 +784,7 @@ export default async function Home() {
             id="from-discord"
             icon="lp-icon-commands"
             title="Run it from Discord too"
+            flip
             visual={
               <figure
                 className="lp-dc lp-slash"
@@ -860,7 +823,6 @@ export default async function Home() {
             id="moderation"
             icon="lp-icon-watch"
             title="Every action is a case, and every case can be undone"
-            flip
             visual={
               <div className="lp-pair">
                 <AppWindow path="Moderation" tint="cobalt">
@@ -913,6 +875,7 @@ export default async function Home() {
             id="groups"
             icon="lp-icon-rally"
             title="From LFG post to full squad"
+            flip
             visual={
               <AppWindow path="Groups and raids" tint="volt">
                 <div className="lp-app lp-app--stack">

@@ -139,39 +139,64 @@ const REQUEST_PAGE: Record<string, string> = {
   economy_purchase: "/economy",
 };
 
+type AttentionTone = "alert" | "caution" | "waiting";
+
 /**
- * One thing that needs someone. Its mark says how much, by shape as well as color: alert (a
- * filled red triangle) is happening now; caution (an amber triangle, as the menu marks a
- * module) is broken until someone fixes it; waiting (an amber ring) only needs a look.
+ * One thing that needs someone: what's wrong (naming the thing), what that means or why, and
+ * the fix as a verb, which is where the row goes. Its mark says how much it matters by shape
+ * as well as color: a filled red triangle is happening now, an amber triangle (as the menu
+ * marks a module) is broken until fixed, a ring only needs a look.
  */
 interface Attention {
-  tone: "alert" | "caution" | "waiting";
+  tone: AttentionTone;
+  /** "Suggestions isn't working". */
   title: string;
+  /** "On, but no suggestions channel is picked." */
   detail: string;
   href: string;
-  go: string;
+  /** "Pick a channel". */
+  action: string;
 }
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-/** How many the strip shows before "Show more"; every alert shows, however many. */
-const ATTENTION_SHOWN = 5;
+/** The three groups, most urgent first, each with what it asks of you. */
+const ATTENTION_GROUPS: { tone: AttentionTone; name: string; hint: string }[] = [
+  { tone: "alert", name: "Happening now", hint: "Deal with these first." },
+  { tone: "caution", name: "Not working", hint: "Switched on, but broken until someone fixes it." },
+  {
+    tone: "waiting",
+    name: "When you have a minute",
+    hint: "Nothing is broken; these just need a look.",
+  },
+];
+/** "When you have a minute" shows this many before "Show N more"; the others show them all. */
+const WAITING_SHOWN = 3;
 
-function AttentionRow({ a, i }: { a: Attention; i: number }) {
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+/**
+ * A row is the link to its fix. The fix shows as a button on the right (under the sentence on
+ * phones); the first row's is the panel's one white button, so the first thing to do is plain.
+ */
+function AttentionRow({ a, id, first }: { a: Attention; id: string; first: boolean }) {
   return (
     <li>
       <a
-        className={`attention__item attention__item--${a.tone}`}
+        className="attention__item"
+        data-tone={a.tone}
         href={a.href}
-        aria-label={`${a.title}. ${a.go}`}
-        aria-describedby={`attn-${i}`}
+        aria-label={`${a.title}. ${a.action}`}
+        aria-describedby={id}
       >
         <span className="attention__mark" aria-hidden="true" />
         <span className="attention__text">
           <strong>{a.title}</strong>
-          <span id={`attn-${i}`}>{a.detail}</span>
+          <span id={id}>{a.detail}</span>
         </span>
-        <span className="attention__go" aria-hidden="true">
-          {a.go}
+        <span
+          className={`g-btn g-btn--sm attention__go ${first ? "g-btn--primary" : "g-btn--secondary"}`}
+          aria-hidden="true"
+        >
+          {a.action}
           <span className="cue" />
         </span>
       </a>
@@ -319,40 +344,47 @@ export default async function OverviewPage({
 
   // What needs someone (sorted most urgent first below). Nothing shows when nothing does.
   const attention: Attention[] = [];
-  if (o.activeLockdown)
+  const lock = o.activeLockdown;
+  if (lock)
     attention.push({
       tone: "alert",
-      title: "The server is locked down",
-      detail: "@everyone can't post until the lockdown is lifted. Staff roles still can.",
+      title: `The server is locked down${lock.source === "anti_raid" ? " by anti-raid" : ""}`,
+      detail: `Members can't post; staff roles still can. ${
+        lock.endsAt
+          ? `It lifts by itself ${untilText(lock.endsAt.getTime() - now)}.`
+          : "It stays until someone lifts it."
+      }`,
       href: `${base}/gatehouse#lockdown`,
-      go: "Lockdown",
+      action: "Review the lockdown",
     });
   if (o.quarantines24h > 0)
     attention.push({
       tone: "alert",
-      title: `${plural(o.quarantines24h, "member", "members")} quarantined by anti-nuke`,
-      detail: "Their roles were removed and saved. Restore them if it was a mistake.",
+      title: `Anti-nuke quarantined ${plural(o.quarantines24h, "member", "members")}`,
+      detail: "Their roles were removed and saved. Give them back if it was a mistake.",
       href: `${base}/gatehouse#quarantine`,
-      go: "Quarantined",
+      action: "Review quarantine",
     });
   const failing = health?.checks.filter((c) => c.status !== "ok") ?? [];
   if (failing.length)
     attention.push({
       tone: failing.some((c) => c.status === "fix") ? "alert" : "caution",
-      title: `${plural(failing.length, "health check needs", "health checks need")} a look`,
+      title: `${plural(failing.length, "health check", "health checks")} found a problem`,
       detail: plainMentions(failing[0]?.text ?? ""),
       href: "#health",
-      go: "See checks",
+      action: "See what to fix",
     });
   const planWaiting =
     build?.status === "pending" && now - build.createdAt.getTime() < QM_PLAN_TTL_MS;
   if (planWaiting && build)
     attention.push({
       tone: "waiting",
-      title: `AI assistant plan v${build.version} is waiting`,
-      detail: `Nothing changes in Discord until someone applies it. Plans expire after ${QM_PLAN_TTL_MS / 60_000} minutes.`,
+      title: "An AI assistant plan is waiting for review",
+      detail: `Nothing changes in Discord until someone applies it. It expires ${untilText(
+        build.createdAt.getTime() + QM_PLAN_TTL_MS - now,
+      )}.`,
       href: `${base}/quartermaster#qm-plan`,
-      go: "Review plan",
+      action: "Review the plan",
     });
   const untilRaid = o.nextOp ? o.nextOp.startsAt.getTime() - now : null;
   if (o.nextOp && untilRaid !== null && untilRaid > 0 && untilRaid < 3 * 86_400_000) {
@@ -362,25 +394,29 @@ export default async function OverviewPage({
     if (short.length)
       attention.push({
         tone: "waiting",
-        title: `${o.nextOp.title} is ${short.reduce((t, s) => t + s.n, 0)} short`,
-        detail: `${formatTime(o.nextOp.startsAt, o.nextOp.timezone)} · ${short
+        title: `${o.nextOp.title} is ${plural(
+          short.reduce((t, s) => t + s.n, 0),
+          "person",
+          "people",
+        )} short`,
+        detail: `${formatTime(o.nextOp.startsAt, o.nextOp.timezone)}. Still needs ${short
           .map((s) => `${s.n} ${s.name}`)
-          .join(", ")}`,
+          .join(", ")}.`,
         href: `${base}/rally?tab=raids`,
-        go: "Raids",
+        action: "See signups",
       });
   }
   for (const m of mods.filter((x) => x.state === "blocked"))
     attention.push({
       tone: "caution",
-      title: `${m.name} is on but can't work`,
+      title: `${m.name} isn't working`,
       detail: m.reason ?? "Something it needs is missing.",
       // Straight to the field or permission that fixes it, in the page's own words.
       href:
         m.fix?.to === "permissions"
           ? (fixUrl ?? `${base}${m.href}`)
           : `${base}${m.href}${m.fix?.to ?? ""}`,
-      go: m.fix?.action ?? "Fix it",
+      action: m.fix?.action ?? `Open ${m.name}`,
     });
   const stuck = actions.filter(
     (a) =>
@@ -390,12 +426,14 @@ export default async function OverviewPage({
   if (stuck[0])
     attention.push({
       tone: "waiting",
-      title: `${plural(stuck.length, "request has", "requests have")} waited over 10 minutes`,
+      title: live
+        ? `${plural(stuck.length, "request is", "requests are")} taking a while`
+        : `${plural(stuck.length, "request is", "requests are")} waiting for Garrison`,
       detail: live
-        ? `${ACTION_KIND[stuck[0].kind] ?? "A request"}, asked ${ago(stuck[0].createdAt)}. Garrison may be busy; it runs them in order.`
-        : "Garrison hasn't checked in lately, so requests wait until it's back. See the status page.",
+        ? `${ACTION_KIND[stuck[0].kind] ?? "A request"}, asked ${ago(stuck[0].createdAt)}. Garrison runs them in order and may be busy.`
+        : `${lastBeat ? `Garrison was last seen ${ago(new Date(lastBeat))}` : "Garrison hasn't checked in yet"}. Requests run as soon as it's back.`,
       href: live ? requestHref(stuck[0].kind) : "/status",
-      go: live ? "Open" : "Status",
+      action: live ? "See the request" : "Check Garrison's status",
     });
   const failed = actions.filter(
     (a) => a.status === "failed" && now - a.createdAt.getTime() < 86_400_000,
@@ -406,16 +444,15 @@ export default async function OverviewPage({
       title: `${plural(failed.length, "request", "requests")} failed in the last day`,
       detail: `${ACTION_KIND[failed[0].kind] ?? failed[0].kind}: ${failed[0].message ?? "no reason given"}`,
       href: requestHref(failed[0].kind),
-      go: "Open",
+      action: "See what failed",
     });
 
-  // Most urgent first: what's happening now, then what's broken, then what's waiting.
-  const rank = { alert: 0, caution: 1, waiting: 2 } as const;
-  attention.sort((x, y) => rank[x.tone] - rank[y.tone]);
-  const urgent = attention.filter((a) => a.tone === "alert").length;
-  const broken = attention.filter((a) => a.tone === "caution").length;
-  const waiting = attention.length - urgent - broken;
-  const shown = Math.max(ATTENTION_SHOWN, urgent);
+  // Grouped most urgent first; the first row of the first group is the one thing to do first.
+  const groups = ATTENTION_GROUPS.map((g) => ({
+    ...g,
+    items: attention.filter((a) => a.tone === g.tone),
+  })).filter((g) => g.items.length);
+  const worst = groups[0]?.tone ?? null;
 
   return (
     <>
@@ -478,6 +515,133 @@ export default async function OverviewPage({
         </div>
       ) : null}
 
+      {/* Band 1: what needs you, grouped by how much, each with its fix; or one line saying
+          nothing does. The health check is the panel's foot. */}
+      <section
+        className={worst ? "g-card attention" : "g-card attention attention--clear"}
+        data-worst={worst ?? undefined}
+        aria-labelledby="attention-title"
+      >
+        <div className="attention__head">
+          <span className="attention__tile">
+            {worst ? (
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true">
+                <path
+                  d="M8 2.2 14.2 13H1.8z"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinejoin="round"
+                />
+                <path d="M8 6.4v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <circle cx="8" cy="11.2" r=".85" fill="currentColor" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true">
+                <path
+                  d="m3.5 8.5 3 3 6-7"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
+          </span>
+          <h2 className="card-title" id="attention-title">
+            {worst ? (
+              <>
+                Needs attention <span className="count">{attention.length}</span>
+              </>
+            ) : (
+              "All clear"
+            )}
+          </h2>
+          {worst ? null : (
+            <span className="attention__sum">Every module that's on is working.</span>
+          )}
+        </div>
+        {groups.map((g, gi) => {
+          const shownHere = g.tone === "waiting" ? WAITING_SHOWN : g.items.length;
+          const row = (a: Attention, i: number) => (
+            <AttentionRow
+              a={a}
+              id={`attn-${g.tone}-${i}`}
+              first={gi === 0 && i === 0}
+              key={a.title}
+            />
+          );
+          return (
+            <section
+              className="attention__group"
+              data-tone={g.tone}
+              aria-labelledby={`attn-${g.tone}`}
+              key={g.tone}
+            >
+              <h3 className="attention__group-head" id={`attn-${g.tone}`}>
+                <span className="attention__group-name">{g.name}</span>
+                <span className="count">{g.items.length}</span>
+                <span className="attention__hint">{g.hint}</span>
+              </h3>
+              <ul className="attention__list">{g.items.slice(0, shownHere).map(row)}</ul>
+              {g.items.length > shownHere ? (
+                <details className="attention__more">
+                  <summary>
+                    <span className="attention__more-show">
+                      Show {g.items.length - shownHere} more
+                    </span>
+                    <span className="attention__more-hide">Show fewer</span>
+                    <span className="cue" aria-hidden="true" />
+                  </summary>
+                  <ul className="attention__list">
+                    {g.items.slice(shownHere).map((a, i) => row(a, i + shownHere))}
+                  </ul>
+                </details>
+              ) : null}
+            </section>
+          );
+        })}
+        <div className="attention__foot" id="health">
+          {health ? (
+            <details className="attention__checks" open={failing.length > 0}>
+              <summary>
+                Health check <span className="count">{health.checks.length}</span>
+                <span className="attention__checks-when">
+                  {ago(health.computedAt)} ·{" "}
+                  {failing.length ? `${failing.length} to look at` : "all OK"}
+                </span>
+              </summary>
+              {health.checks.slice(0, 6).map((c) => (
+                <div className="health-row" key={c.text}>
+                  <span
+                    className={`g-badge ${c.status === "ok" ? "g-badge--go" : c.status === "fix" ? "g-badge--alert" : "g-badge--caution"}`}
+                  >
+                    {c.status === "ok" ? "OK" : c.status === "fix" ? "Fix" : "Check"}
+                  </span>
+                  <span>{plainMentions(c.text)}</span>
+                </div>
+              ))}
+              {health.problems > 0 && fixUrl ? (
+                <a className="g-btn g-btn--secondary g-btn--sm" href={fixUrl}>
+                  Fix permissions
+                </a>
+              ) : null}
+            </details>
+          ) : (
+            <span className="attention__checks-none">
+              No health check yet: it checks Garrison's permissions, role and channels.
+            </span>
+          )}
+          <form action={requestAction} className="attention__run">
+            <input type="hidden" name="guildId" value={guild.id} />
+            <input type="hidden" name="page" value="" />
+            <input type="hidden" name="kind" value="run_health" />
+            <button type="submit" className="g-btn g-btn--ghost g-btn--sm">
+              {health ? "Run again" : "Run a check"}
+            </button>
+          </form>
+        </div>
+      </section>
+
       {showSetup ? (
         <SetupCard
           guildId={guild.id}
@@ -506,109 +670,6 @@ export default async function OverviewPage({
           </Link>
         </section>
       )}
-
-      {/* Band 1: what needs you, or one line saying nothing does, and the health check. */}
-      <section
-        className={attention.length ? "g-card attention" : "g-card attention attention--clear"}
-        aria-labelledby="attention-title"
-      >
-        <div className="attention__head">
-          {attention.length ? (
-            <span className={`attention__tile${urgent ? " attention__tile--alert" : ""}`}>
-              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true">
-                <path
-                  d="M8 2.2 14.2 13H1.8z"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinejoin="round"
-                />
-                <path d="M8 6.4v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                <circle cx="8" cy="11.2" r=".85" fill="currentColor" />
-              </svg>
-            </span>
-          ) : null}
-          <div className="attention__heading">
-            <h2 className="card-title" id="attention-title">
-              {attention.length ? (
-                <>
-                  Needs attention <span className="count">{attention.length}</span>
-                </>
-              ) : (
-                "All clear"
-              )}
-            </h2>
-            {attention.length ? (
-              <span className="attention__sum">
-                {[
-                  urgent ? `${urgent} happening now` : "",
-                  broken ? `${broken} not working` : "",
-                  waiting ? `${waiting} to look at` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </span>
-            ) : null}
-          </div>
-          <div className="attention__check">
-            <span>{health ? `Health check ${ago(health.computedAt)}` : "No health check yet"}</span>
-            <form action={requestAction}>
-              <input type="hidden" name="guildId" value={guild.id} />
-              <input type="hidden" name="page" value="" />
-              <input type="hidden" name="kind" value="run_health" />
-              <button type="submit" className="g-btn g-btn--ghost g-btn--sm">
-                Run a check
-              </button>
-            </form>
-          </div>
-        </div>
-        {attention.length ? (
-          <>
-            <ul className="attention__list">
-              {attention.slice(0, shown).map((a, i) => (
-                <AttentionRow a={a} i={i} key={a.title} />
-              ))}
-            </ul>
-            {attention.length > shown ? (
-              <details className="attention__more">
-                <summary>
-                  <span className="attention__more-show">Show {attention.length - shown} more</span>
-                  <span className="attention__more-hide">Show fewer</span>
-                  <span className="cue" aria-hidden="true" />
-                </summary>
-                <ul className="attention__list">
-                  {attention.slice(shown).map((a, i) => (
-                    <AttentionRow a={a} i={i + shown} key={a.title} />
-                  ))}
-                </ul>
-              </details>
-            ) : null}
-          </>
-        ) : (
-          <p className="attention__clear">Every module that's on works.</p>
-        )}
-        {health ? (
-          <details className="attention__checks" id="health" open={failing.length > 0}>
-            <summary>
-              Health checks <span className="count">{health.checks.length}</span>
-            </summary>
-            {health.checks.slice(0, 6).map((c) => (
-              <div className="health-row" key={c.text}>
-                <span
-                  className={`g-badge ${c.status === "ok" ? "g-badge--go" : c.status === "fix" ? "g-badge--alert" : "g-badge--caution"}`}
-                >
-                  {c.status === "ok" ? "OK" : c.status === "fix" ? "Fix" : "Check"}
-                </span>
-                <span>{plainMentions(c.text)}</span>
-              </div>
-            ))}
-            {health && health.problems > 0 && fixUrl ? (
-              <a className="g-btn g-btn--primary" href={fixUrl}>
-                Fix permissions
-              </a>
-            ) : null}
-          </details>
-        ) : null}
-      </section>
 
       <RequestsPanel guildId={guild.id} kinds={["run_health"]} query={query} />
 

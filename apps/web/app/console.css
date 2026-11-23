@@ -4089,39 +4089,248 @@ a.item-tile:focus-visible {
   font-size: 12.5px;
   font-weight: 600;
 }
-/* Attention: always there. Nothing waiting is one quiet line; the health check rides along. */
-.attention__check {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--text-muted);
-  font-size: 12.5px;
+/* --- Needs attention (2026-11-23) ----------------------------------------------------------
+   What needs you, grouped by how much it matters: Happening now, Not working, When you have a
+   minute, each named in its tone with what it asks of you. A row says what's wrong, what that
+   means, and the fix as a button; the first row's fix is the panel's one white button. The
+   health check is the panel's foot. Nothing waiting is one quiet line. */
+.attention {
+  padding: 0;
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--caution) 40%, var(--line));
 }
-.attention__check form {
-  display: contents;
+.attention[data-worst="alert"] {
+  border-color: color-mix(in srgb, var(--alert) 45%, var(--line));
 }
+.attention[data-worst="waiting"],
 .attention--clear {
   border-color: var(--line);
 }
-.attention--clear .attention__head {
-  background: none;
+.attention__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px var(--space-3);
+  min-height: 52px;
+  padding: 10px var(--space-4);
 }
-.attention__clear {
+.attention__head .card-title {
   margin: 0;
-  padding: var(--space-3) var(--space-4);
-  border-top: 1px solid var(--line);
-  color: var(--text-muted);
-  font-size: 14px;
 }
-.attention__checks {
+.attention__tile {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--caution) 16%, var(--surface-raised));
+  color: var(--caution);
+}
+.attention[data-worst="alert"] .attention__tile {
+  background: color-mix(in srgb, var(--alert) 16%, var(--surface-raised));
+  color: var(--alert);
+}
+.attention[data-worst="waiting"] .attention__tile {
+  background: var(--surface-raised);
+  color: var(--text-muted);
+}
+.attention--clear .attention__tile {
+  background: color-mix(in srgb, var(--go) 14%, var(--surface-raised));
+  color: var(--go);
+}
+.attention__sum {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+/* A group: its name in its tone, how many, and what it asks of you, on one line. */
+.attention__group {
+  --tone: var(--caution);
   border-top: 1px solid var(--line);
+}
+.attention__group[data-tone="alert"] {
+  --tone: var(--alert);
+  background: color-mix(in srgb, var(--alert) 5%, var(--surface));
+}
+.attention__group-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--space-2);
+  margin: 0;
+  padding: 10px var(--space-4) 2px calc(var(--space-4) + 24px);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 18px;
+}
+.attention__group-name {
+  color: var(--tone);
+}
+.attention__group[data-tone="waiting"] .attention__group-name {
+  color: var(--text);
+}
+.attention__group-head .count {
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.attention__hint {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.attention__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* A row: its mark, what's wrong over what it means, and the fix on the right. */
+.attention__item {
+  --tone: var(--caution);
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  gap: 4px var(--space-3);
+  align-items: center;
+  padding: 10px var(--space-4);
+  color: var(--text);
+  text-decoration: none;
+  transition: background-color 0.15s var(--ease-out);
+}
+.attention__item[data-tone="alert"] {
+  --tone: var(--alert);
+}
+.attention__list > li + li > .attention__item {
+  border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+.attention__item:hover {
+  background: color-mix(in srgb, var(--surface-raised) 70%, transparent);
+  color: var(--text);
+}
+.attention__item:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+/* The mark sits on the title's line: a filled triangle now, an outlined one broken, a ring
+   waiting. */
+.attention__mark {
+  align-self: start;
+  width: 12px;
+  height: 11px;
+  margin-top: 5px;
+  background: var(--tone);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.attention__item[data-tone="caution"] .attention__mark {
+  clip-path: none;
+  mask:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 11'%3E%3Cpath d='M6 1.2 11 10H1z' fill='none' stroke='%23000' stroke-width='1.7' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+.attention__item[data-tone="waiting"] .attention__mark {
+  width: 10px;
+  height: 10px;
+  margin: 6px 1px 0;
+  border-radius: 50%;
+  background: none;
+  box-shadow: inset 0 0 0 2px var(--tone);
+  clip-path: none;
+}
+.attention__text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.attention__text strong {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.attention__text span {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+.attention__go {
+  white-space: nowrap;
+}
+.attention__go .cue {
+  margin-right: 0;
+}
+.attention__item:hover .attention__go.g-btn--secondary {
+  border-color: var(--line-strong);
+}
+
+/* The rest of a long group, folded: a row of its own that reads as the list's last line. */
+.attention__more {
+  display: flex;
+  flex-direction: column;
+}
+.attention__more[open] > summary {
+  order: 1;
+}
+.attention__more > summary {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 var(--space-4) 0 calc(var(--space-4) + 24px);
+  border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+.attention__more > summary::-webkit-details-marker {
+  display: none;
+}
+.attention__more > summary:hover {
+  color: var(--text);
+}
+.attention__more > summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.attention__more > summary .cue {
+  margin-bottom: 3px;
+  transform: rotate(135deg);
+}
+.attention__more[open] > summary .cue {
+  margin: 3px 3px 0 6px;
+  transform: rotate(-45deg);
+}
+.attention__more-hide,
+.attention__more[open] .attention__more-show {
+  display: none;
+}
+.attention__more[open] .attention__more-hide {
+  display: inline;
+}
+.attention__more > .attention__list > li:first-child > .attention__item {
+  border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+/* The foot: the health check, when it last ran and what it found, and Run again. */
+.attention__foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0 var(--space-3);
+  padding: 4px var(--space-4);
+  border-top: 1px solid var(--line);
+  scroll-margin-top: 96px;
 }
 .attention__checks > summary {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
-  padding: 10px var(--space-4);
+  gap: 2px var(--space-2);
+  min-height: 36px;
   color: var(--text-muted);
   font-size: 13px;
   font-weight: 600;
@@ -4136,17 +4345,50 @@ a.item-tile:focus-visible {
 }
 .attention__checks > summary:focus-visible {
   outline: 2px solid var(--focus);
-  outline-offset: -2px;
+  outline-offset: 2px;
 }
-.attention__checks[open] > summary {
-  padding-bottom: var(--space-2);
+.attention__checks > summary .count {
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
-.attention__checks > .health-row,
+.attention__checks-when {
+  font-weight: 400;
+}
+.attention__checks > .health-row {
+  margin-bottom: var(--space-2);
+}
 .attention__checks > .g-btn {
-  margin: 0 var(--space-4) var(--space-2);
+  margin: 2px 0 var(--space-3);
 }
-.attention__checks > .g-btn {
-  margin-bottom: var(--space-4);
+.attention__checks-none {
+  align-self: center;
+  padding: 8px 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+.attention__run {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+}
+
+/* Phones: the fix goes under its sentence, still in reach of the thumb. */
+@media (max-width: 520px) {
+  .attention__item {
+    grid-template-columns: 12px minmax(0, 1fr);
+  }
+  .attention__go {
+    grid-column: 2;
+    justify-self: start;
+    margin-top: 6px;
+  }
+  .attention__hint {
+    flex-basis: 100%;
+  }
 }
 
 /* --- Layout, phase D: the phone head ------------------------------------------------------
