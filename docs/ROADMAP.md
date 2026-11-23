@@ -1652,4 +1652,7 @@ Decided (2026-11-12, owner):
   Utilities, Fun, Member pages; staff-role fields take moderator roles. Three eval cases from the
   production request. Not run against the real API (no key here). Not committed or deployed:
   needs migration 0090 in production.
+- 2026-11-23: The AI assistant's conversation scrolls in its own window at every size (on phones
+  sized so the message box stays in view), opens at the newest message, and follows new replies
+  only when the reader is already at the bottom (ScrollToEnd). Deployed (dashboard).
 

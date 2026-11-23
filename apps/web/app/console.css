@@ -385,6 +385,19 @@ a.g-btn--primary:hover {
   font-size: 15px;
   line-height: 22px;
 }
+/* The conversation is its own scrolling window at every size, opening at the newest message
+   (ScrollToEnd), so the message box, quick replies and supplies stay in view below it. On
+   narrower screens it takes the screen's height less the page head and the message box below
+   it (about 420px), so the box stays in view; a short conversation stays short. */
+.qm-chat__log {
+  max-height: clamp(260px, calc(100dvh - 420px), 600px);
+  margin-right: calc(-1 * var(--space-2));
+  padding-right: var(--space-2);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text-muted) 30%, transparent) transparent;
+}
 @media (min-width: 1100px) {
   .qm-work {
     grid-template-columns: minmax(0, 1fr) minmax(340px, 400px);
@@ -396,12 +409,7 @@ a.g-btn--primary:hover {
   .qm-chat__log {
     flex: 1 1 auto;
     min-height: 0;
-    margin-right: calc(-1 * var(--space-2));
-    padding-right: var(--space-2);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--text-muted) 30%, transparent) transparent;
+    max-height: none;
   }
   .qm-plan {
     position: sticky;
