@@ -654,7 +654,9 @@ export async function requestAction(form: FormData) {
       ? "#describe"
       : page === "quartermaster" && ["qm_apply", "qm_cancel", "qm_remove"].includes(kind)
         ? "#qm-plan"
-        : "#requests";
+        : kind === "run_health"
+          ? "#health"
+          : "#requests";
   const built = await build(form, guild.id, session.userId);
   if (!built.ok) redirect(`${base}?${new URLSearchParams({ error: built.error })}${where}`);
   const result = await queueDashboardAction(

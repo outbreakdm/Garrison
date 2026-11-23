@@ -33,7 +33,7 @@ describe("runHealthChecks", () => {
       ...healthy,
       botPermissions: ALL_REQUIRED & ~PermissionFlagsBits.ChangeNickname,
     });
-    const profile = checks.find((c) => c.text.startsWith("Profile:"));
+    const profile = checks.find((c) => c.key === "perm:Profile");
     expect(profile?.status).toBe("warn");
     expect(checks.some((c) => c.status === "fix")).toBe(false);
   });
@@ -45,7 +45,10 @@ describe("runHealthChecks", () => {
     });
     expect(checks[0]).toEqual({
       status: "fix",
-      text: "Security: I'm missing View Audit Log, for lockdowns, verification, pausing invites and anti-nuke.",
+      key: "perm:Security",
+      title: "Security is missing permissions",
+      text: "Garrison needs View Audit Log for lockdowns, verification, pausing invites and anti-nuke.",
+      fix: { to: "permissions", action: "Give the permissions" },
     });
   });
 
@@ -54,8 +57,8 @@ describe("runHealthChecks", () => {
       ...healthy,
       botPermissions: PermissionFlagsBits.Administrator,
     });
-    expect(checks.some((c) => c.status === "warn" && c.text.includes("Administrator"))).toBe(true);
-    expect(checks.some((c) => c.text.includes("missing"))).toBe(false);
+    expect(checks.some((c) => c.status === "warn" && c.key === "administrator")).toBe(true);
+    expect(checks.some((c) => c.key.startsWith("perm:"))).toBe(false);
   });
 
   it("flags powerful roles above Garrison, ignoring harmless and integration roles", () => {
@@ -76,7 +79,9 @@ describe("runHealthChecks", () => {
       },
     ];
     const fix = runHealthChecks({ ...healthy, roles }).find((c) => c.status === "fix");
-    expect(fix?.text).toContain("A role with moderation powers sits above Garrison: <@&admins>");
+    expect(fix?.title).toBe("A role with moderation powers sits above Garrison");
+    expect(fix?.text).toContain("<@&admins>");
+    expect(fix?.text).not.toContain("<@&cosmetic>");
   });
 
   it("catches broken channels and roles, and protections turned off", () => {
@@ -91,9 +96,28 @@ describe("runHealthChecks", () => {
     expect(checks.filter((c) => c.status === "warn")).toHaveLength(2);
   });
 
-  it("asks for a log channel when none is set", () => {
+  it("asks for a log channel when none is set, fixed on the dashboard", () => {
     const checks = runHealthChecks({ ...healthy, logChannelId: null, logChannel: null });
-    expect(checks.find((c) => c.status === "warn")?.text).toContain("/moderation log_channel");
+    expect(checks.find((c) => c.status === "warn")).toMatchObject({
+      key: "log-channel",
+      fix: { to: "/watch#settings", action: "Pick a log channel" },
+    });
+  });
+
+  it("says where every problem is fixed, and never sends anyone to a slash command", () => {
+    const checks = runHealthChecks({
+      ...healthy,
+      botPermissions: ALL_REQUIRED & ~PermissionFlagsBits.MoveMembers,
+      logChannel: { exists: false, canPost: false },
+      verifyRoleId: "gone",
+      staffRoleIds: ["gone"],
+      antiRaidEnabled: false,
+      antiNukeEnabled: false,
+    });
+    for (const c of checks) {
+      expect(c.text).not.toMatch(/(^|\s)\/[a-z]/);
+      if (c.status !== "ok") expect(c.fix?.action).toBeTruthy();
+    }
   });
 });
 

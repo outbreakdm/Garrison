@@ -7,17 +7,14 @@ import {
   guildActivityDaily,
   healthSnapshots,
   memberLastSeen,
+  type StoredHealthCheck,
 } from "../schema";
 
 const today = (d = new Date()) => d.toISOString().slice(0, 10);
 
 // --- Written by the bot ------------------------------------------------------
 
-export async function saveHealthSnapshot(
-  db: Db,
-  guildId: string,
-  checks: { status: "ok" | "warn" | "fix"; text: string }[],
-) {
+export async function saveHealthSnapshot(db: Db, guildId: string, checks: StoredHealthCheck[]) {
   const problems = checks.filter((c) => c.status !== "ok").length;
   await db
     .insert(healthSnapshots)

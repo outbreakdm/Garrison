@@ -19,9 +19,16 @@ import {
   runHealthChecks,
 } from "./checks.js";
 
-/** Checks grouped by what they ask of you: fix now, worth a look, passed. */
-export function healthCard(checks: Check[], fixButton: ButtonBuilder | null): Card {
-  const list = (items: Check[]) => items.map((c) => `- ${c.text}`).join("\n");
+/**
+ * Checks grouped by what they ask of you: fix now, worth a look, passed. Each fix is a setting
+ * on the dashboard, so with problems the card links there (to the Overview's health check).
+ */
+export function healthCard(
+  checks: Check[],
+  fixButton: ButtonBuilder | null,
+  dashboardButton: ButtonBuilder | null = null,
+): Card {
+  const list = (items: Check[]) => items.map((c) => `- **${c.title}.** ${c.text}`).join("\n");
   const fix = checks.filter((c) => c.status === "fix");
   const warn = checks.filter((c) => c.status === "warn");
   const ok = checks.filter((c) => c.status === "ok");
@@ -45,7 +52,13 @@ export function healthCard(checks: Check[], fixButton: ButtonBuilder | null): Ca
       : "All checks passed",
     lead: problems ? `${ok.length} of ${checks.length} checks passed` : undefined,
     blocks,
-    actions: fixButton && !problems ? [fixButton] : undefined,
+    actions: problems
+      ? dashboardButton
+        ? [dashboardButton]
+        : undefined
+      : fixButton
+        ? [fixButton]
+        : undefined,
     module: "gatehouse",
     ref: "health",
   };
@@ -115,7 +128,13 @@ export const health: Command = {
           .setLabel("Fix permissions")
           .setURL(fixPermissionsUrl(interaction.client.user.id, interaction.guild.id))
       : null;
-    await interaction.editReply(cardMessage(healthCard(checks, fixButton)));
+    const dashboardButton = ctx.appUrl
+      ? new ButtonBuilder()
+          .setStyle(ButtonStyle.Link)
+          .setLabel("Fix on the dashboard")
+          .setURL(`${ctx.appUrl.replace(/\/$/, "")}/servers/${interaction.guild.id}#attention`)
+      : null;
+    await interaction.editReply(cardMessage(healthCard(checks, fixButton, dashboardButton)));
   },
 };
 

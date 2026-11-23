@@ -4375,6 +4375,71 @@ a.item-tile:focus-visible {
   align-items: center;
   min-height: 36px;
 }
+.attention__checks > summary .cue {
+  margin: 0 0 3px 2px;
+  transform: rotate(135deg);
+}
+.attention__checks[open] > summary .cue {
+  margin: 3px 0 0 2px;
+  transform: rotate(-45deg);
+}
+/* Each check: its badge, what it found, and (for a problem) its fix as a link. */
+.health-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+.health-list .health-row {
+  font-size: 13.5px;
+  line-height: 20px;
+}
+.health-list .health-row strong {
+  font-weight: 600;
+}
+.health-list .health-row a {
+  font-weight: 600;
+  white-space: nowrap;
+}
+/* Run again, asked for: the button gives way to "Checking now" until the result lands. */
+.attention__checking {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.attention__spin {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--line-strong);
+  border-top-color: var(--text);
+  border-radius: 50%;
+  animation: save-spin 0.7s linear infinite;
+}
+.attention__wait,
+.attention__run-error {
+  grid-column: 1 / -1;
+}
+.attention__wait:empty {
+  display: none;
+}
+.attention__wait .notice {
+  margin: 0 0 var(--space-3);
+}
+.attention__run-error {
+  margin: 0 0 var(--space-3);
+  color: var(--alert);
+  font-size: 13px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .attention__spin {
+    animation-duration: 2.4s;
+  }
+}
 
 /* Phones: the fix goes under its sentence, still in reach of the thumb. */
 @media (max-width: 520px) {
@@ -5609,4 +5674,82 @@ a.item-tile:not([open]) > .panel__summary {
 #verification:has(#verifyRoleId option[value=""]:checked)
   :is(.g-field:has(> #verifyMinAccountAgeDays), .switch:has(input[name="verifyWeb"])) {
   display: none;
+}
+
+/* --- Distill (2026-11-23): member and account pages, and one divider under a header ------- */
+
+/* A list, or the line saying it's empty, right under a header bar: the bar's hairline is the
+   divider, so it doesn't draw a second one a few pixels lower. */
+.g-card
+  > :is(.card-title, .card-head, .queue__head, .row-between, .table-card__head):first-child
+  + :is(.queue__list, .queue__empty, .empty-block),
+.g-card
+  > :is(.card-title, .card-head, .queue__head, .row-between, .table-card__head):first-child
+  + .ops-cal
+  > .queue__empty:first-child {
+  border-top: 0;
+}
+.g-card > :is(.card-title, .card-head, .queue__head, .row-between):first-child + .queue__empty,
+.g-card > :is(.card-title, .card-head, .queue__head):first-child + .ops-cal > .queue__empty {
+  padding-top: 4px;
+  padding-bottom: 0;
+}
+.g-card > :is(.card-title, .card-head, .queue__head):first-child + .ops-cal > .queue__empty {
+  margin-top: 0;
+  font-size: 14px;
+}
+.g-card > .table-card__head:first-child + .empty-block {
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-4);
+}
+
+/* Member pages: the tabs already name the page, so its title is for screen readers and the
+   head is the one line under them that says where you stand. */
+.member__page > .page-head {
+  padding: 0;
+  border: 0;
+}
+.member__page > .page-head h1 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.member__page > .page-head p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+.member-card__none {
+  align-self: center;
+  margin: 0;
+}
+@media (max-width: 720px) {
+  .member-card {
+    gap: var(--space-3);
+  }
+  .member__head .member__mark {
+    width: 34px;
+    height: 34px;
+  }
+  .member__server {
+    font-size: 16px;
+    line-height: 22px;
+  }
+}
+
+/* Your account, What Garrison keeps on a phone: what it is, then how long and who removes it
+   on the lines under it, tighter than three spaced rows. */
+@media (max-width: 520px) {
+  .acct-kept tr {
+    gap: 0;
+    padding: var(--space-2) var(--space-4);
+  }
+  .acct-kept td {
+    font-size: 13px;
+    line-height: 19px;
+  }
 }

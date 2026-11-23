@@ -60,10 +60,39 @@ export const REQUIRED_PERMISSIONS: {
 export const ALL_REQUIRED = REQUIRED_PERMISSIONS.reduce((acc, r) => acc | r.bits, 0n);
 
 export type CheckStatus = "ok" | "fix" | "warn";
+
+/**
+ * Where a check is fixed, and the words for the button: a section of a dashboard page under the
+ * server ("/watch#settings"; a #section opens the tab it's on), or "permissions" for Discord's
+ * page that gives Garrison exactly the permissions it uses. None when the fix is in Discord's
+ * own settings (a role's place in the list): the text says how.
+ */
+export interface CheckFix {
+  to: `/${string}` | "permissions";
+  action: string;
+}
+
 export interface Check {
   status: CheckStatus;
+  /** What the check is about, the same on every run: "perm:Moderation", "log-channel". */
+  key: string;
+  /** The problem (or that all's well) in a few words: "No moderation log channel". */
+  title: string;
+  /** The sentence: what's wrong and what it means, or that it works. */
   text: string;
+  fix?: CheckFix;
 }
+
+/** Fixes on the dashboard, by what they change. */
+const FIX = {
+  permissions: { to: "permissions", action: "Give the permissions" },
+  logChannel: { to: "/watch#settings", action: "Pick a log channel" },
+  alertChannel: { to: "/gatehouse#anti-raid", action: "Pick an alert channel" },
+  verifyRole: { to: "/gatehouse#verification", action: "Pick a role" },
+  staffRoles: { to: "/gatehouse#anti-raid", action: "Review staff roles" },
+  antiRaid: { to: "/gatehouse#anti-raid", action: "Turn on anti-raid" },
+  antiNuke: { to: "/gatehouse#anti-nuke", action: "Open anti-nuke" },
+} as const satisfies Record<string, CheckFix>;
 
 export interface ChannelAccess {
   exists: boolean;
@@ -96,17 +125,28 @@ export function runHealthChecks(h: HealthInput): Check[] {
     if (missing && !isAdmin) {
       checks.push({
         status: req.optional ? "warn" : "fix",
-        text: `${req.module}: I'm missing ${permissionNames(missing)}, ${req.why}.`,
+        key: `perm:${req.module}`,
+        title: `${req.module} is missing permissions`,
+        text: `Garrison needs ${permissionNames(missing)} ${req.why}.`,
+        fix: FIX.permissions,
       });
     }
   }
   if (isAdmin) {
     checks.push({
       status: "warn",
-      text: "Garrison has Administrator. It doesn't need it: re-invite it with Fix permissions, then take Administrator away.",
+      key: "administrator",
+      title: "Garrison has Administrator",
+      text: "It doesn't need it. Give it exactly the permissions it uses, then take Administrator away in Server Settings → Roles.",
+      fix: FIX.permissions,
     });
   } else if (has(ALL_REQUIRED)) {
-    checks.push({ status: "ok", text: "Garrison has every permission it uses, and nothing more." });
+    checks.push({
+      status: "ok",
+      key: "permissions",
+      title: "Permissions",
+      text: "Garrison has every permission it uses, and nothing more.",
+    });
   }
 
   const dangerousAbove = h.roles.filter(
@@ -118,47 +158,69 @@ export function runHealthChecks(h: HealthInput): Check[] {
   );
   if (dangerousAbove.length) {
     const list = dangerousAbove.map((r) => `<@&${r.id}>`).join(" ");
+    const one = dangerousAbove.length === 1;
     checks.push({
       status: "fix",
-      text: `${dangerousAbove.length === 1 ? "A role" : `${dangerousAbove.length} roles`} with moderation powers ${dangerousAbove.length === 1 ? "sits" : "sit"} above Garrison: ${list}. Anti-nuke can't act on members with ${dangerousAbove.length === 1 ? "it" : "them"}. Drag Garrison above ${dangerousAbove.length === 1 ? "it" : "them"} in Server Settings → Roles.`,
+      key: "role-order",
+      title: one
+        ? "A role with moderation powers sits above Garrison"
+        : `${dangerousAbove.length} roles with moderation powers sit above Garrison`,
+      text: `${list}: anti-nuke can't act on members with ${one ? "it" : "them"}. Drag Garrison above ${one ? "it" : "them"} in Server Settings → Roles.`,
     });
   } else {
     checks.push({
       status: "ok",
+      key: "role-order",
+      title: "Role order",
       text: "Garrison's role sits above every role with moderation powers.",
     });
   }
 
   const channelCheck = (
+    key: string,
     label: string,
     id: string | null,
     access: ChannelAccess | null,
-    unsetText: string,
+    fix: CheckFix,
+    unset: { title: string; text: string },
   ) => {
-    if (!id) return checks.push({ status: "warn", text: unsetText });
+    const Label = `${label[0]?.toUpperCase()}${label.slice(1)}`;
+    if (!id) return checks.push({ status: "warn", key, ...unset, fix });
     if (!access?.exists)
       return checks.push({
         status: "fix",
-        text: `The ${label} channel was deleted. Pick a new one.`,
+        key,
+        title: `The ${label} channel was deleted`,
+        text: "Nothing is posted there until a new one is picked.",
+        fix: { ...fix, action: "Pick a new channel" },
       });
     if (!access.canPost) {
       return checks.push({
         status: "fix",
-        text: `I can't post in <#${id}>. Give Garrison View Channel, Send Messages and Embed Links there.`,
+        key,
+        title: `Garrison can't post in the ${label} channel`,
+        text: `Give it View Channel, Send Messages and Embed Links in <#${id}>, or pick another channel.`,
+        fix: { ...fix, action: "Pick another channel" },
       });
     }
-    return checks.push({
-      status: "ok",
-      text: `${label[0]?.toUpperCase()}${label.slice(1)} channel <#${id}> works.`,
-    });
+    return checks.push({ status: "ok", key, title: Label, text: `<#${id}> works.` });
   };
-  channelCheck(
-    "log",
-    h.logChannelId,
-    h.logChannel,
-    "Cases aren't logged anywhere. Set a channel with /moderation log_channel.",
-  );
-  if (h.alertChannelId) channelCheck("alert", h.alertChannelId, h.alertChannel, "");
+  channelCheck("log-channel", "moderation log", h.logChannelId, h.logChannel, FIX.logChannel, {
+    title: "No moderation log channel",
+    text: "Warnings, timeouts and bans aren't posted anywhere for staff to see.",
+  });
+  if (h.alertChannelId)
+    channelCheck(
+      "alert-channel",
+      "anti-raid alert",
+      h.alertChannelId,
+      h.alertChannel,
+      FIX.alertChannel,
+      {
+        title: "",
+        text: "",
+      },
+    );
 
   const roleById = new Map(h.roles.map((r) => [r.id, r]));
   if (h.verifyRoleId) {
@@ -166,29 +228,48 @@ export function runHealthChecks(h: HealthInput): Check[] {
     if (!role)
       checks.push({
         status: "fix",
-        text: "The verified role was deleted. Run /verify setup again.",
+        key: "verify-role",
+        title: "Verification's role was deleted",
+        text: "New members can't verify until a new role is picked.",
+        fix: FIX.verifyRole,
       });
     else if (role.position >= h.botTop) {
       checks.push({
         status: "fix",
-        text: `I can't give <@&${role.id}>: my role sits below it. Drag Garrison above it.`,
+        key: "verify-role",
+        title: "Garrison can't give the verified role",
+        text: `<@&${role.id}> sits above Garrison's role. Drag Garrison above it in Server Settings → Roles, or pick another role.`,
+        fix: { ...FIX.verifyRole, action: "Pick another role" },
       });
     }
   }
   const missingStaff = h.staffRoleIds.filter((id) => !roleById.has(id));
   if (missingStaff.length) {
+    const one = missingStaff.length === 1;
     checks.push({
       status: "warn",
-      text: `${missingStaff.length} staff ${missingStaff.length === 1 ? "role was" : "roles were"} deleted. Remove ${missingStaff.length === 1 ? "it" : "them"} with /security staff_role_remove.`,
+      key: "staff-roles",
+      title: `${one ? "A staff role was" : `${missingStaff.length} staff roles were`} deleted`,
+      text: `Anti-raid's list of who keeps talking during a lockdown still names ${one ? "it" : "them"}.`,
+      fix: FIX.staffRoles,
     });
   }
 
   if (!h.antiRaidEnabled)
-    checks.push({ status: "warn", text: "Anti-raid is off. Turn it on with /security anti_raid." });
+    checks.push({
+      status: "warn",
+      key: "anti-raid-off",
+      title: "Anti-raid is off",
+      text: "Nothing locks the server when too many people join too fast.",
+      fix: FIX.antiRaid,
+    });
   if (!h.antiNukeEnabled)
     checks.push({
       status: "warn",
-      text: "Anti-nuke is off. The owner can turn it on with /security anti_nuke.",
+      key: "anti-nuke-off",
+      title: "Anti-nuke is off",
+      text: "Nothing stops a rogue admin. Only the server owner can turn it on.",
+      fix: FIX.antiNuke,
     });
 
   const order: Record<CheckStatus, number> = { fix: 0, warn: 1, ok: 2 };

@@ -1109,12 +1109,25 @@ export type RosterShare = typeof rosterShares.$inferSelect;
 // Health, activity and service metrics
 // ---------------------------------------------------------------------------
 
+/**
+ * One /health check as stored. key, title and fix came in 2026-11-23: snapshots written before
+ * have only status and text. fix.to is a dashboard path under the server ("/watch#settings") or
+ * "permissions" (Discord's page that gives Garrison the permissions it uses).
+ */
+export interface StoredHealthCheck {
+  status: "ok" | "warn" | "fix";
+  text: string;
+  key?: string;
+  title?: string;
+  fix?: { to: string; action: string };
+}
+
 /** The latest /health result per server, written by the bot so the dashboard can show it. */
 export const healthSnapshots = pgTable("health_snapshots", {
   guildId: text("guild_id")
     .primaryKey()
     .references(() => guilds.id, { onDelete: "cascade" }),
-  checks: jsonb("checks").$type<{ status: "ok" | "warn" | "fix"; text: string }[]>().notNull(),
+  checks: jsonb("checks").$type<StoredHealthCheck[]>().notNull(),
   problems: integer("problems").notNull(),
   computedAt: timestamp("computed_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();

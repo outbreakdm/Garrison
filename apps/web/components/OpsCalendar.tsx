@@ -20,6 +20,13 @@ export function OpsCalendar({
   const weeks = calendarWeeks(raids, timeZone, now);
   const time = new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", minute: "2-digit" });
   const busy = weeks.flat().some((d) => d.items.length);
+  // Five empty weeks say nothing a sentence doesn't: the grid draws once there's something on.
+  if (!busy)
+    return (
+      <div className="ops-cal">
+        <p className="queue__empty muted">Nothing scheduled in the next five weeks.</p>
+      </div>
+    );
   return (
     <div className="ops-cal">
       <table className="ops-cal__grid" aria-label="Raids by day">
@@ -71,9 +78,6 @@ export function OpsCalendar({
           ))}
         </tbody>
       </table>
-      {busy ? null : (
-        <p className="queue__empty muted">Nothing scheduled in the next five weeks.</p>
-      )}
     </div>
   );
 }

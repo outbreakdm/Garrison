@@ -139,6 +139,7 @@ export type {
   StarboardPost,
   StartGiveawayPayload,
   StatChannel,
+  StoredHealthCheck,
   Suggestion,
   SupplyGrant,
   Ticket,

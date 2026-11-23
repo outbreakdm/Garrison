@@ -19,10 +19,11 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { ViewTransition } from "react";
+import { WaitingForBot } from "@/components/BotOffline";
 import { DurationBar, untilText } from "@/components/DurationBar";
 import { ActionBadge, formatTime, plainMentions } from "@/components/format";
 import { Bars } from "@/components/insights/Bars";
-import { RequestsPanel } from "@/components/RequestsPanel";
+import { REQUEST_ERRORS } from "@/components/RequestsPanel";
 import { SetupCard } from "@/components/SetupCard";
 import { getDb } from "@/lib/db";
 import { channelNames, guildCounts, listTextChannels } from "@/lib/discord";
@@ -137,6 +138,7 @@ const REQUEST_PAGE: Record<string, string> = {
   economy_adjust: "/economy",
   economy_buy: "/economy",
   economy_purchase: "/economy",
+  run_health: "#health",
 };
 
 type AttentionTone = "alert" | "caution" | "waiting";
@@ -153,9 +155,10 @@ interface Attention {
   title: string;
   /** "On, but no suggestions channel is picked." */
   detail: string;
-  href: string;
-  /** "Pick a channel". */
-  action: string;
+  /** Where it's fixed, and the fix as a verb: "Pick a channel". None when the fix is in
+   * Discord's own settings, which the detail then says how to do. */
+  href?: string;
+  action?: string;
 }
 
 /** The three groups, most urgent first, each with what it asks of you. */
@@ -178,6 +181,18 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
  * phones); the first row's is the panel's one white button, so the first thing to do is plain.
  */
 function AttentionRow({ a, id, first }: { a: Attention; id: string; first: boolean }) {
+  if (!a.href || !a.action)
+    return (
+      <li>
+        <div className="attention__item" data-tone={a.tone}>
+          <span className="attention__mark" aria-hidden="true" />
+          <span className="attention__text">
+            <strong>{a.title}</strong>
+            <span>{a.detail}</span>
+          </span>
+        </div>
+      </li>
+    );
   return (
     <li>
       <a
@@ -365,15 +380,40 @@ export default async function OverviewPage({
       href: `${base}/gatehouse#quarantine`,
       action: "Review quarantine",
     });
+  // Each problem the health check found is its own row with its own fix: broken is Not working,
+  // a gap (no log channel) is for when you have a minute. Protections switched off are a choice,
+  // not a fault: they stay in the check's own list, and "Worth turning on" offers them. A missing
+  // permission that a module's own row already reports isn't said twice.
   const failing = health?.checks.filter((c) => c.status !== "ok") ?? [];
-  if (failing.length)
+  const blockedNames = new Set(mods.filter((m) => m.state === "blocked").map((m) => m.name));
+  const checkHref = (to: string | undefined) =>
+    to === "permissions" ? fixUrl : to?.startsWith("/") ? `${base}${to}` : null;
+  for (const c of failing) {
+    if (c.key === "anti-raid-off" || c.key === "anti-nuke-off") continue;
+    if (c.key?.startsWith("perm:") && blockedNames.has(c.key.slice(5))) continue;
+    // Written before checks said where they're fixed (2026-11-23): only the broken ones show
+    // here until the next check, which Run again starts.
+    if (!c.key && c.status === "warn") continue;
+    const href = checkHref(c.fix?.to);
     attention.push({
-      tone: failing.some((c) => c.status === "fix") ? "alert" : "caution",
-      title: `${plural(failing.length, "health check", "health checks")} found a problem`,
-      detail: plainMentions(failing[0]?.text ?? ""),
-      href: "#health",
-      action: "See what to fix",
+      tone: c.status === "fix" ? "caution" : "waiting",
+      title: c.title ?? "The health check found a problem",
+      detail: plainMentions(c.text),
+      href: href ?? undefined,
+      action: href ? c.fix?.action : undefined,
     });
+  }
+  // The health check's own run: asked for and not done yet, or turned down.
+  const healthRun = actions.find((a) => a.kind === "run_health");
+  const checking =
+    (healthRun?.status === "pending" || healthRun?.status === "running") &&
+    now - healthRun.createdAt.getTime() < 10 * 60_000;
+  const runError =
+    typeof query.error === "string"
+      ? REQUEST_ERRORS[query.error]
+      : healthRun?.status === "failed" && now - healthRun.createdAt.getTime() < 3_600_000
+        ? (healthRun.message ?? "The health check didn't run.")
+        : undefined;
   const planWaiting =
     build?.status === "pending" && now - build.createdAt.getTime() < QM_PLAN_TTL_MS;
   if (planWaiting && build)
@@ -519,6 +559,7 @@ export default async function OverviewPage({
           nothing does. The health check is the panel's foot. */}
       <section
         className={worst ? "g-card attention" : "g-card attention attention--clear"}
+        id="attention"
         data-worst={worst ?? undefined}
         aria-labelledby="attention-title"
       >
@@ -602,43 +643,70 @@ export default async function OverviewPage({
         })}
         <div className="attention__foot" id="health">
           {health ? (
-            <details className="attention__checks" open={failing.length > 0}>
+            <details className="attention__checks">
               <summary>
-                Health check <span className="count">{health.checks.length}</span>
+                Health check
                 <span className="attention__checks-when">
-                  {ago(health.computedAt)} ·{" "}
+                  {plural(health.checks.length, "check", "checks")}, {ago(health.computedAt)} ·{" "}
                   {failing.length ? `${failing.length} to look at` : "all OK"}
                 </span>
+                <span className="cue" aria-hidden="true" />
               </summary>
-              {health.checks.slice(0, 6).map((c) => (
-                <div className="health-row" key={c.text}>
-                  <span
-                    className={`g-badge ${c.status === "ok" ? "g-badge--go" : c.status === "fix" ? "g-badge--alert" : "g-badge--caution"}`}
-                  >
-                    {c.status === "ok" ? "OK" : c.status === "fix" ? "Fix" : "Check"}
-                  </span>
-                  <span>{plainMentions(c.text)}</span>
-                </div>
-              ))}
-              {health.problems > 0 && fixUrl ? (
-                <a className="g-btn g-btn--secondary g-btn--sm" href={fixUrl}>
-                  Fix permissions
-                </a>
-              ) : null}
+              <ul className="health-list">
+                {health.checks.map((c) => {
+                  const href = c.status === "ok" ? null : checkHref(c.fix?.to);
+                  return (
+                    <li className="health-row" key={c.key ?? c.text}>
+                      <span
+                        className={`g-badge ${c.status === "ok" ? "g-badge--go" : c.status === "fix" ? "g-badge--alert" : "g-badge--caution"}`}
+                      >
+                        {c.status === "ok" ? "OK" : c.status === "fix" ? "Fix" : "Check"}
+                      </span>
+                      <span>
+                        {c.title ? <strong>{c.title}. </strong> : null}
+                        {plainMentions(c.text)}
+                        {href && c.fix ? (
+                          <>
+                            {" "}
+                            <a href={href}>{c.fix.action}</a>
+                          </>
+                        ) : null}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
             </details>
           ) : (
             <span className="attention__checks-none">
               No health check yet: it checks Garrison's permissions, role and channels.
             </span>
           )}
-          <form action={requestAction} className="attention__run">
-            <input type="hidden" name="guildId" value={guild.id} />
-            <input type="hidden" name="page" value="" />
-            <input type="hidden" name="kind" value="run_health" />
-            <button type="submit" className="g-btn g-btn--ghost g-btn--sm">
-              {health ? "Run again" : "Run a check"}
-            </button>
-          </form>
+          {checking ? (
+            <span className="attention__checking" role="status">
+              <span className="attention__spin" aria-hidden="true" />
+              Checking now
+            </span>
+          ) : (
+            <form action={requestAction} className="attention__run">
+              <input type="hidden" name="guildId" value={guild.id} />
+              <input type="hidden" name="page" value="" />
+              <input type="hidden" name="kind" value="run_health" />
+              <button type="submit" className="g-btn g-btn--ghost g-btn--sm">
+                {health ? "Run again" : "Run a check"}
+              </button>
+            </form>
+          )}
+          {checking ? (
+            <div className="attention__wait">
+              <WaitingForBot />
+            </div>
+          ) : null}
+          {runError ? (
+            <p className="attention__run-error" role="alert">
+              {runError}
+            </p>
+          ) : null}
         </div>
       </section>
 
@@ -670,8 +738,6 @@ export default async function OverviewPage({
           </Link>
         </section>
       )}
-
-      <RequestsPanel guildId={guild.id} kinds={["run_health"]} query={query} />
 
       {/* Band 2: the pulse. */}
       <section className="g-card ov-stats" aria-label="This week">
