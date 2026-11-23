@@ -12,12 +12,16 @@ import { useMemo, useState } from "react";
 import { AutoSaveCard, useSaveSignal } from "@/components/AutoSave";
 import { CardEditor, ProNotice, ProTag } from "@/components/cards/CardEditor";
 import { CardPreview } from "@/components/cards/CardPreview";
+import { WelcomeBannerView } from "@/components/cards/WelcomeBannerView";
 import type { AutoResult } from "@/lib/autosave";
+import { usePickedWelcomeImage } from "./WelcomeImage";
 
 type Action = (form: FormData) => Promise<AutoResult>;
 
 /** A stand-in member for the preview: the person editing, as if they'd just joined. */
 const SAMPLE_ID = "100000000000000000";
+/** The member number the preview shows, in the card's text and on the welcome image. */
+const SAMPLE_COUNT = 128;
 
 const TITLES = { join: "Welcome card", leave: "Leave card", dm: "Welcome DM" } as const;
 
@@ -28,7 +32,8 @@ interface Props {
   ent: Entitlements;
   channels: { id: string; name: string }[];
   roleNames: [string, string][];
-  sample: { name: string; server: string };
+  /** The person editing, as the preview's new member: their name here and their avatar. */
+  sample: { name: string; server: string; avatar: string | null };
   /** The whole part is Pro and this server doesn't have it (the DM on Free). */
   locked: boolean;
   planHref: string;
@@ -73,6 +78,9 @@ function WelcomeCardFields({
   const [enabled, setEnabled] = useState(saved.enabled);
   const [channelId, setChannelId] = useState(saved.channelId ?? "");
   const [card, setCard] = useState(saved.card);
+  // The welcome image picked in its own panel below, drawn into the card as the bot sends it.
+  const picked = usePickedWelcomeImage();
+  const banner = part === "join" && ent["welcome.image"] ? picked : null;
 
   const names = useMemo(
     () => ({
@@ -83,7 +91,7 @@ function WelcomeCardFields({
   );
   const filled = fillWelcome(
     card,
-    { userId: SAMPLE_ID, name: sample.name, server: sample.server, count: 128 },
+    { userId: SAMPLE_ID, name: sample.name, server: sample.server, count: SAMPLE_COUNT },
     { mention: part !== "leave" },
   );
 
@@ -201,6 +209,18 @@ function WelcomeCardFields({
           card={filled}
           channel={part === "dm" ? "Direct message" : (names.channels.get(channelId) ?? null)}
           names={names}
+          media={
+            banner !== null ? (
+              <WelcomeBannerView
+                background={banner}
+                accent={card.accent}
+                name={sample.name}
+                server={sample.server}
+                count={SAMPLE_COUNT}
+                avatar={sample.avatar}
+              />
+            ) : undefined
+          }
         />
       </div>
     </div>

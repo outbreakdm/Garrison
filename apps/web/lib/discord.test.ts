@@ -64,8 +64,46 @@ describe("memberNow", () => {
     await expect(memberNow(id, "1")).resolves.toEqual({
       manage: true,
       roleIds: ["200000000000000000"],
+      avatar: null,
     });
     expect(calls.filter((c) => c === `/guilds/${id}`)).toHaveLength(2);
+  });
+
+  it("names the member and finds the avatar the bot draws for them", async () => {
+    const id = "100000000000000004";
+    const [own, server, none] = ["300000000000000001", "300000000000000002", "300000000000000003"];
+    const member = (
+      user: string,
+      avatar: string | null,
+      nick: string | null,
+      userAvatar: string | null,
+    ) =>
+      json(200, {
+        roles: [],
+        nick,
+        avatar,
+        user: { id: user, username: "scout", global_name: "Scout", avatar: userAvatar },
+      });
+    discordAnswering({
+      [`/guilds/${id}`]: [json(200, { ...guild, id })],
+      [`/guilds/${id}/members/${own}`]: [member(own, null, null, "abc123")],
+      [`/guilds/${id}/members/${server}`]: [member(server, "def456", "Sarge", "abc123")],
+      [`/guilds/${id}/members/${none}`]: [member(none, null, null, null)],
+    });
+    const cdn = "https://cdn.discordapp.com";
+    await expect(memberNow(id, own)).resolves.toMatchObject({
+      name: "Scout",
+      avatar: `${cdn}/avatars/${own}/abc123.png?size=256`,
+    });
+    // A server avatar and nickname win, as they do in Discord.
+    await expect(memberNow(id, server)).resolves.toMatchObject({
+      name: "Sarge",
+      avatar: `${cdn}/guilds/${id}/users/${server}/avatars/def456.png?size=256`,
+    });
+    // No avatar at all: Discord's default one, picked from the ID.
+    await expect(memberNow(id, none)).resolves.toMatchObject({
+      avatar: `${cdn}/embed/avatars/${(BigInt(none) >> 22n) % 6n}.png`,
+    });
   });
 
   it("is no access when Discord says the person isn't in the server", async () => {

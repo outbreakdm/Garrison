@@ -1,6 +1,7 @@
 import "server-only";
 import { env } from "./env";
 import { canManage, type GuildSnapshot, memberPermissions } from "./permissions";
+import { isSnowflake } from "./security";
 
 export const OAUTH_SCOPES = "identify guilds";
 
@@ -222,6 +223,29 @@ const accessReads = new Map<string, Shared<MemberNow | null>>();
 export interface MemberNow {
   manage: boolean;
   roleIds: string[];
+  /** As this server shows them: nickname, else display name, else username. */
+  name?: string;
+  /** Their avatar in this server, else their own, else Discord's default one. */
+  avatar?: string | null;
+}
+
+interface RawMemberNow {
+  roles: string[];
+  nick?: string | null;
+  avatar?: string | null;
+  user?: { id: string; username: string; global_name?: string | null; avatar?: string | null };
+}
+
+const AVATAR_HASH = /^[a-z0-9_]+$/i;
+
+/** The avatar the bot draws for a member (displayAvatarURL): server one, own one, or default. */
+function memberAvatar(guildId: string, userId: string, m: RawMemberNow) {
+  const cdn = "https://cdn.discordapp.com";
+  if (m.avatar && AVATAR_HASH.test(m.avatar))
+    return `${cdn}/guilds/${guildId}/users/${userId}/avatars/${m.avatar}.png?size=256`;
+  if (m.user?.avatar && AVATAR_HASH.test(m.user.avatar))
+    return `${cdn}/avatars/${userId}/${m.user.avatar}.png?size=256`;
+  return isSnowflake(userId) ? `${cdn}/embed/avatars/${(BigInt(userId) >> 22n) % 6n}.png` : null;
 }
 
 /**
@@ -235,7 +259,7 @@ export function memberNow(guildId: string, userId: string): Promise<MemberNow | 
     try {
       const [guild, member] = await Promise.all([
         rawGuild(guildId),
-        discord<{ roles: string[] }>(`/guilds/${guildId}/members/${userId}`, {
+        discord<RawMemberNow>(`/guilds/${guildId}/members/${userId}`, {
           headers: { Authorization: `Bot ${env().DISCORD_TOKEN}` },
         }),
       ]);
@@ -245,7 +269,12 @@ export function memberNow(guildId: string, userId: string): Promise<MemberNow | 
         roles: guild.roles.map((r) => ({ id: r.id, permissions: r.permissions ?? "0" })),
       };
       const roleIds = Array.isArray(member.roles) ? member.roles.map(String) : [];
-      return { manage: canManage(memberPermissions(snapshot, userId, roleIds)), roleIds };
+      return {
+        manage: canManage(memberPermissions(snapshot, userId, roleIds)),
+        roleIds,
+        name: member.nick || member.user?.global_name || member.user?.username,
+        avatar: memberAvatar(guildId, userId, member),
+      };
     } catch (error) {
       // Discord said this person isn't there (or Garrison can't see the server): no access.
       if (error instanceof DiscordError && (error.status === 404 || error.status === 403))

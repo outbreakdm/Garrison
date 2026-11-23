@@ -3,21 +3,18 @@ import {
   getGuildPlan,
   getOverview,
   getWelcome,
-  isPresetBackground,
   JOIN_ROLES_MAX,
-  RANK_BACKGROUNDS,
   type WelcomeConfig,
 } from "@garrison/db";
 import type { Metadata } from "next";
 import { AddRow } from "@/components/AddRow";
 import { AutoSaveCard } from "@/components/AutoSave";
-import { BackgroundChip } from "@/components/cards/BackgroundChip";
 import { ProTag } from "@/components/cards/CardEditor";
 import { HeadNote, HeadStatus } from "@/components/ModuleHead";
 import { SetupLayout } from "@/components/PageLayouts";
 import { PageTabs, TabPanel } from "@/components/PageTabs";
 import { getDb } from "@/lib/db";
-import { botTopPosition, listGuildRoles, listTextChannels } from "@/lib/discord";
+import { botTopPosition, listGuildRoles, listTextChannels, memberNow } from "@/lib/discord";
 import { contentKey, readFlash } from "@/lib/flash";
 import { pageStatus } from "@/lib/module-states";
 import { isDangerousRole } from "@/lib/permissions";
@@ -25,6 +22,7 @@ import { requireGuildAccess } from "@/lib/session";
 import { undoChange } from "../settings/actions";
 import { saveJoinRoles, saveWelcomeCard, saveWelcomeImage } from "./actions";
 import { WelcomeCardForm } from "./WelcomeCardForm";
+import { WelcomeImageFields, WelcomeImageProvider } from "./WelcomeImage";
 
 export const metadata: Metadata = { title: "Welcome" };
 
@@ -36,13 +34,15 @@ export default async function WelcomePage({ params }: { params: Promise<{ guildI
   const { guild, session } = await requireGuildAccess(guildId);
   const status = await pageStatus(guild.id, "/herald");
   const db = await getDb();
-  const [w, plan, channels, roles, botTop, overview] = await Promise.all([
+  const [w, plan, channels, roles, botTop, overview, me] = await Promise.all([
     getWelcome(db, guild.id),
     getGuildPlan(db, guild.id),
     listTextChannels(guild.id).catch(() => []),
     listGuildRoles(guild.id).catch(() => []),
     botTopPosition(guild.id),
     getOverview(db, guild.id),
+    // Already asked of Discord for the access check (cached): the preview's new member.
+    memberNow(guild.id, session.userId).catch(() => null),
   ]);
   const verifyId = overview.gatehouse?.verifyRoleId;
   const verifyRole = verifyId ? roles.find((r) => r.id === verifyId) : null;
@@ -60,7 +60,7 @@ export default async function WelcomePage({ params }: { params: Promise<{ guildI
     ent,
     channels,
     roleNames,
-    sample: { name: session.username, server: guild.name },
+    sample: { name: me?.name ?? session.username, server: guild.name, avatar: me?.avatar ?? null },
     planHref: `/servers/${guild.id}/plan`,
     action: saveWelcomeCard,
     undo: undoChange,
@@ -127,70 +127,27 @@ export default async function WelcomePage({ params }: { params: Promise<{ guildI
       <TabPanel id="join" tabs={WELCOME_TABS}>
         {/* One column: the card, the image drawn under it, then the roles given on join. */}
         <SetupLayout>
-          {part("join", { enabled: w.joinEnabled, channelId: w.joinChannelId, card: w.joinCard })}
+          <WelcomeImageProvider saved={w.joinImage}>
+            {part("join", { enabled: w.joinEnabled, channelId: w.joinChannelId, card: w.joinCard })}
 
-          <AutoSaveCard
-            id="image"
-            title="Welcome image"
-            action={saveWelcomeImage}
-            undo={undoChange}
-            guildId={guild.id}
-            stamp={contentKey(w.joinImage)}
-            saveLabel="Save welcome image"
-            aside={<ProTag on={ent["welcome.image"]} />}
-          >
-            <p className="g-help">
-              Drawn under the welcome card: the new member's avatar, their name and their member
-              number.
-              {w.joinImage && !ent["welcome.image"] ? " Saved on Pro, paused on Free." : ""}
-            </p>
-            <div className="swatches" role="radiogroup" aria-label="Background">
-              <label className="swatch">
-                <input type="radio" name="background" value="" defaultChecked={!w.joinImage} />
-                <span className="swatch__chip swatch__chip--off" aria-hidden="true" />
-                <span className="swatch__name">Off</span>
-              </label>
-              {Object.entries(RANK_BACKGROUNDS).map(([key, bg]) => (
-                <label className="swatch" key={key}>
-                  <input
-                    type="radio"
-                    name="background"
-                    value={key}
-                    defaultChecked={w.joinImage === key}
-                    disabled={!ent["welcome.image"] && w.joinImage !== key}
-                  />
-                  <BackgroundChip from={bg.from} to={bg.to} />
-                  <span className="swatch__name">{bg.label}</span>
-                </label>
-              ))}
-              <label className="swatch swatch--image">
-                <input
-                  type="radio"
-                  name="background"
-                  value="image"
-                  defaultChecked={Boolean(w.joinImage && !isPresetBackground(w.joinImage))}
-                  disabled={!ent["welcome.image"] && !w.joinImage}
-                />
-                <span className="swatch__chip" aria-hidden="true" />
-                <span className="swatch__name">Your image</span>
-              </label>
-            </div>
-            <label className="g-field" htmlFor="imageUrl">
-              <span>Image link</span>
-              <input
-                className="g-input"
-                id="imageUrl"
-                name="imageUrl"
-                type="url"
-                inputMode="url"
-                placeholder="https://cdn.discordapp.com/attachments/…"
-                defaultValue={w.joinImage && !isPresetBackground(w.joinImage) ? w.joinImage : ""}
-              />
-              <span className="g-help">
-                Upload it to any Discord channel and copy its link. 1000 × 360 fits best.
-              </span>
-            </label>
-          </AutoSaveCard>
+            <AutoSaveCard
+              id="image"
+              title="Welcome image"
+              action={saveWelcomeImage}
+              undo={undoChange}
+              guildId={guild.id}
+              stamp={contentKey(w.joinImage)}
+              saveLabel="Save welcome image"
+              aside={<ProTag on={ent["welcome.image"]} />}
+            >
+              <p className="g-help">
+                Drawn into the welcome card in place of its own image: the new member's avatar,
+                their name and their member number. The card's preview shows it as you pick.
+                {w.joinImage && !ent["welcome.image"] ? " Saved on Pro, paused on Free." : ""}
+              </p>
+              <WelcomeImageFields saved={w.joinImage} pro={ent["welcome.image"]} />
+            </AutoSaveCard>
+          </WelcomeImageProvider>
           <AutoSaveCard
             id="roles"
             title="Roles on join"

@@ -24,12 +24,15 @@ export function CardPreview({
   card,
   channel,
   names,
+  media,
   controls,
 }: {
   card: CustomCard;
   /** The channel it's posted in, if known. */
   channel?: string | null;
   names: MentionNames;
+  /** Drawn in the image's place: the welcome image the bot attaches instead of the card's. */
+  media?: ReactNode;
   /** What the module adds under the card: a role menu's buttons or dropdown. */
   controls?: ReactNode;
 }) {
@@ -100,9 +103,10 @@ export function CardPreview({
                 </div>
               ),
             )}
-            {card.image ? (
-              <PreviewImage url={card.image} className="dc-card__image" label="Banner image" />
-            ) : null}
+            {media ??
+              (card.image ? (
+                <PreviewImage url={card.image} className="dc-card__image" label="Banner image" />
+              ) : null)}
             {controls ? <div className="dc-card__controls">{controls}</div> : null}
             {footer ? <div className="dc-sub">{footer}</div> : null}
           </div>

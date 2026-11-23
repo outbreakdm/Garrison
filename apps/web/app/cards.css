@@ -2816,3 +2816,92 @@
 .public-server__foot {
   margin: 0;
 }
+
+/* The welcome image (Pro), drawn into the welcome card's preview as the bot draws it:
+   1000 × 360, so 1cqw is 10 of its pixels. */
+.welcome-image {
+  display: contents;
+}
+.welcome-banner {
+  --wb-accent: #d4ff3a;
+  position: relative;
+  container-type: inline-size;
+  aspect-ratio: 25 / 9;
+  overflow: hidden;
+  border-radius: 8px;
+  /* The bot's gradient runs corner to corner, from top left to bottom right. */
+  background: linear-gradient(110deg, var(--wb-from, #0b0d10), var(--wb-to, #1a2028));
+  color: #e8ecf1;
+  font-family: var(--font-sans);
+}
+.welcome-banner--image {
+  background:
+    linear-gradient(rgb(11 13 16 / 0.6), rgb(11 13 16 / 0.6)),
+    var(--wb-image) center / cover no-repeat;
+}
+.welcome-banner__avatar {
+  position: absolute;
+  top: 3.7cqw;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 15cqw;
+  height: 15cqw;
+  overflow: hidden;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0.6cqw var(--wb-accent);
+  background: #1a2028;
+  font: 700 6.4cqw / 1 var(--font-display);
+  translate: -50% 0;
+}
+.welcome-banner__avatar > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.welcome-banner__welcome,
+.welcome-banner__name,
+.welcome-banner__number {
+  position: absolute;
+  right: 6%;
+  left: 6%;
+  overflow: hidden;
+  line-height: 1;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.welcome-banner__welcome {
+  top: 22cqw;
+  font-size: 2.2cqw;
+  font-weight: 600;
+  color: var(--wb-accent);
+}
+.welcome-banner__name {
+  top: 24.9cqw;
+  font: 700 5.6cqw / 1 var(--font-display);
+  color: #ffffff;
+}
+.welcome-banner__number {
+  top: 31.3cqw;
+  font-size: 2cqw;
+  color: #8c96a3;
+}
+/* What the preview can't draw itself: an image link still to paste, or one only Discord loads. */
+.welcome-banner__note {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  max-width: calc(100% - 16px);
+  padding: 2px 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 0.55);
+  font-size: 11px;
+  line-height: 16px;
+  color: #c9d1db;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

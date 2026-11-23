@@ -1658,4 +1658,10 @@ Decided (2026-11-12, owner):
 - 2026-11-23: Discarding an AI draft updates the page: the draft leaves at once ("Discarding the
   draft…"), the page refreshes until the bot confirms, and the chat's chip says Discarding,
   then Discarded (a waiting draft says Waiting, never Expired). Deployed (dashboard).
+- 2026-11-23: The welcome card's "Preview in Discord" draws the welcome image (Pro) in the card,
+  where the bot attaches it in place of the card's own image: the editor's avatar (server one,
+  own one or Discord's default) in the card's accent ring, "Welcome to <server>", their name and
+  member #128, on the picked background or image (WelcomeBannerView, matched against the bot's
+  render). It follows the image panel live (WelcomeImageProvider) and notes what it can't show:
+  a link still to paste, an image only Discord loads, a link the save refuses. Deployed (dashboard).
 
