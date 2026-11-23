@@ -94,13 +94,11 @@ export async function serverInsight(
         : "too few joins to tell",
       top_channels: i.channels.slice(0, 5),
       busiest_hours: busiest,
-      top_inviters: i.invites
-        .slice(0, 3)
-        .map((v) => ({
-          inviter: v.inviterName ?? "a member who has left",
-          joins: v.joins,
-          stayed: v.stayed,
-        })),
+      top_inviters: i.invites.slice(0, 3).map((v) => ({
+        inviter: v.inviterName ?? "a member who has left",
+        joins: v.joins,
+        stayed: v.stayed,
+      })),
       ...(opts.pro || days < 30
         ? {}
         : { note: "Free keeps 30 days of insights; Pro keeps a year." }),

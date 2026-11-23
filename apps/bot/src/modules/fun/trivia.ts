@@ -1,10 +1,5 @@
 import { randomInt } from "node:crypto";
-import {
-  ButtonBuilder,
-  type ButtonInteraction,
-  ButtonStyle,
-  MessageFlags,
-} from "discord.js";
+import { ButtonBuilder, type ButtonInteraction, ButtonStyle, MessageFlags } from "discord.js";
 import { guildCommand } from "../../commands/builders.js";
 import type { ButtonHandler, Command } from "../../commands/types.js";
 import { type Card, cardMessage, cardReply } from "../../lib/card.js";
