@@ -1,5 +1,6 @@
 import { RESPONDER_LIMITS, type Responder } from "@garrison/db";
 import { removeResponder, saveResponder } from "@/app/servers/[guildId]/dispatch/responder-actions";
+import { CheckList } from "./settings";
 
 const TRIGGER_WORDS: Record<Responder["trigger"], string> = {
   word: "Says the word",
@@ -15,7 +16,6 @@ function Fields({
   r: Responder | null;
   channels: { id: string; name: string }[];
 }) {
-  const key = r?.id ?? "new";
   return (
     <div className="resp__fields">
       <label className="g-field">
@@ -32,7 +32,7 @@ function Fields({
       <div className="resp__trigger">
         <label className="g-field">
           <span className="g-label">When someone</span>
-          <select className="g-select" name="trigger" defaultValue={r?.trigger ?? "word"}>
+          <select className="g-input" name="trigger" defaultValue={r?.trigger ?? "word"}>
             {(Object.keys(TRIGGER_WORDS) as Responder["trigger"][]).map((t) => (
               <option key={t} value={t}>
                 {TRIGGER_WORDS[t]}
@@ -65,29 +65,17 @@ function Fields({
         />
       </label>
       <div className="resp__row">
-        <label className="g-field">
-          <span className="g-label">Only in (words and phrases)</span>
-          <select
-            className="g-select resp__channels"
-            name="channelIds"
-            multiple
-            defaultValue={r?.channelIds ?? []}
-            aria-describedby={`resp-ch-${key}`}
-          >
-            {channels.map((c) => (
-              <option key={c.id} value={c.id}>
-                #{c.name}
-              </option>
-            ))}
-          </select>
-          <span className="g-help" id={`resp-ch-${key}`}>
-            None picked: every channel.
-          </span>
-        </label>
+        <CheckList
+          name="channelIds"
+          label="Only in (words and phrases)"
+          value={r?.channelIds ?? []}
+          options={channels.map((c) => ({ id: c.id, label: `#${c.name}` }))}
+          help="None picked: every channel."
+        />
         <label className="g-field">
           <span className="g-label">Wait between replies</span>
           <select
-            className="g-select"
+            className="g-input"
             name="cooldownSeconds"
             defaultValue={String(r?.cooldownSeconds ?? 30)}
           >

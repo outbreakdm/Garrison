@@ -86,7 +86,17 @@ export type QueueInput =
         status: "open" | "planned" | "done" | "declined";
         note: string | null;
       };
+    }
+  // Several at once from a list (2026-11-23): one request, up to BULK_MAX items, each checked
+  // and done by the bot as if it were asked alone.
+  | { kind: "undo_cases"; payload: { caseNumbers: number[] } }
+  | {
+      kind: "ticket_bulk";
+      payload: { op: "claim" | "close"; ticketIds: string[]; reason: string | null };
     };
+
+/** The most items one bulk request (undo_cases, ticket_bulk) carries. */
+export const BULK_MAX = 10;
 
 /** Per server: at most this many requests waiting at once. */
 export const MAX_PENDING_PER_GUILD = 10;

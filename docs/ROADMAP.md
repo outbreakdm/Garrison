@@ -210,6 +210,7 @@ then updates **Status** and the **Log** before stopping.
 | 10 | Stream and video alerts (Twitch, YouTube, Kick) | **Code done**, not deployed: needs migration 0029; Twitch needs the owner's keys; Kick later |
 | 11 | Giveaways and starboard | **Code done**, not deployed: needs migrations 0030 and 0031 |
 | — | Depth for current modules (backlog below), slotted between phases | Not started |
+| — | Final polish (2026-11-23): critique fixes, Pro yearly $89.99, selling points, drafts that build up until applied, bulk actions | **Deployed** 2026-11-23 (migration 0089 applied); the owner swaps the Stripe yearly price (`docs/RELEASE.md`) |
 
 ## How plans work
 
@@ -1613,3 +1614,32 @@ Decided (2026-11-12, owner):
   The bot deployed on the first try (no 100146) and restarted at 21:36 UTC; healthz 200, the
   status page says online, an unknown public page is a 404, and the Twitch webhook answers 404
   until its secret is set.
+- 2026-11-23: Final polish from the critique (28/40). Dropdowns that used `g-select` (no
+  styles, 15 of them) use `g-input`; the three `<select multiple>` lists are CheckLists;
+  Roles back on rejoin saves itself. 58 stray font sizes and corners moved onto the scale
+  (new `--radius-mark`, the full ramp in DESIGN.md); the Pro sheet, Pro card and Pro slot
+  lost their purple glows and grid. The card editor splits by its panel's width, which fixed
+  Welcome's crushed 180px fields (page 1,894 to 1,532px) and Stats (1,143 to 980px). Touch
+  targets 36px on phones; the phone page head lost its ruled row. Pro yearly $79.99 to
+  $89.99 (save 17%, like Agency), with checkout refusing a Stripe price that differs from the
+  page. Selling points: eight Pro highlights, "Upgrade a server" from the landing into a
+  picker in upgrade mode, a supply-pack line on the landing, an in-chat offer from the last
+  tenth of a pool, and a Pro comparison for Free servers that bought packs. AI drafts have no
+  time limit: one per person per server, a new one retires the older, and the bot refuses a
+  draft that points at something deleted since. Dev pool kept on globalThis (hot reloads had
+  used up the local database's connections). Lint clean, type-check, 860 tests pass. Not
+  committed or deployed.
+- 2026-11-23: AI drafts build on one change set. Every request from a person, in any
+  conversation or `/qm build`, revises their one waiting draft on the server instead of
+  starting a new one; the plan format gained `drop`, and `carry.ts` keeps whatever a revision
+  leaves out unless it's dropped (with what leans on it, matched by reference fields, never by
+  name). Tests for the merge, a new conversation adding to the draft, and revisions keeping
+  v1. Not committed or deployed.
+- 2026-11-23: Bulk actions: tick cases (undo) or open tickets (claim, close), up to 10 at a
+  time, from a bar that shows once something is ticked; new request kinds `undo_cases` and
+  `ticket_bulk` (migration 0089, two enum values, applied to production by hand), each item
+  checked by the bot as if asked alone. The engine name is off the dashboard, Discord and help
+  (Fast and Smart only). Settings' public page folds its details while it's off. Landing CSS
+  left global on purpose (Next's docs: global CSS below the root isn't removed on navigation
+  and its order can change). Type-check, lint, 869 tests pass. Committed and deployed.
+

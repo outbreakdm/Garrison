@@ -1,5 +1,5 @@
 import { brand, inviteUrl } from "@garrison/brand";
-import { formatPrice, PRICING, yearlySaving } from "@garrison/db";
+import { formatPrice, PRICING, SUPPLY_PACKS, yearlySaving } from "@garrison/db";
 import type { Metadata } from "next";
 import { Gabarito, Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
@@ -1094,10 +1094,15 @@ export default async function Home() {
                   <div className="lp-tier__cta">
                     {paid ? (
                       <>
-                        <Link className="lp-btn lp-btn--ghost lp-btn--sm" href={dashboard}>
-                          Pick a server to upgrade
+                        <Link
+                          className={`lp-btn ${tier === "pro" ? "lp-btn--primary" : "lp-btn--ghost"} lp-btn--sm`}
+                          href={`${dashboard}?upgrade=${tier}`}
+                        >
+                          {tier === "pro" ? "Upgrade a server" : "Get Agency"}
                         </Link>
-                        <span className="lp-tier__note">From that server's Plan page.</span>
+                        <span className="lp-tier__note">
+                          Sign in, pick the server, then Checkout.
+                        </span>
                       </>
                     ) : invite ? (
                       <a className="lp-btn lp-btn--ghost lp-btn--sm" href={invite}>
@@ -1111,6 +1116,11 @@ export default async function Home() {
               );
             })}
           </ul>
+          <p className="lp-price__packs">
+            <strong>Need more AI?</strong> Supply packs from {formatPrice(SUPPLY_PACKS.small.price)}{" "}
+            for {SUPPLY_PACKS.small.supplies.toLocaleString("en-US")} supplies, on any server, Free
+            included. They're used after the month's supplies and last a year.
+          </p>
           <p className="lp-price__foot">
             Prices in US dollars. Plans belong to servers, so moderators share them. Going back to
             Free never deletes anything: extras pause until you upgrade again.

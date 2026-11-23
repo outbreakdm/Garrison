@@ -101,6 +101,12 @@ type AiPlanOutput = z.infer<typeof AiPlanSchema>;
 export type AiPlan = Omit<AiPlanOutput, "order" | "edits"> & {
   order?: AiPlanOutput["order"];
   edits?: AiPlanOutput["edits"];
+  /**
+   * Revising a waiting draft: what of it the admin asked to take out (refs, ids, module.field
+   * names, message ids). Everything else in the draft is kept (carry.ts), so one draft grows
+   * with each message instead of being replaced.
+   */
+  drop?: string[];
 };
 export type AiPlanInput = AiPlan;
 
@@ -495,6 +501,61 @@ export function describePlan(ops: QmOperation[], server: ServerSnapshot) {
       : "no permissions";
     return `+ Role @${o.name} · ${perms}${o.color !== null ? ` · #${o.color.toString(16).padStart(6, "0")}` : ""}${o.hoist ? " · shown separately" : ""}`;
   });
+}
+
+/**
+ * What a waiting draft points at that the server no longer has: categories, channels and
+ * roles it was drafted against, named as they were. Drafts have no time limit, so this is
+ * checked again before building: a draft from last week may place a channel in a category
+ * someone deleted since. Things the same draft creates (refs) are always there.
+ */
+export function staleReferences(
+  build: { plan: QmOperation[]; edits?: QmEdit[]; orders?: QmOrder[] },
+  server: ServerSnapshot,
+): string[] {
+  const refs = new Set(build.plan.map((o) => o.ref));
+  const categories = new Map(server.categories.map((c) => [c.id, c.name]));
+  const roles = new Map(server.roles.map((r) => [r.id, r.name]));
+  const channels = server.channels ? new Map(server.channels.map((c) => [c.id, c.name])) : null;
+  const gone = new Set<string>();
+  const category = (id: string | null | undefined) => {
+    if (id && !refs.has(id) && !categories.has(id)) gone.add("a category");
+  };
+  const role = (id: string) => {
+    if (!refs.has(id) && !roles.has(id)) gone.add("a role");
+  };
+  for (const op of build.plan) {
+    category(op.parent);
+    for (const id of [...op.privateTo, ...(op.posters ?? [])]) role(id);
+  }
+  for (const e of build.edits ?? []) {
+    const known = e.kind.endsWith("_role")
+      ? roles.has(e.id)
+      : e.kind.endsWith("_category")
+        ? categories.has(e.id)
+        : // Channels are only known when the snapshot lists them.
+          channels === null || channels.has(e.id);
+    if (!known)
+      gone.add(
+        e.kind.endsWith("_role") ? `@${e.was}` : e.kind.endsWith("_category") ? e.was : `#${e.was}`,
+      );
+    category(e.parent);
+    for (const id of [...(e.access?.privateTo ?? []), ...(e.access?.posters ?? [])]) role(id);
+  }
+  for (const o of build.orders ?? []) {
+    if (o.scope === "channels") category(o.parent);
+    o.items.forEach((id, i) => {
+      if (refs.has(id)) return;
+      const there =
+        o.scope === "roles"
+          ? roles.has(id)
+          : o.scope === "categories"
+            ? categories.has(id)
+            : channels === null || channels.has(id);
+      if (!there) gone.add(o.names[i] ?? "something it moves");
+    });
+  }
+  return [...gone];
 }
 
 /** Undo order: channels first, then categories (once empty), then roles. Settings are undone apart. */

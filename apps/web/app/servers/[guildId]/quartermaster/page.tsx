@@ -1,8 +1,10 @@
 import {
+  AI_SUPPLIES_PER_MONTH,
   aiAllowance,
   describeEdits,
   engineLabel,
   entitlements,
+  formatPrice,
   getGuildPlan,
   latestQmThread,
   listDashboardActions,
@@ -10,9 +12,9 @@ import {
   listQmThread,
   listQmThreads,
   listTemplates,
+  PRICING,
   QM_MIN_MESSAGE_SUPPLIES,
   QM_MODELS,
-  QM_PLAN_TTL_MS,
   QM_SETTINGS_MODULES,
   type QmBuild,
   qmChangeCount,
@@ -20,6 +22,7 @@ import {
   qmHoldSupplies,
   qmTypicalSupplies,
   readSettings,
+  SUPPLY_PACKS,
   TEMPLATE_NAME_MAX,
   TEMPLATES_PER_USER,
 } from "@garrison/db";
@@ -160,8 +163,8 @@ export default async function QuartermasterPage({
   const ent = entitlements(guildPlan);
   const isOwner = ownerId === session.userId;
   const now = Date.now();
-  const waiting = (b: QmBuild) =>
-    b.status === "pending" && now - b.createdAt.getTime() < QM_PLAN_TTL_MS;
+  // Drafts don't expire: one waits until it's applied, discarded or replaced.
+  const waiting = (b: QmBuild) => b.status === "pending";
 
   // The draft: the one this conversation made last, or one of yours still waiting.
   const lastDraftId = [...messages].reverse().find((m) => m.buildId)?.buildId;
@@ -344,9 +347,6 @@ export default async function QuartermasterPage({
     orders.length +
     edits.length +
     (plan?.notes ? 1 : 0);
-  const minutesLeft = plan
-    ? Math.max(1, Math.ceil((plan.createdAt.getTime() + QM_PLAN_TTL_MS - now) / 60_000))
-    : 0;
 
   // A message on its way: queued (shown as sent) or being answered (Garrison is typing).
   const myChat = actions.filter(
@@ -401,6 +401,8 @@ export default async function QuartermasterPage({
   const num = (n: number) => n.toLocaleString("en-US");
   // Less than a full message's hold left: say where more comes from.
   const low = suppliesLeft < QM_FULL_MESSAGE_SUPPLIES;
+  // The offer shows from the last tenth of the month's pool (a few Smart messages on Pro).
+  const runningLow = low || suppliesLeft <= Math.floor(pool / 10);
   const renews = resetsAt.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -571,6 +573,39 @@ export default async function QuartermasterPage({
                   ))}
                 </form>
               ) : null}
+              {/* Running low is when more AI is worth offering: a pack, or Pro for a Free server. */}
+              {runningLow ? (
+                <div className="qm-offer" role="note">
+                  <p className="qm-offer__text">
+                    <strong>
+                      {canMessage
+                        ? "Almost out of supplies this month"
+                        : "Out of supplies this month"}
+                    </strong>
+                    <span>
+                      {smartAllowed
+                        ? `They renew ${renews}. A pack adds ${num(SUPPLY_PACKS.small.supplies)} for ${formatPrice(SUPPLY_PACKS.small.price)}, used once the month's run out and kept a year.`
+                        : `They renew ${renews}. Pro gives this server ${num(AI_SUPPLIES_PER_MONTH.pro)} a month and Smart mode for ${formatPrice(PRICING.pro.monthly)}, or a pack adds ${num(SUPPLY_PACKS.small.supplies)} for ${formatPrice(SUPPLY_PACKS.small.price)}.`}
+                    </span>
+                  </p>
+                  <div className="qm-offer__do">
+                    {smartAllowed ? null : (
+                      <a
+                        className="g-btn g-btn--primary g-btn--sm"
+                        href={`/servers/${guild.id}/plan#plans`}
+                      >
+                        See Pro
+                      </a>
+                    )}
+                    <a
+                      className={`g-btn ${smartAllowed ? "g-btn--primary" : "g-btn--secondary"} g-btn--sm`}
+                      href={`/servers/${guild.id}/plan#supplies`}
+                    >
+                      Buy supplies
+                    </a>
+                  </div>
+                </div>
+              ) : null}
               <form
                 id="qm-composer"
                 action={requestAction}
@@ -619,12 +654,6 @@ export default async function QuartermasterPage({
                   <span>
                     <strong>{num(poolLeft)}</strong> of {num(pool)} supplies left this month
                     {packLeft ? ` · ${num(packLeft)} in packs` : ""}
-                    {low ? (
-                      <>
-                        {" "}
-                        · <a href={`/servers/${guild.id}/plan#supplies`}>Buy supplies</a>
-                      </>
-                    ) : null}
                   </span>
                   <span className="muted">
                     1 a change made by the AI
@@ -757,7 +786,7 @@ export default async function QuartermasterPage({
                     {sentence ? `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)}. ` : ""}
                     Uses {plural(charged, "supply", "supplies")}
                     {charged < changes ? ` (${plural(changes - charged, "hand change")} free)` : ""}
-                    , held for {minutesLeft} more min.
+                    , held until it's applied or discarded. Every message adds to this draft.
                     {mine ? "" : ` Only ${plan.requestedByTag} can apply it.`}
                   </p>
                 </div>

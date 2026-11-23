@@ -412,29 +412,56 @@ describe("Quartermaster end to end", () => {
     await used(f, a, FREE - 40);
     const first = await planBuild(ctx, stub(rolesPlan(10)), f.guild, a, "x");
     expect(first).toMatchObject({ ok: true, suppliesLeft: 27 });
+    // Built, so its changes stay counted (a new draft would replace a waiting one instead).
+    if (first.ok) await applyBuild(ctx, f.guild, first.build);
     const small = await planBuild(ctx, stub(rolesPlan(3)), f.guild, a, "x");
     expect(small).toMatchObject({ ok: true, suppliesLeft: 21 });
+    if (small.ok) await applyBuild(ctx, f.guild, small.build);
     // 21 left: the message takes 3, so the next plan may make up to 18. One asking for more
     // is refused whole; its message still costs the 3 its AI used (since 2026-11-20).
     const tooBig = await planBuild(ctx, stub(rolesPlan(19)), f.guild, a, "x");
     expect(!tooBig.ok && tooBig.error).toMatch(/only 18 supplies are left for changes./);
     // 18 left: 3 for the message, 15 for changes.
-    expect(await planBuild(ctx, stub(rolesPlan(15)), f.guild, a, "x")).toMatchObject({
-      ok: true,
-      suppliesLeft: 0,
-    });
+    const last = await planBuild(ctx, stub(rolesPlan(15)), f.guild, a, "x");
+    expect(last).toMatchObject({ ok: true, suppliesLeft: 0 });
+    if (last.ok) await applyBuild(ctx, f.guild, last.build);
     const none = await planBuild(ctx, stub(rolesPlan(1)), f.guild, a, "x");
     expect(!none.ok && none.error).toMatch(
       /this month's 100 AI assistant supplies on Free servers\. They renew <t:\d+:R>.*Garrison Pro gives a server 2,500 supplies a month/,
     );
   });
 
+  it("builds every prompt onto the person's one waiting draft, keeping what's in it", async () => {
+    const { getQmBuild, latestWaitingQmBuild } = await import("@garrison/db");
+    const f = fakeGuild("q4b");
+    const a = asker(f);
+    await used(f, a, FREE - 40);
+    const first = await planBuild(ctx, stub(rolesPlan(10)), f.guild, a, "x");
+    expect(first).toMatchObject({ ok: true, suppliesLeft: 27 });
+    // A second prompt, with nothing said about the first: it goes into the same draft, and
+    // the ten roles stay even though this answer didn't repeat them.
+    const extra = sectionPlan.operations.length;
+    const next = await planBuild(ctx, stub(sectionPlan), f.guild, a, "x");
+    expect(next).toMatchObject({ ok: true, suppliesLeft: 40 - 3 - 3 - (10 + extra) });
+    if (!first.ok || !next.ok) throw new Error("no draft");
+    expect(next.build.version).toBe(first.build.version + 1);
+    expect(next.build.plan.map((o) => o.name).slice(0, 10)).toEqual(
+      Array.from({ length: 10 }, (_, i) => `Role ${i}`),
+    );
+    expect(next.build.plan).toHaveLength(10 + extra);
+    expect((await getQmBuild(ctx.db, "q4b", first.build.id))?.status).toBe("cancelled");
+    expect((await latestWaitingQmBuild(ctx.db, "q4b", a.id))?.id).toBe(next.build.id);
+  });
+
   it("gives the planner what's left after the message as its limit", async () => {
     const f = fakeGuild("q12");
     const a = asker(f);
     await used(f, a, FREE - 40);
-    expect((await planBuild(ctx, stub(rolesPlan(20)), f.guild, a, "x")).ok).toBe(true);
-    expect((await planBuild(ctx, stub(rolesPlan(9)), f.guild, a, "x")).ok).toBe(true);
+    for (const n of [20, 9]) {
+      const planned = await planBuild(ctx, stub(rolesPlan(n)), f.guild, a, "x");
+      expect(planned.ok).toBe(true);
+      if (planned.ok) await applyBuild(ctx, f.guild, planned.build);
+    }
     let limit: number | undefined;
     const seeing: Planner = {
       plan: async (input) => {
@@ -467,8 +494,11 @@ describe("Quartermaster end to end", () => {
     const f = fakeGuild("q14");
     const a = asker(f);
     await used(f, a, FREE - 40);
-    for (let i = 0; i < 10; i++)
-      expect((await planBuild(ctx, stub(rolesPlan(1)), f.guild, a, "x")).ok).toBe(true);
+    for (let i = 0; i < 10; i++) {
+      const planned = await planBuild(ctx, stub(rolesPlan(1)), f.guild, a, "x");
+      expect(planned.ok).toBe(true);
+      if (planned.ok) await applyBuild(ctx, f.guild, planned.build);
+    }
     const eleventh = await planBuild(ctx, stub(rolesPlan(1)), f.guild, a, "x");
     expect(!eleventh.ok && eleventh.error).toMatch(/this month's 100 AI assistant supplies/);
   });
@@ -498,7 +528,7 @@ describe("Quartermaster end to end", () => {
     expect(first).toMatchObject({ ok: true, suppliesLeft: 10_993 });
   });
 
-  it("revises a waiting plan into the next version, which replaces it", async () => {
+  it("revises a waiting plan into the next version, which keeps it and adds on", async () => {
     const f = fakeGuild("q13");
     const a = asker(f);
     const v1 = await planBuild(ctx, stub(sectionPlan), f.guild, a, "a WARDOGS section");
@@ -513,10 +543,18 @@ describe("Quartermaster end to end", () => {
     const v2 = await planBuild(ctx, reviser, f.guild, a, "add two more roles", {
       continues: v1.build,
     });
-    // v1's 4 changes are given back; both messages count: the pool - 3 - 3 - 6.
-    expect(v2).toMatchObject({ ok: true, suppliesLeft: FREE - 12 });
+    // The revision didn't drop v1's 4 changes, so they stay, with the 6 it adds; both
+    // messages count: the pool - 3 - 3 - 10.
+    expect(v2).toMatchObject({ ok: true, suppliesLeft: FREE - 16 });
     if (!v2.ok) return;
     expect(v2.build.continuesId).toBe(v1.build.id);
+    expect(v2.build.plan.map((o) => o.ref)).toEqual([
+      "gold",
+      "wardogs",
+      "ranked",
+      "vc",
+      ...Array.from({ length: 6 }, (_, i) => `r${i}`),
+    ]);
     expect(v2.replaced).toMatchObject({ id: v1.build.id, status: "cancelled" });
     expect(told).toMatchObject({ mode: "revise", history: [{ version: v1.build.version }] });
     expect(told?.mode === "revise" && told.operations.map((o) => o.ref)).toEqual([
@@ -525,12 +563,12 @@ describe("Quartermaster end to end", () => {
       "ranked",
       "vc",
     ]);
-    // The replaced plan can't be built or continued any more.
+    // Asking from the replaced version builds on the waiting draft, v2, not on v1.
     const { getQmBuild } = await import("@garrison/db");
     const old = await getQmBuild(ctx.db, "q13", v1.build.id);
     if (!old) throw new Error("v1 missing");
     const again = await planBuild(ctx, reviser, f.guild, a, "x", { continues: old });
-    expect(!again.ok && again.error).toMatch(/can't be continued/);
+    expect(again.ok && again.build.continuesId).toBe(v2.build.id);
   });
 
   it("continues a built plan by adding onto what it made", async () => {
@@ -764,6 +802,31 @@ describe("AI assistant chat", () => {
     expect(thread[1]?.choices).toEqual(["Both", "Ranked"]);
     expect(thread[3]?.buildId).toBe(second.build.id);
     expect((await getQmBuild(ctx.db, "q16", second.build.id))?.status).toBe("cancelled");
+  });
+
+  it("builds on the one draft from a new conversation, and drops only what it names", async () => {
+    const f = fakeGuild("q16b");
+    const me = asker(f);
+    const bot = scripted([
+      { reply: "Here's a section.", plan: sectionPlan },
+      // A new conversation: the answer mentions only its new role, and drops the voice room.
+      {
+        reply: "Added a Coach role and took out the voice room.",
+        plan: {
+          summary: "Coach role",
+          notes: "",
+          operations: [op({ kind: "create_role", ref: "coach", name: "Coach" })],
+          drop: ["vc"],
+        },
+      },
+    ]);
+    const first = await chatTurn(ctx, bot, f.guild, me, { message: "A WARDOGS section" });
+    if (!first.ok || !first.build) throw new Error("no draft");
+    const second = await chatTurn(ctx, bot, f.guild, me, { message: "Add a coach", fresh: true });
+    if (!second.ok || !second.build) throw new Error("no revision");
+    expect(second.threadId).not.toBe(first.threadId);
+    expect(second.build.continuesId).toBe(first.build.id);
+    expect(second.build.plan.map((o) => o.ref)).toEqual(["gold", "wardogs", "ranked", "coach"]);
   });
 
   it("keeps someone else's thread private: a stranger's thread id starts a new one", async () => {

@@ -13,14 +13,7 @@ import { type Card, cardEdit, cardMessage, cardReply, ts } from "../../lib/card.
 import { safeText } from "../../lib/text.js";
 import { describeEdits } from "./edits.js";
 import { describeOrders, describePlan, type ServerSnapshot } from "./plan.js";
-import {
-  applyBuild,
-  PLAN_TTL_MS,
-  planBuild,
-  REQUEST_MAX,
-  undoBuild,
-  undoSettingsNote,
-} from "./service.js";
+import { applyBuild, planBuild, REQUEST_MAX, undoBuild, undoSettingsNote } from "./service.js";
 
 export const QM_PREFIX = "qm";
 const UUID = /^[0-9a-f-]{36}$/;
@@ -48,7 +41,6 @@ export function planCard(
     ...describeEdits(edits, names),
     ...describeOrders(build.orders ?? [], build.plan, server),
   ].map((l) => safeText(l));
-  const expires = new Date(build.createdAt.getTime() + PLAN_TTL_MS);
   return {
     tone: "intel",
     title: `Plan v${build.version}`,
@@ -62,7 +54,7 @@ export function planCard(
           edits.length
             ? `Changes to what exists can be undone${deletes ? `; the ${deletes === 1 ? "deletion" : `${deletes} deletions`} can't` : ""}.`
             : `Nothing that exists is changed${(build.orders ?? []).length ? ", only put in a new order" : ""}.`
-        } Expires ${ts(expires)}.`,
+        } Each request adds to it until you apply or discard it.`,
       },
     ],
     actions: [

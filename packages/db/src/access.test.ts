@@ -58,9 +58,10 @@ describe("access rules", () => {
       "backup_restore",
       "qm_apply",
       "verify_decide",
+      "undo_cases",
     ])
       expect(MANAGER_REQUEST_KINDS.has(k), k).toBe(true);
-    for (const k of ["post_message", "start_giveaway", "qm_chat", "ticket_action"])
+    for (const k of ["post_message", "start_giveaway", "qm_chat", "ticket_action", "ticket_bulk"])
       expect(MANAGER_REQUEST_KINDS.has(k), k).toBe(false);
   });
 });

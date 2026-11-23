@@ -217,6 +217,33 @@ describe("dashboard actions, run by the bot", () => {
     expect(tooHigh).toMatchObject({ status: "failed" });
   });
 
+  it("does several at once, each checked alone, and says what didn't go through", async () => {
+    // Cases and tickets that don't exist: every one is refused on its own, and the request
+    // says so instead of claiming it worked.
+    expect(
+      await run(OWNER, { kind: "undo_cases", payload: { caseNumbers: [9101, 9102] } }),
+    ).toMatchObject({ status: "failed" });
+    const tickets = await run(OWNER, {
+      kind: "ticket_bulk",
+      payload: {
+        op: "close",
+        ticketIds: ["00000000-0000-4000-8000-000000000001"],
+        reason: null,
+      },
+    });
+    expect(tickets).toMatchObject({
+      status: "failed",
+      message: expect.stringMatching(/None of them/),
+    });
+    // More than BULK_MAX is refused before anything runs.
+    expect(
+      await run(OWNER, {
+        kind: "undo_cases",
+        payload: { caseNumbers: Array.from({ length: 11 }, (_, i) => i + 1) },
+      }),
+    ).toMatchObject({ status: "failed", message: "That request wasn't valid." });
+  });
+
   it("closes a group from the dashboard, once", async () => {
     const post = await createLfgPost(ctx.db, {
       guildId: G,

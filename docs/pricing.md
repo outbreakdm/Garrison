@@ -11,7 +11,7 @@ checkout isn't available; the landing page always shows release pricing.
 |---|---|---|---|
 | Servers | Any number | 1 server | Up to 5 servers, moved between them any time |
 | Monthly | $0 | **$8.99** | **$34.99** ($7.00 a server) |
-| Yearly | $0 | **$79.99** (save 26%) | **$349.99** ($5.83 a server a month) |
+| Yearly | $0 | **$89.99** (save 17%; $79.99 until 2026-11-23) | **$349.99** ($5.83 a server a month) |
 | Safety (moderation, anti-raid, anti-nuke, verification, logs) | Everything | Everything | Everything |
 | AI builder supplies a day (a message costs 3, each change a plan makes costs 1) | 40 per person, across all their Free servers (and 40 per server) | 300 | 400 on each server |
 | That's about | 1 full plan, or 13 messages | 13 full plans, or 100 messages | 17 full plans, or 133 messages |
@@ -60,7 +60,7 @@ on) and disputes:
 | Plan or pack | Price | After Stripe | Worst-case AI | Margin |
 |---|---|---|---|---|
 | Pro monthly | $8.99 | $8.43 | $2.50 | 66% |
-| Pro yearly | $6.67/mo | $6.45/mo | $2.50 | 59% |
+| Pro yearly | $7.50/mo | $7.26/mo | $2.50 | 63% (59% at $79.99) |
 | Agency monthly | $34.99 | $33.68 | $11.00 | 65% |
 | Agency yearly | $29.17/mo | $28.30/mo | $11.00 | 59% |
 | Pack, 800 supplies | $2.99 | $2.60 | $0.80 | 60% |
@@ -179,7 +179,7 @@ Checkout is built (2026-11-14). It stays off, and every page shows launch prices
 buttons, until all of these are set. Do it in Stripe's test mode first, then repeat with live
 keys.
 
-1. **Products in Stripe:** "Garrison Pro" with a monthly ($8.99) and a yearly ($79.99) price,
+1. **Products in Stripe:** "Garrison Pro" with a monthly ($8.99) and a yearly ($89.99) price,
    and "Garrison Agency" with a monthly ($34.99) and a yearly ($349.99) price. Give both
    products the tax code `txcd_10103000` (Software as a service, personal use): Stripe now
    refuses checkout for a product without one. Copy the four price IDs (price_...).

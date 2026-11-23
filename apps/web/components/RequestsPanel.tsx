@@ -37,6 +37,7 @@ export const REQUEST_ERRORS: Record<string, string> = {
   giveaway_pro: "Entry rules, bonus entries and your own color are part of Garrison Pro.",
   giveaway_full: "This server runs as many giveaways at once as its plan allows. End one first.",
   ticket_closed: "That ticket is already closed.",
+  bulk_max: "Pick at most 10 at a time.",
   ticket_open: "That ticket is already open.",
   qm_cant_continue:
     "That plan can't be continued any more: it expired, was discarded or was undone. Start a new plan.",

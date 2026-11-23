@@ -1326,6 +1326,8 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "economy_purchase",
   "post_application_panel",
   "application_decide",
+  "undo_cases",
+  "ticket_bulk",
 ]);
 
 /**

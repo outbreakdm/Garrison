@@ -10,5 +10,9 @@ export const AI_MODES = {
   smart: { label: "Smart", about: "big designs and tricky permissions" },
 } as const;
 
-/** "Bastion v1 Smart", for a message or a picker. */
-export const engineLabel = (mode: keyof typeof AI_MODES) => `${AI_ENGINE} ${AI_MODES[mode].label}`;
+/**
+ * "Smart", for a message or a picker. The engine's name stays out of the dashboard
+ * (2026-11-23): admins choose Fast or Smart, and a product name for the model underneath was
+ * one more word to learn. The AI still answers "Bastion" if asked what it runs on.
+ */
+export const engineLabel = (mode: keyof typeof AI_MODES) => AI_MODES[mode].label;

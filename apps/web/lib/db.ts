@@ -15,7 +15,12 @@ import { cache } from "react";
 const onWorkers = () =>
   typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers";
 
-let shared: Db | undefined;
+/**
+ * Kept on globalThis, not in a module variable: `next dev` re-evaluates this module on every
+ * hot reload, and each copy opened its own pool, so a day of editing left 90 idle connections
+ * and the local database refused new ones. One pool per process, however often it reloads.
+ */
+const pool = globalThis as typeof globalThis & { __garrisonWebDb?: Db };
 
 async function hyperdriveUrl(): Promise<string | undefined> {
   const { getCloudflareContext } = await import("@opennextjs/cloudflare");
@@ -57,8 +62,8 @@ export async function getDb(): Promise<Db> {
   else {
     const url = process.env.WEB_DATABASE_URL;
     if (!url) throw new Error("WEB_DATABASE_URL isn't set.");
-    shared ??= createDb(url, { max: 5 }).db;
-    db = shared;
+    pool.__garrisonWebDb ??= createDb(url, { max: 5 }).db;
+    db = pool.__garrisonWebDb;
   }
   await checkRoleOnce(db);
   return db;

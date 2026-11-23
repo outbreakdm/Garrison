@@ -24,6 +24,8 @@ colors:
   light-hairline: "#e2e3e8"
   light-ink: "#121317"
   light-ink-muted: "#5b5e69"
+  foil-ink: "#2b1a46"
+  foil-edge: "#7b45d6"
 typography:
   headline:
     fontFamily: "Archivo, system-ui, -apple-system, Segoe UI, sans-serif"
@@ -50,7 +52,38 @@ typography:
     fontSize: "12px"
     fontWeight: 600
     lineHeight: "16px"
+  micro:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "11px"
+    fontWeight: 600
+    lineHeight: "14px"
+  card-title:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "17px"
+    fontWeight: 650
+    lineHeight: "24px"
+  block-title:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "20px"
+    fontWeight: 700
+    lineHeight: "26px"
+  display-sm:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "22px"
+    fontWeight: 700
+    lineHeight: "28px"
+  display:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "26px"
+    fontWeight: 750
+    lineHeight: "32px"
+  display-lg:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "30px"
+    fontWeight: 750
+    lineHeight: "36px"
 rounded:
+  mark: "2px"
   chip: "6px"
   control: "8px"
   panel: "12px"
@@ -159,6 +192,11 @@ The current page's color reaches its icon tiles, gems, the server card's initial
 - **Body** (400, 14px/20px): descriptions and settings sentences; 68ch measure for page intros.
 - **UI** (600, 13.5px/20px): buttons, menu items, tabs.
 - **Label** (600, 12px/16px): field labels, rail group names (11.5px there), help text at 13px.
+- **Micro** (600, 11px/14px): counts in tabs, small tags, times in the calendar.
+- **Card title** (650, 17px/24px): titles in card heads and table heads.
+- **Display** steps for numbers and page names only: 20 (block titles), 22 (server name, small stats), 26 (page title, stat values), 30 (prices, big figures).
+
+Nothing else: a size between steps goes to the nearer one (the 2026-11-23 pass moved 58 strays). Two places keep their own sizes on purpose: the Discord previews (`.dc-*`, Discord's own type) and the landing page (its own world, `landing.css`).
 
 ## Layout
 
@@ -194,7 +232,7 @@ Flat by default. Panels use hairlines and one step of tone, not shadows (`--shad
 
 ## Shapes
 
-Panels 12px, controls 8px, chips and badges 6px, pills and switches fully round. Gems are 8 to 10px squares rotated 45° with 2px corners, set in 28 to 36px tinted tiles. "New" tiles are dashed with the strong hairline.
+Panels 12px, controls 8px, chips and badges 6px, pills and switches fully round, and marks 2px (`--radius-mark`: gems, pips, chart keys and bars). Gems are 8 to 10px squares rotated 45° with 2px corners, set in 28 to 36px tinted tiles. "New" tiles are dashed with the strong hairline. A control inside a segmented control takes the next step down (8px outside, 6px inside). Discord previews keep Discord's own corners.
 
 ## Components
 
@@ -235,7 +273,7 @@ A list in the side column: one line per item, newest first, a hairline between, 
 One at a time, centered at the foot of the screen: a small gem (go or alert), one sentence, a white Undo when there's something to take back, and a close. 6 s (9 s for errors), held open while hovered or focused.
 
 ### Pro sheet
-Every foil "Requires Pro" tag and every "See what Pro adds" link opens the same sheet over the page, dimmed to 78% and blurred 3px: Garrison's shield drawn in foil over a faint grid, "Part of Garrison Pro", the sentence from the spot that opened it, one white button straight to Checkout, then what else Pro adds as a checklist and a line of fine print. 20px corners, the only floating thing with a lift shadow besides menus.
+Every foil "Requires Pro" tag and every "See what Pro adds" link opens the same sheet over the page, dimmed to 78% and blurred 3px: Garrison's shield on a dark plate over a flat raised strip, "Part of Garrison Pro", the sentence from the spot that opened it, one white button straight to Checkout, then what else Pro adds as a checklist (PRICING's Pro highlights) and a line of fine print. 12px corners, the only floating thing with a lift shadow besides menus. No coloured glows and no grid (removed 2026-11-23): the foil is Pro's one mark, and its 1px edge (`--foil-edge`) is the only purple on the dashboard. The Pro plan card has no ring of its own either; its foil name marks it.
 
 ### Choices
 A pick among a few is shown, never typed or selected. **Segmented row**: a recessed track, options sharing its width, the picked one raised with a strong edge (not white: the One White Rule holds). **Level cards**: a scale, weakest first, always one row; signal bars fill one step per card. **Preset cards**: a name (with a "Recommended" tag on Garrison's own setting), what it does in a few words, who it's for in a sentence. Picked cards take the page's section color on their edge and a filled ring top right. All are radios underneath.
@@ -253,7 +291,10 @@ Every list page opens with it: filter pills in a track (each with its count, the
 38 by 22px. Off: Panel Raised slot, muted knob. On: white track, black knob, 180ms ease-out.
 
 ### Inputs
-Panel Raised, hairline edge (strong on hover), 8px corners, 38px tall; focus ring 2px in the section color.
+Panel Raised, hairline edge (strong on hover), 8px corners, 38px tall; focus ring 2px in the section color. A select is a `g-input` too (`select.g-input`); there is no other select class, and `g-select` (which had no styles, so 15 selects showed as the browser's own) is gone. Picking several (roles, channels) is always a CheckList of checkbox rows, never a `<select multiple>`.
+
+### Touch
+On a touch screen (`pointer: coarse`) small buttons, chips, the chat's rating buttons, the draft's rename and move tools and the Fast/Smart switch grow to 36px or more.
 
 ### Navigation (rail)
 Groups follow what an owner sets out to do: Overview, AI assistant and Insights first, then Safety, Members, Engagement, Posts, Support and Gaming, with Settings pinned at the foot (Plan is the plan card below it, and in the phone sheet). A group folds behind its name, remembered per browser; a folded group still shows a Needs-you mark, and arriving on a page opens its group. Group names at 11.5px led by their gem; items 32px with Garrison's own 16px line icon, muted, raised on hover, and the module's state at the end. The group name is also the tag beside each page's title. The current page is the white pill, on the phone menu too. The server card on top shows the server's initial in a tinted tile, its name and "Switch server". The plan card at the foot names the plan with one line and a grey button (the rail keeps one white thing), and marks itself on the Plan page.
@@ -282,10 +323,13 @@ Draw now, Cancel a giveaway, Remove a message, Cancel a raid and Lock the server
 A segmented row of 13px semibold labels; the selected tab is the white pill. Built from radios, so they work before scripts load.
 
 ### Live preview
-Discord's own dark theme inside a framed pane, sticky beside its editor, labelled "Preview in Discord". Variables in help text are color-coded chips.
+Discord's own dark theme inside a framed pane, sticky beside its editor, labelled "Preview in Discord". Variables in help text are color-coded chips. The editor and its preview split by the panel's own width (a container query), not the window's: two columns from 620px, the preview at most 460px from 780px, stacked with the preview first below 620px. Beside "On this page" a panel is about 660px wide on a 1280px screen, and a window-based split had crushed the fields to 180px.
 
 ### AI assistant
-Garrison speaks in plain text beside its gem mark; your messages are raised bubbles. The plan panel's head carries the counts and Apply build; tabs switch Channels, Roles and Settings; its foot shows "+N new · ~N settings" and Discard.
+Garrison speaks in plain text beside its gem mark; your messages are raised bubbles. The plan panel's head carries the counts and Apply build; tabs switch Channels, Roles and Settings; its foot shows "+N new · ~N settings" and Discard. A draft has no time limit and there's one per person per server: every message, from any conversation (or `/qm build` in Discord), adds to it, and nothing in it goes unless the admin asks (the AI names it in `drop`; whatever it leaves out is carried over). It says "held until it's applied or discarded. Every message adds to this draft.", and the Overview lists it under Needs attention with when it was drafted. From the last tenth of the month's supplies, a caution-edged line above the message box says when they renew and offers a pack (and Pro, with Smart, on a Free server): one sentence, two buttons. The write card is a plain hairline card, not a coloured side stripe.
+
+### Upgrade paths
+The landing's Pro button ("Upgrade a server") and Agency button go to the server picker in upgrade mode (`/servers?upgrade=pro`): a note says what Pro is, and each server you run opens its Plan page. A Free server that has bought packs sees, above the packs' fine print, that Pro's monthly supplies cost about what three small packs do.
 
 ## Do's and Don'ts
 

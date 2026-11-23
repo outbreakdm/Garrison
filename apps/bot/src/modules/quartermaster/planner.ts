@@ -298,7 +298,7 @@ Ordering:
 - When asked to tidy or sort the server, look at the snapshot's order and propose a better one with a sentence on why (info first, staff last, staff roles above members).
 
 Continuing a plan:
-- <previous_plan> means the admin is revising a plan that hasn't been built yet. Return the whole plan again: keep what they didn't ask to change, apply what they asked for, and keep the same refs for items you keep.
+- <previous_plan> is the admin's draft, which hasn't been built yet: every request adds onto it. Return the whole plan again: keep what they didn't ask to change, apply what they asked for, and keep the same refs for items you keep. Anything you leave out stays in the draft anyway, so to take something out, name it in drop (its ref, edit id, module.field or message_id); never drop what they didn't ask to remove.
 - <built_before> lists items an earlier plan built; they exist in the server now (their ids are also in the snapshot). Add onto that design: put new channels in its categories by id, use its roles by id, follow its naming, and never create any of it again.
 - <history> shows the earlier requests in this line of plans, oldest first. If the admin asks for "more" or "what you suggested", build what <previous_notes> suggested next.
 
@@ -325,9 +325,9 @@ How to talk:
 - When the admin asks how something in Garrison works, where to find it, which commands it has or what Free and Pro get, look it up with garrison_help and answer from what it says: name the page, then the steps as short lines that start with "- " (six at most). Never guess a page, a command or a plan limit; if garrison_help doesn't cover it, say you're not sure and point to the Plan page or Help.
 - Find out what you need, then build. What matters: the games or purpose, roughly how big the community is, how they play (casual, ranked, raids, events), whether they want staff or members-only areas, and the naming style. Look at the server snapshot first and never ask what it already tells you.
 - Ask one question at a time, and offer 2 to 4 quick replies in choices that answer it ("Casual and ranked", "Mostly raids", "Both"). Give your own suggestion when you have one ("I'd split LFG by rank. Sound good?").
-- Don't interview forever. After two or three answers, or straight away when the request is already clear, draft a plan: fill operations, plan_summary and plan_notes, and in reply say in a sentence what it adds and invite changes. The admin sees every change and applies the draft with one click whenever they're happy, so keep refining the same draft as they ask for more; each new draft replaces the last.
+- Don't interview forever. After two or three answers, or straight away when the request is already clear, draft a plan: fill operations, plan_summary and plan_notes, and in reply say in a sentence what it adds and invite changes. The admin sees every change and applies the draft with one click whenever they're happy, so keep building on the same draft as they ask for more: each new request adds to it, and nothing in it goes unless they ask.
 - While you're still asking, leave operations empty and plan_summary and plan_notes empty.
-- When the admin asks for changes to a plan that hasn't been built (<previous_plan>), draft the whole plan again with the changes. When <built_before> is there, the last plan was built: offer what to add next, and draft additions when they want them.
+- When there's a draft that hasn't been built (<previous_plan>), whatever the admin asks for next goes into it: draft the whole plan again with the new changes added, and the ones they asked to remove in drop. When <built_before> is there, the last plan was built: offer what to add next, and draft additions when they want them.
 - After drafting, choices can offer next steps ("Add a clips channel", "Make ranked Gold+ only", "Looks good").
 - If they ask for something you can't do, say so plainly and offer the closest thing you can.
 - When they ask about their server ("who can see #staff?", "why can't members post in #general?", "what's wrong with my permissions?"), answer from the snapshot specifically, naming channels and roles, then offer to fix it.
@@ -472,7 +472,7 @@ function apiError(error: unknown): { ok: false; error: string } {
   )
     return {
       ok: false,
-      error: "Bastion's AI key was rejected. The bot's operator needs to fix it.",
+      error: "The AI assistant's key was rejected. The bot's operator needs to fix it.",
     };
   if (error instanceof Anthropic.APIError) {
     // A refusal before the model ran (a 4xx) is Garrison's own bug, not something a retry
@@ -482,21 +482,21 @@ function apiError(error: unknown): { ok: false; error: string } {
       const said = apiErrorMessage(error).slice(0, 160);
       return {
         ok: false,
-        error: `Bastion couldn't answer: the AI service refused the request (${status}${said ? `: ${said}` : ""}). Garrison's team needs to fix this; trying again won't help.`,
+        error: `The AI assistant couldn't answer: the AI service refused the request (${status}${said ? `: ${said}` : ""}). Garrison's team needs to fix this; trying again won't help.`,
       };
     }
-    return { ok: false, error: "Bastion had a problem with that. Try again shortly." };
+    return { ok: false, error: "The AI assistant had a problem with that. Try again shortly." };
   }
   // The SDK's own errors, such as an answer that doesn't fit the schema.
   if (error instanceof Anthropic.AnthropicError)
-    return { ok: false, error: "Bastion's answer didn't come back in the right shape. Try again." };
+    return { ok: false, error: "The AI's answer didn't come back in the right shape. Try again." };
   throw error;
 }
 
 /** The longest one chat message may take with Claude, every round and retry included. */
 export const CHAT_DEADLINE_MS = 150_000;
 export const CHAT_TOO_SLOW =
-  "Bastion took too long to answer. Try again, or ask for a smaller piece at a time.";
+  "The AI assistant took too long to answer. Try again, or ask for a smaller piece at a time.";
 
 /** The least output a request runs with: below it, an answer can't be useful. */
 export const MIN_ROUND_OUTPUT = 1024;
@@ -656,7 +656,8 @@ export class ClaudePlanner implements Planner {
       .flatMap((b) => (b.type === "text" ? [b.text] : []))
       .join("")
       .trim();
-    if (!text) return { ok: false, error: "Bastion had nothing to say. Try again.", usage };
+    if (!text)
+      return { ok: false, error: "The AI assistant had nothing to say. Try again.", usage };
     return { ok: true, text, usage };
   }
 
@@ -700,14 +701,14 @@ export class ClaudePlanner implements Planner {
     if (!response.parsed_output)
       return {
         ok: false,
-        error: "Bastion's plan didn't come back in the right shape. Try again.",
+        error: "The AI's plan didn't come back in the right shape. Try again.",
         usage,
       };
     const read = readPlanJson(AiPlanWireSchema, response.parsed_output.plan_json);
     if (!read.ok)
       return {
         ok: false,
-        error: "Bastion's plan didn't come back in the right shape. Try again.",
+        error: "The AI's plan didn't come back in the right shape. Try again.",
         usage,
       };
     return { ok: true, plan: planFromWire(read.value), model: response.model, usage };
@@ -834,7 +835,7 @@ export class ClaudePlanner implements Planner {
         if (!out)
           return {
             ok: false,
-            error: "Bastion's answer didn't come back in the right shape.",
+            error: "The AI's answer didn't come back in the right shape.",
             usage,
           };
         const said = {
@@ -879,13 +880,15 @@ export class ClaudePlanner implements Planner {
           winners: wireCount(x.winners),
           durationMinutes: wireCount(x.duration_minutes),
         }));
+        // A revision may only take things out: a draft that's just a drop list still counts.
         const empty =
           !d.operations.length &&
           !d.order.length &&
           !d.edits.length &&
           !settings.length &&
           !posts.length &&
-          !writes.length;
+          !writes.length &&
+          !d.drop.length;
         return {
           ok: true,
           ...said,
@@ -900,6 +903,7 @@ export class ClaudePlanner implements Planner {
                 settings,
                 posts,
                 writes,
+                ...(d.drop.length ? { drop: d.drop } : {}),
               },
         };
       }
@@ -970,6 +974,43 @@ function usageOf(response: {
   };
 }
 
+/**
+ * A waiting draft (the revise continuation) in the shape a drafted plan comes back in, so
+ * carry.ts can keep what the model left out of its revision.
+ */
+export function revisionBase(cont: Extract<PlannerContinuation, { mode: "revise" }>): DraftPlan {
+  return {
+    summary: "",
+    notes: cont.notes ?? "",
+    operations: cont.operations,
+    edits: cont.edits ?? [],
+    order: (cont.order ?? []).map((o) => ({
+      scope: o.scope as NonNullable<AiPlan["order"]>[number]["scope"],
+      parent: o.parent,
+      items: o.items,
+    })),
+    settings: (cont.settings ?? []).map((x) => ({
+      module: x.module,
+      field: x.field,
+      value: parseValue(x.value_json),
+    })),
+    posts: (cont.posts ?? []).map((x) => ({ kind: x.kind, itemId: x.item_id, channel: x.channel })),
+    writes: (cont.writes ?? []).map((x) => ({
+      target: x.target,
+      messageId: x.message_id,
+      name: x.name,
+      title: x.title,
+      body: x.body,
+      ...(x.target === "new_role_menu" && x.style ? { style: x.style } : {}),
+      items: x.items,
+      staffRoles: x.staff_roles,
+      ...(x.channel ? { channel: x.channel } : {}),
+      winners: x.winners,
+      durationMinutes: x.duration_minutes,
+    })),
+  };
+}
+
 /** A setting's value_json; text that isn't JSON is kept as text, and the checks decide. */
 function parseValue(json: string): unknown {
   try {
@@ -999,7 +1040,7 @@ function asParam(block: Anthropic.Beta.BetaContentBlock): Anthropic.Beta.BetaCon
 
 function stopError(reason: string | null) {
   if (reason === "refusal")
-    return "Bastion declined that. Try describing the channels and roles you want.";
+    return "The AI assistant declined that. Try describing the channels and roles you want.";
   if (reason === "max_tokens") return "That's too big to plan in one go. Ask for fewer changes.";
   return null;
 }

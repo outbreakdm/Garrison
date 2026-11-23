@@ -30,11 +30,22 @@
   justify-content: space-between;
   gap: var(--space-3);
 }
-@media (max-width: 1099px) {
+/* The split follows the panel's own width, not the window's: beside "On this page" a panel
+   is about 660px wide on a 1280px screen, and a fixed 460px preview crushed the fields into
+   a 180px column. */
+:has(> .editor-layout) {
+  container-type: inline-size;
+}
+@container (width < 780px) {
+  .editor-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+@container (width < 620px) {
   .editor-layout {
     grid-template-columns: minmax(0, 1fr);
   }
-  /* On narrow screens the result comes first, then the fields that shape it. */
+  /* On narrow panels the result comes first, then the fields that shape it. */
   .preview-pane {
     position: static;
     order: -1;
@@ -231,7 +242,7 @@
   gap: 2px;
   padding: 3px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--bg) 65%, var(--surface));
 }
 [data-theme="light"] .segmented {
@@ -253,7 +264,7 @@
   align-items: center;
   height: 30px;
   padding: 0 12px;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   font-size: 13px;
   font-weight: 600;
   line-height: 20px;
@@ -1430,7 +1441,7 @@
   overflow: hidden;
   padding: 2px 6px;
   border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--accent) 12%, var(--surface));
   font-size: 12px;
   line-height: 1.35;
@@ -1719,7 +1730,7 @@
 .chart-legend__key {
   width: 10px;
   height: 10px;
-  border-radius: 2px;
+  border-radius: var(--radius-mark);
   background: var(--cobalt);
 }
 .chart-legend__key--down {
@@ -1750,21 +1761,21 @@
   width: 100%;
   height: 6px;
   border: 0;
-  border-radius: 3px;
+  border-radius: var(--radius-mark);
   background: var(--surface-raised);
   appearance: none;
 }
 .meter-list__bar::-webkit-meter-bar {
   border: 0;
-  border-radius: 3px;
+  border-radius: var(--radius-mark);
   background: var(--surface-raised);
 }
 .meter-list__bar::-webkit-meter-optimum-value {
-  border-radius: 3px;
+  border-radius: var(--radius-mark);
   background: var(--cobalt);
 }
 .meter-list__bar::-moz-meter-bar {
-  border-radius: 3px;
+  border-radius: var(--radius-mark);
   background: var(--cobalt);
 }
 .table-card__foot {
@@ -2626,22 +2637,29 @@
 }
 
 /* --- Server stats: every counter, switched on or off ------------------------------ */
+/* Counters two to a row where the column has room, split by hairlines; "Members with a
+   role" takes the full width under them. */
 .stat-options {
   display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  gap: 1px;
   margin: 0;
   padding: 0;
+  overflow: hidden;
   list-style: none;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
+  background: var(--line);
 }
 .stat-option {
   display: grid;
+  align-content: start;
   gap: var(--space-3);
   padding: var(--space-3);
-  border-top: 1px solid var(--line);
+  background: var(--surface);
 }
-.stat-option:first-child {
-  border-top: 0;
+.stat-option:last-child {
+  grid-column: 1 / -1;
 }
 .stat-option[data-on] {
   background: var(--surface-raised);
@@ -2719,7 +2737,7 @@
   flex: none;
   width: 72px;
   height: 72px;
-  border-radius: 20px;
+  border-radius: var(--radius-lg);
   object-fit: cover;
   background: var(--surface-raised);
 }
@@ -2746,7 +2764,7 @@
 .public-server__about {
   margin: 0;
   max-width: 62ch;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.6;
   white-space: pre-line;
 }

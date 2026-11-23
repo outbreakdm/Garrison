@@ -41,8 +41,15 @@ first draft counted 20 a plan; the page and pricing show the honest 23.
   the only part that costs real money (an AI call), so it's priced higher.
 - **A change: 1.** Each channel, category or role a plan creates, each setting a plan
   changes (one per field: "Automod On" is 1, "Scam links Blocked" is 1), and each post.
-- **A drafted plan holds its changes** until it's built, discarded or expires (15 minutes);
-  discarded and expired plans give them back. A plan still makes at most 20 changes.
+- **A drafted plan holds its changes** until it's built, discarded or replaced; discarded
+  and replaced plans give them back. Drafts have no time limit (since 2026-11-23; 15 minutes
+  before), so an admin can leave and come back: each person keeps one waiting draft per
+  server, and every request, from any conversation or `/qm build`, builds on it. A revision
+  keeps everything it doesn't name in `drop` (`carry.ts`): the model returns the whole draft,
+  but whatever it leaves out by mistake is carried over, and what leans on a dropped item goes
+  with it. The bot checks a draft against the live server before building
+  (`staleReferences`), refusing one that points at a deleted category, channel or role. A
+  draft still makes at most 20 changes; past that, apply it and keep going.
 - **Refusals are free.** A plan Garrison's checks refused as unsafe gives its supplies back.
   Since supplies v2, a message the AI couldn't answer is charged what it used
   (`docs/AI_SUPPLIES_V2.md`).

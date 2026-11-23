@@ -29,6 +29,17 @@ export function formatTime(date: Date, timeZone = "UTC") {
   }).format(date);
 }
 
+/** "Nov 23, 1:39 PM": for a narrow column, with formatTime in its title for the rest. */
+export function formatShort(date: Date, timeZone = "UTC") {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
 export function formatDuration(seconds: number | null) {
   if (!seconds) return "";
   if (seconds % 86_400 === 0) return `${seconds / 86_400} d`;

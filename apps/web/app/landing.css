@@ -1170,6 +1170,20 @@ button.lp-btn {
   margin: auto 0 0;
   padding-top: 18px;
 }
+.lp-price__packs {
+  max-width: 640px;
+  margin: 28px auto 0;
+  color: var(--lp-muted, var(--text-muted));
+  font-size: 15px;
+  text-align: center;
+  text-wrap: pretty;
+}
+.lp-price__packs strong {
+  color: var(--text);
+}
+.lp-price__packs + .lp-price__foot {
+  margin-top: 12px;
+}
 .lp-price__foot {
   max-width: 640px;
   margin: 32px auto 0;

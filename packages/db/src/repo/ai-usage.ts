@@ -14,7 +14,7 @@ import { AI_SUPPLIES_PER_MONTH, type AiTier } from "../plans";
 export type AiFeature = "qm" | "qm_chat" | "ticket_assist";
 
 import { aiUsage, guildPlans, planBundles, qmBuilds, supplyGrants } from "../schema";
-import { qmChangesMade, qmChangesUsed } from "./quartermaster";
+import { type DraftsOf, qmChangesMade, qmChangesUsed } from "./quartermaster";
 
 /**
  * One row per AI call. A call holds the most it could cost (`supplies`) before it runs,
@@ -221,14 +221,20 @@ async function callSuppliesSince(
 export async function suppliesUsed(
   db: Db,
   scope: PoolScope,
-  opts: { exceptId?: string; now?: Date; since?: Date; settled?: boolean } = {},
+  opts: {
+    exceptId?: string;
+    exceptDraftsOf?: DraftsOf;
+    now?: Date;
+    since?: Date;
+    settled?: boolean;
+  } = {},
 ) {
   const now = opts.now ?? new Date();
   // The calendar month unless a pool's own period is given.
   const since = opts.since ?? utcMonthStart(now);
   const [calls, changes] = await Promise.all([
     callSuppliesSince(db, scope, since, now, opts.settled ?? false),
-    qmChangesUsed(db, scope, since, { ...opts, now }),
+    qmChangesUsed(db, scope, since, opts),
   ]);
   return calls + changes;
 }
@@ -295,7 +301,7 @@ async function allowanceFor(
   info: PoolInfo,
   guildId: string,
   personId: string,
-  opts: { exceptId?: string; now?: Date },
+  opts: { exceptId?: string; exceptDraftsOf?: DraftsOf; now?: Date },
 ): Promise<AiAllowance> {
   const now = opts.now ?? new Date();
   const period = poolPeriod(info, now);
@@ -326,13 +332,14 @@ async function allowanceFor(
 /**
  * What this person can still spend on the AI assistant on this server: the lower of the
  * pool's supplies and (on Free) the person's. `exceptId` leaves out a waiting plan that's
- * about to be replaced by a revision.
+ * about to be replaced by a revision; `exceptDraftsOf` all of a person's waiting drafts on a
+ * server, which a new draft replaces.
  */
 export async function aiAllowance(
   db: Db,
   guildId: string,
   personId: string,
-  opts: { exceptId?: string; now?: Date } = {},
+  opts: { exceptId?: string; exceptDraftsOf?: DraftsOf; now?: Date } = {},
 ): Promise<AiAllowance> {
   return allowanceFor(db, await poolInfo(db, guildId), guildId, personId, opts);
 }

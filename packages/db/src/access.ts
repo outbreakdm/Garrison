@@ -101,6 +101,7 @@ export const MANAGER_REQUEST_KINDS: ReadonlySet<string> = new Set([
   "lockdown_end",
   "release_quarantine",
   "undo_case",
+  "undo_cases",
   "mod_action",
   "purge",
   "backup_create",

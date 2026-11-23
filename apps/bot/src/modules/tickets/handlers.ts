@@ -135,7 +135,7 @@ export const ticket: Command = {
     .addSubcommand((s) =>
       s
         .setName("assist")
-        .setDescription("Bastion reads this ticket and drafts a summary and a reply (staff, Pro)"),
+        .setDescription("The AI reads this ticket and drafts a summary and a reply (staff, Pro)"),
     )
     .addSubcommand((s) =>
       s

@@ -178,7 +178,7 @@ export const HELP = {
     steps: [
       "Tickets → Panels: make a panel, its topics and the staff roles who see tickets.",
       "Post the panel in a channel (or ask the AI assistant to). Turn on modmail in Tickets settings if you want it.",
-      "With Pro, staff run /ticket assist in a ticket: Bastion reads it and your tags, and privately drafts a summary and a reply, using a few supplies.",
+      "With Pro, staff run /ticket assist in a ticket: the AI reads it and your tags, and privately drafts a summary and a reply, using a few supplies.",
     ],
     commands: ["/ticket close", "/ticket claim", "/ticket assist", "/ticket add", "/ticket remove"],
     modules: ["tickets"],
@@ -391,7 +391,7 @@ export const HELP = {
     page: "AI assistant",
     path: "/quartermaster",
     about:
-      "Describe what you need in plain words; the assistant drafts it (channels, roles, permissions, order, some settings and posts), you see every change in Your server, and nothing happens until you apply it. Every build can be undone. It runs on Bastion v1, Garrison's AI engine: Fast (every plan) or Smart (Pro), each costing supplies at its real price; changes you make by hand are free.",
+      "Describe what you need in plain words; the assistant drafts it (channels, roles, permissions, order, some settings and posts), you see every change in Your server, and nothing happens until you apply it. Every build can be undone. It has two modes: Fast (every plan) or Smart (Pro), each costing supplies at its real price; changes you make by hand are free.",
     steps: [
       "Ask in the chat, or rename and drag in Your server.",
       "Review the changes, then Apply. Undo any build from History.",

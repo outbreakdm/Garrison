@@ -624,6 +624,13 @@
       "when": 1795221988605,
       "tag": "0088_erase_birthdays",
       "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1795441012093,
+      "tag": "0089_bulk_requests",
+      "breakpoints": true
     }
   ]
 }

@@ -57,7 +57,7 @@ h2 {
   margin: 0;
 }
 .g-logo__word--sm {
-  font-size: 16px;
+  font-size: 15px;
   line-height: 20px;
 }
 
@@ -190,7 +190,7 @@ table.g-table {
   gap: var(--space-4);
 }
 .login h1 {
-  font-size: 28px;
+  font-size: 26px;
 }
 .notice {
   border: 1px solid var(--alert);
@@ -578,7 +578,7 @@ a.topbar__user:hover {
     flex: none;
     width: 10px;
     height: 10px;
-    border-radius: 2px;
+    border-radius: var(--radius-mark);
     background: var(--gem, var(--accent));
     transform: rotate(45deg);
   }
@@ -729,7 +729,7 @@ figure.preview {
   color: var(--text);
 }
 .invite-dialog::backdrop {
-  background: rgb(0 0 0 / 60%);
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
 }
 .invite-steps {
   margin: 0;
@@ -1181,7 +1181,7 @@ select[multiple].g-input option {
 .avatar--lg {
   width: 56px;
   height: 56px;
-  font-size: 24px;
+  font-size: 22px;
 }
 .member-head {
   display: flex;
@@ -1252,7 +1252,7 @@ select[multiple].g-input option {
   background: var(--surface-raised);
 }
 .mod-action h2 {
-  font-size: 16px;
+  font-size: 17px;
   line-height: 20px;
 }
 .mod-action .g-btn {
@@ -1329,7 +1329,7 @@ select[multiple].g-input option {
   width: 10px;
   height: 10px;
   margin: 0 3px 14px;
-  border-radius: 2px;
+  border-radius: var(--radius-mark);
   background: var(--accent-strong);
   transform: rotate(45deg);
 }
@@ -1339,7 +1339,7 @@ select[multiple].g-input option {
   max-width: min(78%, 60ch);
   padding: var(--space-2) var(--space-4);
   border: 1px solid var(--line);
-  border-radius: 14px 14px 14px 4px;
+  border-radius: var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-mark);
   background: var(--surface-raised);
   font-size: 15px;
   line-height: 22px;
@@ -1361,7 +1361,7 @@ select[multiple].g-input option {
 }
 .qm-msg--me .qm-msg__bubble {
   border-color: color-mix(in srgb, var(--accent-strong) 35%, var(--line));
-  border-radius: 14px 14px 4px;
+  border-radius: var(--radius-lg) var(--radius-lg) var(--radius-mark);
   background: color-mix(in srgb, var(--accent) 14%, var(--surface));
 }
 .qm-msg--queued {
@@ -1966,7 +1966,7 @@ h1 {
   font-variant-numeric: tabular-nums;
 }
 .table-card__head .card-title {
-  font-size: 16px;
+  font-size: 17px;
   line-height: 22px;
 }
 .card-head {
@@ -2154,7 +2154,7 @@ a:hover .cue {
   max-width: 56ch;
   margin: var(--space-3) 0 0;
   color: var(--text-muted);
-  font-size: 16px;
+  font-size: 15px;
   line-height: 24px;
 }
 .server-grid {
@@ -2249,7 +2249,7 @@ a.server-tile .server-tile__foot {
 }
 .server-tile--add .server-tile__state::before {
   height: 2px;
-  border-radius: 1px;
+  border-radius: var(--radius-mark);
   background: var(--text-muted);
 }
 .server-tile--add .server-tile__foot {
@@ -2258,7 +2258,7 @@ a.server-tile .server-tile__foot {
 .guild-icon--lg {
   width: 52px;
   height: 52px;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   font-family: var(--font-display);
   font-size: 18px;
 }
@@ -2354,7 +2354,7 @@ a.server-tile .server-tile__foot {
   flex: none;
   width: 20px;
   height: 20px;
-  border-radius: 4px;
+  border-radius: var(--radius-mark);
   background: var(--accent);
   color: var(--accent-ink);
   font: 700 11px / 1 var(--font-display);
@@ -3012,7 +3012,7 @@ form[data-pending] [aria-busy="true"]::after {
   width: 8px;
   height: 8px;
   margin-top: -4px;
-  border-radius: 2px;
+  border-radius: var(--radius-mark);
   background: var(--gem, var(--accent));
   transform: rotate(45deg);
 }
@@ -3198,6 +3198,8 @@ form[data-pending] [aria-busy="true"]::after {
     #f0d6ff 100%
   );
   --foil-ink: #2b1a46;
+  /* The foil's one-pixel edge: the only purple on the dashboard, and only on foil. */
+  --foil-edge: rgb(123 69 214 / 0.28);
 }
 .pro-tag {
   display: inline-flex;
@@ -3209,7 +3211,7 @@ form[data-pending] [aria-busy="true"]::after {
   background: var(--foil);
   background-size: 220% 100%;
   box-shadow:
-    0 0 0 1px rgb(123 69 214 / 0.28),
+    0 0 0 1px var(--foil-edge),
     0 1px 2px rgb(20 26 46 / 0.18);
   color: var(--foil-ink);
   font: 700 12px / 16px var(--font-display);
@@ -3240,7 +3242,7 @@ form[data-pending] [aria-busy="true"]::after {
 .notice--pro::before {
   width: 8px;
   height: 8px;
-  border-radius: 2px;
+  border-radius: var(--radius-mark);
   background: var(--foil);
   clip-path: none;
   transform: rotate(45deg);
@@ -3323,7 +3325,7 @@ form[data-pending] [aria-busy="true"]::after {
   width: 56px;
   height: 56px;
   border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--accent) 12%, var(--surface));
   color: var(--accent-strong);
 }
@@ -3402,7 +3404,7 @@ form[data-pending] [aria-busy="true"]::after {
   width: 8px;
   height: 8px;
   margin: 0 3px 0 3px;
-  border-radius: 2px;
+  border-radius: var(--radius-mark);
   background: var(--gem, var(--text-muted));
   transform: rotate(45deg);
 }
@@ -3416,7 +3418,7 @@ form[data-pending] [aria-busy="true"]::after {
   width: 12px;
   height: 12px;
   margin: 0 14px 0 3px;
-  border-radius: 3px;
+  border-radius: var(--radius-mark);
   background: var(--id, var(--accent));
   transform: rotate(45deg) translateY(-3px);
   vertical-align: middle;
@@ -3855,10 +3857,8 @@ button.list-rows__remove:focus-visible {
   box-shadow: var(--shadow-card);
 }
 .tier--pro {
-  border-color: color-mix(in srgb, rgb(123 69 214) 45%, var(--line));
-  box-shadow:
-    0 0 0 1px rgb(123 69 214 / 0.18),
-    var(--shadow-lift);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-lift);
 }
 .tier.is-current {
   border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
@@ -3886,7 +3886,7 @@ button.list-rows__remove:focus-visible {
   border-radius: var(--radius-sm);
   background: var(--foil);
   background-size: 220% 100%;
-  box-shadow: 0 0 0 1px rgb(123 69 214 / 0.28);
+  box-shadow: 0 0 0 1px var(--foil-edge);
   color: var(--foil-ink);
   font-weight: 700;
   animation: foil 2.4s var(--ease-in-out) 0.3s both;
@@ -3899,10 +3899,10 @@ button.list-rows__remove:focus-visible {
   margin: 0;
 }
 .tier__amount {
-  font-size: 34px;
+  font-size: 30px;
   font-weight: 750;
   font-stretch: 104%;
-  line-height: 40px;
+  line-height: 36px;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
@@ -4099,9 +4099,9 @@ button.list-rows__remove:focus-visible {
   align-items: center;
   gap: var(--space-2) var(--space-3);
   padding: 12px 14px;
-  border: 1px dashed color-mix(in srgb, rgb(123 69 214) 40%, var(--line));
+  border: 1px dashed var(--line-strong);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, rgb(123 69 214) 5%, var(--surface));
+  background: color-mix(in srgb, var(--bg) 35%, var(--surface));
   font-size: 14px;
   line-height: 20px;
 }
@@ -4171,6 +4171,21 @@ button.list-rows__remove:focus-visible {
 .supplies__note {
   margin: 0;
 }
+/* Free servers that bought packs: the case for Pro, in one line above the fine print. */
+.supplies__pro {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 20px;
+  text-wrap: pretty;
+}
+.supplies__pro strong {
+  color: var(--text);
+}
 .supplies__toggle {
   cursor: pointer;
   font-size: 14px;
@@ -4214,7 +4229,7 @@ button.list-rows__remove:focus-visible {
   gap: var(--space-2);
 }
 .legal__head h1 {
-  font-size: clamp(32px, 6vw, 44px);
+  font-size: clamp(26px, 6vw, 30px);
   line-height: 1.1;
   letter-spacing: -0.02em;
 }
@@ -4281,7 +4296,7 @@ button.list-rows__remove:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 .legal__section h3 {
-  font-size: 16px;
+  font-size: 17px;
   margin-top: var(--space-2);
 }
 .legal__section ul {

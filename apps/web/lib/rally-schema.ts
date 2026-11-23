@@ -48,6 +48,8 @@ export const ACTION_KIND: Record<string, string> = {
   lockdown_end: "Lift lockdown",
   release_quarantine: "Restore roles",
   undo_case: "Undo case",
+  undo_cases: "Undo cases",
+  ticket_bulk: "Tickets: claim or close several",
   cancel_raid: "Cancel raid",
   close_lfg: "Close group",
   undo_build: "Undo build",

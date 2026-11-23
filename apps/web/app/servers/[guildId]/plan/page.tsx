@@ -1,4 +1,5 @@
 import {
+  AI_SUPPLIES_PER_MONTH,
   aiAllowance,
   FEATURES,
   formatPrice,
@@ -7,6 +8,7 @@ import {
   listAgencyPlans,
   listSupplyPacks,
   type PlanTier,
+  PRICING,
   SUPPLY_PACK_REFUND_DAYS,
   SUPPLY_PACKS,
   type SupplyGrant,
@@ -57,6 +59,10 @@ const DONE: Record<string, { text: string; ok: boolean }> = {
   },
   checkout_failed: {
     text: "Stripe didn't open a checkout. Nothing was charged; try again.",
+    ok: false,
+  },
+  price_changing: {
+    text: "That price is being updated, so checkout is paused for a moment. Nothing was charged; try monthly, or come back shortly.",
     ok: false,
   },
   portal_failed: {
@@ -295,6 +301,17 @@ export default async function PlanPage({
             );
           })}
         </ul>
+        {/* A Free server that keeps buying packs is paying for Pro's supplies without Pro. */}
+        {!pro && packs.length && live ? (
+          <p className="supplies__pro">
+            <strong>
+              Pro gives this server {num(AI_SUPPLIES_PER_MONTH.pro)} supplies every month for{" "}
+              {formatPrice(PRICING.pro.monthly)}
+            </strong>
+            , about what three small packs cost, plus Smart mode and everything else in Pro.{" "}
+            <a href="#plans">Compare plans</a>
+          </p>
+        ) : null}
         <p className="legal-note supplies__note">
           {selling
             ? `A one-time payment for this server; nothing renews. Used after the monthly supplies run out, for a year. An unused pack is refunded in full within ${SUPPLY_PACK_REFUND_DAYS} days. `

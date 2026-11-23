@@ -10,7 +10,6 @@ import {
   leaveLfg,
   listActiveMembers,
   noteDashboardAction,
-  QM_PLAN_TTL_MS,
   qmChangeCount,
   renderWording,
   setLfgMessage,
@@ -458,8 +457,7 @@ export async function doQmRemove(ctx: BotContext, guild: Guild, member: GuildMem
   const p = removeOne.safeParse(raw);
   if (!p.success) return fail("That request wasn't valid.");
   const build = await getQmBuild(ctx.db, guild.id, p.data.id);
-  if (build?.status !== "pending" || Date.now() - build.createdAt.getTime() > QM_PLAN_TTL_MS)
-    return fail("That draft isn't waiting anymore.");
+  if (build?.status !== "pending") return fail("That draft isn't waiting anymore.");
   if (build.requestedById !== member.id)
     return fail("Only the person who asked for this draft can change it.");
   const { ref, setting, post, order, edit, write } = p.data;
@@ -545,7 +543,7 @@ export async function doQmEdit(ctx: BotContext, guild: Guild, member: GuildMembe
     ? await getQmBuild(ctx.db, guild.id, p.data.id)
     : await latestWaitingQmBuild(ctx.db, guild.id, member.id);
   if (p.data.id) {
-    if (build?.status !== "pending" || Date.now() - build.createdAt.getTime() > QM_PLAN_TTL_MS)
+    if (build?.status !== "pending")
       return fail("That draft isn't waiting anymore. Make the change again.");
     if (build.requestedById !== member.id)
       return fail("Only the person who asked for this draft can change it.");

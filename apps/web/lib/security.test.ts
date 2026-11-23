@@ -41,6 +41,9 @@ describe("safeNext", () => {
   it("keeps same-site paths", () => {
     expect(safeNext("/servers/123456789012345678/watch")).toBe("/servers/123456789012345678/watch");
   });
+  it("keeps a plain query of words, like the pricing page's upgrade link", () => {
+    expect(safeNext("/servers?upgrade=pro")).toBe("/servers?upgrade=pro");
+  });
   it.each([
     "//evil.com",
     "/\\evil.com",

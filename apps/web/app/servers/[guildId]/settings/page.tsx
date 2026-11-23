@@ -347,58 +347,65 @@ export default async function SettingsPage({
               label="Public page"
               help={`At ${publicPath}.`}
             />
-            <Switch
-              name="publicLeaderboard"
-              defaultChecked={memberPages.publicLeaderboard}
-              label="Show the leaderboard on it"
-              help={`The top ${publicBoardSize(ent)} by XP: their Discord names, levels and XP. Leave it off if your members wouldn't want that public.`}
-            />
-            <div className="field-row field-row--top">
-              <label className="g-field" htmlFor="publicSlug">
-                <span>
-                  Its own name <ProTag on={ent["members.publicSlug"]} />
-                </span>
-                <input
+            {/* What the page shows, only while it's on (the fields still save when hidden). */}
+            <div className="public-page__more">
+              <Switch
+                name="publicLeaderboard"
+                defaultChecked={memberPages.publicLeaderboard}
+                label="Show the leaderboard on it"
+                help={`The top ${publicBoardSize(ent)} by XP: their Discord names, levels and XP. Leave it off if your members wouldn't want that public.`}
+              />
+              <div className="field-row field-row--top">
+                <label className="g-field" htmlFor="publicSlug">
+                  <span>
+                    Its own name <ProTag on={ent["members.publicSlug"]} />
+                  </span>
+                  <input
+                    className="g-input"
+                    id="publicSlug"
+                    name="publicSlug"
+                    maxLength={32}
+                    defaultValue={memberPages.publicSlug ?? ""}
+                    placeholder="raid-team"
+                    disabled={!ent["members.publicSlug"] && !memberPages.publicSlug}
+                  />
+                  <span className="g-help">
+                    Lower-case letters, numbers and dashes. Without one, the page uses the server's
+                    ID.
+                  </span>
+                </label>
+                <label className="g-field" htmlFor="publicInvite">
+                  <span>Invite link for the Join button</span>
+                  <input
+                    className="g-input"
+                    id="publicInvite"
+                    name="publicInvite"
+                    maxLength={60}
+                    defaultValue={
+                      memberPages.publicInvite
+                        ? `https://discord.gg/${memberPages.publicInvite}`
+                        : ""
+                    }
+                    placeholder="https://discord.gg/…"
+                  />
+                  <span className="g-help">
+                    Use one that doesn't expire. Empty: no Join button.
+                  </span>
+                </label>
+              </div>
+              <label className="g-field" htmlFor="publicAbout">
+                <span>About</span>
+                <textarea
                   className="g-input"
-                  id="publicSlug"
-                  name="publicSlug"
-                  maxLength={32}
-                  defaultValue={memberPages.publicSlug ?? ""}
-                  placeholder="raid-team"
-                  disabled={!ent["members.publicSlug"] && !memberPages.publicSlug}
+                  id="publicAbout"
+                  name="publicAbout"
+                  rows={2}
+                  maxLength={PUBLIC_ABOUT_MAX}
+                  defaultValue={memberPages.publicAbout ?? ""}
+                  placeholder="A friendly raiding guild. Mythic+ every night, all welcome."
                 />
-                <span className="g-help">
-                  Lower-case letters, numbers and dashes. Without one, the page uses the server's
-                  ID.
-                </span>
-              </label>
-              <label className="g-field" htmlFor="publicInvite">
-                <span>Invite link for the Join button</span>
-                <input
-                  className="g-input"
-                  id="publicInvite"
-                  name="publicInvite"
-                  maxLength={60}
-                  defaultValue={
-                    memberPages.publicInvite ? `https://discord.gg/${memberPages.publicInvite}` : ""
-                  }
-                  placeholder="https://discord.gg/…"
-                />
-                <span className="g-help">Use one that doesn't expire. Empty: no Join button.</span>
               </label>
             </div>
-            <label className="g-field" htmlFor="publicAbout">
-              <span>About</span>
-              <textarea
-                className="g-input"
-                id="publicAbout"
-                name="publicAbout"
-                rows={3}
-                maxLength={PUBLIC_ABOUT_MAX}
-                defaultValue={memberPages.publicAbout ?? ""}
-                placeholder="A friendly raiding guild. Mythic+ every night, all welcome."
-              />
-            </label>
           </AutoSaveCard>
         </SetupLayout>
       </TabPanel>

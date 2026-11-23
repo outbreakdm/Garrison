@@ -9,6 +9,7 @@ import {
   roleCrossing,
   rollbackOrder,
   type ServerSnapshot,
+  staleReferences,
   validatePlan,
 } from "./plan.js";
 
@@ -466,5 +467,59 @@ describe("forum and announcement channels", () => {
   it("refuses an announcement channel outside a Community server", () => {
     const out = validatePlan(channel("announcement"), { ...server, community: false });
     expect(!out.ok && out.errors[0]).toMatch(/need a Community server/);
+  });
+});
+
+describe("staleReferences (drafts have no time limit, so they're checked again before building)", () => {
+  const channel = {
+    kind: "create_text_channel" as const,
+    ref: "c1",
+    name: "patch-notes",
+    parent: "100000000000000001",
+    topic: null,
+    slowmodeSeconds: null,
+    userLimit: null,
+    privateTo: ["200000000000000001"],
+    color: null,
+    hoist: false,
+    mentionable: false,
+  };
+  const withChannels: ServerSnapshot = {
+    ...server,
+    channels: [{ id: "300000000000000001", name: "general", parentId: null }],
+  };
+
+  it("finds nothing when everything the draft points at is still there", () => {
+    expect(staleReferences({ plan: [channel] }, withChannels)).toEqual([]);
+  });
+
+  it("names a category or role deleted since the draft was made", () => {
+    expect(staleReferences({ plan: [channel] }, { ...server, categories: [], roles: [] })).toEqual([
+      "a category",
+      "a role",
+    ]);
+  });
+
+  it("names an existing channel an edit changes, as it was called", () => {
+    const edits = [
+      { kind: "edit_channel" as const, id: "300000000000000009", was: "lfg", name: "lfg-2" },
+    ];
+    expect(staleReferences({ plan: [], edits }, withChannels)).toEqual(["#lfg"]);
+  });
+
+  it("never counts what the same draft creates", () => {
+    const category = {
+      ...channel,
+      kind: "create_category" as const,
+      ref: "k1",
+      parent: null,
+      privateTo: [],
+    };
+    expect(
+      staleReferences(
+        { plan: [category, { ...channel, parent: "k1", privateTo: [] }] },
+        withChannels,
+      ),
+    ).toEqual([]);
   });
 });

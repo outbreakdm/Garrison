@@ -28,12 +28,13 @@ export function safeEqual(a: string, b: string) {
 }
 
 /**
- * Where to send the user after login. Only same-site paths: "/servers/1".
+ * Where to send the user after login. Only same-site paths: "/servers/1", with at most a
+ * plain query of words ("/servers?upgrade=pro").
  * Rejects "//evil.com", "/\\evil.com", "https://…" and anything odd, to stop open redirects.
  */
 export function safeNext(next: string | null | undefined, fallback = "/servers") {
   if (!next || next.length > 200) return fallback;
-  if (!/^\/(?![/\\])[\w\-/]*$/.test(next)) return fallback;
+  if (!/^\/(?![/\\])[\w\-/]*(?:\?[\w=&-]+)?$/.test(next)) return fallback;
   return next;
 }
 

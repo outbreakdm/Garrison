@@ -16,9 +16,11 @@ import {
   UTILITY_LIMITS,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
+import type { AutoResult } from "@/lib/autosave";
 import { getDb } from "@/lib/db";
 import { listGuildRoles, listTextChannels } from "@/lib/discord";
 import { flashBack } from "@/lib/flash";
+import { answer, type Outcome } from "@/lib/outcome";
 import { checkGuildAccess } from "@/lib/session";
 
 /**
@@ -75,26 +77,36 @@ async function channelProblem(guildId: string, channelId: string) {
   return null;
 }
 
-export async function saveRestore(form: FormData) {
+/** Roles back on rejoin: a panel that saves itself (AutoSaveCard), with Undo in the toast. */
+export async function saveRestore(form: FormData): Promise<AutoResult> {
   const ctx = await load(form);
+  const reply = (outcome: Outcome) =>
+    answer(form, `/servers/${ctx.guild.id}/utilities`, outcome, "#rejoin");
   const restoreRoles = form.get("restoreRoles") === "on";
   const skip = [...new Set(form.getAll("restoreSkipRoleIds").map(String).filter(Boolean))];
   if (skip.length > UTILITY_LIMITS.skipRoles)
-    return back(ctx.guild.id, { error: `Skip up to ${UTILITY_LIMITS.skipRoles} roles.` }, "rejoin");
+    return reply({ error: `Skip up to ${UTILITY_LIMITS.skipRoles} roles.` });
   if (skip.length) {
     const roles = await listGuildRoles(ctx.guild.id).catch(() => null);
-    if (!roles) return back(ctx.guild.id, { error: "Discord didn't answer. Try again." }, "rejoin");
+    if (!roles) return reply({ error: "Discord didn't answer. Try again." });
     if (!skip.every((id) => roles.some((r) => r.id === id)))
-      return back(ctx.guild.id, { error: "Pick roles from this server's list." }, "rejoin");
+      return reply({ error: "Pick roles from this server's list." });
   }
-  return save(
-    ctx,
-    { restoreRoles, restoreSkipRoleIds: skip },
-    restoreRoles
+  const result = await applySettingsChange(ctx.db, {
+    guildId: ctx.guild.id,
+    module: "utilities",
+    patch: { restoreRoles, restoreSkipRoleIds: skip },
+    userId: ctx.session.userId,
+    username: ctx.session.username,
+  });
+  if (!result.ok)
+    return reply(result.reason === "unchanged" ? "unchanged" : { error: "Try again in a minute." });
+  return reply({
+    ok: restoreRoles
       ? "Saved. Members who leave from now on get their roles back when they rejoin."
       : "Saved. Roles back on rejoin is off.",
-    "rejoin",
-  );
+    changeId: result.change.id,
+  });
 }
 
 export async function saveSticky(form: FormData) {

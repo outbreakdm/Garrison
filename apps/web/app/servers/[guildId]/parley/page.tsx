@@ -158,7 +158,7 @@ export default async function TicketsPage({
 
       <RequestsPanel
         guildId={guild.id}
-        kinds={["post_ticket_panel", "ticket_action"]}
+        kinds={["post_ticket_panel", "ticket_action", "ticket_bulk"]}
         query={query}
       />
 
@@ -243,7 +243,16 @@ export default async function TicketsPage({
                   const waits = waitingOn(t);
                   const last = t.closedAt ?? t.lastMessageAt ?? t.openedAt;
                   return (
-                    <li key={t.id}>
+                    <li key={t.id} className="ticket-pick">
+                      {t.status === "open" ? (
+                        <input
+                          type="checkbox"
+                          form="bulk-tickets"
+                          name="ticketId"
+                          value={t.id}
+                          aria-label={`Select ticket #${t.number}`}
+                        />
+                      ) : null}
                       <Link className="ticket-row" href={`${base}/${t.number}`}>
                         <span className="ticket-row__num mono">#{t.number}</span>
                         <span className="ticket-row__main">
@@ -279,6 +288,38 @@ export default async function TicketsPage({
                   );
                 })}
               </ul>
+            ) : null}
+            {list.length ? (
+              // Several at once: shows once a ticket is ticked, counts them, asks before closing.
+              <form id="bulk-tickets" action={requestAction} className="bulk-bar">
+                <input type="hidden" name="guildId" value={guild.id} />
+                <input type="hidden" name="page" value="parley" />
+                <input type="hidden" name="kind" value="ticket_bulk" />
+                <span className="bulk-bar__count" aria-live="polite">
+                  selected, up to 10 at a time
+                </span>
+                <button
+                  type="submit"
+                  name="op"
+                  value="claim"
+                  className="g-btn g-btn--secondary g-btn--sm"
+                >
+                  Claim them
+                </button>
+                <details className="confirm">
+                  <summary className="confirm__toggle g-btn g-btn--ghost g-btn--sm">
+                    Close selected…
+                  </summary>
+                  <button
+                    type="submit"
+                    name="op"
+                    value="close"
+                    className="g-btn g-btn--danger g-btn--sm"
+                  >
+                    Yes, close them
+                  </button>
+                </details>
+              </form>
             ) : (
               <p className="queue__empty muted">
                 {q

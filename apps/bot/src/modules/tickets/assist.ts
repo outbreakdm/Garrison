@@ -137,7 +137,7 @@ export async function assistTicket(
       return 0;
     });
   }
-  if (!result.ok) return note("Bastion couldn't answer", result.error, "alert");
+  if (!result.ok) return note("The AI couldn't answer", result.error, "alert");
   const { summary, reply } = readAssist(result.text);
   return {
     tone: "volt",

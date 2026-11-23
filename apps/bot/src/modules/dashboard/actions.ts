@@ -1,4 +1,5 @@
 import {
+  BULK_MAX,
   cancelOpsEvent,
   claimDashboardActions,
   closeLfg,
@@ -117,6 +118,41 @@ const lockdownStart = z.object({
   reason: z.string().trim().max(200).nullable(),
 });
 const caseNumber = z.object({ caseNumber: z.number().int().min(1) });
+const caseNumbers = z.object({
+  caseNumbers: z.array(z.number().int().min(1)).min(1).max(BULK_MAX),
+});
+const ticketBulk = z.object({
+  op: z.enum(["claim", "close"]),
+  ticketIds: z.array(uuid).min(1).max(BULK_MAX),
+  reason: z.string().max(500).nullable(),
+});
+
+/**
+ * Several of the same action from one dashboard request: each done in turn, with the same
+ * checks as if it were asked alone, and one line saying what happened to all of them.
+ */
+async function each(
+  items: string[],
+  run: (item: string) => Promise<Outcome>,
+  done: (n: number) => string,
+  label: (item: string) => string = () => "",
+) {
+  const failed: string[] = [];
+  for (const item of items) {
+    const r: Outcome = await run(item).catch((error: unknown) =>
+      fail(error instanceof Error ? error.message : "It failed."),
+    );
+    if (!r.ok) failed.push(`${label(item)}${r.message}`);
+  }
+  const worked = items.length - failed.length;
+  if (!worked) return fail(`None of them went through. ${failed.slice(0, 3).join(" ")}`);
+  return {
+    ok: true,
+    message: failed.length
+      ? `${done(worked)} ${failed.length} didn't: ${failed.slice(0, 3).join(" ")}`
+      : done(worked),
+  };
+}
 const buildVersion = z.object({ version: z.number().int().min(1) });
 const verifyPanelPayload = z.object({ channelId: snowflake });
 const postRoleMenu = z.object({
@@ -528,6 +564,16 @@ export async function runDashboardAction(
       return doReleaseQuarantine(ctx, guild, member, action.payload);
     case "undo_case":
       return doUndoCase(ctx, guild, member, action.payload);
+    case "undo_cases": {
+      const p = caseNumbers.safeParse(action.payload);
+      if (!p.success) return fail("That request wasn't valid.");
+      return each(
+        p.data.caseNumbers.map(String),
+        (n) => doUndoCase(ctx, guild, member, { caseNumber: Number(n) }),
+        (n) => `Undid ${n} ${n === 1 ? "case" : "cases"}.`,
+        (n) => `#${n}: `,
+      );
+    }
     case "cancel_raid":
       return doCancelRaid(ctx, guild, action.payload);
     case "close_lfg":
@@ -596,6 +642,16 @@ export async function runDashboardAction(
       return doPostTicketPanel(ctx, guild, member, action.payload);
     case "ticket_action":
       return doTicketAction(ctx, guild, member, action.payload);
+    case "ticket_bulk": {
+      const p = ticketBulk.safeParse(action.payload);
+      if (!p.success) return fail("That request wasn't valid.");
+      const { op, reason } = p.data;
+      return each(
+        p.data.ticketIds,
+        (ticketId) => doTicketAction(ctx, guild, member, { ticketId, op, reason }),
+        (n) => `${op === "claim" ? "Claimed" : "Closed"} ${n} ${n === 1 ? "ticket" : "tickets"}.`,
+      );
+    }
     case "start_giveaway":
       return doStartGiveaway(ctx, guild, member, action.payload);
     case "giveaway_action":

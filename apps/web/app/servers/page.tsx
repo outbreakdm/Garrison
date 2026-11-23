@@ -64,8 +64,34 @@ function BuildTile({ guild, state }: { guild: ListedGuild; state: string }) {
   );
 }
 
-export default async function ServersPage() {
-  const session = await requireSession("/servers");
+/** A server tile that takes the landing page's "Upgrade a server" to that server's plans. */
+function UpgradeTile({ guild, tier }: { guild: ListedGuild; tier: "pro" | "agency" }) {
+  return (
+    <Link href={`/servers/${guild.id}/plan#plans`} className="server-tile server-tile--build">
+      <span className="server-tile__top">
+        <GuildIcon guild={guild} />
+        <span className="server-tile__id">
+          <span className="server-tile__name">{guild.name}</span>
+          <span className="server-tile__state">Garrison is in</span>
+        </span>
+      </span>
+      <span className="server-tile__foot">
+        {tier === "pro" ? "Upgrade this server" : "Start Agency here"}
+        <span className="cue" aria-hidden="true" />
+      </span>
+    </Link>
+  );
+}
+
+export default async function ServersPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  // "Upgrade a server" from the landing page's pricing: each server you run opens its plans.
+  const asked = (await searchParams).upgrade;
+  const upgrade = asked === "pro" || asked === "agency" ? asked : null;
+  const session = await requireSession(upgrade ? `/servers?upgrade=${upgrade}` : "/servers");
   const db = await getDb();
   // Checked live: a server you added Garrison to after signing in shows up here.
   const withGarrison = await listActiveGuilds(db, session.manageableGuildIds);
@@ -106,6 +132,27 @@ export default async function ServersPage() {
           ) : null}
         </div>
 
+        {upgrade && !idea ? (
+          <div className="build-note" role="status">
+            <span className="build-note__mark" aria-hidden="true" />
+            <p className="build-note__text">
+              <strong>
+                {installed.length
+                  ? `Pick the server to ${upgrade === "pro" ? "upgrade to Pro" : "start Agency on"}`
+                  : "Add Garrison to a server first, then upgrade it from its Plan page"}
+              </strong>
+              <span className="build-note__idea">
+                {upgrade === "pro"
+                  ? "Pro is per server: its own look, higher limits, a year of history and Smart AI."
+                  : "Agency covers up to 5 of your servers; start it on one, then add the others."}
+              </span>
+            </p>
+            <a className="g-btn g-btn--ghost g-btn--sm" href="/servers">
+              Never mind
+            </a>
+          </div>
+        ) : null}
+
         {idea ? (
           <div className="build-note" role="status">
             <span className="build-note__mark" aria-hidden="true" />
@@ -135,6 +182,8 @@ export default async function ServersPage() {
                   <li key={g.id}>
                     {idea ? (
                       <BuildTile guild={g} state="Garrison is in" />
+                    ) : upgrade ? (
+                      <UpgradeTile guild={g} tier={upgrade} />
                     ) : (
                       <Link
                         href={`/servers/${g.id}`}

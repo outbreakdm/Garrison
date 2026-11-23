@@ -19,11 +19,11 @@ import {
   getGuildPlan,
   getQmBuild,
   type LimitReason,
+  latestWaitingQmBuild,
   meterAiCall,
   QM_ATTEMPTS_PER_HOUR,
   QM_MICROS_PER_SUPPLY,
   QM_MIN_MESSAGE_SUPPLIES,
-  QM_PLAN_TTL_MS,
   QM_ROLE_PERMISSION_KEYS,
   QM_ROLE_PERMISSIONS,
   type QmBuild,
@@ -46,6 +46,7 @@ import {
   recordQmCreated,
   reserveAiCall,
   resolveQmSettingRefs,
+  retireOtherDrafts,
   SETTINGS_MODULES,
   type SettingsModule,
   settleBuildSupplies,
@@ -70,6 +71,7 @@ import { DANGEROUS_PERMISSIONS } from "../gatehouse/nuke.js";
 import { invalidateLedgerSettings } from "../ledger/service.js";
 import { invalidateRanksSettings } from "../ranks/service.js";
 import { invalidateVoiceRooms } from "../voice/service.js";
+import { carryOver } from "./carry.js";
 import { asAiEdits, type ChannelKind, deletedIds } from "./edits.js";
 import { keepHandChanges } from "./hand.js";
 import {
@@ -78,6 +80,7 @@ import {
   roleCrossing,
   rollbackOrder,
   type ServerSnapshot,
+  staleReferences,
   validatePlan,
 } from "./plan.js";
 import {
@@ -87,6 +90,7 @@ import {
   type PlannerContinuation,
   type PlannerInput,
   type PlannerUsage,
+  revisionBase,
 } from "./planner.js";
 
 /** What a model call used, priced: cached input at the cache's rates. */
@@ -130,7 +134,6 @@ export function warnIfOverHold(
 export const dailyBudgetMicros = async (ctx: BotContext) =>
   ctx.qmDailyBudgetUsd === undefined ? null : aiDailyBudgetMicros(ctx.db, ctx.qmDailyBudgetUsd);
 
-export const PLAN_TTL_MS = QM_PLAN_TTL_MS;
 export const REQUEST_MAX = 500;
 
 const P = PermissionFlagsBits;
@@ -431,17 +434,16 @@ export type PlanOutcome =
       build: QmBuild;
       server: ServerSnapshot;
       notes: string;
-      /** Supplies left today after this plan, which holds its changes until it's built or expires. */
+      /** Supplies left after this plan, which holds its changes until it's built, discarded or replaced. */
       suppliesLeft: number;
       /** The waiting plan this one replaced, when it was a revision. */
       replaced: QmBuild | null;
     }
   | { ok: false; error: string };
 
-/** Builds a continuation can start from: a plan still waiting, or one that was built. */
-export function canContinue(build: QmBuild, now = Date.now()) {
-  if (build.status === "pending") return now - build.createdAt.getTime() < PLAN_TTL_MS;
-  return build.status === "applied" || build.status === "failed";
+/** Builds a continuation can start from: a plan still waiting (they don't expire), or one that was built. */
+export function canContinue(build: QmBuild) {
+  return build.status === "pending" || build.status === "applied" || build.status === "failed";
 }
 
 /** The plan a waiting build holds, in the shape the model writes, for a revision. */
@@ -582,8 +584,11 @@ export async function storePlan(
   | { ok: true; build: QmBuild; suppliesLeft: number; replaced: QmBuild | null }
   | { ok: false; error: string }
 > {
+  // This draft replaces the person's waiting drafts here (one each per server), so what
+  // those hold doesn't count against it.
   const now = await aiAllowance(ctx.db, guildId, requester.id, {
     exceptId: line.replacing?.id,
+    exceptDraftsOf: { guildId, personId: requester.id },
   });
   // A redraft keeps what the admin changed by hand in the draft it replaces.
   const kept = line.replacing
@@ -628,6 +633,8 @@ export async function storePlan(
         error: `Replaced by v${build.version}.`,
       })
     : null;
+  // A draft left in an older conversation gives its supplies back now that this one waits.
+  await retireOtherDrafts(ctx.db, guildId, requester.id, build.id, build.version);
   return {
     ok: true,
     build,
@@ -801,8 +808,9 @@ export async function checkDraft(
 /**
  * Ask the model for a plan and store it as the next version. It costs what the call really
  * cost (1 supply per $0.001) plus one per change: a plan may make up to 20 changes, or
- * whatever is left, and unused supplies stay for the next plan. Continuing a waiting plan
- * replaces it; continuing a built one adds onto it.
+ * whatever is left, and unused supplies stay for the next plan. A person's waiting draft is
+ * what every request builds on (a new version that keeps what it doesn't drop); with none
+ * waiting, continuing a built plan adds onto it.
  */
 export async function planBuild(
   ctx: BotContext,
@@ -813,7 +821,9 @@ export async function planBuild(
   opts: { continues?: QmBuild } = {},
 ): Promise<PlanOutcome> {
   await ensureGuild(ctx, guild);
-  const continues = opts.continues ?? null;
+  // One draft per person per server: a waiting one is what every request builds on.
+  const continues =
+    (await latestWaitingQmBuild(ctx.db, guild.id, requester.id)) ?? opts.continues ?? null;
   if (continues && !canContinue(continues))
     return {
       ok: false,
@@ -864,10 +874,30 @@ export async function planBuild(
     answered = true;
     // Charged what it cost so far, so the plan is checked against what's really left.
     if (usage) await meterAiCall(ctx.db, reserved.id, callUsage(usage, model));
-    const server = deletesAnything(result.plan.edits)
+    // A revision keeps the waiting draft's structure it doesn't drop (carry.ts). This planner
+    // writes structure only, so the draft's settings, posts and writes stay as they were.
+    const kept = {
+      settings: replacing?.settings ?? [],
+      posts: replacing?.posts ?? [],
+      writes: replacing?.writes ?? [],
+    };
+    const structureOnly = { settings: [], posts: [], writes: [] };
+    const plan =
+      continuation?.mode === "revise"
+        ? carryOver(
+            { ...revisionBase(continuation), ...structureOnly },
+            { ...result.plan, ...structureOnly },
+          ).plan
+        : result.plan;
+    const server = deletesAnything(plan.edits)
       ? { ...snap.server, protectedChannels: await protectedChannelsFor(ctx, guild) }
       : snap.server;
-    const checked = validatePlan(result.plan, server, maxOperations);
+    const checked = validatePlan(
+      plan,
+      server,
+      maxOperations,
+      kept.settings.length + kept.posts.length + kept.writes.length,
+    );
     if (!checked.ok) {
       ctx.logger.info("AI assistant plan rejected", { guildId: guild.id, errors: checked.errors });
       return {
@@ -878,10 +908,15 @@ export async function planBuild(
           .join("\n")}`,
       };
     }
-    const stored = await storePlan(ctx, guild.id, requester, request, checked, result.model, {
-      continues,
-      replacing,
-    });
+    const stored = await storePlan(
+      ctx,
+      guild.id,
+      requester,
+      request,
+      { ...checked, ...kept },
+      result.model,
+      { continues, replacing },
+    );
     if (!stored.ok) return stored;
     return { ...stored, server: snap.server, notes: checked.notes };
   } finally {
@@ -959,13 +994,14 @@ export async function applyBuild(
 }
 
 async function runBuild(ctx: BotContext, guild: Guild, build: QmBuild): Promise<ApplyOutcome> {
-  if (Date.now() - build.createdAt.getTime() > PLAN_TTL_MS) {
-    await transitionQmBuild(ctx.db, build.id, "pending", "expired");
+  // Drafts wait as long as they need to, so the server may have changed since this one was
+  // drafted: build nothing if it points at something that's gone.
+  const gone = staleReferences(build, snapshot(guild).server);
+  if (gone.length)
     return {
       ok: false,
-      error: "That plan expired. Plans last 15 minutes: ask again with /qm build.",
+      error: `The server changed since this draft was made: ${gone.slice(0, 3).join(", ")} ${gone.length === 1 ? "is" : "are"} gone. Ask the AI assistant to update the draft, then apply it.`,
     };
-  }
   const me = guild.members.me ?? (await guild.members.fetchMe());
   if (
     (build.plan.length || build.edits?.length) &&
@@ -1011,7 +1047,7 @@ async function runBuild(ctx: BotContext, guild: Guild, build: QmBuild): Promise<
   const claimed = await transitionQmBuild(ctx.db, build.id, "pending", "applied", {
     appliedAt: new Date(),
   });
-  if (!claimed) return { ok: false, error: "That plan was already applied, canceled or expired." };
+  if (!claimed) return { ok: false, error: "That plan was already applied or discarded." };
 
   const ids = new Map<string, string>();
   const created: QmCreated[] = [];

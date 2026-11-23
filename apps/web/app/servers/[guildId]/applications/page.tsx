@@ -13,6 +13,7 @@ import { formatTime } from "@/components/format";
 import { HowItWorks } from "@/components/HowItWorks";
 import { HeadStatus } from "@/components/ModuleHead";
 import { RequestsPanel } from "@/components/RequestsPanel";
+import { CheckList } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { listGuildRoles, listTextChannels } from "@/lib/discord";
 import { readFlash } from "@/lib/flash";
@@ -117,7 +118,7 @@ function FormFields({
               aria-label={`Hint for question ${i + 1}`}
             />
             <select
-              className="g-select"
+              className="g-input"
               name="qlong"
               defaultValue={q?.long ? "long" : "short"}
               aria-label={`Answer box for question ${i + 1}`}
@@ -132,7 +133,7 @@ function FormFields({
         <label className="g-field">
           <span className="g-label">Applications go to</span>
           <select
-            className="g-select"
+            className="g-input"
             name="reviewChannelId"
             defaultValue={f?.reviewChannelId ?? ""}
             required
@@ -147,24 +148,13 @@ function FormFields({
             ))}
           </select>
         </label>
-        <label className="g-field">
-          <span className="g-label">Roles given on accept</span>
-          <select
-            className="g-select appl__roles"
-            name="acceptRoleIds"
-            multiple
-            defaultValue={f?.acceptRoleIds ?? []}
-          >
-            {roles.map((r) => (
-              <option key={r.id} value={r.id}>
-                @{r.name}
-              </option>
-            ))}
-          </select>
-          <span className="g-help">
-            Up to {APPLICATION_LIMITS.roles}. Roles with staff powers aren't offered.
-          </span>
-        </label>
+        <CheckList
+          name="acceptRoleIds"
+          label="Roles given on accept"
+          value={f?.acceptRoleIds ?? []}
+          options={roles.map((r) => ({ id: r.id, label: `@${r.name}` }))}
+          help={`Up to ${APPLICATION_LIMITS.roles}. Roles with staff powers aren't offered.`}
+        />
       </div>
     </div>
   );
@@ -339,7 +329,7 @@ export default async function ApplicationsPage({
                     <input type="hidden" name="formId" value={f.id} />
                     <label className="g-field">
                       <span className="g-label">Post its panel in</span>
-                      <select className="g-select" name="channelId" required defaultValue="">
+                      <select className="g-input" name="channelId" required defaultValue="">
                         <option value="" disabled>
                           Pick a channel
                         </option>

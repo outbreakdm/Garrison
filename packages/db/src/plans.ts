@@ -101,15 +101,18 @@ export const PRICING = {
   pro: {
     name: "Pro",
     monthly: 8.99,
-    yearly: 79.99,
+    yearly: 89.99,
     servers: 1,
     pitch: "Your server's own look, higher limits and history. Replaces three or four paid bots.",
     highlights: [
       "Branded cards: your colors, images, emoji and footer",
+      "AI assistant on Fast and Smart, for whole-server designs: 2,500 supplies a month",
+      "Welcome DMs, and welcome images with each new member's avatar",
       "Ticket forms, auto-assign, stats and a year of transcripts",
       "Custom rank cards, XP boosts and seasons",
-      "Raid attendance, roles from game stats, scheduled backups",
-      "AI assistant: 2,500 supplies a month, and server templates",
+      "Raid attendance, roles from game stats, a backup every week",
+      "A year of insights, downloads of insights and logs, and server templates",
+      "Higher limits: 25 role menus, 50 scheduled messages, 20 giveaways at once",
     ],
   },
   agency: {
@@ -121,14 +124,14 @@ export const PRICING = {
     highlights: [
       "Everything in Pro, on each of 5 servers",
       "Put a server in a seat, or free it, from its Plan page",
-      "AI assistant: 11,000 supplies a month, shared by your servers",
+      "AI assistant on Fast and Smart: 11,000 supplies a month, shared by your servers",
       "One bill: $7.00 a server a month",
     ],
   },
 } as const;
 export type PlanTier = keyof typeof PRICING;
 
-/** "save 26%": what paying yearly saves against twelve monthly payments. */
+/** "save 17%": what paying yearly saves against twelve monthly payments. */
 export const yearlySaving = (monthly: number, yearly: number) =>
   `save ${Math.round((1 - yearly / (monthly * 12)) * 100)}%`;
 
@@ -323,7 +326,7 @@ export const FEATURES = {
   },
   "tickets.aiAssist": {
     module: "tickets",
-    about: "/ticket assist: Bastion reads a ticket and drafts a summary and a reply for staff",
+    about: "/ticket assist: the AI reads a ticket and drafts a summary and a reply for staff",
     free: false,
     pro: true,
   },

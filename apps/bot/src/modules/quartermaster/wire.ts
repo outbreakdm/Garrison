@@ -42,6 +42,11 @@ const count = (v: number | null | undefined) => (typeof v === "number" && v >= 0
 /** 0 or less is "not set": for a new channel, 0 and none are the same. */
 const positive = (v: number | null | undefined) => (typeof v === "number" && v > 0 ? v : null);
 const ids = () => z.array(z.string()).default([]);
+/** Revising: what of <previous_plan> to take out. Everything else stays (carry.ts). */
+const drop = () =>
+  ids().describe(
+    "Only when revising <previous_plan>: the refs, edit ids, module.field names or message_ids of its changes the admin asked to take out. Everything else in <previous_plan> stays in the draft even if you leave it out, so leave this empty unless they asked to remove something.",
+  );
 
 export const AiEditWireSchema = z.object({
   kind: AiEditSchema.shape.kind,
@@ -136,6 +141,7 @@ export const AiPlanWireSchema = z.object({
     .array(AiEditWireSchema)
     .default([])
     .describe(AiPlanSchema.shape.edits.description ?? ""),
+  drop: drop(),
 });
 
 /** A plan the chat drafts: the one-shot plan's parts, and settings, posts and writes. */
@@ -144,6 +150,7 @@ export const AiDraftWireSchema = z.object({
   operations: AiPlanWireSchema.shape.operations,
   order: AiPlanWireSchema.shape.order,
   edits: AiPlanWireSchema.shape.edits,
+  drop: drop(),
   plan_notes: z.string().default("").describe("What you left out or would add next."),
   settings: z
     .array(
@@ -318,6 +325,7 @@ export function planFromWire(p: z.infer<typeof AiPlanWireSchema>): AiPlan {
     notes: p.notes,
     order: p.order.map(orderFromWire),
     edits: p.edits.map(editFromWire),
+    ...(p.drop.length ? { drop: p.drop } : {}),
   };
 }
 

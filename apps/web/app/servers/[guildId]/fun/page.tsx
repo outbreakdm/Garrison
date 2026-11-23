@@ -98,7 +98,7 @@ export default async function FunPage({ params }: { params: Promise<{ guildId: s
             <label className="g-field">
               <span className="g-label">Post them in</span>
               <select
-                className="g-select"
+                className="g-input"
                 name="birthdayChannelId"
                 defaultValue={settings.birthdayChannelId ?? ""}
               >
@@ -113,7 +113,7 @@ export default async function FunPage({ params }: { params: Promise<{ guildId: s
             <label className="g-field">
               <span className="g-label">Birthday role (optional)</span>
               <select
-                className="g-select"
+                className="g-input"
                 name="birthdayRoleId"
                 defaultValue={settings.birthdayRoleId ?? ""}
               >
@@ -162,7 +162,7 @@ export default async function FunPage({ params }: { params: Promise<{ guildId: s
           <label className="g-field">
             <span className="g-label">Channel</span>
             <select
-              className="g-select"
+              className="g-input"
               name="countingChannelId"
               defaultValue={settings.countingChannelId ?? ""}
             >

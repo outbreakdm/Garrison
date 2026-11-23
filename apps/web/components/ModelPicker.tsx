@@ -1,10 +1,10 @@
 "use client";
 
-import { AI_ENGINE, AI_MODES } from "@garrison/db/cards";
+import { AI_MODES } from "@garrison/db/cards";
 import { useEffect, useRef, useState } from "react";
 
 /**
- * Bastion v1's mode, Fast or Smart, for the AI assistant's next message, in the composer. Shows what a message
+ * The AI's mode, Fast or Smart, for the AI assistant's next message, in the composer. Shows what a message
  * costs on each and about how many are left, and the first time Smart is sent from this
  * browser asks once, since one Smart message can hold up to a few hundred supplies. Smart is
  * Pro and Agency; on Free it's shown locked with Upgrade. The choice is a radio named
@@ -83,8 +83,7 @@ export function ModelPicker({
 
   return (
     <fieldset className="qm-model" ref={root}>
-      <legend className="sr-only">{AI_ENGINE} mode for this message</legend>
-      <span className="qm-model__engine">{AI_ENGINE}</span>
+      <legend className="sr-only">AI mode for this message</legend>
       <div className="qm-model__switch">
         <label className="qm-model__opt">
           <input

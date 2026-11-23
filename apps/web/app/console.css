@@ -273,7 +273,7 @@
   width: 8px;
   height: 8px;
   margin: 0 16px 0 8px;
-  border-radius: 2px;
+  border-radius: var(--radius-mark);
   box-shadow: 0 0 0 7px color-mix(in srgb, var(--id, var(--accent)) 16%, var(--surface));
   transform: rotate(45deg) translateY(-2px);
 }
@@ -654,7 +654,7 @@ a.g-btn--primary:hover {
   content: "";
   width: 9px;
   height: 9px;
-  border-radius: 2px;
+  border-radius: var(--radius-mark);
   background: var(--id-text, var(--accent-strong));
   transform: rotate(45deg);
 }
@@ -669,7 +669,7 @@ a.g-btn--primary:hover {
 .qm-msg--me .qm-msg__bubble {
   padding: 8px 14px;
   border-color: var(--line);
-  border-radius: 16px 16px 4px;
+  border-radius: var(--radius-lg) var(--radius-lg) var(--radius-mark);
   background: var(--surface-raised);
   font-size: 14.5px;
 }
@@ -706,7 +706,7 @@ a.g-btn--primary:hover {
   width: 8px;
   height: 8px;
   margin: 0 18px 0 9px;
-  border-radius: 2px;
+  border-radius: var(--radius-mark);
   background: var(--id-text, var(--accent-strong));
   box-shadow: 0 0 0 9px color-mix(in srgb, var(--id, var(--accent)) 14%, var(--surface-raised));
   transform: rotate(45deg) translateY(-1px);
@@ -749,7 +749,7 @@ a.g-btn--primary:hover {
   width: 8px;
   height: 8px;
   margin: 0 18px 0 9px;
-  border-radius: 2px;
+  border-radius: var(--radius-mark);
   background: var(--id-text, var(--accent-strong));
   box-shadow: 0 0 0 9px color-mix(in srgb, var(--id, var(--accent)) 14%, var(--surface-raised));
   transform: rotate(45deg) translateY(-1px);
@@ -841,7 +841,7 @@ a.g-btn--primary:hover {
   content: "";
   width: 9px;
   height: 9px;
-  border-radius: 2px;
+  border-radius: var(--radius-mark);
   background: var(--id-text, var(--accent-strong));
   transform: rotate(45deg);
 }
@@ -1193,7 +1193,7 @@ a.g-btn--primary:hover {
   color: var(--id-text, var(--accent-strong));
 }
 .ov-stat__value {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
   line-height: 34px;
   font-variant-numeric: tabular-nums;
@@ -1464,7 +1464,7 @@ a.g-btn--primary:hover {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   overflow-wrap: anywhere;
 }
@@ -1676,7 +1676,7 @@ a.g-btn--primary:hover {
   content: "";
   width: 7px;
   height: 7px;
-  border-radius: 2px;
+  border-radius: var(--radius-mark);
   background: var(--id-text, var(--accent-strong));
   transform: rotate(45deg);
 }
@@ -1884,7 +1884,7 @@ a.g-btn--primary:hover {
   flex: none;
   width: 7px;
   height: 7px;
-  border-radius: 2px;
+  border-radius: var(--radius-mark);
   background: var(--go);
   transform: rotate(45deg);
 }
@@ -1953,7 +1953,7 @@ a.g-btn--primary:hover {
   padding: 0;
   overflow: auto;
   border: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
-  border-radius: 20px;
+  border-radius: var(--radius-lg);
   background: linear-gradient(
     180deg,
     color-mix(in srgb, var(--surface-raised) 70%, var(--surface)),
@@ -1989,32 +1989,17 @@ html:has(.pro-sheet[open]) {
   height: 136px;
   overflow: hidden;
   border-bottom: 1px solid color-mix(in srgb, var(--text) 7%, transparent);
-  background:
-    radial-gradient(70% 90% at 50% 100%, rgb(123 69 214 / 0.22), transparent 70%),
-    radial-gradient(40% 60% at 30% 20%, rgb(201 247 239 / 0.1), transparent 70%),
-    radial-gradient(40% 60% at 72% 30%, rgb(255 217 243 / 0.1), transparent 70%);
-}
-/* A faint grid behind the shield, fading out from it: the control room, lit for Pro. */
-.pro-sheet__art::before {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  background-image:
-    linear-gradient(color-mix(in srgb, var(--text) 6%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--text) 6%, transparent) 1px, transparent 1px);
-  background-size: 22px 22px;
-  mask-image: radial-gradient(60% 80% at 50% 60%, #000, transparent 75%);
+  background: var(--surface-raised);
 }
 .pro-sheet__shield {
   position: relative;
   box-sizing: content-box;
   padding: 12px;
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--bg) 70%, transparent);
   box-shadow:
-    0 0 0 1px rgb(255 255 255 / 0.55),
-    0 0 0 4px rgb(123 69 214 / 0.18),
-    0 18px 40px -12px rgb(123 69 214 / 0.55);
+    0 0 0 1px var(--foil-edge),
+    0 14px 30px -12px rgb(0 0 0 / 0.6);
 }
 /* Foil reads on dark: the tile stays dark in the light theme too. */
 [data-theme="light"] .pro-sheet__shield {
@@ -2045,7 +2030,7 @@ html:has(.pro-sheet[open]) {
   padding: 24px 28px 20px;
 }
 .pro-sheet__title {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 750;
   font-stretch: 104%;
   line-height: 28px;
@@ -2159,7 +2144,7 @@ a.pro-sheet__go:hover {
   gap: 2px;
   padding: 3px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--bg) 65%, var(--surface));
 }
 .seg__opt {
@@ -2181,7 +2166,7 @@ a.pro-sheet__go:hover {
   min-height: 30px;
   height: 100%;
   padding: 5px 8px;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   color: var(--text-muted);
   font-size: 13px;
   font-weight: 600;
@@ -2339,7 +2324,7 @@ a.pro-sheet__go:hover {
 }
 .pick-card__bar {
   width: 3px;
-  border-radius: 1px;
+  border-radius: var(--radius-mark);
   background: var(--line-strong);
 }
 .pick-card__bar:nth-child(1) {
@@ -2376,7 +2361,7 @@ a.pro-sheet__go:hover {
   padding: 3px;
   overflow-x: auto;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--surface);
   scrollbar-width: none;
 }
@@ -2386,7 +2371,7 @@ a.pro-sheet__go:hover {
   gap: 6px;
   height: 32px;
   padding: 0 12px;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   color: var(--text-muted);
   font-size: 13.5px;
   font-weight: 500;
@@ -2890,7 +2875,7 @@ form[data-locked] button[disabled] {
   height: 28px;
   padding: 0 12px;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   background: none;
   color: var(--text-muted);
   font: inherit;
@@ -3429,7 +3414,7 @@ form[data-locked] .seg__opt:has(input:disabled) {
   flex: none;
   width: 7px;
   height: 7px;
-  border-radius: 2px;
+  border-radius: var(--radius-mark);
   background: var(--id-text, var(--accent-strong));
   transform: rotate(45deg);
 }
@@ -3764,7 +3749,7 @@ form[data-locked] .seg__opt:has(input:disabled) {
 .page-tab:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 .page-tab__count {
   min-width: 20px;
@@ -3985,7 +3970,7 @@ a.item-tile:focus-visible {
 .how-works > summary:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
-  border-radius: 2px;
+  border-radius: var(--radius-mark);
 }
 
 /* --- Layout, phase D: the menu folds by group; Settings stays at its foot ----------------- */
@@ -4522,9 +4507,12 @@ a.item-tile:focus-visible {
     clip-path: inset(50%);
     white-space: nowrap;
   }
-  /* With the title and intro put away, the head is its state alone. */
+  /* With the title and intro put away, the head is its state alone: no rule under it, so
+     the state sits right under the page bar instead of on a ruled row of its own. */
   .console .main .page-head {
     position: relative;
+    padding-bottom: 0;
+    border-bottom: 0;
   }
   .console .main .page-head:has(.head-state) > div:first-child {
     position: absolute;
@@ -4852,11 +4840,6 @@ a.item-tile:not([open]) > .panel__summary {
   padding: 0;
   border: 0;
 }
-.qm-model__engine {
-  color: var(--text);
-  font: 700 12px / 20px var(--font-display);
-  letter-spacing: 0.02em;
-}
 .qm-model__switch {
   display: flex;
   padding: 2px;
@@ -5051,7 +5034,7 @@ a.item-tile:not([open]) > .panel__summary {
 }
 .help-entry__title {
   margin: 0;
-  font-size: 16px;
+  font-size: 15px;
 }
 .help-entry__about {
   margin: 0;
@@ -5119,8 +5102,8 @@ a.item-tile:not([open]) > .panel__summary {
   display: grid;
   gap: 6px;
   padding: var(--space-3);
-  border-left: 3px solid var(--accent);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
   background: var(--surface-raised);
   font-size: 14px;
   line-height: 20px;
@@ -5300,7 +5283,7 @@ a.item-tile:not([open]) > .panel__summary {
   .account-head__id .avatar--lg {
     width: 44px;
     height: 44px;
-    font-size: 19px;
+    font-size: 20px;
   }
 }
 
@@ -5358,9 +5341,6 @@ a.item-tile:not([open]) > .panel__summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
   gap: var(--space-3);
-}
-.resp__channels {
-  min-height: 6.5rem;
 }
 .resp__do {
   display: flex;
@@ -5453,9 +5433,6 @@ a.item-tile:not([open]) > .panel__summary {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto;
   gap: 8px;
-}
-.appl__roles {
-  min-height: 6.5rem;
 }
 .appl__do {
   display: flex;
@@ -5617,7 +5594,7 @@ a.item-tile:not([open]) > .panel__summary {
     font-size: 18px;
   }
   .ov-hero__name {
-    font-size: 19px;
+    font-size: 20px;
     line-height: 24px;
   }
   .ov-hero__side {
@@ -5736,7 +5713,7 @@ a.item-tile:not([open]) > .panel__summary {
     height: 34px;
   }
   .member__server {
-    font-size: 16px;
+    font-size: 15px;
     line-height: 22px;
   }
 }
@@ -5751,5 +5728,145 @@ a.item-tile:not([open]) > .panel__summary {
   .acct-kept td {
     font-size: 13px;
     line-height: 19px;
+  }
+}
+
+/* --- Touch: targets a thumb can hit ---------------------------------------------------------
+   On a touch screen the small controls grow to at least 36px (the chat's rating buttons, quick
+   replies, the draft's rename and move tools, Fast and Smart, small buttons), so nothing on
+   the AI assistant or a settings page needs a fingertip to land on 22px. */
+@media (pointer: coarse) {
+  .g-btn--sm,
+  .chip {
+    min-height: 36px;
+  }
+  .qm-rate__btn,
+  .sp-tool {
+    width: 36px;
+    height: 36px;
+  }
+  .qm-model__name {
+    padding-block: 8px;
+  }
+  .sp-cat > summary {
+    min-height: 40px;
+  }
+}
+
+/* --- AI assistant: more supplies, offered when they run low --------------------------------
+   Above the message box: what's left and when it renews, then a pack, and Pro for a Free
+   server. One line of text and two buttons; it goes away once supplies are back. */
+.qm-offer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0 var(--space-4) var(--space-3);
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--caution) 40%, var(--line));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--caution) 6%, var(--surface));
+}
+.qm-offer__text {
+  display: flex;
+  flex: 1 1 280px;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13.5px;
+  line-height: 20px;
+}
+.qm-offer__text strong {
+  color: var(--text);
+}
+.qm-offer__do {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* --- Settings: the public page's details show while the page is on ---------------------- */
+.public-page__more {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+#public-page:has(input[name="publicPage"]:not(:checked)) .public-page__more {
+  display: none;
+}
+
+/* --- Several at once: tick rows, then act on them from one bar -------------------------------
+   Cases (undo) and open tickets (claim, close) carry a checkbox tied to the list's bulk form
+   by form="bulk-…". The bar shows only once something is ticked, counts what is ticked with a
+   CSS counter, and stays in reach at the bottom of the window while you scroll the list. */
+.g-card:has(.bulk-bar) {
+  counter-reset: picked;
+}
+input[form^="bulk-"]:checked {
+  counter-increment: picked;
+}
+.bulk-bar {
+  position: sticky;
+  bottom: var(--space-4);
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin: var(--space-3) 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lift);
+}
+.g-card:not(:has(input[form^="bulk-"]:checked)) .bulk-bar {
+  display: none;
+}
+.bulk-bar__count {
+  flex: 1 1 auto;
+  color: var(--text-muted);
+  font-size: 13.5px;
+}
+.bulk-bar__count::before {
+  content: counter(picked) " ";
+  color: var(--text);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.bulk-bar .confirm[open] .confirm__toggle {
+  margin-bottom: var(--space-2);
+}
+input[form^="bulk-"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.case-table .case-pick {
+  width: 36px;
+  padding-right: 0;
+}
+.ticket-pick {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.ticket-pick > .ticket-row {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* Closed tickets have no box: keep their rows lined up with the ones that do. */
+.queue__list:has(input[form="bulk-tickets"]) .ticket-pick:not(:has(input)) {
+  padding-left: calc(18px + var(--space-3));
+}
+@media (pointer: coarse) {
+  input[form^="bulk-"] {
+    width: 24px;
+    height: 24px;
   }
 }

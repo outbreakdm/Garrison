@@ -10,13 +10,16 @@ import {
   UTILITY_LIMITS,
 } from "@garrison/db";
 import type { Metadata } from "next";
+import { AutoSaveCard } from "@/components/AutoSave";
 import { formatTime } from "@/components/format";
 import { HowItWorks } from "@/components/HowItWorks";
 import { HeadStatus } from "@/components/ModuleHead";
+import { CheckList } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { listGuildRoles, listTextChannels } from "@/lib/discord";
-import { readFlash } from "@/lib/flash";
+import { contentKey, readFlash } from "@/lib/flash";
 import { requireGuildAccess } from "@/lib/session";
+import { undoChange } from "../settings/actions";
 import { removeClearing, removeSticky, saveClearing, saveRestore, saveSticky } from "./actions";
 
 export const metadata: Metadata = { title: "Utilities" };
@@ -27,7 +30,7 @@ function ChannelSelect({ channels, value }: { channels: Channel[]; value?: strin
   return (
     <label className="g-field">
       <span className="g-label">Channel</span>
-      <select className="g-select" name="channelId" defaultValue={value ?? ""} required>
+      <select className="g-input" name="channelId" defaultValue={value ?? ""} required>
         <option value="" disabled>
           Pick a channel
         </option>
@@ -45,7 +48,7 @@ function OnOff({ on }: { on: boolean }) {
   return (
     <label className="g-field">
       <span className="g-label">State</span>
-      <select className="g-select" name="enabled" defaultValue={on ? "on" : "off"}>
+      <select className="g-input" name="enabled" defaultValue={on ? "on" : "off"}>
         <option value="on">On</option>
         <option value="off">Paused</option>
       </select>
@@ -100,7 +103,7 @@ function ClearFields({ c, channels }: { c: ClearRule | null; channels: Channel[]
         </label>
         <label className="g-field">
           <span className="g-label">Unit</span>
-          <select className="g-select" name="unit" defaultValue={days ? "days" : "hours"}>
+          <select className="g-input" name="unit" defaultValue={days ? "days" : "hours"}>
             <option value="hours">Hours</option>
             <option value="days">Days</option>
           </select>
@@ -175,17 +178,21 @@ export default async function UtilitiesPage({ params }: { params: Promise<{ guil
         </div>
       ) : null}
 
-      <section className="g-card appl" id="rejoin" aria-labelledby="rejoin-title">
-        <h2 className="card-title" id="rejoin-title">
-          Roles back on rejoin
-        </h2>
+      <AutoSaveCard
+        id="rejoin"
+        title="Roles back on rejoin"
+        action={saveRestore}
+        undo={undoChange}
+        guildId={guild.id}
+        stamp={contentKey([s.restoreRoles, s.restoreSkipRoleIds])}
+        saveLabel="Save roles back on rejoin"
+      >
         <p className="card-sub">
           When a member leaves, Garrison keeps their roles for 180 days and gives them back if they
           return. Bot roles, roles above Garrison's and roles with moderation powers are never given
           back.
         </p>
-        <form action={saveRestore} className="appl__edit">
-          <input type="hidden" name="guildId" value={guild.id} />
+        <div className="appl__edit">
           <label className="switch">
             <input type="checkbox" name="restoreRoles" defaultChecked={s.restoreRoles} />
             <span className="switch__text">
@@ -193,31 +200,15 @@ export default async function UtilitiesPage({ params }: { params: Promise<{ guil
               <span className="g-help">Only for members who leave after you turn it on.</span>
             </span>
           </label>
-          <label className="g-field">
-            <span className="g-label">Never give back</span>
-            <select
-              className="g-select appl__roles"
-              name="restoreSkipRoleIds"
-              multiple
-              defaultValue={s.restoreSkipRoleIds}
-            >
-              {roles.map((r) => (
-                <option key={r.id} value={r.id}>
-                  @{r.name}
-                </option>
-              ))}
-            </select>
-            <span className="g-help">
-              Up to {UTILITY_LIMITS.skipRoles}, like a role that only means "here right now".
-            </span>
-          </label>
-          <div className="appl__do">
-            <button type="submit" className="g-btn g-btn--primary g-btn--sm">
-              Save
-            </button>
-          </div>
-        </form>
-      </section>
+          <CheckList
+            name="restoreSkipRoleIds"
+            label="Never give back"
+            value={s.restoreSkipRoleIds}
+            options={roles.map((r) => ({ id: r.id, label: `@${r.name}` }))}
+            help={`Up to ${UTILITY_LIMITS.skipRoles}, like a role that only means "here right now".`}
+          />
+        </div>
+      </AutoSaveCard>
 
       <section className="g-card appl" id="stickies" aria-labelledby="stickies-title">
         <h2 className="card-title" id="stickies-title">

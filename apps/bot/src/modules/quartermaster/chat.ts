@@ -4,6 +4,7 @@ import {
   addQmMessage,
   finishAiCall,
   getQmBuild,
+  latestWaitingQmBuild,
   listQmThread,
   meterAiCall,
   QM_MICROS_PER_SUPPLY,
@@ -16,8 +17,16 @@ import {
 import type { Guild } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
+import { carryOver, draftIsEmpty } from "./carry.js";
 import { displayName, MAX_OPERATIONS } from "./plan.js";
-import { type ChatTurn, DEFAULT_MODEL, type Planner, type PlannerUsage } from "./planner.js";
+import {
+  type ChatTurn,
+  DEFAULT_MODEL,
+  type DraftPlan,
+  type Planner,
+  type PlannerUsage,
+  revisionBase,
+} from "./planner.js";
 import {
   callUsage,
   canContinue,
@@ -99,8 +108,11 @@ export async function chatTurn(
       ...extra,
     });
 
-  // The build the conversation works on: the one it continues, or the last plan it drafted.
-  let working = input.continues ?? null;
+  // The build the conversation works on. One draft per person per server, built up message by
+  // message: a waiting draft of theirs comes first, from whichever conversation; else the
+  // build this continues, or the last one this conversation drafted.
+  let working = await latestWaitingQmBuild(ctx.db, guild.id, person.id);
+  if (!working) working = input.continues ?? null;
   if (!working) {
     const drafted = [...history].reverse().find((m) => m.buildId);
     working = drafted?.buildId ? await getQmBuild(ctx.db, guild.id, drafted.buildId) : null;
@@ -151,6 +163,13 @@ export async function chatTurn(
     const room = allowance.suppliesLeft - AI_SUPPLIES_PER_MESSAGE;
     const maxOperations = Math.max(1, Math.min(MAX_OPERATIONS, room));
     const continuation = working ? await continuationFor(ctx, guild, working) : undefined;
+    // A revision keeps everything in the waiting draft it doesn't name in drop (carry.ts).
+    const onto = (plan: DraftPlan): DraftPlan | null => {
+      if (continuation?.mode !== "revise") return plan;
+      const merged = carryOver(revisionBase(continuation), plan).plan;
+      return draftIsEmpty(merged) ? null : merged;
+    };
+    const emptied = "That would leave the draft with nothing in it. Discard the draft instead.";
     const turns: ChatTurn[] = [...history, userMessage].map((m) => ({
       role: m.role === "assistant" ? "assistant" : "user",
       text: m.buildId ? `${m.text}\n[You drafted a plan here.]` : m.text,
@@ -187,9 +206,15 @@ export async function chatTurn(
       else {
         input.onStep?.("Checking the draft");
         // A plan whose JSON didn't match the format is refused the same way, with what's wrong.
-        let checked: Awaited<ReturnType<typeof checkDraft>> = result.plan
-          ? await checkDraft(ctx, guild, result.plan, snap.server, maxOperations)
-          : { ok: false, errors: [result.planProblem?.error ?? "The plan was empty."] };
+        const first = result.plan ? onto(result.plan) : null;
+        let checked: Awaited<ReturnType<typeof checkDraft>> = first
+          ? await checkDraft(ctx, guild, first, snap.server, maxOperations)
+          : {
+              ok: false,
+              errors: [
+                result.plan ? emptied : (result.planProblem?.error ?? "The plan was empty."),
+              ],
+            };
         // Refused: show the model Garrison's reasons and its own draft once, and take the
         // corrected plan, instead of telling the admin about a plan that won't build. Only
         // with what's left of this message's hold: one that doesn't fit isn't sent.
@@ -244,8 +269,9 @@ export async function chatTurn(
           if (retry.ok) {
             result = retry;
             reply = retry.reply.trim() || reply;
-            if (retry.plan)
-              checked = await checkDraft(ctx, guild, retry.plan, snap.server, maxOperations);
+            const fixed = retry.plan ? onto(retry.plan) : null;
+            if (fixed) checked = await checkDraft(ctx, guild, fixed, snap.server, maxOperations);
+            else if (retry.plan) checked = { ok: false, errors: [emptied] };
             else if (retry.planProblem) checked = { ok: false, errors: [retry.planProblem.error] };
             else checked = { ok: false, errors: [] };
           }

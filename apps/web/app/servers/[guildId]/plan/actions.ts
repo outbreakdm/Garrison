@@ -5,6 +5,7 @@ import {
   getPlanDetails,
   isStaff,
   listAgencyPlans,
+  PRICING,
   releaseSeat,
   SUPPLY_PACK_DAYS,
   SUPPLY_PACKS,
@@ -82,6 +83,19 @@ export async function checkoutAction(form: FormData) {
     redirect(back);
   const price = priceId(tier, interval);
   if (!price) redirect(back);
+  // Never charge a price the page doesn't show: a Stripe price is fixed once made, so after a
+  // price change in PRICING the old one stays in Stripe until its ID is swapped. Checkout waits.
+  const shown = Math.round(PRICING[tier][interval === "month" ? "monthly" : "yearly"] * 100);
+  const charged = await stripe()
+    .prices.retrieve(price)
+    .then((p) => p.unit_amount)
+    .catch(() => null);
+  if (charged !== shown) {
+    console.error(
+      `Stripe price for ${tier}/${interval} is ${charged ?? "unreadable"} cents; the page shows ${shown}.`,
+    );
+    redirect(`${back}?done=price_changing`);
+  }
   const db = await getDb();
   if (tier === "pro") {
     const current = await getPlanDetails(db, access.guild.id);

@@ -24,7 +24,13 @@ import { CopyButton } from "@/components/CopyButton";
 import { ProTag } from "@/components/cards/CardEditor";
 import { LevelCards, Segmented } from "@/components/choices";
 import { EmptyState } from "@/components/EmptyState";
-import { ActionBadge, formatDuration, formatTime, plainMentions } from "@/components/format";
+import {
+  ActionBadge,
+  formatDuration,
+  formatShort,
+  formatTime,
+  plainMentions,
+} from "@/components/format";
 import { HowItWorks } from "@/components/HowItWorks";
 import { ListField } from "@/components/ListField";
 import { MemberAvatar } from "@/components/MemberAvatar";
@@ -182,7 +188,7 @@ export default async function WatchPage({
 
       <RequestsPanel
         guildId={guild.id}
-        kinds={["undo_case", "mod_action", "purge"]}
+        kinds={["undo_case", "undo_cases", "mod_action", "purge"]}
         query={query}
       />
       <SettingsNotice query={query} />
@@ -323,6 +329,9 @@ export default async function WatchPage({
                   <table className="g-table case-table">
                     <thead>
                       <tr>
+                        <th scope="col" className="case-pick">
+                          <span className="sr-only">Select</span>
+                        </th>
                         {["Case", "Action", "Member", "Reason", "By", "When", ""].map((h) => (
                           <th key={h || "actions"} scope="col">
                             <span className="g-label">{h}</span>
@@ -333,6 +342,17 @@ export default async function WatchPage({
                     <tbody>
                       {cases.map((c) => (
                         <tr key={c.id} className={c.revokedAt ? "revoked" : undefined}>
+                          <td className="case-pick">
+                            {!c.revokedAt && UNDOABLE.has(c.action) ? (
+                              <input
+                                type="checkbox"
+                                form="bulk-cases"
+                                name="caseNumber"
+                                value={c.caseNumber}
+                                aria-label={`Select case #${c.caseNumber}`}
+                              />
+                            ) : null}
+                          </td>
                           <td className="mono" data-label="Case">
                             #{c.caseNumber}
                           </td>
@@ -369,7 +389,12 @@ export default async function WatchPage({
                                 : "Automod"}
                           </td>
                           <td className="mono" data-label="When">
-                            {formatTime(c.createdAt)}
+                            <time
+                              dateTime={c.createdAt.toISOString()}
+                              title={formatTime(c.createdAt)}
+                            >
+                              {formatShort(c.createdAt)}
+                            </time>
                           </td>
                           <td>
                             {!c.revokedAt && UNDOABLE.has(c.action) ? (
@@ -401,6 +426,23 @@ export default async function WatchPage({
                     </EmptyState>
                   ) : null}
                 </div>
+                {/* Several at once: shows once a case is ticked, counts them, asks once. */}
+                <form id="bulk-cases" action={requestAction} className="bulk-bar">
+                  <input type="hidden" name="guildId" value={guild.id} />
+                  <input type="hidden" name="page" value="watch" />
+                  <input type="hidden" name="kind" value="undo_cases" />
+                  <span className="bulk-bar__count" aria-live="polite">
+                    selected, up to 10 at a time
+                  </span>
+                  <details className="confirm">
+                    <summary className="confirm__toggle g-btn g-btn--ghost g-btn--sm">
+                      Undo selected…
+                    </summary>
+                    <button type="submit" className="g-btn g-btn--danger g-btn--sm">
+                      Yes, undo them
+                    </button>
+                  </details>
+                </form>
               </div>
             </>
           }

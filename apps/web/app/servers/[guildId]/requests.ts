@@ -3,6 +3,7 @@
 import {
   aiTier,
   BAN_LENGTHS,
+  BULK_MAX,
   checkGiveaway,
   checkProfileRequest,
   countRunningGiveaways,
@@ -35,7 +36,6 @@ import {
   MANAGER_REQUEST_KINDS,
   parseAmount,
   parseDiscordLink,
-  QM_PLAN_TTL_MS,
   type QueueInput,
   queueDashboardAction,
   readAlertFeeds,
@@ -137,6 +137,20 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       const c = Number.isInteger(n) && n > 0 ? await getCase(db, guildId, n) : null;
       if (!c || c.revokedAt) return { ok: false, error: "not_found" };
       return { ok: true, input: { kind, payload: { caseNumber: n } } };
+    }
+    case "undo_cases": {
+      // The ticked cases that can still be undone, at most BULK_MAX; the bot checks each again.
+      const asked = [...new Set(form.getAll("caseNumber").map(Number))].filter(
+        (n) => Number.isInteger(n) && n > 0,
+      );
+      if (asked.length > BULK_MAX) return { ok: false, error: "bulk_max" };
+      const open = [];
+      for (const n of asked) {
+        const c = await getCase(db, guildId, n);
+        if (c && !c.revokedAt) open.push(n);
+      }
+      if (!open.length) return { ok: false, error: "not_found" };
+      return { ok: true, input: { kind, payload: { caseNumbers: open } } };
     }
     case "cancel_raid": {
       const id = uuid.safeParse(field(form, "id"));
@@ -337,6 +351,22 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       if (!s) return { ok: false, error: "not_found" };
       const note = field(form, "note").slice(0, SUGGESTION_LIMITS.note) || null;
       return { ok: true, input: { kind, payload: { id: s.id, status, note } } };
+    }
+    case "ticket_bulk": {
+      const op = field(form, "op");
+      if (op !== "claim" && op !== "close") return { ok: false, error: "invalid" };
+      const asked = [...new Set(form.getAll("ticketId").map(String))].filter(
+        (id) => uuid.safeParse(id).success,
+      );
+      if (asked.length > BULK_MAX) return { ok: false, error: "bulk_max" };
+      const open = [];
+      for (const id of asked) {
+        const t = await getTicket(db, guildId, id);
+        if (t?.status === "open") open.push(t.id);
+      }
+      if (!open.length) return { ok: false, error: "ticket_closed" };
+      const reason = field(form, "reason").trim().slice(0, TICKET_LIMITS.reason) || null;
+      return { ok: true, input: { kind, payload: { op, ticketIds: open, reason } } };
     }
     case "ticket_action": {
       const op = field(form, "op");
@@ -553,9 +583,7 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       if (!raw) return { ok: true, input: { kind, payload: { request } } };
       const id = uuid.safeParse(raw);
       const from = id.success ? await getQmBuild(db, guildId, id.data) : null;
-      const fresh =
-        from?.status === "pending" && Date.now() - from.createdAt.getTime() < QM_PLAN_TTL_MS;
-      if (!from || !(fresh || from.status === "applied" || from.status === "failed"))
+      if (!from || !["pending", "applied", "failed"].includes(from.status))
         return { ok: false, error: "qm_cant_continue" };
       return { ok: true, input: { kind, payload: { request, continues: from.id } } };
     }
@@ -572,9 +600,7 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       if (raw) {
         const id = uuid.safeParse(raw);
         const from = id.success ? await getQmBuild(db, guildId, id.data) : null;
-        const fresh15 =
-          from?.status === "pending" && Date.now() - from.createdAt.getTime() < QM_PLAN_TTL_MS;
-        if (!from || !(fresh15 || from.status === "applied" || from.status === "failed"))
+        if (!from || !["pending", "applied", "failed"].includes(from.status))
           return { ok: false, error: "qm_cant_continue" };
         continues = from.id;
       }

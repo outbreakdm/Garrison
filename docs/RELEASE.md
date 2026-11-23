@@ -38,6 +38,13 @@ be bought. Full steps in `docs/pricing.md`, "Turning checkout on". In **live** m
       tax-exclusive: $8.99/mo, $79.99/yr, $34.99/mo, $349.99/yr (lookup keys
       `garrison_pro_monthly`, `garrison_pro_yearly`, `garrison_agency_monthly`,
       `garrison_agency_yearly`). Created 2026-11-15.
+- [ ] **Pro yearly is now $89.99** (2026-11-23, save 17% like Agency). A Stripe price can't
+      change, so: Product catalog, Garrison Pro, Add another price, $89.99 yearly, tax-exclusive,
+      and move the lookup key `garrison_pro_yearly` to it (archive the $79.99 one). Put its
+      `price_...` ID in the GitHub secret `STRIPE_PRICE_PRO_YEARLY`, then deploy. Until then
+      the Plan page shows $89.99 and Pro yearly checkout pauses itself ("That price is being
+      updated"): checkout compares Stripe's amount with the page before charging. Monthly,
+      Agency and packs are unaffected.
 - [x] Webhook "Garrison dashboard: plans and billing" to
       `https://dash.garrisonbot.com/api/stripe/webhook`, the ten events, API version
       `2026-10-28.endive`. Its signing secret is under Developers, Webhooks, that endpoint,

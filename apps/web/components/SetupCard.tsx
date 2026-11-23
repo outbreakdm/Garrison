@@ -83,7 +83,7 @@ export function SetupCard({
               <select
                 id="setup-welcome-channel"
                 name="channelId"
-                className="g-select starter__select"
+                className="g-input starter__select"
                 required
                 defaultValue=""
               >

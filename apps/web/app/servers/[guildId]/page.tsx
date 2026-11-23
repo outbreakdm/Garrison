@@ -11,7 +11,6 @@ import {
   listQmBuilds,
   listRecentCases,
   listSignups,
-  QM_PLAN_TTL_MS,
   readSettings,
   setupProgress,
 } from "@garrison/db";
@@ -112,6 +111,8 @@ const REQUEST_PAGE: Record<string, string> = {
   application_decide: "/applications#review",
   anti_nuke: "/gatehouse?tab=antinuke",
   undo_case: "/watch",
+  undo_cases: "/watch",
+  ticket_bulk: "/parley",
   mod_action: "/watch",
   purge: "/watch",
   qm_plan: "/quartermaster",
@@ -414,17 +415,14 @@ export default async function OverviewPage({
       : healthRun?.status === "failed" && now - healthRun.createdAt.getTime() < 3_600_000
         ? (healthRun.message ?? "The health check didn't run.")
         : undefined;
-  const planWaiting =
-    build?.status === "pending" && now - build.createdAt.getTime() < QM_PLAN_TTL_MS;
+  const planWaiting = build?.status === "pending";
   if (planWaiting && build)
     attention.push({
       tone: "waiting",
-      title: "An AI assistant plan is waiting for review",
-      detail: `Nothing changes in Discord until someone applies it. It expires ${untilText(
-        build.createdAt.getTime() + QM_PLAN_TTL_MS - now,
-      )}.`,
+      title: "An AI assistant draft is waiting for review",
+      detail: `Drafted ${ago(build.createdAt)}. Nothing changes in Discord until someone applies it, and it waits as long as you need.`,
       href: `${base}/quartermaster#qm-plan`,
-      action: "Review the plan",
+      action: "Review the draft",
     });
   const untilRaid = o.nextOp ? o.nextOp.startsAt.getTime() - now : null;
   if (o.nextOp && untilRaid !== null && untilRaid > 0 && untilRaid < 3 * 86_400_000) {
@@ -525,13 +523,13 @@ export default async function OverviewPage({
               Last seen {ago(new Date(lastBeat))}
             </a>
           )}
-          {build ? (
+          {/* The last build that says something: waiting, built, or not built. A discarded,
+              replaced or (from before drafts stopped expiring) expired one is left out. */}
+          {build && !["cancelled", "expired", "discarded"].includes(build.status) ? (
             <span className="ov-hero__build">
               AI assistant v{build.version} · {ago(build.createdAt)} ·{" "}
               {build.status === "pending"
-                ? planWaiting
-                  ? "waiting for review"
-                  : "expired"
+                ? "waiting for review"
                 : (BUILD_WORDS[build.status] ?? build.status.replace("_", " "))}
               {build.status === "applied" ? (
                 <>

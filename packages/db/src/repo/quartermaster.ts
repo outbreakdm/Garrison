@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gt, gte, max, ne, type SQL, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, max, ne, type SQL, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import type { QmWrite } from "../qm-writes";
 import {
@@ -37,8 +37,19 @@ export interface CreatePlanInput {
   continuesId?: string | null;
 }
 
-/** How long a plan waits to be built before it expires, as the bot enforces. */
-export const QM_PLAN_TTL_MS = 15 * 60_000;
+/**
+ * Drafts have no time limit (since 2026-11-23; 15 minutes before): a plan waits until it's
+ * built, discarded, or replaced by the same person's next draft on that server, so an admin
+ * can leave and come back to finish setting up. The bot checks it against the server again
+ * before building (`staleReferences` in apps/bot quartermaster/plan.ts).
+ */
+export const qmWaiting = (b: Pick<QmBuild, "status">) => b.status === "pending";
+
+/** Leaves one person's waiting drafts on a server out of a count, when a new one replaces them. */
+export interface DraftsOf {
+  guildId: string;
+  personId: string;
+}
 
 /** A list's entries that cost a supply: all but hand changes (`by` "admin"). */
 const charged = (
@@ -48,16 +59,17 @@ const charged = (
 const allCharged = sql`jsonb_array_length(${qmBuilds.plan}) + jsonb_array_length(${qmBuilds.settings}) + jsonb_array_length(${qmBuilds.posts}) + jsonb_array_length(${qmBuilds.writes}) + ${charged(qmBuilds.orders)} + ${charged(qmBuilds.edits)}`;
 
 /**
- * Changes a build counts against the day: what it built (all of a built plan, what got
- * made before a failure or an undo), or what a waiting plan holds until it expires.
- * Structure and settings count alike, one per item or field. Discarded and expired plans
- * count nothing. What supply packs paid for (`pack_supplies`) isn't the pool's. `settled`
- * leaves out waiting plans: only what reached the server.
+ * Changes a build counts against the pool: what it built (all of a built plan, what got
+ * made before a failure or an undo), or what a waiting plan holds until it's built,
+ * discarded or replaced. Structure and settings count alike, one per item or field.
+ * Discarded, replaced and (before 2026-11-23) expired plans count nothing. What supply packs
+ * paid for (`pack_supplies`) isn't the pool's. `settled` leaves out waiting plans: only what
+ * reached the server.
  */
-const changesCounted = (now: Date, settled: boolean) => sql<number>`coalesce(sum(case
+const changesCounted = (settled: boolean) => sql<number>`coalesce(sum(case
   when ${qmBuilds.status} = 'applied' then ${allCharged}
   when ${qmBuilds.status} in ('failed', 'rolled_back') then ${charged(qmBuilds.created)}
-  when ${qmBuilds.status} = 'pending' and ${settled ? sql`false` : sql`${qmBuilds.createdAt} > ${new Date(now.getTime() - QM_PLAN_TTL_MS).toISOString()}::timestamptz`} then ${allCharged}
+  when ${qmBuilds.status} = 'pending' and ${settled ? sql`false` : sql`true`} then ${allCharged}
   else 0 end - ${qmBuilds.packSupplies}), 0)::int`;
 
 /** What a built (or partly built) plan is charged: everything, or what it made before stopping. Hand changes are free. */
@@ -102,7 +114,7 @@ export async function qmChangesUsed(
   db: Db,
   scope: { guildId: string } | { personId: string } | { bundleId: string },
   since: Date,
-  opts: { exceptId?: string; now?: Date; settled?: boolean } = {},
+  opts: { exceptId?: string; exceptDraftsOf?: DraftsOf; settled?: boolean } = {},
 ) {
   const where: SQL[] = [gte(qmBuilds.createdAt, since)];
   if ("guildId" in scope) where.push(eq(qmBuilds.guildId, scope.guildId));
@@ -112,8 +124,12 @@ export async function qmChangesUsed(
     );
   else where.push(eq(qmBuilds.requestedById, scope.personId), onFreeServer);
   if (opts.exceptId) where.push(ne(qmBuilds.id, opts.exceptId));
+  if (opts.exceptDraftsOf)
+    where.push(
+      sql`not (${qmBuilds.status} = 'pending' and ${qmBuilds.guildId} = ${opts.exceptDraftsOf.guildId} and ${qmBuilds.requestedById} = ${opts.exceptDraftsOf.personId})`,
+    );
   const [row] = await db
-    .select({ n: changesCounted(opts.now ?? new Date(), opts.settled ?? false) })
+    .select({ n: changesCounted(opts.settled ?? false) })
     .from(qmBuilds)
     .where(and(...where));
   return Number(row?.n ?? 0);
@@ -171,12 +187,7 @@ export async function hasAppliedQmBuild(db: Db, guildId: string) {
 }
 
 /** A person's newest draft still waiting to be built on a server, or null. */
-export async function latestWaitingQmBuild(
-  db: Db,
-  guildId: string,
-  personId: string,
-  now = new Date(),
-) {
+export async function latestWaitingQmBuild(db: Db, guildId: string, personId: string) {
   const [row] = await db
     .select()
     .from(qmBuilds)
@@ -185,12 +196,37 @@ export async function latestWaitingQmBuild(
         eq(qmBuilds.guildId, guildId),
         eq(qmBuilds.requestedById, personId),
         eq(qmBuilds.status, "pending"),
-        gt(qmBuilds.createdAt, new Date(now.getTime() - QM_PLAN_TTL_MS)),
       ),
     )
     .orderBy(desc(qmBuilds.version))
     .limit(1);
   return row ?? null;
+}
+
+/**
+ * Retire a person's other waiting drafts on a server once a new one is saved: one draft per
+ * person per server, so a draft left behind by a new conversation doesn't hold supplies
+ * forever. Returns the drafts it retired.
+ */
+export async function retireOtherDrafts(
+  db: Db,
+  guildId: string,
+  personId: string,
+  keepId: string,
+  version: number,
+) {
+  return db
+    .update(qmBuilds)
+    .set({ status: "cancelled", error: `Replaced by v${version}.` })
+    .where(
+      and(
+        eq(qmBuilds.guildId, guildId),
+        eq(qmBuilds.requestedById, personId),
+        eq(qmBuilds.status, "pending"),
+        ne(qmBuilds.id, keepId),
+      ),
+    )
+    .returning({ id: qmBuilds.id });
 }
 
 /** Builds started in a server since `since`, for the hourly limit. */
