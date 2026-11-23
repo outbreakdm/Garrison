@@ -631,6 +631,13 @@
       "when": 1795441012093,
       "tag": "0089_bulk_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1795455845367,
+      "tag": "0090_qm_more_settings",
+      "breakpoints": true
     }
   ]
 }

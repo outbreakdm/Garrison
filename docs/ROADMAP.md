@@ -1642,4 +1642,14 @@ Decided (2026-11-12, owner):
   (Fast and Smart only). Settings' public page folds its details while it's off. Landing CSS
   left global on purpose (Next's docs: global CSS below the root isn't removed on navigation
   and its order can change). Type-check, lint, 869 tests pass. Committed and deployed.
+- 2026-11-23: AI assistant as the product's center. Fixed: plans writing ticket panels, role
+  menus, saved messages or welcome cards failed on apply (the bot had no write grant;
+  migration 0090), and a plan posting a panel it creates failed its build check. Limits for
+  whole-server work (80 changes, 40 deletions, 8 writes, 10 posts, 12 modules, 25 orders,
+  40,000 input and 16,000 output tokens, 5.5-minute answers), Smart at high effort. Rewrote the
+  instructions: draft first, explicit layouts in full, restructure by moving and renaming with an
+  Archive for leftovers, features end to end, kinds of servers. New AI settings: Tickets,
+  Utilities, Fun, Member pages; staff-role fields take moderator roles. Three eval cases from the
+  production request. Not run against the real API (no key here). Not committed or deployed:
+  needs migration 0090 in production.
 

@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "./client";
 import { upsertGuild } from "./repo/guilds";
 import { applySettingsChange, getMemberPages, undoSettingsChange } from "./repo/settings";
+import { memberPages } from "./schema";
 import { createTestDb } from "./testing";
 
 let db: Db;
@@ -56,10 +57,14 @@ describe("member pages, as garrison_web", () => {
 });
 
 describe("member pages, as garrison_bot", () => {
-  it("can't read them: they're the dashboard's alone", async () => {
+  it("lets the bot read them, and change only what the AI assistant may (0090)", async () => {
     await exec("RESET ROLE");
     await exec("SET ROLE garrison_bot");
-    await expect(getMemberPages(db, G)).rejects.toThrow();
+    expect(await getMemberPages(db, G)).toMatchObject({ showYou: expect.any(Boolean) });
+    // The page's own name and invite stay the dashboard's: a plan never sets them.
+    await expect(
+      Promise.resolve(db.update(memberPages).set({ publicSlug: "taken" })),
+    ).rejects.toThrow();
     await exec("RESET ROLE");
     await exec("SET ROLE garrison_web");
   });

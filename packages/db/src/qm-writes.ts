@@ -26,7 +26,7 @@ import { readWelcome } from "./welcome";
  * The model writes a title and a body; the rest of a card's look stays as it is.
  */
 
-export const QM_WRITES_MAX = 3;
+export const QM_WRITES_MAX = 8;
 
 export const QM_WRITE_TARGETS = [
   "welcome_join",

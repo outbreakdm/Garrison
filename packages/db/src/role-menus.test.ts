@@ -199,7 +199,9 @@ describe("role menu storage, under each role's grants", () => {
     });
     expect((await getRoleMenuPost(db, G, "abc123def0"))?.messageId).toBe("3");
     expect(await listRoleMenuPosts(db, G)).toHaveLength(1);
-    await denied(db.update(roleMenuSettings).set({ menus: [] }));
+    // Since 0090 the bot saves the menus an AI assistant plan writes, and nothing else.
+    await db.update(roleMenuSettings).set({ menus: [] });
+    await denied(db.update(roleMenuSettings).set({ guildId: "other" }));
     await exec("RESET ROLE");
   });
 });

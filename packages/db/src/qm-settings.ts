@@ -13,6 +13,7 @@ import { newId } from "./ids";
 import { checkInviteLabels, type InviteLabel, inviteCode, readInviteLabels } from "./invite-labels";
 import { readMessages } from "./messages";
 import { type Entitlements, FEATURES } from "./plans";
+import { PUBLIC_ABOUT_MAX } from "./public-page";
 import { checkTemplates, DEFAULT_WORDING } from "./rally";
 import { readSettings } from "./repo/settings";
 import { readRoleMenus } from "./role-menus";
@@ -20,7 +21,8 @@ import type { QmPost, QmSettingChange, SettingsModule } from "./schema";
 import { checkServerStats, readServerStats, STAT_KINDS } from "./server-stats";
 import { checkStarboard, readStarboard, STARBOARD_LIMITS } from "./starboard";
 import { checkSuggestions, readSuggestions } from "./suggestions";
-import { readTicketPanels } from "./tickets";
+import { checkTicketOptions, readTicketConfig, readTicketPanels, TICKET_LIMITS } from "./tickets";
+import { UTILITY_LIMITS } from "./utilities";
 import { checkVoiceRooms, readVoiceRooms, VOICE_LIMITS } from "./voice-rooms";
 import { checkWelcome, readWelcome } from "./welcome";
 
@@ -43,6 +45,8 @@ type Kind =
   | "category"
   | "role"
   | "roles"
+  /** Roles that name who handles something (staff): ones with moderation powers are fine. */
+  | "staffRoles"
   | "ladder"
   | "rewards"
   | "timezone"
@@ -325,8 +329,9 @@ export const QM_SETTINGS = {
       },
       staffRoleIds: {
         label: "Staff roles",
-        kind: "roles",
-        about: "roles that keep talking during a lockdown (10 at most)",
+        kind: "staffRoles",
+        about:
+          "roles that keep talking during a lockdown (10 at most); moderator roles belong here",
       },
       verifyRoleId: {
         label: "Verified role",
@@ -458,12 +463,113 @@ export const QM_SETTINGS = {
       },
     },
   },
+  // Since 2026-11-23: who handles tickets and where they open, roles back on rejoin, the fun
+  // channels and member pages, so the assistant can set up and change every feature's basics.
+  tickets: {
+    label: "Tickets",
+    fields: {
+      staffRoleIds: {
+        label: "Staff roles",
+        kind: "staffRoles",
+        about: `roles that see and answer every ticket (${TICKET_LIMITS.staffRoles} at most); moderator and support roles belong here`,
+      },
+      parentId: {
+        label: "Category",
+        kind: "category",
+        about: "the category ticket channels open under; null: the top of the channel list",
+      },
+      logChannelId: {
+        label: "Log channel",
+        kind: "textChannel",
+        about: "where a summary goes when a ticket closes (staff-only); null: the dashboard only",
+      },
+      maxOpen: {
+        label: "Open per member",
+        kind: "int",
+        about: "open tickets one member can have at once",
+        min: 1,
+        max: TICKET_LIMITS.maxOpen,
+      },
+      pingStaff: {
+        label: "Ping staff",
+        kind: "bool",
+        about: "ping the staff roles when a ticket opens",
+      },
+      autoAssign: {
+        label: "Auto-assign",
+        kind: "bool",
+        about: "Pro: hand each new ticket to the staff member with the fewest open",
+      },
+      modmail: { label: "Modmail", kind: "bool", about: "members open a ticket by DMing Garrison" },
+    },
+  },
+  utilities: {
+    label: "Utilities",
+    fields: {
+      restoreRoles: on("members who leave get their roles back when they rejoin (kept 180 days)"),
+      restoreSkipRoleIds: {
+        label: "Never give back",
+        kind: "roles",
+        about: `roles never given back on rejoin (${UTILITY_LIMITS.skipRoles} at most), like one that only means "here right now"`,
+      },
+    },
+  },
+  fun: {
+    label: "Fun",
+    fields: {
+      birthdaysEnabled: on("members' birthdays are wished on the day; needs birthdayChannelId"),
+      birthdayChannelId: {
+        label: "Birthday channel",
+        kind: "textChannel",
+        about: "where birthday wishes are posted",
+      },
+      birthdayRoleId: {
+        label: "Birthday role",
+        kind: "role",
+        about: "given for the day, or null; never one with staff powers",
+      },
+      countingEnabled: on(
+        "a counting game: members count up one message at a time; needs countingChannelId",
+      ),
+      countingChannelId: {
+        label: "Counting channel",
+        kind: "textChannel",
+        about: "the counting game's channel (best a channel of its own)",
+      },
+    },
+  },
+  members: {
+    label: "Member pages",
+    fields: {
+      showYou: on("members sign in to see their level, rank card and the leaderboard"),
+      showRecord: {
+        label: "Their record",
+        kind: "bool",
+        about: "members see their own warnings, timeouts, kicks and bans (never who acted)",
+      },
+      publicPage: {
+        label: "Public page",
+        kind: "bool",
+        about: "a page anyone can open: the server's name, icon, member count and About text",
+      },
+      publicLeaderboard: {
+        label: "Public leaderboard",
+        kind: "bool",
+        about: "the top members by XP on the public page",
+      },
+      publicAbout: {
+        label: "About",
+        kind: "text",
+        about: `the public page's About text, ${PUBLIC_ABOUT_MAX} characters at most`,
+      },
+    },
+  },
 } as const satisfies Partial<Record<SettingsModule, ModuleSpec>>;
 
 export type QmSettingsModule = keyof typeof QM_SETTINGS;
 export const QM_SETTINGS_MODULES = Object.keys(QM_SETTINGS) as QmSettingsModule[];
 /** The most modules one plan changes, so a plan stays easy to read. */
-export const QM_SETTINGS_MAX_MODULES = 6;
+export const QM_SETTINGS_MAX_MODULES = 12;
 
 const spec = (module: string): ModuleSpec | undefined =>
   (QM_SETTINGS as Record<string, ModuleSpec>)[module];
@@ -502,6 +608,7 @@ const KIND_TEXT: Record<Kind, string> = {
   emoji: "an emoji",
   textChannel: "a text channel id or ref, or null",
   textChannels: "list of text channel ids or refs",
+  staffRoles: "list of role ids or refs (staff roles with moderation powers are fine)",
   voiceChannels: "list of voice channel ids or refs",
   category: "a category id or ref, or null",
   role: "a role id or ref, or null",
@@ -543,8 +650,9 @@ const TARGETS: Partial<Record<Kind, IdTarget>> = {
   category: "category",
   role: "role",
   roles: "role",
+  staffRoles: "role",
 };
-const MANY = new Set<Kind>(["textChannels", "voiceChannels", "roles", "words"]);
+const MANY = new Set<Kind>(["textChannels", "voiceChannels", "roles", "staffRoles", "words"]);
 
 /** What the checks need to know about the server: its channels and roles, and the plan's new items. */
 export interface QmSettingsLookup {
@@ -708,6 +816,90 @@ const MODULES: Record<
   stats: {
     read: (row) => ({ ...readServerStats(row) }),
     check: (b, p, e) => widen(checkServerStats({ ...b, ...p }, e, readServerStats(b))),
+  },
+  tickets: {
+    // Everything but the panels: those are written as new_ticket_panel and stay as they are.
+    read: (row) => {
+      const config = readTicketConfig(row as Parameters<typeof readTicketConfig>[0]);
+      return {
+        staffRoleIds: config.staffRoleIds,
+        parentId: config.parentId,
+        logChannelId: config.logChannelId,
+        maxOpen: config.maxOpen,
+        pingStaff: config.pingStaff,
+        autoAssign: config.autoAssign,
+        modmail: config.modmail,
+      };
+    },
+    check: (b, p, e) =>
+      widen(checkTicketOptions({ ...b, ...p }, e, { autoAssign: b.autoAssign === true })),
+  },
+  utilities: {
+    read: (row) => ({
+      restoreRoles: row?.restoreRoles === true,
+      restoreSkipRoleIds: Array.isArray(row?.restoreSkipRoleIds) ? row.restoreSkipRoleIds : [],
+    }),
+    check: (b, p) => {
+      const v = { ...b, ...p };
+      const skip = Array.isArray(v.restoreSkipRoleIds) ? v.restoreSkipRoleIds : [];
+      if (skip.length > UTILITY_LIMITS.skipRoles)
+        return { ok: false, error: `Skip up to ${UTILITY_LIMITS.skipRoles} roles.` };
+      return {
+        ok: true,
+        value: { restoreRoles: v.restoreRoles === true, restoreSkipRoleIds: skip },
+      };
+    },
+  },
+  fun: {
+    read: (row) => ({
+      birthdaysEnabled: row?.birthdaysEnabled === true,
+      birthdayChannelId: row?.birthdayChannelId ?? null,
+      birthdayRoleId: row?.birthdayRoleId ?? null,
+      countingEnabled: row?.countingEnabled === true,
+      countingChannelId: row?.countingChannelId ?? null,
+    }),
+    check: (b, p) => {
+      const v = { ...b, ...p };
+      if (v.birthdaysEnabled === true && !v.birthdayChannelId)
+        return { ok: false, error: "Birthdays need a channel (birthdayChannelId)." };
+      if (v.countingEnabled === true && !v.countingChannelId)
+        return { ok: false, error: "Counting needs a channel (countingChannelId)." };
+      return {
+        ok: true,
+        value: {
+          birthdaysEnabled: v.birthdaysEnabled === true,
+          birthdayChannelId: v.birthdayChannelId ?? null,
+          birthdayRoleId: v.birthdayRoleId ?? null,
+          countingEnabled: v.countingEnabled === true,
+          countingChannelId: v.countingChannelId ?? null,
+        },
+      };
+    },
+  },
+  members: {
+    read: (row) => ({
+      showYou: row?.showYou !== false,
+      showRecord: row?.showRecord === true,
+      publicPage: row?.publicPage === true,
+      publicLeaderboard: row?.publicLeaderboard === true,
+      publicAbout: row?.publicAbout ?? null,
+    }),
+    check: (b, p) => {
+      const v = { ...b, ...p };
+      const about = typeof v.publicAbout === "string" ? v.publicAbout.trim() : null;
+      if (about && about.length > PUBLIC_ABOUT_MAX)
+        return { ok: false, error: `The About text is ${PUBLIC_ABOUT_MAX} characters at most.` };
+      return {
+        ok: true,
+        value: {
+          showYou: v.showYou !== false,
+          showRecord: v.showRecord === true,
+          publicPage: v.publicPage === true,
+          publicLeaderboard: v.publicLeaderboard === true,
+          publicAbout: about || null,
+        },
+      };
+    },
   },
 };
 
@@ -995,7 +1187,8 @@ function shape(
       if (target === "role") {
         const role = lookup.role(id);
         if (!role) return `${name}: that role isn't in this server.`;
-        if (role.status === "dangerous")
+        // A staff-role field names who handles something; it never gives the role to anyone.
+        if (role.status === "dangerous" && f.kind !== "staffRoles")
           return `${name}: @${role.name} has moderation or admin powers, so the AI assistant won't use it.`;
         if (role.status === "fixed") return `${name}: @${role.name} can't be used here.`;
       } else if (lookup.channel(id) !== target)
@@ -1210,7 +1403,7 @@ export function resolveQmSettingRefs(change: QmSettingChange, ids: Map<string, s
 }
 
 /** The most posts one plan makes. */
-export const QM_POSTS_MAX = 5;
+export const QM_POSTS_MAX = 10;
 export const QM_POST_KINDS = ["role_menu", "ticket_panel", "message"] as const;
 const POST_TEXT: Record<QmPost["kind"], string> = {
   role_menu: "Role menu",

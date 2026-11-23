@@ -14,7 +14,7 @@ export type GuildPlan = (typeof PLANS)[number];
 export type AiTier = GuildPlan | "agency";
 
 /** The most changes one AI assistant plan can make. */
-export const QM_CHANGES_PER_PLAN = 20;
+export const QM_CHANGES_PER_PLAN = 80;
 
 /**
  * Supplies: the AI assistant's one currency, a monthly pool. A message (a chat message, a
@@ -55,7 +55,7 @@ export type SupplyPack = keyof typeof SUPPLY_PACKS;
 export const SUPPLY_PACK_DAYS = 365;
 /** An unused pack is refunded in full within this many days. */
 export const SUPPLY_PACK_REFUND_DAYS = 14;
-/** What one full plan costs: the message that drafts it and its 20 changes. */
+/** What one full plan costs: the message that drafts it and its QM_CHANGES_PER_PLAN changes. */
 export const AI_SUPPLIES_PER_FULL_PLAN = AI_SUPPLIES_PER_MESSAGE + QM_CHANGES_PER_PLAN;
 
 /**

@@ -21,6 +21,10 @@ const MODULES: Record<QmSettingsModule, { href: string; on?: string; set?: strin
   rally: { href: "/rally", set: "templates" },
   invites: { href: "/invites", set: "labels" },
   stats: { href: "/stats", on: "enabled" },
+  tickets: { href: "/parley", set: "staffRoleIds" },
+  utilities: { href: "/utilities", on: "restoreRoles" },
+  fun: { href: "/fun", on: "birthdaysEnabled" },
+  members: { href: "/settings", on: "publicPage" },
 };
 
 const words = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, " ");

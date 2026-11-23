@@ -3,6 +3,7 @@ import type { Db } from "./client";
 import { entitlements } from "./plans";
 import {
   checkQmSettings,
+  QM_SETTINGS_MAX_MODULES,
   type QmSettingProposal,
   type QmSettingsLookup,
   qmSettingValueText,
@@ -201,7 +202,7 @@ describe("AI assistant settings", () => {
     expect(await readSettings(db, "s2", "suggestions")).toMatchObject({ enabled: false });
   });
 
-  it("caps a plan at 6 modules", async () => {
+  it("caps a plan at QM_SETTINGS_MAX_MODULES modules", async () => {
     const out = await checkQmSettings(
       db,
       "s3",
@@ -213,11 +214,19 @@ describe("AI assistant settings", () => {
         p("welcome", "leaveEnabled", false),
         p("ranks", "announce", "off"),
         p("ledger", "retentionDays", 60),
+        p("tickets", "pingStaff", false),
+        p("utilities", "restoreRoles", true),
+        p("fun", "countingEnabled", false),
+        p("members", "showRecord", true),
+        p("stats", "enabled", false),
+        p("economy", "enabled", false),
       ],
       lookup(),
       free,
     );
-    expect(!out.ok && out.errors).toEqual([expect.stringMatching(/at most 6 modules/)]);
+    expect(!out.ok && out.errors).toEqual([
+      expect.stringMatching(new RegExp(`at most ${QM_SETTINGS_MAX_MODULES} modules`)),
+    ]);
   });
 });
 
@@ -444,5 +453,79 @@ describe("AI assistant settings that add items", () => {
       free,
     );
     expect(!tooMany.ok && tooMany.errors[0]).toMatch(/counters on Free/);
+  });
+});
+
+describe("AI assistant settings for every feature (2026-11-23)", () => {
+  it("lets staff-role fields name moderator roles, and nothing else does", async () => {
+    const staff = await checkQmSettings(
+      db,
+      "s4",
+      [
+        p("tickets", "staffRoleIds", [MODS]),
+        p("tickets", "parentId", CATEGORY),
+        p("tickets", "logChannelId", TEXT),
+        p("gatehouse", "staffRoleIds", [MODS]),
+      ],
+      lookup(),
+      free,
+    );
+    expect(staff.ok).toBe(true);
+    // A role the member is given never may be one with moderation powers.
+    const given = await checkQmSettings(
+      db,
+      "s4",
+      [p("fun", "birthdayRoleId", MODS)],
+      lookup(),
+      free,
+    );
+    expect(!given.ok && given.errors[0]).toMatch(/moderation or admin powers/);
+  });
+
+  it("checks the fun channels and member pages like their pages do", async () => {
+    const noChannel = await checkQmSettings(
+      db,
+      "s4",
+      [p("fun", "birthdaysEnabled", true)],
+      lookup(),
+      free,
+    );
+    expect(!noChannel.ok && noChannel.errors[0]).toMatch(/Birthdays need a channel/);
+    const fine = await checkQmSettings(
+      db,
+      "s4",
+      [
+        p("fun", "countingEnabled", true),
+        p("fun", "countingChannelId", TEXT),
+        p("members", "publicPage", true),
+        p("members", "publicAbout", "A friendly raiding guild."),
+        p("utilities", "restoreRoles", true),
+      ],
+      lookup(),
+      free,
+    );
+    expect(fine.ok).toBe(true);
+  });
+});
+
+describe("what the bot may write when it applies a plan (migration 0090)", () => {
+  it("saves ticket, role menu, message, welcome card, utilities, fun and member page settings", async () => {
+    const as = { guildId: "s4", userId: "1", username: "admin" };
+    // A first patch makes each module's row (INSERT), a second changes it (UPDATE).
+    const patches: [SettingsModule, Record<string, unknown>, Record<string, unknown>][] = [
+      ["tickets", { staffRoleIds: [MODS], parentId: CATEGORY }, { maxOpen: 3, panels: [] }],
+      ["roles", { menus: [{ id: "m0" }] }, { menus: [{ id: "m1" }] }],
+      ["messages", { messages: [{ id: "x0" }] }, { messages: [{ id: "x1" }] }],
+      ["welcome", { joinEnabled: true }, { joinCard: { title: "Welcome", description: "Hi" } }],
+      ["utilities", { restoreRoles: true }, { restoreRoles: false, restoreSkipRoleIds: [] }],
+      ["fun", { countingChannelId: TEXT }, { countingEnabled: true }],
+      ["members", { publicPage: true }, { publicAbout: "Raids every night." }],
+    ];
+    for (const [module, first, second] of patches)
+      for (const patch of [first, second]) {
+        const r = await applySettingsChange(db, { ...as, module, patch });
+        expect(r.ok, `${module} ${JSON.stringify(patch)}`).toBe(true);
+      }
+    expect((await readSettings(db, "s4", "members"))?.publicPage).toBe(true);
   });
 });

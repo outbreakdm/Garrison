@@ -30,7 +30,7 @@ export const QM_EDIT_KINDS = [
 ] as const satisfies readonly QmEdit["kind"][];
 
 /** The most deletions one plan makes. Each is permanent. */
-export const MAX_DELETES = 10;
+export const MAX_DELETES = 40;
 
 /** What the model returns for an edit. Loose, like AiPlanSchema; validateEdits decides. */
 export const AiEditSchema = z.object({

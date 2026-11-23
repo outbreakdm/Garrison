@@ -5,6 +5,8 @@ import {
   describeOrders,
   describePlan,
   displayName,
+  MAX_OPERATIONS,
+  MAX_ORDERS,
   orderPositions,
   roleCrossing,
   rollbackOrder,
@@ -114,7 +116,7 @@ describe("validatePlan", () => {
     expect(
       validatePlan(
         plan(
-          Array.from({ length: 21 }, (_, i) =>
+          Array.from({ length: MAX_OPERATIONS + 1 }, (_, i) =>
             op({ kind: "create_role", ref: `r${i}`, name: `R${i}` }),
           ),
         ),
@@ -285,7 +287,7 @@ describe("orders", () => {
     ]);
   });
 
-  it("orders the channels outside any category, and up to 12 lists in one plan", () => {
+  it("orders the channels outside any category, and up to MAX_ORDERS lists in one plan", () => {
     const loose = validatePlan(
       withOrder([
         { scope: "channels", parent: null, items: ["300000000000000005", "300000000000000004"] },
@@ -303,8 +305,13 @@ describe("orders", () => {
     };
     const many = validatePlan(withOrder(Array.from({ length: 8 }, () => swap)), laddered);
     expect(many.ok).toBe(true);
-    const tooMany = validatePlan(withOrder(Array.from({ length: 13 }, () => swap)), laddered);
-    expect(!tooMany.ok && tooMany.errors).toContainEqual("A plan can set 12 orders at most.");
+    const tooMany = validatePlan(
+      withOrder(Array.from({ length: MAX_ORDERS + 1 }, () => swap)),
+      laddered,
+    );
+    expect(!tooMany.ok && tooMany.errors).toContainEqual(
+      `A plan can set ${MAX_ORDERS} orders at most.`,
+    );
   });
 
   it("orders what the plan makes by ref, in its own category", () => {

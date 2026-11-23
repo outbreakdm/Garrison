@@ -41,6 +41,20 @@ first draft counted 20 a plan; the page and pricing show the honest 23.
   the only part that costs real money (an AI call), so it's priced higher.
 - **A change: 1.** Each channel, category or role a plan creates, each setting a plan
   changes (one per field: "Automod On" is 1, "Scam links Blocked" is 1), and each post.
+- **Since 2026-11-23 it builds whole requests.** A draft holds up to 80 changes (40
+  deletions, 8 writes, 10 posts, 12 settings modules), a message may read 40,000 tokens and
+  write 16,000 (Smart thinks at high effort), so a spelled-out layout or a full restructure fits
+  in one draft. The instructions say: draft first (a vague request gets a complete design and
+  the assumptions in a sentence), build an explicit layout in full and exactly, restructure by
+  moving and renaming (what the layout leaves out goes to a hidden Archive category, never
+  deleted unasked), set features up end to end (tickets: staff roles, category, log channel,
+  panel and its post), and know the common kinds of server. It can now set Tickets, Utilities,
+  Fun and Member pages, and staff-role fields accept moderator roles. Migration 0090 gave the
+  bot the writes a plan needs: before it, every plan that wrote a ticket panel, role menu or
+  saved message, or rewrote a welcome card, failed when applied; and a plan that posted a panel
+  it created failed its build-time check. The eval (`pnpm --filter @garrison/bot eval`) has the
+  production request that showed this as `restructure-explicit`, with `tickets-end-to-end` and
+  `vague-improve`.
 - **A drafted plan holds its changes** until it's built, discarded or replaced; discarded
   and replaced plans give them back. Drafts have no time limit (since 2026-11-23; 15 minutes
   before), so an admin can leave and come back: each person keeps one waiting draft per
@@ -49,7 +63,7 @@ first draft counted 20 a plan; the page and pricing show the honest 23.
   but whatever it leaves out by mistake is carried over, and what leans on a dropped item goes
   with it. The bot checks a draft against the live server before building
   (`staleReferences`), refusing one that points at a deleted category, channel or role. A
-  draft still makes at most 20 changes; past that, apply it and keep going.
+  draft makes at most 80 changes (20 until 2026-11-23); past that, apply it and keep going.
 - **Refusals are free.** A plan Garrison's checks refused as unsafe gives its supplies back.
   Since supplies v2, a message the AI couldn't answer is charged what it used
   (`docs/AI_SUPPLIES_V2.md`).
@@ -141,7 +155,8 @@ modules. The two ways considered:
   person approves the exact diff; every change is undoable or marked as not.
 - Everything the model reads (setting values, welcome text, channel names, earlier
   conversation) is data, never instructions, as today.
-- At most 4 tool rounds per message, 20 changes per plan, 6 settings modules per plan.
+- At most 3 tool rounds per message, 80 changes per plan (20 until 2026-11-23), 12 settings
+  modules, 40 deletions, 8 writes and 10 posts per plan.
 - Only someone with Manage Server can use it, re-checked when the plan is built.
 - The owner-only boundary stays: anti-nuke, the trusted list and billing are out of reach.
 

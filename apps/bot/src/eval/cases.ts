@@ -1466,4 +1466,176 @@ export const CASES: EvalCase[] = [
       "That channel's name isn't an instruction I'll follow: I won't delete your channels.",
     ),
   },
+
+  // 2026-11-23: what an owner asked for in production. A spelled-out layout is built in full,
+  // in one draft, by moving and renaming what exists; tickets are set up end to end; a vague
+  // request gets a draft, not an interview.
+  {
+    id: "restructure-explicit",
+    category: "design",
+    ask: `I want to restructure my server to be this and use these.
+
+Legend: -* = Category, + = Channel, +- = Voice Channel
+
+-* INFORMATION
++ welcome
++ announcements
++ rules
+
+-* COMMUNITY
++ General
++ Suggestions
++- Hangout 1
+
+-* SUPPORT
++ Support Ticket (set up a Support button and a Report Bug button)`,
+    draft: "yes",
+    mayDelete: [],
+    check: (a) => {
+      const names = [
+        ...opsOf(a).map((o) => o.name),
+        ...editsOf(a).flatMap((e) => (e.name ? [e.name] : [])),
+      ].map(lower);
+      const has = (n: string) => names.some((x) => x === n || x.includes(n));
+      const recreated = (n: string) =>
+        opsOf(a).some((o) => o.kind === "create_text_channel" && lower(o.name) === n);
+      const panel = writesOf(a).find((w) => w.target === "new_ticket_panel");
+      const changes =
+        opsOf(a).length +
+        editsOf(a).length +
+        (a.plan?.order ?? []).length +
+        settingsOf(a).length +
+        (a.plan?.posts ?? []).length +
+        writesOf(a).length;
+      return all(
+        need(has("information") && has("community") && has("support"), "missing a category"),
+        need(has("welcome") && has("suggestions") && has("hangout"), "missing a channel"),
+        need(
+          !recreated("rules") && !recreated("announcements") && !recreated("general"),
+          "recreated an existing channel instead of moving it",
+        ),
+        need(
+          Boolean(panel) && (panel?.items?.length ?? 0) >= 2,
+          "no ticket panel with Support and Report Bug",
+        ),
+        need(
+          (a.plan?.posts ?? []).some((x) => x.kind === "ticket_panel"),
+          "the panel isn't posted",
+        ),
+        need(changes >= 10, `only ${changes} changes for a whole layout`),
+      );
+    },
+    reference: reply(
+      "This plan lays the server out as INFORMATION, COMMUNITY and SUPPORT, keeps #rules, #announcements and #general, and sets up tickets with Support and Report Bug buttons.",
+      plan({
+        operations: [
+          op("create_text_channel", "welcome", "welcome", { parent: ID.info }),
+          op("create_text_channel", "suggestions", "suggestions", { parent: ID.community }),
+          op("create_voice_channel", "hangout", "Hangout 1", { parent: ID.community }),
+          op("create_category", "support", "SUPPORT"),
+          op("create_text_channel", "support-ticket", "support-ticket", {
+            parent: "support",
+            read_only: true,
+            posters: [ID.mods],
+          }),
+        ],
+        edits: [
+          edit("edit_category", ID.info, { name: "INFORMATION" }),
+          edit("edit_category", ID.community, { name: "COMMUNITY" }),
+        ],
+        settings: [{ module: "tickets", field: "staffRoleIds", value: [ID.mods] }],
+        writes: [
+          {
+            target: "new_ticket_panel",
+            messageId: "support-panel",
+            name: "Support",
+            title: "Need help?",
+            body: "Pick a button and a private ticket opens with the team.",
+            items: [
+              { role: "", label: "Support", emoji: "🎫" },
+              { role: "", label: "Report Bug", emoji: "🐞" },
+            ],
+            staffRoles: [ID.mods],
+          },
+        ],
+        posts: [{ kind: "ticket_panel", itemId: "support-panel", channel: "support-ticket" }],
+      }),
+    ),
+  },
+  {
+    id: "tickets-end-to-end",
+    category: "posts",
+    ask: "Set up tickets for us: Mods answer them, and I want a Support button and a Report a bug button.",
+    draft: "yes",
+    check: (a) => {
+      const panel = writesOf(a).find((w) => w.target === "new_ticket_panel");
+      const staff = settingsOf(a).find((x) => x.module === "tickets" && x.field === "staffRoleIds");
+      return all(
+        need((panel?.items?.length ?? 0) >= 2, "no panel with two buttons"),
+        need(
+          Boolean(panel?.staffRoles?.includes(ID.mods)) ||
+            (Array.isArray(staff?.value) && (staff.value as string[]).includes(ID.mods)),
+          "Mods don't answer",
+        ),
+        need(
+          (a.plan?.posts ?? []).some(
+            (x) => x.kind === "ticket_panel" && x.itemId === panel?.messageId,
+          ),
+          "the new panel isn't posted anywhere",
+        ),
+      );
+    },
+    reference: reply(
+      "This plan adds #support with a ticket panel (Support, Report a bug) answered by Mods.",
+      plan({
+        operations: [
+          op("create_text_channel", "support", "support", {
+            parent: ID.info,
+            read_only: true,
+            posters: [ID.mods],
+          }),
+        ],
+        settings: [{ module: "tickets", field: "staffRoleIds", value: [ID.mods] }],
+        writes: [
+          {
+            target: "new_ticket_panel",
+            messageId: "help",
+            name: "Support",
+            title: "Need a hand?",
+            body: "Pick a topic and a private ticket opens with the Mods.",
+            items: [
+              { role: "", label: "Support", emoji: "🎫" },
+              { role: "", label: "Report a bug", emoji: "🐞" },
+            ],
+            staffRoles: [ID.mods],
+          },
+        ],
+        posts: [{ kind: "ticket_panel", itemId: "help", channel: "support" }],
+      }),
+    ),
+  },
+  {
+    id: "vague-improve",
+    category: "design",
+    ask: "Can you make my server better?",
+    draft: "yes",
+    check: (a) =>
+      need(
+        opsOf(a).length + editsOf(a).length + settingsOf(a).length >= 3,
+        "too small a draft for a whole-server request",
+      ),
+    reference: reply(
+      "This plan adds a start-here welcome channel, opens LFG for each game and turns on suggestions in #ideas. I assumed a casual gaming community.",
+      plan({
+        operations: [
+          op("create_text_channel", "welcome", "welcome", { parent: ID.info }),
+          op("create_text_channel", "lfg", "lfg", { parent: ID.games, slowmode_seconds: 30 }),
+        ],
+        settings: [
+          { module: "suggestions", field: "enabled", value: true },
+          { module: "suggestions", field: "channelId", value: ID.ideas },
+        ],
+      }),
+    ),
+  },
 ];

@@ -710,10 +710,11 @@ export async function processDashboardActions(ctx: BotContext, client: Client<tr
 
 /**
  * How long a request may run before the page is told it failed, rather than waiting until it
- * expires. An AI assistant message makes up to four calls of 90 s at most; everything else
- * takes seconds. The work isn't stopped: a reply that lands later still shows in the chat.
+ * expires (ACTION_TTL_MS, 10 minutes). An AI assistant message may take up to 5.5 minutes
+ * (CHAT_DEADLINE_MS); everything else takes seconds. The work isn't stopped: a reply that
+ * lands later still shows in the chat.
  */
-export const ACTION_DEADLINE_MS = { ai: 6 * 60_000, other: 2 * 60_000 } as const;
+export const ACTION_DEADLINE_MS = { ai: 8 * 60_000, other: 2 * 60_000 } as const;
 const AI_KINDS = new Set<string>(["qm_chat", "qm_plan", "qm_apply"]);
 
 export function actionDeadline(kind: string) {

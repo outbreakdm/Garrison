@@ -150,7 +150,7 @@ export type ValidationResult =
  * The most orders one plan sets: all categories, the roles, and the channels of each category
  * (and those outside any). Six refused a whole-server tidy of a server with five categories.
  */
-export const MAX_ORDERS = 12;
+export const MAX_ORDERS = 25;
 
 /**
  * Turn model output into a plan Garrison will run, or explain why not. A plan

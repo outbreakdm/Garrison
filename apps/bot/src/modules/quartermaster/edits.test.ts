@@ -1,4 +1,4 @@
-import { describeEdits } from "@garrison/db";
+import { describeEdits, QM_CHANGES_PER_PLAN } from "@garrison/db";
 import { describe, expect, it } from "vitest";
 import { type AiEdit, MAX_DELETES } from "./edits.js";
 import { type AiPlan, type ServerSnapshot, validatePlan } from "./plan.js";
@@ -96,10 +96,12 @@ describe("editing what exists", () => {
   });
 
   it("counts each edit as one change", () => {
-    const many = Array.from({ length: 21 }, (_, i) =>
+    const many = Array.from({ length: QM_CHANGES_PER_PLAN + 1 }, (_, i) =>
       edit({ kind: "edit_channel", id: GENERAL, name: `chat-${i}` }),
     );
-    expect(errorsOf(plan(many)).join(" ")).toMatch(/the most a build can make is 20/);
+    expect(errorsOf(plan(many)).join(" ")).toContain(
+      `the most a build can make is ${QM_CHANGES_PER_PLAN}`,
+    );
   });
 
   it("leaves staff, bot and @everyone roles alone", () => {

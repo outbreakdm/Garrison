@@ -116,8 +116,10 @@ export function outputThatFits(model: string, micros: number, inputTokens: numbe
  * what's held (planner.ts), so a bigger server gets a shorter answer, never a bigger bill. A full
  * 20-change plan with a topic on every channel is about 2,500 tokens, plus reasoning.
  */
-export const QM_MAX_INPUT_TOKENS = 12_000;
-export const QM_MAX_OUTPUT_TOKENS = 6000;
+// Raised 2026-11-23 (from 12,000 and 6,000): a real server's snapshot and instructions passed
+// 21,000 tokens, so the answer's room was squeezed and big restructures came back cut short.
+export const QM_MAX_INPUT_TOKENS = 40_000;
+export const QM_MAX_OUTPUT_TOKENS = 16_000;
 
 /** The most one round can cost: every input token written to the cache, and the output cap. */
 export const qmReserveMicros = (model: string) =>

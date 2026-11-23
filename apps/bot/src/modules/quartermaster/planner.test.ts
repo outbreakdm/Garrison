@@ -269,7 +269,8 @@ describe("a message never costs more than it holds", () => {
     const looks = [look("a", "server_overview"), look("b", "server_overview"), answer("Ok.")];
     const inputs = [12_000, 14_000, 16_000];
     const { planner, sent } = fakeApi(looks, { inputTokens: inputs });
-    const budget = 14_000;
+    // Enough for two looks and an answer at the output cap (16,000 since 2026-11-23).
+    const budget = 40_000;
     const out = await planner.chat({
       ...input(async () => ({ text: "{}", error: false })),
       budgetMicros: budget,

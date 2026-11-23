@@ -85,15 +85,15 @@ const finish = (id: string, over: { ok?: boolean; charge?: boolean; costMicros?:
 
 describe("AI supplies", () => {
   it("prices a supply at $0.001 and holds the most a message can cost", () => {
-    // 12,000 tokens in at the cache-write rate plus 6,000 out: $0.0045 a round.
-    expect(qmReserveMicros(model)).toBe(4500);
-    expect(qmHoldSupplies(model, 3)).toBe(14);
-    expect(qmHoldSupplies(model, 1)).toBe(5);
+    // 40,000 tokens in at the cache-write rate plus 16,000 out: $0.013 a round.
+    expect(qmReserveMicros(model)).toBe(13_000);
+    expect(qmHoldSupplies(model, 3)).toBe(39);
+    expect(qmHoldSupplies(model, 1)).toBe(13);
     expect(suppliesFor(2620)).toBe(3);
     expect(suppliesFor(0)).toBe(0);
     // Four supplies pay for 12,000 tokens in and a shorter answer.
     expect(outputThatFits(model, 4000, 12_000)).toBe(5000);
-    expect(outputThatFits(model, 50_000, 12_000)).toBe(6000);
+    expect(outputThatFits(model, 50_000, 12_000)).toBe(16_000);
     // A bigger server leaves less room for the answer in the same hold.
     expect(outputThatFits(model, 4000, 30_000)).toBe(500);
   });

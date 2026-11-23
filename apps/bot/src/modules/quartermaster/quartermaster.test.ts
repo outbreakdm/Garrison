@@ -670,8 +670,8 @@ describe("AI costs", () => {
     expect(costMicros("claude-haiku-5-5", 3400, 2000)).toBe(1340);
     expect(costMicros("claude-opus-5-5", 1000, 1000)).toBe(24000);
     expect(costMicros("some-new-model", 1000, 1000)).toBe(24000);
-    // A round at its worst: 12,000 tokens written to the cache, and 6,000 out.
-    expect(qmReserveMicros("claude-haiku-5-5")).toBe(4500);
+    // A round at its worst: 40,000 tokens written to the cache, and 16,000 out.
+    expect(qmReserveMicros("claude-haiku-5-5")).toBe(13_000);
     // Cache reads at a tenth, writes at a quarter more.
     expect(costMicros("claude-haiku-5-5", 1000, 0, { read: 10_000, write: 1000 })).toBe(325);
   });
@@ -898,9 +898,9 @@ describe("AI assistant chat", () => {
     expect(repair).toMatch(/ref "Bad Ref!" isn't valid/);
     expect(seen[1]?.history.at(-2)?.text).toMatch(/<draft>/);
     // The message's hold is the budget, and the fix gets only what the first answer left.
-    expect(seen[0]?.budgetMicros).toBe(14_000);
+    expect(seen[0]?.budgetMicros).toBe(39_000);
     const first = costMicros(TYPICAL.model, TYPICAL.inputTokens, TYPICAL.outputTokens);
-    expect(seen[1]?.budgetMicros).toBe(14_000 - first);
+    expect(seen[1]?.budgetMicros).toBe(39_000 - first);
   });
 
   it("charges a typical message 3 supplies, and says so in the chat when they run out", async () => {

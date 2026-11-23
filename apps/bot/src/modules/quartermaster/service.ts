@@ -643,6 +643,20 @@ export async function storePlan(
   };
 }
 
+/**
+ * What a plan writes that its posts can name: new messages, role menus and ticket panels, by
+ * the ref the model gave them and the id they get. Used when a draft is checked and again
+ * when it's built, so a draft that makes a ticket panel and posts it passes both times.
+ */
+function writtenItems(writes: QmWrite[]) {
+  return writes.flatMap((w) => {
+    const id = qmWriteItemId(w);
+    const kind: QmPost["kind"] =
+      w.kind === "role_menu" ? "role_menu" : w.kind === "ticket_panel" ? "ticket_panel" : "message";
+    return w.isNew && w.ref && id ? [{ kind, ref: w.ref, id, name: w.name }] : [];
+  });
+}
+
 /** What a plan's settings may point at: this server's channels and roles, and what the plan makes. */
 export function settingsLookup(guild: Guild, ops: QmOperation[]): QmSettingsLookup {
   const made = new Map(
@@ -756,20 +770,7 @@ export async function checkDraft(
     settingsLookup(guild, structure.operations),
   );
   // A post may name a message the same plan writes, by its ref.
-  const refs = written.ok
-    ? written.writes.flatMap((w) => {
-        const id = qmWriteItemId(w);
-        const kind =
-          w.kind === "role_menu"
-            ? "role_menu"
-            : w.kind === "ticket_panel"
-              ? "ticket_panel"
-              : "message";
-        return w.isNew && w.ref && id
-          ? [{ kind: kind as QmPost["kind"], ref: w.ref, id, name: w.name }]
-          : [];
-      })
-    : [];
+  const refs = written.ok ? writtenItems(written.writes) : [];
   const [settings, posts] = await Promise.all([
     checkQmSettings(
       ctx.db,
@@ -807,7 +808,7 @@ export async function checkDraft(
 
 /**
  * Ask the model for a plan and store it as the next version. It costs what the call really
- * cost (1 supply per $0.001) plus one per change: a plan may make up to 20 changes, or
+ * cost (1 supply per $0.001) plus one per change: a plan may make up to 80 changes, or
  * whatever is left, and unused supplies stay for the next plan. A person's waiting draft is
  * what every request builds on (a new version that keeps what it doesn't drop); with none
  * waiting, continuing a built plan adds onto it.
@@ -1032,11 +1033,15 @@ async function runBuild(ctx: BotContext, guild: Guild, build: QmBuild): Promise<
   }
   const posts = build.posts ?? [];
   if (posts.length) {
+    // What the plan itself writes (a new ticket panel it then posts) counts as there: it's
+    // made before the posts go out. Until 2026-11-23 this check left it out, so such a plan
+    // could never be built ("Ticket panel … isn't saved on this server").
     const now = await checkQmPosts(
       ctx.db,
       guild.id,
       posts.map((x) => ({ kind: x.kind, itemId: x.itemId, channel: x.channel })),
       settingsLookup(guild, build.plan),
+      writtenItems(build.writes ?? []),
     );
     if (!now.ok)
       return {

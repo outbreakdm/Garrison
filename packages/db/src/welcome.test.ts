@@ -110,12 +110,11 @@ describe("welcome storage, under each role's grants", () => {
     const w = await getWelcome(db, G);
     expect(w).toMatchObject({ joinEnabled: true, joinChannelId: C, joinRoleIds: [R[0]] });
     expect(w.joinCard).toEqual(DEFAULT_WELCOME.joinCard);
-    // The bot may change the switches, channels and join roles (the AI assistant's settings),
-    // never the cards' text.
+    // The bot may change the switches, channels, join roles and (since 0090, for the AI
+    // assistant's welcome writes) the cards' text, never the welcome image.
     await db.update(welcomeSettings).set({ joinEnabled: true });
-    const err = await Promise.resolve(
-      db.update(welcomeSettings).set({ joinCard: DEFAULT_WELCOME.leaveCard }),
-    ).then(
+    await db.update(welcomeSettings).set({ joinCard: DEFAULT_WELCOME.leaveCard });
+    const err = await Promise.resolve(db.update(welcomeSettings).set({ joinImage: null })).then(
       () => null,
       (e: Error & { cause?: Error }) => `${e.message} ${e.cause?.message ?? ""}`,
     );

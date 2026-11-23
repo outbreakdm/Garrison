@@ -153,7 +153,10 @@ describe("message storage, under each role's grants", () => {
     await exec("SET ROLE garrison_bot");
     expect((await listScheduledMessages(db)).map((r) => r.guildId)).toEqual([G]);
     expect((await lastSends(db, G)).get("msg0000001")).toEqual(send.occurrence);
-    const err = await Promise.resolve(db.update(messageSettings).set({ messages: [] })).then(
+    // Since 0090 the bot saves the messages an AI assistant plan writes, never the
+    // auto-responders.
+    await db.update(messageSettings).set({ messages: [msg()] });
+    const err = await Promise.resolve(db.update(messageSettings).set({ responders: [] })).then(
       () => null,
       (e: Error & { cause?: Error }) => `${e.message} ${e.cause?.message ?? ""}`,
     );

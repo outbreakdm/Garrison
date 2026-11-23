@@ -29,14 +29,11 @@ describe("readSettings", () => {
     });
   });
 
-  it("is null for modules never set up, and the bot can read every module but member pages", async () => {
+  it("is null for modules never set up, and the bot can read every module", async () => {
     // Moderation (with its default warning ladder) and Security come with the server.
     const made = new Set<SettingsModule>(["suggestions", "watch", "gatehouse", "escalation"]);
-    for (const m of Object.keys(EDITABLE_FIELDS) as SettingsModule[]) {
-      if (m === "members") continue;
+    // Member pages too since 0090: the AI assistant reads them before changing them.
+    for (const m of Object.keys(EDITABLE_FIELDS) as SettingsModule[])
       expect(await readSettings(db, "r1", m), m).toEqual(made.has(m) ? expect.any(Object) : null);
-    }
-    // Which member pages show is the dashboard's alone: the bot has no grant on it.
-    await expect(readSettings(db, "r1", "members")).rejects.toThrow();
   });
 });
