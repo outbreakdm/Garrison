@@ -1655,4 +1655,7 @@ Decided (2026-11-12, owner):
 - 2026-11-23: The AI assistant's conversation scrolls in its own window at every size (on phones
   sized so the message box stays in view), opens at the newest message, and follows new replies
   only when the reader is already at the bottom (ScrollToEnd). Deployed (dashboard).
+- 2026-11-23: Discarding an AI draft updates the page: the draft leaves at once ("Discarding the
+  draft…"), the page refreshes until the bot confirms, and the chat's chip says Discarding,
+  then Discarded (a waiting draft says Waiting, never Expired). Deployed (dashboard).
 

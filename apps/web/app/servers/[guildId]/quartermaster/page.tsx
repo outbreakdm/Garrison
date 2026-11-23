@@ -65,9 +65,10 @@ const QM_FULL_MESSAGE_SUPPLIES = qmHoldSupplies("claude-haiku-5-5", 3);
 /** A request is at most this long, as the bot enforces. */
 const REQUEST_MAX = 500;
 
-/** What became of a draft, shown on the chat message that made it. */
+/** What became of a draft, shown on the chat message that made it. Drafts no longer expire
+ * (2026-11-23): a waiting one is waiting; "expired" is only on drafts from before. */
 const OUTCOME: Record<QmBuild["status"], string> = {
-  pending: "Expired",
+  pending: "Waiting",
   applied: "Applied",
   cancelled: "Discarded",
   expired: "Expired",
@@ -163,8 +164,21 @@ export default async function QuartermasterPage({
   const ent = entitlements(guildPlan);
   const isOwner = ownerId === session.userId;
   const now = Date.now();
+  // A Discard the bot hasn't done yet: the draft goes from the page at once, and the page
+  // keeps refreshing until the bot confirms (or says why not, and the draft comes back).
+  const discardingIds = new Set(
+    actions
+      .filter(
+        (a) =>
+          a.kind === "qm_cancel" &&
+          a.requestedById === session.userId &&
+          (a.status === "pending" || a.status === "running"),
+      )
+      .map((a) => String((a.payload as { id?: string }).id ?? "")),
+  );
+  const discarding = discardingIds.size > 0;
   // Drafts don't expire: one waits until it's applied, discarded or replaced.
-  const waiting = (b: QmBuild) => b.status === "pending";
+  const waiting = (b: QmBuild) => b.status === "pending" && !discardingIds.has(b.id);
 
   // The draft: the one this conversation made last, or one of yours still waiting.
   const lastDraftId = [...messages].reverse().find((m) => m.buildId)?.buildId;
@@ -516,7 +530,11 @@ export default async function QuartermasterPage({
                           ) : (
                             <span className="qm-msg__plan qm-msg__plan--past">
                               {plural(qmChangeCount(drafted), "change")} ·{" "}
-                              {replaced ? "Updated later" : OUTCOME[drafted.status]}
+                              {replaced
+                                ? "Updated later"
+                                : discardingIds.has(drafted.id)
+                                  ? "Discarding…"
+                                  : OUTCOME[drafted.status]}
                             </span>
                           )
                         ) : null}
@@ -687,6 +705,10 @@ export default async function QuartermasterPage({
                     <span className="qm-plan__counts" role="status">
                       Saving your changes…
                     </span>
+                  ) : discarding ? (
+                    <span className="qm-plan__counts" role="status">
+                      Discarding the draft…
+                    </span>
                   ) : counts ? (
                     <span className="qm-plan__counts">
                       <strong>{counts.channels}</strong> channels · <strong>{counts.roles}</strong>{" "}
@@ -732,7 +754,9 @@ export default async function QuartermasterPage({
                   </div>
                 ) : null}
               </header>
-              {saving || applying ? <WaitingForBot every={1500} forMs={5 * 60_000} /> : null}
+              {saving || applying || discarding ? (
+                <WaitingForBot every={1500} forMs={5 * 60_000} />
+              ) : null}
               {requestError ? (
                 <div className="notice qm-plan__status" role="alert">
                   {requestError}
