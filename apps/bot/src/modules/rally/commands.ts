@@ -20,6 +20,7 @@ import type { BotContext, ButtonHandler, Command } from "../../commands/types.js
 import { cardEdit, cardReply } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { lfgCard, RALLY_PREFIX, safeText } from "./card.js";
+import { keepLfgPanelLast } from "./panel.js";
 import { LIFETIME_AFTER_START_MS, matchSlot, parseSlots, parseStart } from "./parse.js";
 import { announceFullSquad, refreshCard, syncVoiceAccess } from "./service.js";
 import { cachedTemplates, findTemplate, postWording } from "./templates.js";
@@ -233,6 +234,8 @@ export const lfg: Command = {
     if (sent) await setLfgMessage(ctx.db, post.id, sent.id);
     if (template?.notifyRoleId && sent)
       await notifyTemplateRole(ctx, guild, channel, post, template.notifyRoleId, sent.url);
+    // The LFG panel, if it lives here and follows the groups, goes back under this one.
+    if (sent) await keepLfgPanelLast(ctx, guild, channel.id);
   },
   async autocomplete(interaction, ctx) {
     const focused = interaction.options.getFocused(true);

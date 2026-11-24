@@ -17,6 +17,7 @@ import { logs } from "../modules/ledger/commands.js";
 import { opsButtons, opsModals, raid } from "../modules/ops/commands.js";
 import { qm, qmButtons } from "../modules/quartermaster/commands.js";
 import { lfg, rallyButtons } from "../modules/rally/commands.js";
+import { lfgPanelButtons, lfgPanelModals } from "../modules/rally/panel-handlers.js";
 import { leaderboard, rank, rankcard, rankcardModals, ranks } from "../modules/ranks/commands.js";
 import { tag } from "../modules/responders/commands.js";
 import { roleMenuButtons, roleMenuSelects } from "../modules/roles/handlers.js";
@@ -67,6 +68,7 @@ export const buttons: ButtonHandler[] = [
   giveawayButtons,
   suggestionButtons,
   suggestionPanelButtons,
+  lfgPanelButtons,
   applyButtons,
   decideApplicationButtons,
   triviaButtons,
@@ -79,6 +81,7 @@ export const modals: ModalHandler[] = [
   questionModals,
   applicationModals,
   suggestionModals,
+  lfgPanelModals,
 ];
 
 // Each command's description in Spanish, Portuguese, German and French: Discord shows members

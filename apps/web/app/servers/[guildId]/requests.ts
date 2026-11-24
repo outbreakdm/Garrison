@@ -344,6 +344,12 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
         input: { kind, payload: { id: a.id, approve: field(form, "op") === "approve" } },
       };
     }
+    case "post_lfg_panel": {
+      const channelId = field(form, "channelId");
+      const channels = await listTextChannels(guildId).catch(() => []);
+      if (!channels.some((c) => c.id === channelId)) return { ok: false, error: "channel" };
+      return { ok: true, input: { kind, payload: { channelId } } };
+    }
     case "post_suggestion_panel": {
       const channelId = field(form, "channelId");
       const [config, channels] = await Promise.all([

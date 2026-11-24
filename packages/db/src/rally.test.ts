@@ -1,14 +1,26 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "./client";
 import {
+  checkLfgPanel,
   checkTemplates,
   DEFAULT_WORDING,
+  LFG_PANEL,
+  LFG_PANEL_BUTTONS,
+  lfgPanelTemplates,
   newTemplateId,
+  readLfgPanel,
   renderWording,
   TEMPLATE_PRESETS,
 } from "./rally";
 import { upsertGuild } from "./repo/guilds";
-import { claimRallyNotify, createLfgPost, getGuildPlan, getRallyTemplates } from "./repo/rally";
+import {
+  claimRallyNotify,
+  createLfgPost,
+  getGuildPlan,
+  getLfgPanel,
+  getRallyTemplates,
+  setLfgPanelMessage,
+} from "./repo/rally";
 import { applySettingsChange, undoSettingsChange } from "./repo/settings";
 import { guildPlans, rallySettings } from "./schema";
 import { createTestDb } from "./testing";
@@ -103,6 +115,56 @@ const refused = (q: PromiseLike<unknown>) =>
     (e: Error & { cause?: Error }) => `${e.message} ${e.cause?.message ?? ""}`,
   );
 
+describe("the LFG panel", () => {
+  const two = [tpl({ id: "aaa111", name: "Mythic+" }), tpl({ id: "bbb222", name: "Raids" })];
+
+  it("stores the standard words and every template as none, and checks what's picked", () => {
+    expect(
+      checkLfgPanel(
+        {
+          lfgPanelTitle: LFG_PANEL.title,
+          lfgPanelBody: "  Post here ",
+          lfgPanelTemplates: ["aaa111", "bbb222"],
+          lfgPanelOther: false,
+          lfgPanelSticky: true,
+        },
+        two,
+      ),
+    ).toEqual({
+      ok: true,
+      value: {
+        lfgPanelTitle: null,
+        lfgPanelBody: "Post here",
+        lfgPanelTemplates: [],
+        lfgPanelOther: false,
+        lfgPanelSticky: true,
+      },
+    });
+    // A pick in another order, or a subset, is kept.
+    expect(checkLfgPanel({ lfgPanelTemplates: ["bbb222"] }, two)).toMatchObject({
+      value: { lfgPanelTemplates: ["bbb222"] },
+    });
+    expect(checkLfgPanel({ lfgPanelTemplates: ["gone99"] }, two).ok).toBe(false);
+    // With no template, the Something else button is the panel's only button.
+    expect(checkLfgPanel({ lfgPanelOther: false }, []).ok).toBe(false);
+  });
+
+  it("shows the picked templates that may be posted in the panel's channel", () => {
+    const here = "123456789012345678";
+    const elsewhere = tpl({ id: "ccc333", name: "Elsewhere", channelIds: ["223456789012345678"] });
+    const all = [...two, elsewhere];
+    expect(lfgPanelTemplates(readLfgPanel(null), all, here).map((t) => t.id)).toEqual([
+      "aaa111",
+      "bbb222",
+    ]);
+    expect(
+      lfgPanelTemplates({ lfgPanelTemplates: ["bbb222", "aaa111"] }, all, here).map((t) => t.id),
+    ).toEqual(["bbb222", "aaa111"]);
+    const many = Array.from({ length: 12 }, (_, i) => tpl({ id: `id${i}xxxx`, name: `T${i}` }));
+    expect(lfgPanelTemplates(readLfgPanel(null), many, here)).toHaveLength(LFG_PANEL_BUTTONS);
+  });
+});
+
 describe("Rally templates in the database", () => {
   beforeAll(async () => {
     ({ db, exec, close } = await createTestDb());
@@ -111,7 +173,7 @@ describe("Rally templates in the database", () => {
   });
   afterAll(() => close());
 
-  it("saves templates from the dashboard with history and undo; the bot only reads", async () => {
+  it("saves templates from the dashboard with history and undo", async () => {
     await as("garrison_web");
     const ok = checkTemplates([tpl()], "free");
     if (!ok.ok) throw new Error(ok.error);
@@ -125,7 +187,10 @@ describe("Rally templates in the database", () => {
     expect(res).toMatchObject({ ok: true });
     await as("garrison_bot");
     expect(await getRallyTemplates(db, G)).toHaveLength(1);
-    expect(await refused(db.update(rallySettings).set({ templates: [] }))).toMatch(
+    // Since 0093 the bot writes what an AI assistant plan changes (new templates, the panel's
+    // words) and where it posted the panel; which templates the panel shows stays the dashboard's.
+    await db.update(rallySettings).set({ lfgPanelTitle: "Squad up" });
+    expect(await refused(db.update(rallySettings).set({ lfgPanelTemplates: [] }))).toMatch(
       /permission denied/,
     );
     await as("garrison_web");
@@ -134,6 +199,20 @@ describe("Rally templates in the database", () => {
       await undoSettingsChange(db, G, res.change.id, { userId: "2", username: "kel" }),
     ).toMatchObject({ ok: true });
     expect(await getRallyTemplates(db, G)).toHaveLength(0);
+  });
+
+  it("lets the bot record where it posted the panel, even before anything was saved", async () => {
+    await as("garrison_bot");
+    await upsertGuild(db, { id: "940000000000000009", name: "New" });
+    const at = { channelId: "940000000000000001", messageId: "940000000000000002" };
+    await setLfgPanelMessage(db, "940000000000000009", at);
+    expect(await getLfgPanel(db, "940000000000000009")).toMatchObject({
+      lfgPanelChannelId: at.channelId,
+      lfgPanelMessageId: at.messageId,
+      lfgPanelOther: true,
+      lfgPanelSticky: true,
+    });
+    await as("garrison_web");
   });
 
   it("caps the stored list at 25 even if the app check is skipped", async () => {

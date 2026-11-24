@@ -20,6 +20,7 @@ import { HowItWorks } from "@/components/HowItWorks";
 import { ListHead } from "@/components/ListHead";
 import { HeadNote, HeadSwitch } from "@/components/ModuleHead";
 import { CompactLayout } from "@/components/PageLayouts";
+import { PanelPostCard } from "@/components/panels/PanelPostCard";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { SettingsNotice } from "@/components/settings";
 import { getDb } from "@/lib/db";
@@ -69,7 +70,6 @@ export default async function SuggestionsPage({
   const base = `/servers/${guild.id}/suggestions`;
   const channelName = (id: string | null) => channels.find((c) => c.id === id)?.name ?? null;
   const panel = { ...suggestionPanel(config), questions: suggestionQuestions(config) };
-  const posted = config.panelChannelId && config.panelMessageId ? config.panelChannelId : null;
 
   return (
     <>
@@ -178,65 +178,24 @@ export default async function SuggestionsPage({
               undo={undoChange}
               stamp={contentKey({ ...panel, sticky: config.panelSticky })}
             />
-            <section className="g-card sg-post" aria-labelledby="sg-post-title">
-              <h2 className="card-title" id="sg-post-title">
-                Post the panel
-              </h2>
-              <p className="card-sub">
-                {posted ? (
-                  <>
-                    It's in #{channelName(posted) ?? "a deleted channel"}.{" "}
-                    <a
-                      href={`https://discord.com/channels/${guild.id}/${posted}/${config.panelMessageId}`}
-                    >
-                      Open in Discord
-                    </a>
-                    . Posting again moves it and takes the old one down.
-                  </>
-                ) : (
-                  "Not posted yet. Your suggestions channel is the usual place."
-                )}
-              </p>
-              {/* Keyed by where it would go, so a channel saved above shows here at once. */}
-              <form
-                action={requestAction}
-                className="sg-post__form"
-                key={posted ?? config.channelId ?? ""}
-              >
-                <input type="hidden" name="guildId" value={guild.id} />
-                <input type="hidden" name="page" value="suggestions" />
-                <input type="hidden" name="kind" value="post_suggestion_panel" />
-                <label className="g-field" htmlFor="panelChannelId">
-                  <span className="g-label">Post it in</span>
-                  <select
-                    className="g-input"
-                    id="panelChannelId"
-                    name="channelId"
-                    required
-                    defaultValue={posted ?? config.channelId ?? ""}
-                  >
-                    <option value="" disabled>
-                      Pick a channel
-                    </option>
-                    {channels.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        #{c.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button
-                  type="submit"
-                  className="g-btn g-btn--primary g-btn--sm"
-                  disabled={!config.enabled || !config.channelId}
-                >
-                  {posted ? "Post again" : "Post the panel"}
-                </button>
-              </form>
-              {!config.enabled || !config.channelId ? (
-                <p className="g-help">Turn suggestions on and pick their channel first.</p>
-              ) : null}
-            </section>
+            <PanelPostCard
+              id="post-panel"
+              guildId={guild.id}
+              page="suggestions"
+              kind="post_suggestion_panel"
+              channels={channels}
+              posted={
+                config.panelChannelId && config.panelMessageId
+                  ? { channelId: config.panelChannelId, messageId: config.panelMessageId }
+                  : null
+              }
+              suggested={config.channelId}
+              blocked={
+                config.enabled && config.channelId
+                  ? null
+                  : "Turn suggestions on and pick their channel first."
+              }
+            />
           </>
         }
         live={

@@ -73,7 +73,16 @@ export const EDITABLE_FIELDS = {
   // The whole ladder is one value, so history and undo treat it as a unit.
   escalation: ["rules"],
   // Templates are checked with checkTemplates before they get here.
-  rally: ["templates"],
+  // Templates with checkTemplates, the LFG panel with checkLfgPanel. Where the panel is posted
+  // is the bot's to record (setLfgPanelMessage), not a setting.
+  rally: [
+    "templates",
+    "lfgPanelTitle",
+    "lfgPanelBody",
+    "lfgPanelTemplates",
+    "lfgPanelOther",
+    "lfgPanelSticky",
+  ],
   // Level rewards are one list too: [{ level, roleId }].
   rewards: ["rewards"],
   // Role menus are checked with checkRoleMenus before they get here.

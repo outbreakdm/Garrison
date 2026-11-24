@@ -1760,12 +1760,14 @@ async function applyPlanPosts(
     { doPostTicketPanel },
     { doStartGiveaway },
     { doPostSuggestionPanel },
+    { doPostLfgPanel },
   ] = await Promise.all([
     import("../dashboard/actions.js"),
     import("../dispatch/service.js"),
     import("../tickets/dashboard.js"),
     import("../giveaways/service.js"),
     import("../suggestions/service.js"),
+    import("../rally/panel.js"),
   ]);
   const handlers: Record<QmPost["kind"], [PostHandler, string]> = {
     role_menu: [doPostRoleMenu, "menuId"],
@@ -1773,6 +1775,7 @@ async function applyPlanPosts(
     message: [postMessageNow, "messageId"],
     // One panel per server: its item id is "suggestions", and the handler takes the channel.
     suggestion_panel: [doPostSuggestionPanel, "panelId"],
+    lfg_panel: [doPostLfgPanel, "panelId"],
   };
   const member = await guild.members.fetch(build.requestedById).catch(() => null);
   if (!member) return "The admin who asked for this plan has left, so nothing was posted.";

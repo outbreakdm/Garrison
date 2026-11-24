@@ -2924,7 +2924,7 @@
   max-width: 520px;
 }
 
-/* Suggestions: the form's other answers under the idea, and posting the panel. */
+/* Suggestions: the form's other answers under the idea. */
 .sg-row__answers {
   display: grid;
   gap: var(--space-1);
@@ -2941,12 +2941,36 @@
   overflow-wrap: anywhere;
   white-space: pre-line;
 }
-.sg-post__form {
+/* Posting a panel (Suggestions, LFG): where it goes and the button that posts it. */
+.panel-post__form {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   gap: var(--space-3);
 }
-.sg-post__form .g-field {
+.panel-post__form .g-field {
   flex: 1 1 220px;
+}
+/* A form's box with something already in it, and a dropdown, in the form preview. */
+.dc-form__box:not(:empty) {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  overflow: hidden;
+  color: #dbdee1;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.dc-form__box--select {
+  justify-content: space-between;
+}
+.dc-form__box--select::after {
+  width: 7px;
+  height: 7px;
+  margin-left: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  content: "";
+  rotate: 45deg;
+  translate: 0 -2px;
 }

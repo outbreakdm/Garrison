@@ -17,6 +17,7 @@ export * from "./ids";
 export * from "./invite-labels";
 export * from "./messages";
 export * from "./ops-calendar";
+export * from "./panels";
 export * from "./plans";
 export * from "./profile";
 export * from "./public-page";

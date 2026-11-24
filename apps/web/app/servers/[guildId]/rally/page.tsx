@@ -6,8 +6,11 @@ import {
   entitlements,
   getCalendarToken,
   getGuildPlan,
+  getLfgPanel,
   getOpsTimezone,
   getRallyTemplates,
+  lfgPanelTemplates,
+  lfgPanelWords,
   listActiveMembers,
   listDashboardActions,
   listOpenLfg,
@@ -28,13 +31,16 @@ import { ListHead } from "@/components/ListHead";
 import { HeadStatus } from "@/components/ModuleHead";
 import { OpsCalendar } from "@/components/OpsCalendar";
 import { PageTabs, TabPanel } from "@/components/PageTabs";
+import { PanelPostCard } from "@/components/panels/PanelPostCard";
 import { FormPanel } from "@/components/settings";
 import { getDb } from "@/lib/db";
 import { listTextChannels } from "@/lib/discord";
 import { env } from "@/lib/env";
+import { contentKey } from "@/lib/flash";
 import { ACTION_KIND, ACTION_STATUS } from "@/lib/rally-schema";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
+import { undoChange } from "../settings/actions";
 import {
   markAttendance,
   requestCallSignups,
@@ -43,6 +49,8 @@ import {
   saveAttendance,
   setCalendarFeed,
 } from "./actions";
+import { LfgPanelEditor } from "./LfgPanelEditor";
+import { saveLfgPanel } from "./panel-actions";
 import { TemplatesTab } from "./templates/TemplatesTab";
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -56,6 +64,7 @@ const QUEUED: Record<string, string> = {
   create_lfg: "Queued. Garrison posts your group in a few seconds.",
   lfg_join: "Queued. Garrison adds you and updates the card.",
   lfg_leave: "Queued. Garrison takes you out and updates the card.",
+  post_lfg_panel: "Queued. Garrison posts the LFG panel in a few seconds.",
   raid_signup: "Queued. Garrison signs you up and updates the card.",
   raid_withdraw: "Queued. Garrison withdraws you and updates the card.",
 };
@@ -75,8 +84,8 @@ const ATTENDANCE: Record<string, string> = {
 
 export const metadata: Metadata = { title: "Groups and raids" };
 
-/** Groups and raids' tabs: open groups first, then raids, the calendar and the templates. */
-const GROUP_TABS = ["groups", "raids", "calendar", "templates"] as const;
+/** Groups and raids' tabs: open groups first, then raids, the calendar, templates and the panel. */
+const GROUP_TABS = ["groups", "raids", "calendar", "templates", "panel"] as const;
 
 export default async function RallyPage({
   params,
@@ -89,18 +98,29 @@ export default async function RallyPage({
   const { guild, session } = await requireGuildAccess(guildId);
   const query = await searchParams;
   const db = await getDb();
-  const [posts, raids, allActions, timezone, channels, rawTemplates, plan, calendarRaids, feed] =
-    await Promise.all([
-      listOpenLfg(db, guild.id),
-      listUpcomingOps(db, guild.id),
-      listDashboardActions(db, guild.id, 30),
-      getOpsTimezone(db, guild.id),
-      listTextChannels(guild.id).catch(() => []),
-      getRallyTemplates(db, guild.id),
-      getGuildPlan(db, guild.id),
-      listOpsForCalendar(db, guild.id, new Date(Date.now() - 14 * 86_400_000)),
-      getCalendarToken(db, guild.id),
-    ]);
+  const [
+    posts,
+    raids,
+    allActions,
+    timezone,
+    channels,
+    rawTemplates,
+    plan,
+    calendarRaids,
+    feed,
+    lfgPanel,
+  ] = await Promise.all([
+    listOpenLfg(db, guild.id),
+    listUpcomingOps(db, guild.id),
+    listDashboardActions(db, guild.id, 30),
+    getOpsTimezone(db, guild.id),
+    listTextChannels(guild.id).catch(() => []),
+    getRallyTemplates(db, guild.id),
+    getGuildPlan(db, guild.id),
+    listOpsForCalendar(db, guild.id, new Date(Date.now() - 14 * 86_400_000)),
+    getCalendarToken(db, guild.id),
+    getLfgPanel(db, guild.id),
+  ]);
   const feedUrl = feed ? `${env().APP_URL}/calendar/${guild.id}/${feed}.ics` : null;
   const ent = entitlements(plan);
   const [tracking, reliability, recentRaids] = await Promise.all([
@@ -113,6 +133,14 @@ export default async function RallyPage({
   const checked = checkTemplates(rawTemplates, plan);
   const templates = checked.ok ? checked.value : [];
   const defaultTemplate = templates.find((t) => t.isDefault);
+  // The LFG panel: what's picked (every template, up to the limit, when nothing is), its words.
+  const channelName = (id: string) => channels.find((c) => c.id === id)?.name ?? null;
+  const panelPicked = lfgPanelTemplates(lfgPanel, templates, null).map((t) => t.id);
+  const panelWords = lfgPanelWords(lfgPanel);
+  const panelAt =
+    lfgPanel.lfgPanelChannelId && lfgPanel.lfgPanelMessageId
+      ? { channelId: lfgPanel.lfgPanelChannelId, messageId: lfgPanel.lfgPanelMessageId }
+      : null;
   const [postMembers, raidSignups] = await Promise.all([
     Promise.all(posts.map((p) => listActiveMembers(db, p.id))),
     Promise.all(raids.map((r) => listSignups(db, r.id))),
@@ -166,6 +194,7 @@ export default async function RallyPage({
           { id: "raids", label: "Raids", count: raids.length },
           { id: "calendar", label: "Calendar" },
           { id: "templates", label: "Templates" },
+          { id: "panel", label: "Panel" },
         ]}
       />
       {working ? <AutoRefresh /> : null}
@@ -920,6 +949,43 @@ export default async function RallyPage({
       </TabPanel>
       <TabPanel id="templates" tabs={GROUP_TABS}>
         <TemplatesTab guildId={guild.id} />
+      </TabPanel>
+      <TabPanel id="panel" tabs={GROUP_TABS}>
+        <div className="card-col">
+          <LfgPanelEditor
+            guildId={guild.id}
+            saved={panelWords}
+            templates={templates.map((t) => ({
+              id: t.id,
+              name: t.name,
+              game: t.game,
+              roles: t.roles,
+              size: t.size,
+              channels: t.channelIds.flatMap((c) => channelName(c) ?? []),
+            }))}
+            picked={panelPicked}
+            other={lfgPanel.lfgPanelOther}
+            sticky={lfgPanel.lfgPanelSticky}
+            channel={panelAt ? channelName(panelAt.channelId) : null}
+            action={saveLfgPanel}
+            undo={undoChange}
+            stamp={contentKey({ ...lfgPanel, lfgPanelChannelId: null, lfgPanelMessageId: null })}
+          />
+          <PanelPostCard
+            id="post-lfg-panel"
+            guildId={guild.id}
+            page="rally"
+            kind="post_lfg_panel"
+            channels={channels}
+            posted={panelAt}
+            suggested={channels.find((c) => /lfg|looking|group/i.test(c.name))?.id ?? null}
+            blocked={
+              templates.length || lfgPanel.lfgPanelOther
+                ? null
+                : "Add a template, or turn on the Something else button first."
+            }
+          />
+        </div>
       </TabPanel>
 
       {recent.length ? (

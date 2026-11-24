@@ -879,7 +879,7 @@ export interface QmSettingChange {
  * into a channel (an id, or the ref of a channel the same plan creates).
  */
 export interface QmPost {
-  kind: "role_menu" | "ticket_panel" | "message" | "suggestion_panel";
+  kind: "role_menu" | "ticket_panel" | "message" | "suggestion_panel" | "lfg_panel";
   itemId: string;
   /** The item's name when the plan was drafted, for the preview. */
   name: string;
@@ -1329,6 +1329,7 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "undo_cases",
   "ticket_bulk",
   "post_suggestion_panel",
+  "post_lfg_panel",
 ]);
 
 /**
@@ -1574,6 +1575,16 @@ export const rallySettings = pgTable(
       .primaryKey()
       .references(() => guilds.id, { onDelete: "cascade" }),
     templates: jsonb("templates").$type<RallyTemplate[]>().notNull().default(sql`'[]'::jsonb`),
+    /** The "Find a group" panel (rally.ts LfgPanelConfig); null text is the standard. */
+    lfgPanelTitle: text("lfg_panel_title"),
+    lfgPanelBody: text("lfg_panel_body"),
+    /** Template ids with a button, in order; empty is every template. */
+    lfgPanelTemplates: text("lfg_panel_templates").array().notNull().default(sql`'{}'::text[]`),
+    lfgPanelOther: boolean("lfg_panel_other").notNull().default(true),
+    lfgPanelSticky: boolean("lfg_panel_sticky").notNull().default(true),
+    /** Where Garrison posted the panel (the bot records it). */
+    lfgPanelChannelId: text("lfg_panel_channel_id"),
+    lfgPanelMessageId: text("lfg_panel_message_id"),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

@@ -36,6 +36,7 @@ import {
 import { z } from "zod";
 import type { BotContext } from "../../commands/types.js";
 import { type Card, cardMessage } from "../../lib/card.js";
+import { placePanel, queuePanelMove } from "../../lib/panels.js";
 import { safeText } from "../../lib/text.js";
 
 /**
@@ -229,42 +230,32 @@ async function postSuggestion(
   return { ok: true, message: `Posted suggestion #${s.number}.`, url: posted.url };
 }
 
-/** One panel move at a time per server, so two suggestions at once don't leave two panels. */
-const moving = new Map<string, Promise<unknown>>();
-
 /**
  * Take the panel down and post it again, so it's the last message in its channel. Read fresh
  * inside the queue: the previous move changed where it is.
  */
 function keepPanelLast(ctx: BotContext, guild: Guild) {
-  const run = async () => {
+  return queuePanelMove(`suggestions:${guild.id}`, async () => {
     const config = await getSuggestionSettings(ctx.db, guild.id);
     if (!config.enabled || !config.panelSticky || !config.panelChannelId) return;
     const channel = guild.channels.cache.get(config.panelChannelId);
     if (!channel?.isSendable() || !channel.isTextBased()) return;
-    await placePanel(ctx, guild, config, channel);
-  };
-  const next = (moving.get(guild.id) ?? Promise.resolve()).then(run, run);
-  moving.set(guild.id, next);
-  return next.finally(() => {
-    if (moving.get(guild.id) === next) moving.delete(guild.id);
+    await postPanelIn(ctx, guild, config, channel);
   });
 }
 
 /** Post the panel in `channel`, take the old one down (wherever it was) and record the new. */
-async function placePanel(
+async function postPanelIn(
   ctx: BotContext,
   guild: Guild,
   config: SuggestionsConfig,
   channel: SendableChannels,
 ) {
-  const sent = await channel.send(suggestionPanelMessage(config));
-  if (config.panelChannelId && config.panelMessageId) {
-    const old = guild.channels.cache.get(config.panelChannelId);
-    if (old?.isTextBased()) await old.messages.delete(config.panelMessageId).catch(() => null);
-  }
-  await setSuggestionPanelMessage(ctx.db, guild.id, { channelId: channel.id, messageId: sent.id });
-  return sent;
+  const at = await placePanel(guild, channel, suggestionPanelMessage(config), {
+    channelId: config.panelChannelId ?? undefined,
+    messageId: config.panelMessageId ?? undefined,
+  });
+  await setSuggestionPanelMessage(ctx.db, guild.id, at);
 }
 
 const postPanel = z.object({ channelId: z.string().regex(/^\d{17,20}$/) });
@@ -290,7 +281,7 @@ export async function doPostSuggestionPanel(
   const needed = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages];
   if (!channel.permissionsFor(member)?.has(needed)) return fail("You can't post in that channel.");
   if (!channel.permissionsFor(me)?.has(needed)) return fail("Garrison can't post in that channel.");
-  await placePanel(ctx, guild, config, channel);
+  await postPanelIn(ctx, guild, config, channel);
   return { ok: true, message: `Posted the suggestions panel in #${channel.name}.` };
 }
 

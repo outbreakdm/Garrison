@@ -5,6 +5,7 @@
  */
 
 import { newId } from "./ids";
+import { PANEL_LIMITS, panelText, readPanelText } from "./panels";
 import { FEATURES, type GuildPlan } from "./plans";
 
 export interface LfgSlotGroupLike {
@@ -393,3 +394,134 @@ export const TEMPLATE_PRESETS: Record<
 /** Up to 16 lowercase letters and digits, for template IDs. */
 /** Kept for existing callers; the generator lives in ids.ts. */
 export const newTemplateId = newId;
+
+// --- The LFG panel ---------------------------------------------------------------------------
+
+/**
+ * The "Find a group" panel: a card in an LFG channel with a button per template (and one for
+ * anything else). A button opens a short form, asking only what its template doesn't set, and
+ * the group goes up in the panel's channel like /lfg create's. It can follow the groups down
+ * the channel, so it's always the last message.
+ */
+export interface LfgPanelConfig {
+  /** Null is the standard text (LFG_PANEL). */
+  lfgPanelTitle: string | null;
+  lfgPanelBody: string | null;
+  /** Templates with a button, in order. Empty: every template, up to LFG_PANEL_BUTTONS. */
+  lfgPanelTemplates: string[];
+  /** A button for a group no template fits: the form asks for the size or roles too. */
+  lfgPanelOther: boolean;
+  /** Post the panel again under each new group in its channel. */
+  lfgPanelSticky: boolean;
+  /** Where Garrison posted it. */
+  lfgPanelChannelId: string | null;
+  lfgPanelMessageId: string | null;
+}
+
+export const LFG_PANEL = {
+  title: "Find a group",
+  body: "Pick what you're playing and fill in the rest. Your group goes up here for others to join.",
+  other: "Something else",
+} as const;
+
+/** Template buttons on one panel: two rows of Discord's buttons, leaving room for "Something else". */
+export const LFG_PANEL_BUTTONS = 9;
+
+export const DEFAULT_LFG_PANEL: LfgPanelConfig = {
+  lfgPanelTitle: null,
+  lfgPanelBody: null,
+  lfgPanelTemplates: [],
+  lfgPanelOther: true,
+  lfgPanelSticky: true,
+  lfgPanelChannelId: null,
+  lfgPanelMessageId: null,
+};
+
+const PANEL_SNOWFLAKE = /^\d{17,20}$/;
+
+export function readLfgPanel(
+  raw: Partial<Record<keyof LfgPanelConfig, unknown>> | null | undefined,
+): LfgPanelConfig {
+  if (!raw) return { ...DEFAULT_LFG_PANEL };
+  const snowflake = (v: unknown) => (typeof v === "string" && PANEL_SNOWFLAKE.test(v) ? v : null);
+  return {
+    lfgPanelTitle: readPanelText(raw.lfgPanelTitle, PANEL_LIMITS.title),
+    lfgPanelBody: readPanelText(raw.lfgPanelBody, PANEL_LIMITS.body),
+    lfgPanelTemplates: Array.isArray(raw.lfgPanelTemplates)
+      ? [...new Set(raw.lfgPanelTemplates.filter((id): id is string => typeof id === "string"))]
+      : [],
+    lfgPanelOther: raw.lfgPanelOther !== false,
+    lfgPanelSticky: raw.lfgPanelSticky !== false,
+    lfgPanelChannelId: snowflake(raw.lfgPanelChannelId),
+    lfgPanelMessageId: snowflake(raw.lfgPanelMessageId),
+  };
+}
+
+export type LfgPanelSettings = Omit<LfgPanelConfig, "lfgPanelChannelId" | "lfgPanelMessageId">;
+
+/** Check a change to the panel against the server's templates. */
+export function checkLfgPanel(
+  raw: Record<string, unknown>,
+  templates: Pick<RallyTemplate, "id">[],
+): Parsed<LfgPanelSettings> {
+  const title = panelText(
+    raw.lfgPanelTitle,
+    PANEL_LIMITS.title,
+    "The panel's title",
+    LFG_PANEL.title,
+  );
+  if (!title.ok) return title;
+  const body = panelText(raw.lfgPanelBody, PANEL_LIMITS.body, "The panel's text", LFG_PANEL.body);
+  if (!body.ok) return body;
+  const list = Array.isArray(raw.lfgPanelTemplates) ? raw.lfgPanelTemplates : [];
+  const known = new Set(templates.map((t) => t.id));
+  const ids = [...new Set(list.filter((id): id is string => typeof id === "string"))];
+  if (ids.some((id) => !TEMPLATE_ID.test(id) || !known.has(id)))
+    return { ok: false, error: "A template on the panel was removed. Refresh and pick again." };
+  if (ids.length > LFG_PANEL_BUTTONS)
+    return { ok: false, error: `The panel holds ${LFG_PANEL_BUTTONS} template buttons.` };
+  const other = raw.lfgPanelOther !== false;
+  if (!other && !templates.length)
+    return {
+      ok: false,
+      error: `Add a template, or keep the "${LFG_PANEL.other}" button: the panel needs a button.`,
+    };
+  return {
+    ok: true,
+    value: {
+      lfgPanelTitle: title.value,
+      lfgPanelBody: body.value,
+      // Every template, in the server's order, is stored as none: new templates join the panel.
+      lfgPanelTemplates:
+        ids.length === Math.min(templates.length, LFG_PANEL_BUTTONS) &&
+        ids.every((id, i) => templates[i]?.id === id)
+          ? []
+          : ids,
+      lfgPanelOther: other,
+      lfgPanelSticky: raw.lfgPanelSticky !== false,
+    },
+  };
+}
+
+/**
+ * The templates the panel has buttons for, in order: the picked ones (or every template) that
+ * may be posted in the panel's channel, up to LFG_PANEL_BUTTONS.
+ */
+export function lfgPanelTemplates<T extends Pick<RallyTemplate, "id" | "channelIds">>(
+  c: Pick<LfgPanelConfig, "lfgPanelTemplates">,
+  templates: T[],
+  channelId: string | null,
+): T[] {
+  const picked = c.lfgPanelTemplates.length
+    ? c.lfgPanelTemplates.flatMap((id) => templates.filter((t) => t.id === id))
+    : templates;
+  return picked
+    .filter((t) => !channelId || !t.channelIds.length || t.channelIds.includes(channelId))
+    .slice(0, LFG_PANEL_BUTTONS);
+}
+
+/** The panel as members see it, with the standard words where the server wrote none. */
+export const lfgPanelWords = (c: Pick<LfgPanelConfig, "lfgPanelTitle" | "lfgPanelBody">) => ({
+  title: c.lfgPanelTitle ?? LFG_PANEL.title,
+  body: c.lfgPanelBody ?? LFG_PANEL.body,
+});

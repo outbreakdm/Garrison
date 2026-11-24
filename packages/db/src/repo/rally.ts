@@ -1,8 +1,9 @@
 import { and, asc, eq, gt, inArray, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import type { Db } from "../client";
+import type { PanelPlace } from "../panels";
 import type { GuildPlan } from "../plans";
-import type { RallyWording } from "../rally";
-import { NOTIFY_COOLDOWN_MS } from "../rally";
+import type { LfgPanelConfig, RallyWording } from "../rally";
+import { NOTIFY_COOLDOWN_MS, readLfgPanel } from "../rally";
 import {
   guildPlans,
   type LfgMember,
@@ -282,6 +283,25 @@ export async function getRallyTemplates(db: Db, guildId: string): Promise<unknow
     .from(rallySettings)
     .where(eq(rallySettings.guildId, guildId));
   return Array.isArray(row?.templates) ? row.templates : [];
+}
+
+/** The server's LFG panel, with the standard settings where none are saved. */
+export async function getLfgPanel(db: Db, guildId: string): Promise<LfgPanelConfig> {
+  const [row] = await db.select().from(rallySettings).where(eq(rallySettings.guildId, guildId));
+  return readLfgPanel(row ?? null);
+}
+
+/** Where the LFG panel now is: the bot records it after posting. Not a setting: no history. */
+export async function setLfgPanelMessage(db: Db, guildId: string, at: PanelPlace | null) {
+  // A server can post the standard panel before saving anything, so this makes the row.
+  const place = {
+    lfgPanelChannelId: at?.channelId ?? null,
+    lfgPanelMessageId: at?.messageId ?? null,
+  };
+  await db
+    .insert(rallySettings)
+    .values({ guildId, ...place })
+    .onConflictDoUpdate({ target: rallySettings.guildId, set: place });
 }
 
 export async function getGuildPlan(db: Db, guildId: string): Promise<GuildPlan> {

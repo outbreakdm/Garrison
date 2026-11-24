@@ -8,6 +8,7 @@
  * posted; staff still see it on the dashboard).
  */
 
+import { PANEL_LIMITS, panelText, readPanelText } from "./panels";
 import type { Entitlements } from "./plans";
 import type { Parsed } from "./rally";
 import {
@@ -82,9 +83,9 @@ export const DEFAULT_SUGGESTIONS: SuggestionsConfig = {
 export const SUGGESTION_LIMITS = {
   text: 1000,
   note: 300,
-  panelTitle: 100,
-  panelBody: 1000,
-  button: 40,
+  panelTitle: PANEL_LIMITS.title,
+  panelBody: PANEL_LIMITS.body,
+  button: PANEL_LIMITS.button,
 } as const;
 const SNOWFLAKE = /^\d{17,20}$/;
 
@@ -101,9 +102,6 @@ export const suggestionPanel = (
   button: c.buttonLabel ?? SUGGESTION_PANEL.button,
 });
 
-const words = (v: unknown, max: number) =>
-  typeof v === "string" && v.trim() ? v.trim().replace(/\r\n/g, "\n").slice(0, max) : null;
-
 export function readSuggestions(
   raw: Partial<Record<keyof SuggestionsConfig, unknown>> | null,
 ): SuggestionsConfig {
@@ -113,9 +111,9 @@ export function readSuggestions(
     enabled: raw.enabled === true,
     channelId: snowflake(raw.channelId),
     anonymous: raw.anonymous === true,
-    panelTitle: words(raw.panelTitle, SUGGESTION_LIMITS.panelTitle),
-    panelBody: words(raw.panelBody, SUGGESTION_LIMITS.panelBody),
-    buttonLabel: words(raw.buttonLabel, SUGGESTION_LIMITS.button),
+    panelTitle: readPanelText(raw.panelTitle, SUGGESTION_LIMITS.panelTitle),
+    panelBody: readPanelText(raw.panelBody, SUGGESTION_LIMITS.panelBody),
+    buttonLabel: readPanelText(raw.buttonLabel, SUGGESTION_LIMITS.button),
     questions: readVerifyQuestions(raw.questions),
     panelSticky: raw.panelSticky !== false,
     panelChannelId: snowflake(raw.panelChannelId),
@@ -147,14 +145,6 @@ export function checkSuggestions(
   return { ok: true, value: { enabled, channelId, anonymous } };
 }
 
-function panelLine(v: unknown, max: number, what: string, standard: string): Parsed<string | null> {
-  if (v === null || v === undefined) return { ok: true, value: null };
-  if (typeof v !== "string") return { ok: false, error: `${what} is text.` };
-  const t = v.trim().replace(/\r\n/g, "\n");
-  if (t.length > max) return { ok: false, error: `${what} holds ${max} characters.` };
-  return { ok: true, value: t && t !== standard ? t : null };
-}
-
 /**
  * Check the panel and its form. Text the same as the standard is stored as null, so it follows
  * the standard; the form is up to Discord's five questions, the first one being the idea.
@@ -162,11 +152,11 @@ function panelLine(v: unknown, max: number, what: string, standard: string): Par
 export function checkSuggestionPanel(raw: Record<string, unknown>): Parsed<SuggestionPanelConfig> {
   const L = SUGGESTION_LIMITS;
   const P = SUGGESTION_PANEL;
-  const title = panelLine(raw.panelTitle, L.panelTitle, "The panel's title", P.title);
+  const title = panelText(raw.panelTitle, L.panelTitle, "The panel's title", P.title);
   if (!title.ok) return title;
-  const body = panelLine(raw.panelBody, L.panelBody, "The panel's text", P.body);
+  const body = panelText(raw.panelBody, L.panelBody, "The panel's text", P.body);
   if (!body.ok) return body;
-  const button = panelLine(raw.buttonLabel, L.button, "The button", P.button);
+  const button = panelText(raw.buttonLabel, L.button, "The button", P.button);
   if (!button.ok) return button;
   if (button.value?.includes("\n")) return { ok: false, error: "The button's label is one line." };
   const list = Array.isArray(raw.questions) ? raw.questions : [];

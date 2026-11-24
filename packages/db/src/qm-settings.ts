@@ -14,7 +14,7 @@ import { checkInviteLabels, type InviteLabel, inviteCode, readInviteLabels } fro
 import { readMessages } from "./messages";
 import { type Entitlements, FEATURES } from "./plans";
 import { PUBLIC_ABOUT_MAX } from "./public-page";
-import { checkTemplates, DEFAULT_WORDING } from "./rally";
+import { checkLfgPanel, checkTemplates, DEFAULT_WORDING, LFG_PANEL, readLfgPanel } from "./rally";
 import { RANK_BACKGROUNDS } from "./rank-cards";
 import { readSettings } from "./repo/settings";
 import { readRoleMenus } from "./role-menus";
@@ -490,12 +490,32 @@ export const QM_SETTINGS = {
     },
   },
   rally: {
-    label: "LFG templates",
+    label: "LFG",
     fields: {
       templates: {
         label: "New LFG templates",
         kind: "lfgTemplates",
         about: `templates to add for /lfg (the saved ones stay): up to ${QM_ADD_MAX} of { name (letters, numbers, spaces, up to 32: "Mythic+", "Raid night"), game or null, roles (like "Tank 2, Healer 2, DPS 6"; up to 4 roles, 2-40 players in all) or null, size (2-40 players when roles is null, else null), group (what a group is called: squad, party, fireteam, raid), lifetimeHours 1-12, voice (true: a members-only voice channel opens when it fills), channelIds (text channels it can be posted in; empty: any) }`,
+      },
+      lfgPanelTitle: {
+        label: "LFG panel title",
+        kind: "text",
+        about: `the "Find a group" panel's title; null for "${LFG_PANEL.title}"`,
+      },
+      lfgPanelBody: {
+        label: "LFG panel text",
+        kind: "text",
+        about: "a line under it on how to post a group; null for the standard text",
+      },
+      lfgPanelOther: {
+        label: `"${LFG_PANEL.other}" button`,
+        kind: "bool",
+        about: "a button for groups no template fits (its form asks for the size or roles)",
+      },
+      lfgPanelSticky: {
+        label: "LFG panel stays at the bottom",
+        kind: "bool",
+        about: "the panel is posted again under each new group in its channel",
       },
     },
   },
@@ -869,12 +889,16 @@ const MODULES: Record<
     read: (row) => {
       // The saved list with the widest rules, so a server back on Free can still add within its limit.
       const t = checkTemplates(row?.templates ?? [], "pro");
-      return { templates: t.ok ? t.value : [] };
+      return { templates: t.ok ? t.value : [], ...readLfgPanel(row) };
     },
     check: (b, p, e) => {
       const plan = e["rally.templates"] > FEATURES["rally.templates"].free ? "pro" : "free";
       const r = checkTemplates(p.templates ?? b.templates, plan);
-      return r.ok ? { ok: true, value: { templates: r.value } } : r;
+      if (!r.ok) return r;
+      // The panel's words and buttons; which templates it shows stays the dashboard's.
+      const panel = checkLfgPanel({ ...b, ...p }, r.value);
+      if (!panel.ok) return panel;
+      return { ok: true, value: { ...b, templates: r.value, ...panel.value } };
     },
   },
   invites: {
@@ -1475,15 +1499,24 @@ export function resolveQmSettingRefs(change: QmSettingChange, ids: Map<string, s
 
 /** The most posts one plan makes. */
 export const QM_POSTS_MAX = 10;
-export const QM_POST_KINDS = ["role_menu", "ticket_panel", "message", "suggestion_panel"] as const;
+export const QM_POST_KINDS = [
+  "role_menu",
+  "ticket_panel",
+  "message",
+  "suggestion_panel",
+  "lfg_panel",
+] as const;
 const POST_TEXT: Record<QmPost["kind"], string> = {
   role_menu: "Role menu",
   ticket_panel: "Ticket panel",
   message: "Saved message",
   suggestion_panel: "Suggestions panel",
+  lfg_panel: "LFG panel",
 };
 /** The suggestions panel is one per server: it posts by this id. */
 export const SUGGESTION_PANEL_ITEM = { id: "suggestions", name: "Suggestions panel" } as const;
+/** The LFG panel is one per server too, with a button per template. */
+export const LFG_PANEL_ITEM = { id: "lfg", name: "LFG panel" } as const;
 export const qmPostLabel = (kind: QmPost["kind"]) => POST_TEXT[kind];
 
 /**
@@ -1502,6 +1535,7 @@ export async function qmPostables(db: Db, guildId: string) {
     ticket_panel: pick(readTicketPanels(tickets?.panels ?? [])),
     message: pick(readMessages(messages?.messages ?? [])),
     suggestion_panel: [{ ...SUGGESTION_PANEL_ITEM }],
+    lfg_panel: [{ ...LFG_PANEL_ITEM }],
   } satisfies Record<QmPost["kind"], { id: string; name: string }[]>;
 }
 
@@ -1538,6 +1572,7 @@ export async function checkQmPosts(
     ticket_panel: [...saved.ticket_panel, ...made("ticket_panel")],
     message: [...saved.message, ...made("message")],
     suggestion_panel: saved.suggestion_panel,
+    lfg_panel: saved.lfg_panel,
   };
   // Something the plan makes is named by its ref; it posts by its id.
   proposals = proposals.map((p) => {

@@ -30,6 +30,7 @@ import { withoutItem } from "../quartermaster/remove.js";
 import { applyBuild, planBuild, REQUEST_MAX, snapshot } from "../quartermaster/service.js";
 import { lfgCard } from "../rally/card.js";
 import { notifyTemplateRole } from "../rally/commands.js";
+import { keepLfgPanelLast } from "../rally/panel.js";
 import { LIFETIME_AFTER_START_MS, matchSlot, parseSlots, parseStart } from "../rally/parse.js";
 import { announceFullSquad, refreshCard, syncVoiceAccess } from "../rally/service.js";
 import { cachedTemplates, findTemplate, postWording } from "../rally/templates.js";
@@ -188,11 +189,17 @@ export async function doPurge(ctx: BotContext, guild: Guild, member: GuildMember
   };
 }
 
+/**
+ * Post a group: from the dashboard, or from the LFG panel's form (`fromPanel`). A panel invites
+ * members to post through it, often in a channel they can read but not write in, so there
+ * seeing the channel is enough; from the dashboard they must be able to post there themselves.
+ */
 export async function doCreateLfg(
   ctx: BotContext,
   guild: Guild,
   member: GuildMember,
   raw: unknown,
+  { fromPanel = false }: { fromPanel?: boolean } = {},
 ) {
   const p = createLfg.safeParse(raw);
   if (!p.success) return fail("That group wasn't valid.");
@@ -201,7 +208,7 @@ export async function doCreateLfg(
   if (!channel?.isSendable() || !channel.isTextBased())
     return fail("That channel isn't a text channel I can post in.");
   const needed = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages];
-  if (!channel.permissionsFor(member)?.has(needed))
+  if (!channel.permissionsFor(member)?.has(fromPanel ? [PermissionFlagsBits.ViewChannel] : needed))
     return fail("You can't post in that channel, so Garrison won't either.");
   const me = guild.members.me;
   if (!me || !channel.permissionsFor(me)?.has([...needed, PermissionFlagsBits.EmbedLinks]))
@@ -248,7 +255,13 @@ export async function doCreateLfg(
   await setLfgMessage(ctx.db, post.id, sent.id);
   if (template?.notifyRoleId)
     await notifyTemplateRole(ctx, guild, channel, post, template.notifyRoleId, sent.url);
-  return { ok: true, message: `Posted ${p.data.title} in #${channel.name}.` };
+  await keepLfgPanelLast(ctx, guild, channel.id);
+  return {
+    ok: true,
+    message: fromPanel
+      ? `Your group is up: ${sent.url}`
+      : `Posted ${p.data.title} in #${channel.name}.`,
+  };
 }
 
 export async function doLfgJoin(ctx: BotContext, guild: Guild, member: GuildMember, raw: unknown) {

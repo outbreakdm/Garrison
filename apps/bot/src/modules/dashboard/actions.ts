@@ -51,6 +51,7 @@ import { parseWhen } from "../ops/when.js";
 import { applyBotProfile } from "../profile/apply.js";
 import { undoBuild, undoSettingsNote } from "../quartermaster/service.js";
 import { doTemplateApply, doTemplateSave } from "../quartermaster/templates.js";
+import { doPostLfgPanel } from "../rally/panel.js";
 import { parseSlots } from "../rally/parse.js";
 import { refreshCard } from "../rally/service.js";
 import { doSeasonStart } from "../ranks/seasons.js";
@@ -676,6 +677,8 @@ export async function runDashboardAction(
       return doSuggestionStatus(ctx, guild, member, action.payload);
     case "post_suggestion_panel":
       return doPostSuggestionPanel(ctx, guild, member, action.payload);
+    case "post_lfg_panel":
+      return doPostLfgPanel(ctx, guild, member, action.payload);
     default:
       return fail("Garrison doesn't know that request.");
   }

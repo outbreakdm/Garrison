@@ -74,6 +74,7 @@ export type QueueInput =
   | { kind: "economy_purchase"; payload: { id: string; done: boolean } }
   | { kind: "post_application_panel"; payload: { formId: string; channelId: string } }
   | { kind: "post_suggestion_panel"; payload: { channelId: string } }
+  | { kind: "post_lfg_panel"; payload: { channelId: string } }
   | { kind: "application_decide"; payload: { id: string; accept: boolean } }
   | { kind: "backup_create"; payload: Record<string, never> }
   | { kind: "backup_restore"; payload: { backupId: string } }

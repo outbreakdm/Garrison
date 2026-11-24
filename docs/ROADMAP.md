@@ -562,7 +562,7 @@ Later phases get their checklists when they start.
   following the cards so it stays last. Already: Applications, Verification, Tickets (Pro topic
   forms), Suggestions. Candidates, best value first:
   [ ] Voice rooms: an owner's control panel in the room's chat (Rename and Limit open a form;
-  Lock, Hide, Hand over) · [ ] Rally LFG: a "Find a group" panel, a button per template, the
+  Lock, Hide, Hand over) · [x] Rally LFG: a "Find a group" panel, a button per template, the
   form asking only what the template doesn't (when, note) · [ ] Reports: a "Report a problem"
   panel and a Report message app command, answers to the mod log as a card with Warn, Time out
   and Dismiss · [ ] Birthdays: an "Add your birthday" panel (month from a list, day typed) ·
@@ -1697,5 +1697,19 @@ Decided (2026-11-12, owner):
   form columns, `suggestions.answers`, request kind post_suggestion_panel, grants) must be
   applied to production by hand before the deploy. Checked in the local preview (save, form
   editor, preview, posting request); the bot's side has tests but no live Discord run yet.
+  Deployed (everything, commands registered).
+- 2026-11-23: LFG panel, and the panels' shared pieces. Rally's new Panel tab sets a "Find a
+  group" panel: its words, which templates get a button (up to 9, every template by default),
+  a "Something else" button, and "Keep the panel at the bottom". A template's button opens a
+  form asking what you're running (its name to start), your role from a dropdown when it lists
+  roles, when it starts and a note; Something else asks how many players or which roles. The
+  group goes up in the panel's channel through the dashboard's own LFG creation (seeing the
+  channel is enough there, so it can be read-only), and the panel follows new groups from the
+  panel, /lfg create and the dashboard. The AI assistant can set the panel's words and post it
+  (lfg_panel). Shared now: panels.ts (db), lib/panels.ts (posting and one move at a time),
+  components/panels (post card, words, question rows, form preview); Suggestions uses them.
+  Migration `0093_lfg_panel` also gives the bot the write grants on rally_settings that AI
+  plans adding LFG templates needed (they failed when applied until now). Checked in the local
+  preview (panel tab, saving, form preview, posting request); no live Discord run.
   Deployed (everything, commands registered).
 
