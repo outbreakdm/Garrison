@@ -3,9 +3,11 @@
 import {
   applySettingsChange,
   checkEconomy,
+  checkShopPanel,
   entitlements,
   getEconomy,
   getGuildPlan,
+  getShopPanel,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
 import { type AutoResult, ownedFields } from "@/lib/autosave";
@@ -94,6 +96,39 @@ export async function saveEconomy(form: FormData): Promise<AutoResult> {
       : value.enabled
         ? "Saved. The economy is on."
         : "Saved. The economy is off: nobody earns or spends.",
+    changeId: result.change.id,
+  });
+}
+
+/**
+ * The shop panel's words. Posting it is a request to the bot (post_shop_panel), which lists
+ * the shop as it's saved then.
+ */
+export async function saveShopPanel(form: FormData): Promise<AutoResult> {
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  if (!access) redirect("/servers");
+  const { guild, session } = access;
+  const back = (outcome: Outcome) => answer(form, `/servers/${guild.id}/economy`, outcome);
+  const checked = checkShopPanel({
+    shopPanelTitle: String(form.get("shopPanelTitle") ?? ""),
+    shopPanelBody: String(form.get("shopPanelBody") ?? ""),
+  });
+  if (!checked.ok) return back({ error: checked.error });
+  const db = await getDb();
+  const before = await getShopPanel(db, guild.id);
+  const result = await applySettingsChange(db, {
+    guildId: guild.id,
+    module: "economy",
+    patch: { ...checked.value },
+    userId: session.userId,
+    username: session.username,
+  });
+  if (!result.ok)
+    return back(result.reason === "unchanged" ? "unchanged" : { error: "Try again in a minute." });
+  return back({
+    ok: before.shopPanelMessageId
+      ? "Saved the panel. Post it again below to update the one in Discord."
+      : "Saved the panel. Post it below when it's ready.",
     changeId: result.change.id,
   });
 }

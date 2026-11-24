@@ -70,11 +70,12 @@ export type QueueInput =
   | { kind: "web_verify"; payload: { answers?: Record<string, string> } }
   | { kind: "verify_decide"; payload: { id: string; approve: boolean } }
   | { kind: "economy_adjust"; payload: { userId: string; amount: number; reason: string } }
-  | { kind: "economy_buy"; payload: { itemId: string } }
+  | { kind: "economy_buy"; payload: { itemId: string; answer?: string } }
   | { kind: "economy_purchase"; payload: { id: string; done: boolean } }
   | { kind: "post_application_panel"; payload: { formId: string; channelId: string } }
   | { kind: "post_suggestion_panel"; payload: { channelId: string } }
   | { kind: "post_lfg_panel"; payload: { channelId: string } }
+  | { kind: "post_shop_panel"; payload: { channelId: string } }
   | { kind: "application_decide"; payload: { id: string; accept: boolean } }
   | { kind: "backup_create"; payload: Record<string, never> }
   | { kind: "backup_restore"; payload: { backupId: string } }

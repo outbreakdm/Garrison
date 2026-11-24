@@ -31,6 +31,7 @@ import { safeText } from "../../lib/text.js";
 import { doTestAlert } from "../alerts/service.js";
 import { doApplicationDecide, doPostApplicationPanel } from "../applications/service.js";
 import { postMessageNow } from "../dispatch/service.js";
+import { doPostShopPanel } from "../economy/panel.js";
 import { buy, decidePurchase, staffAdjust } from "../economy/service.js";
 import { restoreQuarantine } from "../gatehouse/anti-nuke.js";
 import { doBackupCreate, doBackupRestore } from "../gatehouse/backup.js";
@@ -100,7 +101,10 @@ const economyAdjust = z.object({
     .refine((n) => n !== 0 && Math.abs(n) <= 1_000_000),
   reason: z.string().trim().min(1).max(200),
 });
-const economyBuy = z.object({ itemId: z.string().regex(/^[a-z0-9]{6,16}$/) });
+const economyBuy = z.object({
+  itemId: z.string().regex(/^[a-z0-9]{6,16}$/),
+  answer: z.string().max(300).optional(),
+});
 const economyPurchase = z.object({ id: uuid, done: z.boolean() });
 const createRaid = z.object({
   channelId: snowflake,
@@ -591,7 +595,7 @@ export async function runDashboardAction(
     case "economy_buy": {
       const p = economyBuy.safeParse(action.payload);
       if (!p.success) return fail("That item wasn't valid.");
-      return buy(ctx, guild, member, p.data.itemId);
+      return buy(ctx, guild, member, p.data.itemId, p.data.answer);
     }
     case "economy_purchase": {
       const p = economyPurchase.safeParse(action.payload);
@@ -679,6 +683,8 @@ export async function runDashboardAction(
       return doPostSuggestionPanel(ctx, guild, member, action.payload);
     case "post_lfg_panel":
       return doPostLfgPanel(ctx, guild, member, action.payload);
+    case "post_shop_panel":
+      return doPostShopPanel(ctx, guild, member, action.payload);
     default:
       return fail("Garrison doesn't know that request.");
   }

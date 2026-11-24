@@ -879,7 +879,7 @@ export interface QmSettingChange {
  * into a channel (an id, or the ref of a channel the same plan creates).
  */
 export interface QmPost {
-  kind: "role_menu" | "ticket_panel" | "message" | "suggestion_panel" | "lfg_panel";
+  kind: "role_menu" | "ticket_panel" | "message" | "suggestion_panel" | "lfg_panel" | "shop_panel";
   itemId: string;
   /** The item's name when the plan was drafted, for the preview. */
   name: string;
@@ -1330,6 +1330,7 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "ticket_bulk",
   "post_suggestion_panel",
   "post_lfg_panel",
+  "post_shop_panel",
 ]);
 
 /**
@@ -2666,6 +2667,12 @@ export const economySettings = pgTable(
     shop: jsonb("shop").$type<ShopItem[]>().notNull().default(sql`'[]'::jsonb`),
     staffChannelId: text("staff_channel_id"),
     noEarnChannelIds: text("no_earn_channel_ids").array().notNull().default(sql`'{}'::text[]`),
+    /** The shop panel (economy.ts ShopPanelConfig); null text is the standard. */
+    shopPanelTitle: text("shop_panel_title"),
+    shopPanelBody: text("shop_panel_body"),
+    /** Where Garrison posted it (the bot records it). */
+    shopPanelChannelId: text("shop_panel_channel_id"),
+    shopPanelMessageId: text("shop_panel_message_id"),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -2756,6 +2763,8 @@ export const economyPurchases = pgTable(
     decidedBy: text("decided_by"),
     channelId: text("channel_id"),
     messageId: text("message_id"),
+    /** What the member answered to the item's question, for staff. Null: nothing asked. */
+    answers: jsonb("answers").$type<VerifyAnswer[]>(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

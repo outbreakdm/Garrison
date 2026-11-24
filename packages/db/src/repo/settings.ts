@@ -176,7 +176,17 @@ export const EDITABLE_FIELDS = {
   // Checked with checkInviteLabels before it gets here.
   invites: ["labels"],
   // Checked with checkEconomy before it gets here.
-  economy: ["enabled", "currency", "earn", "shop", "staffChannelId", "noEarnChannelIds"],
+  // The shop panel's words too (checkShopPanel); where it's posted is the bot's to record.
+  economy: [
+    "enabled",
+    "currency",
+    "earn",
+    "shop",
+    "staffChannelId",
+    "noEarnChannelIds",
+    "shopPanelTitle",
+    "shopPanelBody",
+  ],
   // Checked with checkStarboard before it gets here.
   starboard: [
     "enabled",

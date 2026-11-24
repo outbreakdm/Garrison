@@ -2974,3 +2974,15 @@
   rotate: 45deg;
   translate: 0 -2px;
 }
+
+/* The member page's shop: an item that asks something has its answer beside Buy. */
+.shop-list__buy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: flex-end;
+}
+.shop-list__buy .g-field {
+  min-width: 140px;
+}

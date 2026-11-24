@@ -2,13 +2,18 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "./client";
 import {
   checkEconomy,
+  checkShopPanel,
   DEFAULT_ECONOMY,
   dailyAmount,
   isIcon,
   money,
   parseAmount,
   readEconomy,
+  readShopPanel,
+  SHOP_PANEL,
   type ShopItem,
+  shopAnswers,
+  shopPanelWords,
 } from "./economy";
 import { entitlements } from "./plans";
 import {
@@ -17,10 +22,13 @@ import {
   claimDaily,
   completePurchase,
   getEconomy,
+  getShopPanel,
   getWallet,
   listLedger,
   payMember,
   refundPurchase,
+  setShopPanelMessage,
+  shopSold,
   topWallets,
   walletRank,
 } from "./repo/economy";
@@ -49,6 +57,7 @@ const item = (over: Partial<ShopItem> = {}): ShopItem => ({
   stock: null,
   perMember: null,
   needsRoleId: null,
+  question: null,
   ...over,
 });
 
@@ -120,6 +129,42 @@ describe("economy rules", () => {
     const saved = checkEconomy(form({ shop: eleven }), pro, DEFAULT_ECONOMY);
     if (!saved.ok) throw new Error(saved.error);
     expect(checkEconomy(form({ shop: eleven }), free, saved.value).ok).toBe(true);
+  });
+
+  it("lets a staff item ask one question, and needs its answer", () => {
+    const ask = item({ kind: "staff", roleId: null, question: "  Which   color? " });
+    const saved = checkEconomy(form({ shop: [ask], staffChannelId: CH }), free, DEFAULT_ECONOMY);
+    expect(saved).toMatchObject({ ok: true, value: { shop: [{ question: "Which color?" }] } });
+    // A role item never asks: buying it gives the role at once.
+    expect(
+      checkEconomy(form({ shop: [item({ question: "Why?" })] }), free, DEFAULT_ECONOMY),
+    ).toMatchObject({ ok: true, value: { shop: [{ question: null }] } });
+    expect(
+      checkEconomy(
+        form({
+          shop: [item({ kind: "staff", roleId: null, question: "x".repeat(46) })],
+          staffChannelId: CH,
+        }),
+        free,
+        DEFAULT_ECONOMY,
+      ).ok,
+    ).toBe(false);
+    expect(shopAnswers({ question: "Which color?" }, " ")).toMatchObject({ ok: false });
+    expect(shopAnswers({ question: "Which color?" }, " Teal ")).toEqual({
+      ok: true,
+      value: [{ label: "Which color?", value: "Teal" }],
+    });
+    expect(shopAnswers({ question: null }, "ignored")).toEqual({ ok: true, value: null });
+  });
+
+  it("stores the shop panel's standard words as none", () => {
+    expect(
+      checkShopPanel({ shopPanelTitle: SHOP_PANEL.title, shopPanelBody: " Spend it here " }),
+    ).toEqual({ ok: true, value: { shopPanelTitle: null, shopPanelBody: "Spend it here" } });
+    expect(shopPanelWords(readShopPanel(null))).toEqual({
+      title: SHOP_PANEL.title,
+      body: SHOP_PANEL.body,
+    });
   });
 
   it("reads stored rows leniently", () => {
@@ -250,8 +295,13 @@ describe("economy money, in the database", () => {
     expect([p.ok, q.ok].filter(Boolean)).toHaveLength(1);
     const staff = item({ id: "item0003", kind: "staff", roleId: null, price: 25, perMember: 1 });
     const before = (await getWallet(db, G, B.id)).balance;
-    const bought = await buyItem(db, G, B, staff);
-    expect(bought).toMatchObject({ ok: true, purchase: { status: "waiting" } });
+    const bought = await buyItem(db, G, B, staff, new Date(), [{ label: "Which?", value: "Teal" }]);
+    expect(bought).toMatchObject({
+      ok: true,
+      purchase: { status: "waiting", answers: [{ label: "Which?", value: "Teal" }] },
+    });
+    // The panel's "left": refunds put one back.
+    expect((await shopSold(db, G)).get("item0002")).toBe(1);
     expect(await buyItem(db, G, B, staff)).toEqual({ ok: false, reason: "limit" });
     if (!bought.ok) return;
     const [r1, r2] = await Promise.all([
@@ -261,6 +311,13 @@ describe("economy money, in the database", () => {
     expect([r1, r2].filter(Boolean)).toHaveLength(1);
     expect((await getWallet(db, G, B.id)).balance).toBe(before);
     expect(await completePurchase(db, G, bought.purchase.id, "mod")).toBeNull();
+    expect((await shopSold(db, G)).get("item0003")).toBeUndefined();
+    // The bot records where it posted the shop panel.
+    await setShopPanelMessage(db, G, { channelId: CH, messageId: "360000000000000009" });
+    expect(await getShopPanel(db, G)).toMatchObject({
+      shopPanelChannelId: CH,
+      shopPanelMessageId: "360000000000000009",
+    });
     await exec("RESET ROLE");
   });
 

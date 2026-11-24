@@ -16,6 +16,7 @@ import {
   getApplicationForms,
   getBackup,
   getCase,
+  getEconomy,
   getGiveaway,
   getGuildPlan,
   getLfgPost,
@@ -343,6 +344,16 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
         ok: true,
         input: { kind, payload: { id: a.id, approve: field(form, "op") === "approve" } },
       };
+    }
+    case "post_shop_panel": {
+      const channelId = field(form, "channelId");
+      const [config, channels] = await Promise.all([
+        getEconomy(db, guildId),
+        listTextChannels(guildId).catch(() => []),
+      ]);
+      if (!config.enabled || !config.shop.length) return { ok: false, error: "shop_empty" };
+      if (!channels.some((c) => c.id === channelId)) return { ok: false, error: "channel" };
+      return { ok: true, input: { kind, payload: { channelId } } };
     }
     case "post_lfg_panel": {
       const channelId = field(form, "channelId");

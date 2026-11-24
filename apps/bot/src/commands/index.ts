@@ -6,6 +6,7 @@ import {
 } from "../modules/applications/service.js";
 import { link, roster, unlink } from "../modules/barracks/commands.js";
 import { economyCommands, purchaseButtons } from "../modules/economy/commands.js";
+import { shopBuyButtons, shopForms, shopPickSelects } from "../modules/economy/panel-handlers.js";
 import { birthday } from "../modules/fun/birthday.js";
 import { trivia, triviaButtons } from "../modules/fun/trivia.js";
 import { gatehouseButtons, gatehouseCommands } from "../modules/gatehouse/commands/index.js";
@@ -69,11 +70,12 @@ export const buttons: ButtonHandler[] = [
   suggestionButtons,
   suggestionPanelButtons,
   lfgPanelButtons,
+  shopBuyButtons,
   applyButtons,
   decideApplicationButtons,
   triviaButtons,
 ];
-export const selects: SelectHandler[] = [roleMenuSelects];
+export const selects: SelectHandler[] = [roleMenuSelects, shopPickSelects];
 export const modals: ModalHandler[] = [
   opsModals,
   ticketModals,
@@ -82,6 +84,7 @@ export const modals: ModalHandler[] = [
   applicationModals,
   suggestionModals,
   lfgPanelModals,
+  shopForms,
 ];
 
 // Each command's description in Spanish, Portuguese, German and French: Discord shows members

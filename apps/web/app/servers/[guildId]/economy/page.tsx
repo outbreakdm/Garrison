@@ -2,10 +2,13 @@ import {
   entitlements,
   getEconomy,
   getGuildPlan,
+  getShopPanel,
   listLedger,
   listPurchases,
   money,
+  shopPanelWords,
   topWallets,
+  type VerifyAnswer,
 } from "@garrison/db";
 import type { Metadata } from "next";
 import { EmptyState } from "@/components/EmptyState";
@@ -14,6 +17,7 @@ import { MemberAvatar } from "@/components/MemberAvatar";
 import { HeadSwitch } from "@/components/ModuleHead";
 import { ActivityLayout, SetupLayout } from "@/components/PageLayouts";
 import { PageTabs, TabPanel } from "@/components/PageTabs";
+import { PanelPostCard } from "@/components/panels/PanelPostCard";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { SettingsNotice } from "@/components/settings";
 import { getDb } from "@/lib/db";
@@ -23,8 +27,9 @@ import { isDangerousRole } from "@/lib/permissions";
 import { requireGuildAccess } from "@/lib/session";
 import { requestAction } from "../requests";
 import { undoChange } from "../settings/actions";
-import { saveEconomy } from "./actions";
+import { saveEconomy, saveShopPanel } from "./actions";
 import { EarningPanel, ShopPanel } from "./EconomyPanels";
+import { ShopPanelEditor } from "./ShopPanelEditor";
 
 export const metadata: Metadata = { title: "Economy" };
 
@@ -66,17 +71,19 @@ export default async function EconomyPage({
   const query = await searchParams;
   const find = typeof query.find === "string" ? query.find.trim().slice(0, 32) : "";
   const db = await getDb();
-  const [config, plan, top, ledger, waiting, roles, channels, found, flash] = await Promise.all([
-    getEconomy(db, guild.id),
-    getGuildPlan(db, guild.id),
-    topWallets(db, guild.id, 10),
-    listLedger(db, guild.id, { limit: 40 }),
-    listPurchases(db, guild.id, { status: "waiting", limit: 20 }),
-    listGuildRoles(guild.id).catch(() => []),
-    listTextChannels(guild.id).catch(() => []),
-    find ? searchMembers(guild.id, find).catch(() => null) : null,
-    readFlash(),
-  ]);
+  const [config, plan, top, ledger, waiting, roles, channels, found, flash, shopPanel] =
+    await Promise.all([
+      getEconomy(db, guild.id),
+      getGuildPlan(db, guild.id),
+      topWallets(db, guild.id, 10),
+      listLedger(db, guild.id, { limit: 40 }),
+      listPurchases(db, guild.id, { status: "waiting", limit: 20 }),
+      listGuildRoles(guild.id).catch(() => []),
+      listTextChannels(guild.id).catch(() => []),
+      find ? searchMembers(guild.id, find).catch(() => null) : null,
+      readFlash(),
+      getShopPanel(db, guild.id),
+    ]);
   const ent = entitlements(plan);
   const names = await memberNames(guild.id, [
     ...new Set([...top.map((w) => w.userId), ...ledger.map((l) => l.userId)]),
@@ -119,7 +126,7 @@ export default async function EconomyPage({
       <SettingsNotice query={query} />
       <RequestsPanel
         guildId={guild.id}
-        kinds={["economy_adjust", "economy_purchase"]}
+        kinds={["economy_adjust", "economy_purchase", "post_shop_panel"]}
         query={query}
       />
 
@@ -146,6 +153,16 @@ export default async function EconomyPage({
                             {formatTime(p.createdAt)}
                           </span>
                         </div>
+                        {Array.isArray(p.answers) && p.answers.length ? (
+                          <dl className="sg-row__answers">
+                            {(p.answers as VerifyAnswer[]).map((a) => (
+                              <div key={a.label}>
+                                <dt>{a.label}</dt>
+                                <dd>{a.value}</dd>
+                              </div>
+                            ))}
+                          </dl>
+                        ) : null}
                         {manager ? (
                           <div className="answers-list__actions">
                             {(["done", "refund"] as const).map((op) => (
@@ -369,6 +386,48 @@ export default async function EconomyPage({
             action={saveEconomy}
             undo={undoChange}
             stamp={stamp}
+          />
+          <ShopPanelEditor
+            guildId={guild.id}
+            saved={shopPanelWords(shopPanel)}
+            lines={config.shop.slice(0, ent["economy.items"]).map((i) => {
+              const gives =
+                i.kind === "role"
+                  ? `@${roles.find((r) => r.id === i.roleId)?.name ?? "a role"}${i.hours ? ` for ${i.hours} hours` : ""}`
+                  : "handed over by staff";
+              return `${i.emoji && !i.emoji.startsWith("<") ? `${i.emoji} ` : ""}**${i.name}** · ${money(config.currency, i.price)} · ${gives}`;
+            })}
+            channel={
+              shopPanel.shopPanelChannelId
+                ? (channels.find((c) => c.id === shopPanel.shopPanelChannelId)?.name ?? null)
+                : null
+            }
+            action={saveShopPanel}
+            undo={undoChange}
+            stamp={contentKey({ t: shopPanel.shopPanelTitle, b: shopPanel.shopPanelBody })}
+          />
+          <PanelPostCard
+            id="post-shop-panel"
+            guildId={guild.id}
+            page="economy"
+            kind="post_shop_panel"
+            channels={channels}
+            posted={
+              shopPanel.shopPanelChannelId && shopPanel.shopPanelMessageId
+                ? {
+                    channelId: shopPanel.shopPanelChannelId,
+                    messageId: shopPanel.shopPanelMessageId,
+                  }
+                : null
+            }
+            suggested={channels.find((c) => /shop|store|market/i.test(c.name))?.id ?? null}
+            blocked={
+              !config.enabled
+                ? "Turn the economy on first."
+                : config.shop.length
+                  ? null
+                  : "Add something to the shop first."
+            }
           />
         </SetupLayout>
       </TabPanel>

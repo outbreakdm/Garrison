@@ -31,6 +31,7 @@ export const REQUEST_ERRORS: Record<string, string> = {
   menu_paused: "This menu is paused: the server has more menus than its plan runs.",
   form_paused: "This form is paused: the server has more forms than its plan runs.",
   suggestions_off: "Turn suggestions on and pick their channel, then post the panel.",
+  shop_empty: "Turn the economy on and add something to the shop, then post the panel.",
   panel_empty: "Add a topic and save the panel before posting it.",
   panel_paused: "This panel is paused: the server has more panels than its plan runs.",
   giveaway:

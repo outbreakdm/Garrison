@@ -20,6 +20,7 @@ import {
   SectionBuilder,
   SeparatorBuilder,
   SeparatorSpacingSize,
+  type StringSelectMenuBuilder,
   TextDisplayBuilder,
   ThumbnailBuilder,
 } from "discord.js";
@@ -59,6 +60,8 @@ export interface Card {
   facts?: CardFact[];
   /** Buttons at the bottom, five to a row. */
   actions?: ButtonBuilder[];
+  /** A dropdown under the buttons (the shop panel's "Buy something…"). */
+  menu?: StringSelectMenuBuilder;
   /** Footer: module name, a short reference and a time. Never "Powered by". */
   module?: ModuleKey;
   ref?: string;
@@ -140,6 +143,12 @@ export function cardContainer(card: Card): ContainerBuilder {
     if (i === 0 && hasBody) container.addSeparatorComponents(rule(false));
     container.addActionRowComponents(
       new ActionRowBuilder<ButtonBuilder>().addComponents(actions.slice(i, i + 5)),
+    );
+  }
+  if (card.menu) {
+    if (!actions.length && hasBody) container.addSeparatorComponents(rule(false));
+    container.addActionRowComponents(
+      new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(card.menu),
     );
   }
 
@@ -264,9 +273,17 @@ export function legacyMessage(card: Card) {
     ...(card.blocks ?? []).flatMap((b) => (b !== "divider" && b.button ? [b.button] : [])),
     ...(card.actions ?? []),
   ];
-  const components: ActionRowBuilder<ButtonBuilder>[] = [];
+  const components: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
   for (let i = 0; i < buttons.length; i += 5)
-    components.push(new ActionRowBuilder<ButtonBuilder>().addComponents(buttons.slice(i, i + 5)));
+    components.push(
+      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        buttons.slice(i, i + 5),
+      ),
+    );
+  if (card.menu)
+    components.push(
+      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(card.menu),
+    );
   return { content: "", embeds: [embed], components, allowedMentions: QUIET };
 }
 

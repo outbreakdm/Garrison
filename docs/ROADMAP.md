@@ -567,7 +567,7 @@ Later phases get their checklists when they start.
   panel and a Report message app command, answers to the mod log as a card with Warn, Time out
   and Dismiss · [ ] Birthdays: an "Add your birthday" panel (month from a list, day typed) ·
   [ ] Tickets: topic forms on the shared question model (a line under each, short or paragraph,
-  optional questions, answers as the ticket's first card) · [ ] Economy: a shop panel, with a
+  optional questions, answers as the ticket's first card) · [x] Economy: a shop panel, with a
   form for items staff fulfil ("which color?") that goes with the purchase · [ ] Stream alerts:
   "Add my stream" for members, staff approve on the dashboard · [ ] Barracks: "Link your
   account" panel · [ ] Giveaways: an optional entry question. The suggestions panel's pieces
@@ -1716,4 +1716,14 @@ Decided (2026-11-12, owner):
   economy, invite labels or server stats failed when applied: the bot could only read those
   settings. Migration `0094_qm_grants` gives it the grants and policies, and qm-grants.test.ts
   checks every setting the assistant may change against the bot's grants. Not deployed.
+- 2026-11-23: Shop panel (Economy). The Setup tab's Shop panel posts the shop as a card with a
+  "Buy something…" dropdown: picking an item shows its price and the member's balance with
+  Buy and Cancel (nothing is spent before Buy), and Garrison edits the panel after each
+  purchase or refund so its "N left" stays right. A staff-handled item can ask one question
+  ("Which color?") before it's bought, from the panel, /buy (which opens the form) or the
+  member page; the answer rides with the purchase to the staff card and the dashboard's
+  waiting list. The AI assistant can set the panel's words, give items a question and post
+  the panel (shop_panel). Cards can carry a dropdown now (lib/card.ts menu). Migration
+  `0095_shop_panel`. Checked in the local preview (editor, preview, question field); the
+  member page's answer field only by typecheck (member pages are off there). Not deployed.
 

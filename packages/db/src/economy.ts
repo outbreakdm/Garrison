@@ -8,8 +8,10 @@
  * level-up earning, and timed roles.
  */
 
+import { PANEL_LIMITS, panelText, readPanelText } from "./panels";
 import type { Entitlements } from "./plans";
 import type { Parsed } from "./rally";
+import type { VerifyAnswer } from "./verify-questions";
 
 export interface Currency {
   /** Plural, as in "1,250 Crowns". */
@@ -50,6 +52,11 @@ export interface ShopItem {
   perMember: number | null;
   /** Only members with this role can buy it. */
   needsRoleId: string | null;
+  /**
+   * A staff-handled item can ask one thing before it's bought ("Which color?"); the answer
+   * goes to staff with the purchase. Null: nothing to ask.
+   */
+  question: string | null;
 }
 
 export interface EconomyConfig {
@@ -79,6 +86,9 @@ export const ECONOMY_LIMITS = {
   stock: 1_000_000,
   reason: 200,
   noEarn: 50,
+  /** What Discord's form shows of a question. */
+  question: 45,
+  answer: 300,
 } as const;
 
 export const DEFAULT_CURRENCY: Currency = { name: "Coins", singular: "Coin", icon: "🪙" };
@@ -193,6 +203,7 @@ function readItem(raw: unknown): ShopItem | null {
     perMember: opt(i.perMember, ECONOMY_LIMITS.stock),
     needsRoleId:
       typeof i.needsRoleId === "string" && SNOWFLAKE.test(i.needsRoleId) ? i.needsRoleId : null,
+    question: kind === "staff" ? text(i.question, ECONOMY_LIMITS.question) : null,
   };
 }
 
@@ -330,6 +341,15 @@ export function checkEconomy(
     const needsRoleId = typeof i.needsRoleId === "string" && i.needsRoleId ? i.needsRoleId : null;
     if (needsRoleId && !SNOWFLAKE.test(needsRoleId))
       return { ok: false, error: `${label}: pick the role needed from this server's list.` };
+    const question =
+      kind === "staff" && typeof i.question === "string"
+        ? i.question.replace(/\s+/g, " ").trim()
+        : "";
+    if (question.length > ECONOMY_LIMITS.question)
+      return {
+        ok: false,
+        error: `${label}: Discord's form shows ${ECONOMY_LIMITS.question} characters of a question.`,
+      };
     let id = typeof i.id === "string" && ID.test(i.id) ? i.id : newItemId();
     while (ids.has(id)) id = newItemId();
     ids.add(id);
@@ -345,6 +365,7 @@ export function checkEconomy(
       stock: stock as number | null,
       perMember: perMember as number | null,
       needsRoleId,
+      question: question || null,
     });
   }
   const staffChannelId =
@@ -408,3 +429,78 @@ export function parseAmount(v: unknown, max = ECONOMY_LIMITS.amount): number | n
   const n = typeof v === "string" ? Number(v.replace(/[,\s_]/g, "")) : Number(v);
   return Number.isInteger(n) && n >= 1 && n <= max ? n : null;
 }
+
+/**
+ * What a member answered before buying, checked against the item's question: needed when it
+ * asks one, cut to one line's worth of the answer limit. Labelled for the staff card.
+ */
+export function shopAnswers(
+  item: Pick<ShopItem, "question">,
+  answer: unknown,
+): Parsed<VerifyAnswer[] | null> {
+  if (!item.question) return { ok: true, value: null };
+  const value = typeof answer === "string" ? answer.trim() : "";
+  if (!value) return { ok: false, error: `Answer “${item.question}” to buy it.` };
+  if (value.length > ECONOMY_LIMITS.answer)
+    return { ok: false, error: `Keep the answer under ${ECONOMY_LIMITS.answer} characters.` };
+  return { ok: true, value: [{ label: item.question, value }] };
+}
+
+// --- The shop panel --------------------------------------------------------------------------
+
+/**
+ * The shop panel: a card in a channel listing the shop, with a "Buy…" dropdown. Picking an
+ * item shows its price and the member's balance with a Buy button, or opens its question.
+ * Garrison updates it in place after each purchase, so stock stays right.
+ */
+export interface ShopPanelConfig {
+  /** Null is the standard text (SHOP_PANEL). */
+  shopPanelTitle: string | null;
+  shopPanelBody: string | null;
+  /** Where Garrison posted it. */
+  shopPanelChannelId: string | null;
+  shopPanelMessageId: string | null;
+}
+
+export const SHOP_PANEL = {
+  title: "Shop",
+  body: "Pick something from the list. You'll see the price and your balance before anything is spent.",
+  pick: "Buy something…",
+} as const;
+
+/** Items Discord's dropdown holds. */
+export const SHOP_PANEL_ITEMS = 25;
+
+export function readShopPanel(
+  raw: Partial<Record<keyof ShopPanelConfig, unknown>> | null | undefined,
+): ShopPanelConfig {
+  const snowflake = (v: unknown) => (typeof v === "string" && SNOWFLAKE.test(v) ? v : null);
+  return {
+    shopPanelTitle: readPanelText(raw?.shopPanelTitle, PANEL_LIMITS.title),
+    shopPanelBody: readPanelText(raw?.shopPanelBody, PANEL_LIMITS.body),
+    shopPanelChannelId: snowflake(raw?.shopPanelChannelId),
+    shopPanelMessageId: snowflake(raw?.shopPanelMessageId),
+  };
+}
+
+/** Check the panel's words. Text the same as the standard is stored as none. */
+export function checkShopPanel(
+  raw: Record<string, unknown>,
+): Parsed<Pick<ShopPanelConfig, "shopPanelTitle" | "shopPanelBody">> {
+  const title = panelText(
+    raw.shopPanelTitle,
+    PANEL_LIMITS.title,
+    "The panel's title",
+    SHOP_PANEL.title,
+  );
+  if (!title.ok) return title;
+  const body = panelText(raw.shopPanelBody, PANEL_LIMITS.body, "The panel's text", SHOP_PANEL.body);
+  if (!body.ok) return body;
+  return { ok: true, value: { shopPanelTitle: title.value, shopPanelBody: body.value } };
+}
+
+/** The panel as members see it, with the standard words where the server wrote none. */
+export const shopPanelWords = (c: Pick<ShopPanelConfig, "shopPanelTitle" | "shopPanelBody">) => ({
+  title: c.shopPanelTitle ?? SHOP_PANEL.title,
+  body: c.shopPanelBody ?? SHOP_PANEL.body,
+});

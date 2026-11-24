@@ -8,7 +8,7 @@ import {
 } from "./alerts";
 import { AUTOMOD_LIMITS, checkAutomod, readAutomod } from "./automod";
 import type { Db } from "./client";
-import { checkEconomy, readEconomy } from "./economy";
+import { checkEconomy, checkShopPanel, readEconomy, readShopPanel, SHOP_PANEL } from "./economy";
 import { newId } from "./ids";
 import { checkInviteLabels, type InviteLabel, inviteCode, readInviteLabels } from "./invite-labels";
 import { readMessages } from "./messages";
@@ -480,12 +480,22 @@ export const QM_SETTINGS = {
       shop: {
         label: "New shop items",
         kind: "shopItems",
-        about: `items to add (the saved ones stay): up to ${QM_ADD_MAX} of { name (40 characters), description or null, emoji or empty, price 1-1000000000, kind role|staff, roleId (role: the role it gives, never one with staff powers; staff: null) }; staff items are handed out by staff, so they need staffChannelId`,
+        about: `items to add (the saved ones stay): up to ${QM_ADD_MAX} of { name (40 characters), description or null, emoji or empty, price 1-1000000000, kind role|staff, roleId (role: the role it gives, never one with staff powers; staff: null), question (staff: one thing to ask before it's bought, like "Which color?", 45 characters; else null) }; staff items are handed out by staff, so they need staffChannelId`,
       },
       staffChannelId: {
         label: "Staff channel",
         kind: "textChannel",
         about: "where purchases of staff-handled items go",
+      },
+      shopPanelTitle: {
+        label: "Shop panel title",
+        kind: "text",
+        about: `the shop panel's title; null for "${SHOP_PANEL.title}"`,
+      },
+      shopPanelBody: {
+        label: "Shop panel text",
+        kind: "text",
+        about: "a line or two under it; null for the standard text",
       },
     },
   },
@@ -882,8 +892,14 @@ const MODULES: Record<
     },
   },
   economy: {
-    read: (row) => ({ ...readEconomy(row) }),
-    check: (b, p, e) => widen(checkEconomy({ ...b, ...p }, e, readEconomy(b))),
+    read: (row) => ({ ...readEconomy(row), ...readShopPanel(row) }),
+    check: (b, p, e) => {
+      const shop = checkEconomy({ ...b, ...p }, e, readEconomy(b));
+      if (!shop.ok) return shop;
+      const panel = checkShopPanel({ ...b, ...p });
+      if (!panel.ok) return panel;
+      return { ok: true, value: { ...b, ...shop.value, ...panel.value } };
+    },
   },
   rally: {
     read: (row) => {
@@ -1195,6 +1211,7 @@ function shapeItems(
         stock: null,
         perMember: null,
         needsRoleId: null,
+        question: kind === "staff" ? str(r.question) || null : null,
       });
     } else if (f.kind === "lfgTemplates") {
       const channels = one("textChannels", Array.isArray(r.channelIds) ? r.channelIds : []);
@@ -1505,6 +1522,7 @@ export const QM_POST_KINDS = [
   "message",
   "suggestion_panel",
   "lfg_panel",
+  "shop_panel",
 ] as const;
 const POST_TEXT: Record<QmPost["kind"], string> = {
   role_menu: "Role menu",
@@ -1512,11 +1530,14 @@ const POST_TEXT: Record<QmPost["kind"], string> = {
   message: "Saved message",
   suggestion_panel: "Suggestions panel",
   lfg_panel: "LFG panel",
+  shop_panel: "Shop panel",
 };
 /** The suggestions panel is one per server: it posts by this id. */
 export const SUGGESTION_PANEL_ITEM = { id: "suggestions", name: "Suggestions panel" } as const;
 /** The LFG panel is one per server too, with a button per template. */
 export const LFG_PANEL_ITEM = { id: "lfg", name: "LFG panel" } as const;
+/** The shop panel: one per server, listing the shop with a Buy dropdown. */
+export const SHOP_PANEL_ITEM = { id: "shop", name: "Shop panel" } as const;
 export const qmPostLabel = (kind: QmPost["kind"]) => POST_TEXT[kind];
 
 /**
@@ -1536,6 +1557,7 @@ export async function qmPostables(db: Db, guildId: string) {
     message: pick(readMessages(messages?.messages ?? [])),
     suggestion_panel: [{ ...SUGGESTION_PANEL_ITEM }],
     lfg_panel: [{ ...LFG_PANEL_ITEM }],
+    shop_panel: [{ ...SHOP_PANEL_ITEM }],
   } satisfies Record<QmPost["kind"], { id: string; name: string }[]>;
 }
 
@@ -1573,6 +1595,7 @@ export async function checkQmPosts(
     message: [...saved.message, ...made("message")],
     suggestion_panel: saved.suggestion_panel,
     lfg_panel: saved.lfg_panel,
+    shop_panel: saved.shop_panel,
   };
   // Something the plan makes is named by its ref; it posts by its id.
   proposals = proposals.map((p) => {

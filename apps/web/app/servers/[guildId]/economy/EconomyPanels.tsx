@@ -412,7 +412,7 @@ function ShopFields({
                     onChange={(e) =>
                       e.target.value === "staff"
                         ? set(i, { kind: "staff", roleId: null, hours: null })
-                        : set(i, { kind: "role", roleId: e.target.value || null })
+                        : set(i, { kind: "role", roleId: e.target.value || null, question: null })
                     }
                   >
                     <option value="staff">Something staff hand over</option>
@@ -490,6 +490,18 @@ function ShopFields({
                     onChange={(e) => set(i, { description: e.target.value || null })}
                   />
                 </label>
+                {item.kind === "staff" ? (
+                  <label className="g-field shop-row__wide">
+                    <span className="field-label">Ask before buying</span>
+                    <input
+                      className="g-input"
+                      value={item.question ?? ""}
+                      maxLength={ECONOMY_LIMITS.question}
+                      placeholder="Which color? Leave empty to ask nothing"
+                      onChange={(e) => set(i, { question: e.target.value || null })}
+                    />
+                  </label>
+                ) : null}
               </div>
               {i >= limit ? (
                 <p className="g-help counter-row__note">Paused on Free: Garrison Pro sells it.</p>
@@ -523,6 +535,7 @@ function ShopFields({
                 stock: null,
                 perMember: null,
                 needsRoleId: null,
+                question: null,
               },
             ]);
             setAdded(id);

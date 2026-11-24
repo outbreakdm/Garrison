@@ -1,5 +1,6 @@
 import {
   coinNumber,
+  ECONOMY_LIMITS,
   entitlements,
   getEconomy,
   getGuildPlan,
@@ -133,9 +134,22 @@ export default async function WalletPage({ params }: { params: Promise<{ guildId
                     </span>
                   </span>
                   <span className="shop-list__price">{money(config.currency, item.price)}</span>
-                  <form action={buyFromShop}>
+                  <form action={buyFromShop} className="shop-list__buy">
                     <input type="hidden" name="guildId" value={guild.id} />
                     <input type="hidden" name="itemId" value={item.id} />
+                    {item.question ? (
+                      <label className="g-field">
+                        <span className="sr-only">{item.question}</span>
+                        <input
+                          className="g-input"
+                          name="answer"
+                          required
+                          maxLength={ECONOMY_LIMITS.answer}
+                          placeholder={item.question}
+                          disabled={short}
+                        />
+                      </label>
+                    ) : null}
                     <button
                       type="submit"
                       className="g-btn g-btn--secondary g-btn--sm"

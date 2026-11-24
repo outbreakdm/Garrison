@@ -14,6 +14,7 @@ import {
   rankCardForPlan,
   readRankCard,
   saveRankDetails,
+  shopAnswers,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
 import { wakeBot } from "@/lib/bot";
@@ -91,13 +92,19 @@ export async function buyFromShop(form: FormData) {
   const { session, guild, db } = ok;
   const itemId = String(form.get("itemId") ?? "");
   const config = await getEconomy(db, guild.id);
-  if (!config.shop.some((i) => i.id === itemId))
-    return flashBack(path, { error: "That item isn't in the shop anymore." });
+  const item = config.shop.find((i) => i.id === itemId);
+  if (!item) return flashBack(path, { error: "That item isn't in the shop anymore." });
+  // An item that asks something needs the answer; the bot checks it again.
+  const asked = shopAnswers(item, form.get("answer"));
+  if (!asked.ok) return flashBack(path, { error: asked.error });
   const queued = await queueDashboardAction(
     db,
     guild.id,
     { id: session.userId, name: session.username },
-    { kind: "economy_buy", payload: { itemId } },
+    {
+      kind: "economy_buy",
+      payload: { itemId, ...(asked.value ? { answer: asked.value[0]?.value } : {}) },
+    },
   );
   wakeBot();
   if (!queued.ok) return flashBack(path, { error: "That's a lot at once. Try again in a minute." });

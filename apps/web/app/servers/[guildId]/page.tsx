@@ -110,6 +110,7 @@ const REQUEST_PAGE: Record<string, string> = {
   post_application_panel: "/applications",
   post_suggestion_panel: "/suggestions#panel",
   post_lfg_panel: "/rally?tab=panel",
+  post_shop_panel: "/economy?tab=setup",
   application_decide: "/applications#review",
   anti_nuke: "/gatehouse?tab=antinuke",
   undo_case: "/watch",

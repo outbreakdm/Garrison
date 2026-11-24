@@ -1,6 +1,14 @@
 import { and, count, desc, eq, gt, inArray, isNotNull, lt, lte, ne, sql } from "drizzle-orm";
 import type { Db } from "../client";
-import { dailyAmount, type EarnRules, readEconomy, type ShopItem } from "../economy";
+import {
+  dailyAmount,
+  type EarnRules,
+  readEconomy,
+  readShopPanel,
+  type ShopItem,
+  type ShopPanelConfig,
+} from "../economy";
+import type { PanelPlace } from "../panels";
 import {
   economyLedger,
   economyPurchases,
@@ -10,6 +18,7 @@ import {
   type Wallet,
   wallets,
 } from "../schema";
+import type { VerifyAnswer } from "../verify-questions";
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 export type LedgerSource = LedgerRow["source"];
@@ -17,6 +26,30 @@ export type LedgerSource = LedgerRow["source"];
 /** Sources that add up into one ledger row per member per day. */
 const SUMMED = new Set(["chat", "voice"]);
 const dayOf = (d: Date) => d.toISOString().slice(0, 10);
+
+/** The shop panel's words and where it's posted. */
+export async function getShopPanel(db: Db, guildId: string): Promise<ShopPanelConfig> {
+  const [row] = await db.select().from(economySettings).where(eq(economySettings.guildId, guildId));
+  return readShopPanel(row ?? null);
+}
+
+/** Where the shop panel now is: the bot records it after posting. Not a setting: no history. */
+export async function setShopPanelMessage(db: Db, guildId: string, at: PanelPlace | null) {
+  await db
+    .update(economySettings)
+    .set({ shopPanelChannelId: at?.channelId ?? null, shopPanelMessageId: at?.messageId ?? null })
+    .where(eq(economySettings.guildId, guildId));
+}
+
+/** How many of each stocked item are gone (refunds put one back), for the panel's "left". */
+export async function shopSold(db: Db, guildId: string): Promise<Map<string, number>> {
+  const rows = await db
+    .select({ itemId: economyPurchases.itemId, n: count() })
+    .from(economyPurchases)
+    .where(and(eq(economyPurchases.guildId, guildId), ne(economyPurchases.status, "refunded")))
+    .groupBy(economyPurchases.itemId);
+  return new Map(rows.map((r) => [r.itemId, Number(r.n)]));
+}
 
 export async function getEconomy(db: Db, guildId: string) {
   const [row] = await db.select().from(economySettings).where(eq(economySettings.guildId, guildId));
@@ -290,6 +323,8 @@ export async function buyItem(
   member: { id: string; username: string },
   item: ShopItem,
   now = new Date(),
+  /** What the member answered to the item's question (shopAnswers). */
+  answers: VerifyAnswer[] | null = null,
 ): Promise<Bought> {
   return db.transaction(async (tx) => {
     await tx.execute(
@@ -339,6 +374,7 @@ export async function buyItem(
             ? new Date(now.getTime() + item.hours * 3_600_000)
             : null,
         status: item.kind === "role" ? "done" : "waiting",
+        answers,
         createdAt: now,
       })
       .returning();

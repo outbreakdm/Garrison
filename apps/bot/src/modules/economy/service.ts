@@ -15,6 +15,8 @@ import {
   pruneEconomyLedger,
   refundPurchase,
   setPurchaseCard,
+  shopAnswers,
+  type VerifyAnswer,
 } from "@garrison/db";
 import {
   ButtonBuilder,
@@ -28,7 +30,9 @@ import {
 } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
 import { cardMessage } from "../../lib/card.js";
+import { safeText } from "../../lib/text.js";
 import { DANGEROUS_PERMISSIONS } from "../gatehouse/nuke.js";
+import { refreshShopPanel } from "./panel.js";
 
 /**
  * The economy in Discord (docs/ECONOMY.md): coins for chatting (once per cooldown), time in
@@ -183,6 +187,10 @@ export function purchaseCard(p: Purchase, config: EconomyConfig) {
         ? `Refunded by ${p.decidedBy ?? "staff"}`
         : `Handed over by ${p.decidedBy ?? "staff"}`,
     lead: `<@${p.userId}> bought it for ${money(config.currency, p.price)}`,
+    // What they answered to the item's question, for whoever hands it over.
+    blocks: (Array.isArray(p.answers) ? (p.answers as VerifyAnswer[]) : []).map((a) => ({
+      text: `**${safeText(a.label)}**\n${safeText(a.value)}`,
+    })),
     actions: waiting
       ? [
           new ButtonBuilder()
@@ -214,12 +222,16 @@ async function roleProblem(guild: Guild, roleId: string | null): Promise<string 
   return null;
 }
 
-/** Buy from the shop, from /buy or the member page. Every check before the money moves. */
+/**
+ * Buy from the shop: the shop panel, /buy or the member page. Every check before the money
+ * moves; an item with a question needs its `answer`, which goes to staff with the purchase.
+ */
 export async function buy(
   ctx: BotContext,
   guild: Guild,
   member: GuildMember,
   itemId: string,
+  answer?: string,
 ): Promise<Outcome> {
   const config = await economyOf(ctx, guild.id);
   if (!config.enabled) return { ok: false, message: OFF };
@@ -242,11 +254,15 @@ export async function buy(
   } else if (!config.staffChannelId) {
     return { ok: false, message: "Staff haven't picked where purchases go yet." };
   }
+  const asked = shopAnswers(item, answer);
+  if (!asked.ok) return { ok: false, message: asked.error };
   const result = await buyItem(
     ctx.db,
     guild.id,
     { id: member.id, username: member.user.username },
     item,
+    new Date(),
+    asked.value,
   );
   if (!result.ok)
     return {
@@ -267,6 +283,7 @@ export async function buy(
       await refundPurchase(ctx.db, guild.id, purchase.id, null, { failed: true });
       return { ok: false, message: "Discord wouldn't give the role, so you weren't charged." };
     }
+    await refreshShopPanel(ctx, guild);
     return {
       ok: true,
       message: `Bought ${item.name}${item.hours ? ` for ${item.hours} hours` : ""}. You have ${money(config.currency, balance)} left.`,
@@ -278,6 +295,7 @@ export async function buy(
     if (sent)
       await setPurchaseCard(ctx.db, purchase.id, { channelId: channel.id, messageId: sent.id });
   }
+  await refreshShopPanel(ctx, guild);
   return {
     ok: true,
     message: `Bought ${item.name}. Staff will hand it over; you have ${money(config.currency, balance)} left.`,
@@ -304,6 +322,8 @@ export async function decidePurchase(
     if (channel?.isTextBased())
       await channel.messages.edit(fresh.messageId, purchaseCard(fresh, config)).catch(() => null);
   }
+  // A refund puts one back in stock.
+  if (!done) await refreshShopPanel(ctx, guild);
   return {
     ok: true,
     message: done

@@ -16,6 +16,7 @@ import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { BotContext, ButtonHandler, Command } from "../../commands/types.js";
 import { cardReply } from "../../lib/card.js";
 import { safeText } from "../../lib/text.js";
+import { shopForm } from "./panel.js";
 import { buy, decidePurchase, economyOf, OFF, staffAdjust } from "./service.js";
 
 /** One economy command per member every 3 seconds, so nobody hammers the database. */
@@ -190,13 +191,18 @@ export const buyCommand: Command = {
   },
   async execute(interaction, ctx) {
     if (tooFast(interaction.user.id)) return void (await interaction.reply(SLOW));
-    await interaction.deferReply(ephemeral);
     const config = await economyOf(ctx, interaction.guildId);
     const asked = interaction.options.getString("item", true);
     // A name typed without picking from the list works too.
     const item =
       config.shop.find((i) => i.id === asked) ??
       config.shop.find((i) => i.name.toLowerCase() === asked.toLowerCase());
+    // An item that asks something opens its form; submitting it buys it (shopForms).
+    if (config.enabled && item?.question) {
+      await interaction.showModal(shopForm(item));
+      return;
+    }
+    await interaction.deferReply(ephemeral);
     const result = await buy(ctx, interaction.guild, interaction.member, item?.id ?? asked);
     await interaction.editReply(result.message);
   },
