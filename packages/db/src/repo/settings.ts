@@ -133,7 +133,17 @@ export const EDITABLE_FIELDS = {
   ],
   // Panels are checked with checkTicketPanels, the rest with checkTicketOptions.
   // Feeds are checked with checkAlertFeeds before they get here.
-  alerts: ["feeds"],
+  // Feeds with checkAlertFeeds; members' requests with checkStreamRequests (where the request
+  // panel is posted is the bot's to record).
+  alerts: [
+    "feeds",
+    "requestsEnabled",
+    "requestReviewChannelId",
+    "requestAlertChannelId",
+    "requestRoleId",
+    "requestPanelTitle",
+    "requestPanelBody",
+  ],
   // Checked with checkStatRoles before it gets here.
   barracks: ["statRoles"],
   // Checked with checkAutomod before it gets here.

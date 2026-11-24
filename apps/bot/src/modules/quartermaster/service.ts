@@ -1762,6 +1762,7 @@ async function applyPlanPosts(
     { doPostSuggestionPanel },
     { doPostLfgPanel },
     { doPostShopPanel },
+    { doPostStreamPanel },
   ] = await Promise.all([
     import("../dashboard/actions.js"),
     import("../dispatch/service.js"),
@@ -1770,6 +1771,7 @@ async function applyPlanPosts(
     import("../suggestions/service.js"),
     import("../rally/panel.js"),
     import("../economy/panel.js"),
+    import("../alerts/requests.js"),
   ]);
   const handlers: Record<QmPost["kind"], [PostHandler, string]> = {
     role_menu: [doPostRoleMenu, "menuId"],
@@ -1779,6 +1781,7 @@ async function applyPlanPosts(
     suggestion_panel: [doPostSuggestionPanel, "panelId"],
     lfg_panel: [doPostLfgPanel, "panelId"],
     shop_panel: [doPostShopPanel, "panelId"],
+    stream_panel: [doPostStreamPanel, "panelId"],
   };
   const member = await guild.members.fetch(build.requestedById).catch(() => null);
   if (!member) return "The admin who asked for this plan has left, so nothing was posted.";

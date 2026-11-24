@@ -62,6 +62,7 @@ export * from "./repo/settings";
 export * from "./repo/shares";
 export * from "./repo/starboard";
 export * from "./repo/stats";
+export * from "./repo/stream-requests";
 export * from "./repo/suggestions";
 export * from "./repo/templates";
 export * from "./repo/tickets";
@@ -141,6 +142,7 @@ export type {
   StartGiveawayPayload,
   StatChannel,
   StoredHealthCheck,
+  StreamRequest,
   Suggestion,
   SupplyGrant,
   Ticket,

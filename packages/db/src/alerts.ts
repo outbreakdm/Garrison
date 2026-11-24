@@ -11,6 +11,7 @@
 
 import { ACCENT, STANDARD_ACCENT } from "./cards";
 import { type Language, say } from "./i18n";
+import { PANEL_LIMITS, panelText, readPanelText } from "./panels";
 import { type Entitlements, FEATURES } from "./plans";
 import type { Parsed } from "./rally";
 
@@ -320,3 +321,146 @@ export const ALERT_BUTTON: Record<AlertProvider, string> = {
   bluesky: "Open on Bluesky",
   rss: "Read it",
 };
+
+// --- Members asking for their stream ------------------------------------------------------------
+
+/**
+ * "Get your stream announced": a panel whose button opens a short form (the platform, their
+ * channel, a note). Each request goes to staff as a card with Approve and Decline, and to the
+ * Stream alerts page; approving adds the stream to the server's alerts, with the server's own
+ * channel and ping, within the plan's alert limit. The member hears back by DM.
+ */
+export const STREAM_REQUEST_PROVIDERS = ["twitch", "kick", "youtube"] as const;
+export type StreamRequestProvider = (typeof STREAM_REQUEST_PROVIDERS)[number];
+
+export interface StreamRequestsConfig {
+  /** Members may ask. Needs both channels. */
+  requestsEnabled: boolean;
+  /** Where requests go for staff. */
+  requestReviewChannelId: string | null;
+  /** Where an approved stream's alerts post. */
+  requestAlertChannelId: string | null;
+  /** The role an approved stream's alerts ping. Null: none. */
+  requestRoleId: string | null;
+  /** The panel's words; null is the standard (STREAM_PANEL). */
+  requestPanelTitle: string | null;
+  requestPanelBody: string | null;
+  /** Where Garrison posted the panel. */
+  requestPanelChannelId: string | null;
+  requestPanelMessageId: string | null;
+}
+
+export const STREAM_PANEL = {
+  title: "Get your stream announced",
+  body: "Stream on Twitch, Kick or YouTube? Send your channel and staff add it to the server's stream alerts.",
+  button: "Add my stream",
+} as const;
+
+export const STREAM_REQUEST_LIMITS = { note: 200 } as const;
+/** Decided requests are kept this long, then deleted. */
+export const STREAM_REQUESTS_DAYS = 90;
+
+export function readStreamRequests(
+  raw: Partial<Record<keyof StreamRequestsConfig, unknown>> | null | undefined,
+): StreamRequestsConfig {
+  const snowflake = (v: unknown) => (typeof v === "string" && SNOWFLAKE.test(v) ? v : null);
+  return {
+    requestsEnabled: raw?.requestsEnabled === true,
+    requestReviewChannelId: snowflake(raw?.requestReviewChannelId),
+    requestAlertChannelId: snowflake(raw?.requestAlertChannelId),
+    requestRoleId: snowflake(raw?.requestRoleId),
+    requestPanelTitle: readPanelText(raw?.requestPanelTitle, PANEL_LIMITS.title),
+    requestPanelBody: readPanelText(raw?.requestPanelBody, PANEL_LIMITS.body),
+    requestPanelChannelId: snowflake(raw?.requestPanelChannelId),
+    requestPanelMessageId: snowflake(raw?.requestPanelMessageId),
+  };
+}
+
+export type StreamRequestsSettings = Omit<
+  StreamRequestsConfig,
+  "requestPanelChannelId" | "requestPanelMessageId"
+>;
+
+/** Check a change to member requests. Channels and the role belonging to the server: the caller. */
+export function checkStreamRequests(raw: Record<string, unknown>): Parsed<StreamRequestsSettings> {
+  const id = (v: unknown, what: string): Parsed<string | null> => {
+    if (v === null || v === undefined || v === "") return { ok: true, value: null };
+    return typeof v === "string" && SNOWFLAKE.test(v)
+      ? { ok: true, value: v }
+      : { ok: false, error: `Pick ${what} from this server's list.` };
+  };
+  const review = id(raw.requestReviewChannelId, "the staff channel");
+  if (!review.ok) return review;
+  const alert = id(raw.requestAlertChannelId, "the alerts channel");
+  if (!alert.ok) return alert;
+  const role = id(raw.requestRoleId, "the role to ping");
+  if (!role.ok) return role;
+  const enabled = raw.requestsEnabled === true;
+  if (enabled && !review.value)
+    return { ok: false, error: "Pick the staff channel requests go to." };
+  if (enabled && !alert.value)
+    return { ok: false, error: "Pick the channel approved streams are announced in." };
+  const title = panelText(
+    raw.requestPanelTitle,
+    PANEL_LIMITS.title,
+    "The panel's title",
+    STREAM_PANEL.title,
+  );
+  if (!title.ok) return title;
+  const body = panelText(
+    raw.requestPanelBody,
+    PANEL_LIMITS.body,
+    "The panel's text",
+    STREAM_PANEL.body,
+  );
+  if (!body.ok) return body;
+  return {
+    ok: true,
+    value: {
+      requestsEnabled: enabled,
+      requestReviewChannelId: review.value,
+      requestAlertChannelId: alert.value,
+      requestRoleId: role.value,
+      requestPanelTitle: title.value,
+      requestPanelBody: body.value,
+    },
+  };
+}
+
+/** The panel as members see it, with the standard words where the server wrote none. */
+export const streamPanelWords = (
+  c: Pick<StreamRequestsConfig, "requestPanelTitle" | "requestPanelBody">,
+) => ({
+  title: c.requestPanelTitle ?? STREAM_PANEL.title,
+  body: c.requestPanelBody ?? STREAM_PANEL.body,
+});
+
+/**
+ * What a member sent, checked: a platform members stream on, their channel as Garrison
+ * watches it, and a short note. Null handle: it isn't one.
+ */
+export function checkStreamRequest(raw: {
+  provider: unknown;
+  handle: unknown;
+  note?: unknown;
+}): Parsed<{ provider: StreamRequestProvider; handle: string; note: string | null }> {
+  const provider = STREAM_REQUEST_PROVIDERS.find((p) => p === raw.provider);
+  if (!provider) return { ok: false, error: "Pick Twitch, Kick or YouTube." };
+  const handle = typeof raw.handle === "string" ? normalizeHandle(provider, raw.handle) : null;
+  if (!handle) return { ok: false, error: `That isn't a ${ALERT_PROVIDERS[provider].example}.` };
+  const note = typeof raw.note === "string" ? raw.note.trim().replace(/\s+/g, " ") : "";
+  if (note.length > STREAM_REQUEST_LIMITS.note)
+    return { ok: false, error: `Keep the note under ${STREAM_REQUEST_LIMITS.note} characters.` };
+  return { ok: true, value: { provider, handle, note: note || null } };
+}
+
+/** A stream's page, for staff to look before approving. */
+export function streamUrl(provider: AlertProvider, handle: string): string | null {
+  if (provider === "twitch") return `https://twitch.tv/${handle}`;
+  if (provider === "kick") return `https://kick.com/${handle}`;
+  if (provider === "youtube")
+    return handle.startsWith("@")
+      ? `https://youtube.com/${handle}`
+      : `https://youtube.com/channel/${handle}`;
+  return null;
+}

@@ -111,6 +111,8 @@ const REQUEST_PAGE: Record<string, string> = {
   post_suggestion_panel: "/suggestions#panel",
   post_lfg_panel: "/rally?tab=panel",
   post_shop_panel: "/economy?tab=setup",
+  post_stream_panel: "/beacon#post-stream-panel",
+  stream_request_decide: "/beacon#stream-requests",
   application_decide: "/applications#review",
   anti_nuke: "/gatehouse?tab=antinuke",
   undo_case: "/watch",

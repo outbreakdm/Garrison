@@ -82,6 +82,8 @@ export const ACTION_KIND: Record<string, string> = {
   post_suggestion_panel: "Post suggestions panel",
   post_lfg_panel: "Post LFG panel",
   post_shop_panel: "Post shop panel",
+  post_stream_panel: "Post stream request panel",
+  stream_request_decide: "Stream request decision",
   application_decide: "Application decision",
   economy_adjust: "Give or take coins",
   economy_buy: "Buy from the shop",

@@ -879,7 +879,14 @@ export interface QmSettingChange {
  * into a channel (an id, or the ref of a channel the same plan creates).
  */
 export interface QmPost {
-  kind: "role_menu" | "ticket_panel" | "message" | "suggestion_panel" | "lfg_panel" | "shop_panel";
+  kind:
+    | "role_menu"
+    | "ticket_panel"
+    | "message"
+    | "suggestion_panel"
+    | "lfg_panel"
+    | "shop_panel"
+    | "stream_panel";
   itemId: string;
   /** The item's name when the plan was drafted, for the preview. */
   name: string;
@@ -1331,6 +1338,8 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "post_suggestion_panel",
   "post_lfg_panel",
   "post_shop_panel",
+  "post_stream_panel",
+  "stream_request_decide",
 ]);
 
 /**
@@ -2216,6 +2225,16 @@ export const alertSettings = pgTable(
       .primaryKey()
       .references(() => guilds.id, { onDelete: "cascade" }),
     feeds: jsonb("feeds").$type<AlertFeed[]>().notNull().default(sql`'[]'::jsonb`),
+    /** Members asking for their stream (alerts.ts StreamRequestsConfig). */
+    requestsEnabled: boolean("requests_enabled").notNull().default(false),
+    requestReviewChannelId: text("request_review_channel_id"),
+    requestAlertChannelId: text("request_alert_channel_id"),
+    requestRoleId: text("request_role_id"),
+    requestPanelTitle: text("request_panel_title"),
+    requestPanelBody: text("request_panel_body"),
+    /** Where Garrison posted the request panel (the bot records it). */
+    requestPanelChannelId: text("request_panel_channel_id"),
+    requestPanelMessageId: text("request_panel_message_id"),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -2225,6 +2244,43 @@ export const alertSettings = pgTable(
     ),
   ],
 ).enableRLS();
+
+/**
+ * A member asking for their stream to be announced (alerts.ts). Staff approve it (it becomes a
+ * stream alert) or decline it, from the card or the dashboard; one waiting request per member.
+ * Decided ones are deleted after STREAM_REQUESTS_DAYS.
+ */
+export const streamRequests = pgTable(
+  "stream_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    username: text("username").notNull(),
+    provider: text("provider").notNull(),
+    handle: text("handle").notNull(),
+    note: text("note"),
+    /** waiting, approved or declined. */
+    status: text("status").notNull().default("waiting"),
+    decidedBy: text("decided_by"),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    /** The staff card. */
+    channelId: text("channel_id"),
+    messageId: text("message_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("stream_requests_recent").on(t.guildId, t.status, t.createdAt),
+    uniqueIndex("stream_requests_one_waiting")
+      .on(t.guildId, t.userId)
+      .where(sql`${t.status} = 'waiting'`),
+    check("stream_requests_status", sql`${t.status} IN ('waiting', 'approved', 'declined')`),
+  ],
+).enableRLS();
+
+export type StreamRequest = typeof streamRequests.$inferSelect;
 
 /**
  * What the bot last saw for each feed, written by the bot. The last item is

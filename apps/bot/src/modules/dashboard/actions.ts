@@ -28,6 +28,7 @@ import { z } from "zod";
 import type { BotContext } from "../../commands/types.js";
 import { cardMessage } from "../../lib/card.js";
 import { safeText } from "../../lib/text.js";
+import { doPostStreamPanel, doStreamRequestDecide } from "../alerts/requests.js";
 import { doTestAlert } from "../alerts/service.js";
 import { doApplicationDecide, doPostApplicationPanel } from "../applications/service.js";
 import { postMessageNow } from "../dispatch/service.js";
@@ -685,6 +686,10 @@ export async function runDashboardAction(
       return doPostLfgPanel(ctx, guild, member, action.payload);
     case "post_shop_panel":
       return doPostShopPanel(ctx, guild, member, action.payload);
+    case "post_stream_panel":
+      return doPostStreamPanel(ctx, guild, member, action.payload);
+    case "stream_request_decide":
+      return doStreamRequestDecide(ctx, guild, member, action.payload);
     default:
       return fail("Garrison doesn't know that request.");
   }

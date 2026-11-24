@@ -27,6 +27,8 @@ import {
   getQmBuildByVersion,
   getQuarantine,
   getRoleMenus,
+  getStreamRequest,
+  getStreamRequests,
   getSuggestion,
   getSuggestionSettings,
   getTemplate,
@@ -343,6 +345,25 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       return {
         ok: true,
         input: { kind, payload: { id: a.id, approve: field(form, "op") === "approve" } },
+      };
+    }
+    case "post_stream_panel": {
+      const channelId = field(form, "channelId");
+      const [config, channels] = await Promise.all([
+        getStreamRequests(db, guildId),
+        listTextChannels(guildId).catch(() => []),
+      ]);
+      if (!config.requestsEnabled) return { ok: false, error: "requests_off" };
+      if (!channels.some((c) => c.id === channelId)) return { ok: false, error: "channel" };
+      return { ok: true, input: { kind, payload: { channelId } } };
+    }
+    case "stream_request_decide": {
+      const id = field(form, "id");
+      const r = uuid.safeParse(id).success ? await getStreamRequest(db, guildId, id) : null;
+      if (r?.status !== "waiting") return { ok: false, error: "not_found" };
+      return {
+        ok: true,
+        input: { kind, payload: { id: r.id, approve: field(form, "op") === "approve" } },
       };
     }
     case "post_shop_panel": {

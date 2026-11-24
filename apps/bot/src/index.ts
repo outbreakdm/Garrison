@@ -17,6 +17,7 @@ import { sayHello } from "./lib/hello.js";
 import { watchDatabase } from "./lib/liveness.js";
 import { createLogger } from "./lib/logger.js";
 import { Metrics, maybePruneOperations } from "./lib/metrics.js";
+import { maybePruneStreamRequests } from "./modules/alerts/requests.js";
 import { sweepAlerts } from "./modules/alerts/service.js";
 import { sweepSubRoles } from "./modules/alerts/sub-roles.js";
 import { maybePruneApplications } from "./modules/applications/service.js";
@@ -284,6 +285,7 @@ client.once(Events.ClientReady, async (ready) => {
       await step("Ledger prune", () => maybePruneLedger(ctx));
       await step("Verification answers prune", () => maybePruneAnswers(ctx));
       await step("Applications prune", () => maybePruneApplications(ctx));
+      await step("Stream requests prune", () => maybePruneStreamRequests(ctx));
       await step("Insights prune", () => maybePruneInsights(ctx));
       await step("Operations prune", () => maybePruneOperations(ctx));
       await step("Game stats refresh", () => refreshOsrs(ctx, gameStatKeys));

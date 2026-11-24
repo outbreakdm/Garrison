@@ -3,8 +3,11 @@ import {
   ALERT_PROVIDERS,
   type AlertFeed,
   checkAlertFeeds,
+  checkStreamRequests,
   normalizeHandle,
   readAlertFeeds,
+  readStreamRequests,
+  STREAM_PANEL,
 } from "./alerts";
 import { AUTOMOD_LIMITS, checkAutomod, readAutomod } from "./automod";
 import type { Db } from "./client";
@@ -469,6 +472,34 @@ export const QM_SETTINGS = {
         kind: "alertFeeds",
         about: `alerts to add (the saved ones stay): up to ${QM_ADD_MAX} of { provider twitch|kick|youtube|reddit|bluesky|rss, handle (a Twitch or Kick username, a YouTube @handle or UC… channel id, a subreddit name, a Bluesky handle like name.bsky.social, or an RSS feed's https address), channelId (text channel), roleId (a role to ping, or null) }; a post when the channel goes live or uploads, or the subreddit, account or feed has a new post`,
       },
+      requestsEnabled: on(
+        "members ask for their own Twitch, Kick or YouTube channel to be announced, from the request panel; staff approve each one; needs requestReviewChannelId and requestAlertChannelId",
+      ),
+      requestReviewChannelId: {
+        label: "Stream requests go to",
+        kind: "textChannel",
+        about: "a staff-only channel where each request waits for Approve or Decline",
+      },
+      requestAlertChannelId: {
+        label: "Approved streams announce in",
+        kind: "textChannel",
+        about: "the channel an approved member's stream alerts post in",
+      },
+      requestRoleId: {
+        label: "Approved streams ping",
+        kind: "role",
+        about: "a role pinged when an approved member goes live, or null",
+      },
+      requestPanelTitle: {
+        label: "Request panel title",
+        kind: "text",
+        about: `the request panel's title; null for "${STREAM_PANEL.title}"`,
+      },
+      requestPanelBody: {
+        label: "Request panel text",
+        kind: "text",
+        about: "a line under it; null for the standard text",
+      },
     },
   },
   economy: {
@@ -891,10 +922,13 @@ const MODULES: Record<
     check: (b, p) => ({ ok: true, value: { ...b, ...p } }),
   },
   alerts: {
-    read: (row) => ({ feeds: readAlertFeeds(row?.feeds ?? []) }),
+    read: (row) => ({ feeds: readAlertFeeds(row?.feeds ?? []), ...readStreamRequests(row) }),
     check: (b, p, e) => {
       const r = checkAlertFeeds(p.feeds ?? b.feeds, e, b.feeds as AlertFeed[]);
-      return r.ok ? { ok: true, value: { feeds: r.value } } : r;
+      if (!r.ok) return r;
+      const requests = checkStreamRequests({ ...b, ...p });
+      if (!requests.ok) return requests;
+      return { ok: true, value: { ...b, feeds: r.value, ...requests.value } };
     },
   },
   economy: {
@@ -1529,6 +1563,7 @@ export const QM_POST_KINDS = [
   "suggestion_panel",
   "lfg_panel",
   "shop_panel",
+  "stream_panel",
 ] as const;
 const POST_TEXT: Record<QmPost["kind"], string> = {
   role_menu: "Role menu",
@@ -1537,6 +1572,7 @@ const POST_TEXT: Record<QmPost["kind"], string> = {
   suggestion_panel: "Suggestions panel",
   lfg_panel: "LFG panel",
   shop_panel: "Shop panel",
+  stream_panel: "Stream request panel",
 };
 /** The suggestions panel is one per server: it posts by this id. */
 export const SUGGESTION_PANEL_ITEM = { id: "suggestions", name: "Suggestions panel" } as const;
@@ -1544,6 +1580,8 @@ export const SUGGESTION_PANEL_ITEM = { id: "suggestions", name: "Suggestions pan
 export const LFG_PANEL_ITEM = { id: "lfg", name: "LFG panel" } as const;
 /** The shop panel: one per server, listing the shop with a Buy dropdown. */
 export const SHOP_PANEL_ITEM = { id: "shop", name: "Shop panel" } as const;
+/** The panel members ask for their stream from: one per server. */
+export const STREAM_PANEL_ITEM = { id: "streams", name: "Stream request panel" } as const;
 export const qmPostLabel = (kind: QmPost["kind"]) => POST_TEXT[kind];
 
 /**
@@ -1564,6 +1602,7 @@ export async function qmPostables(db: Db, guildId: string) {
     suggestion_panel: [{ ...SUGGESTION_PANEL_ITEM }],
     lfg_panel: [{ ...LFG_PANEL_ITEM }],
     shop_panel: [{ ...SHOP_PANEL_ITEM }],
+    stream_panel: [{ ...STREAM_PANEL_ITEM }],
   } satisfies Record<QmPost["kind"], { id: string; name: string }[]>;
 }
 
@@ -1602,6 +1641,7 @@ export async function checkQmPosts(
     suggestion_panel: saved.suggestion_panel,
     lfg_panel: saved.lfg_panel,
     shop_panel: saved.shop_panel,
+    stream_panel: saved.stream_panel,
   };
   // Something the plan makes is named by its ref; it posts by its id.
   proposals = proposals.map((p) => {

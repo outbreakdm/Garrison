@@ -1,5 +1,10 @@
 import { commandLocalizations } from "@garrison/db";
 import {
+  streamDecideButtons,
+  streamForms,
+  streamPanelButtons,
+} from "../modules/alerts/requests.js";
+import {
   applicationModals,
   applyButtons,
   decideApplicationButtons,
@@ -73,6 +78,8 @@ export const buttons: ButtonHandler[] = [
   lfgPanelButtons,
   shopBuyButtons,
   roomButtons,
+  streamPanelButtons,
+  streamDecideButtons,
   applyButtons,
   decideApplicationButtons,
   triviaButtons,
@@ -88,6 +95,7 @@ export const modals: ModalHandler[] = [
   lfgPanelModals,
   shopForms,
   roomForms,
+  streamForms,
 ];
 
 // Each command's description in Spanish, Portuguese, German and French: Discord shows members

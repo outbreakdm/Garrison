@@ -568,7 +568,7 @@ Later phases get their checklists when they start.
   and Dismiss · [ ] Birthdays: an "Add your birthday" panel (month from a list, day typed) ·
   [ ] Tickets: topic forms on the shared question model (a line under each, short or paragraph,
   optional questions, answers as the ticket's first card) · [x] Economy: a shop panel, with a
-  form for items staff fulfil ("which color?") that goes with the purchase · [ ] Stream alerts:
+  form for items staff fulfil ("which color?") that goes with the purchase · [x] Stream alerts:
   "Add my stream" for members, staff approve on the dashboard · [ ] Barracks: "Link your
   account" panel · [ ] Giveaways: an optional entry question. The suggestions panel's pieces
   (PanelEditor, the questions rows, keepPanelLast) become shared ones with the second of these.
@@ -1735,4 +1735,14 @@ Decided (2026-11-12, owner):
   owner leaves). Renames past Discord's two per ten minutes say they'll land shortly.
   Migration `0096_voice_controls`. Checked by tests and the settings page; no live Discord
   run. Not deployed.
+- 2026-11-23: Stream requests (Stream alerts). Members' streams on the Stream alerts page: members
+  ask for their own Twitch, Kick or YouTube channel from a request panel (its form: the
+  platform from a list, their channel as a name or link, a note); the request goes to a staff
+  channel as a card with "Add their alerts" and Decline, and waits on the page with the same.
+  Adding it makes a stream alert through the same settings change the dashboard makes
+  (history, undo), in the server's chosen channel with its ping, within the plan's alert
+  limit; the member hears back by DM. One waiting request per member; decided ones are
+  deleted after 90 days. The AI assistant can turn it on, pick the channels and post the panel
+  (stream_panel). Migration `0097_stream_requests`. Checked in the local preview (settings
+  save, preview, posting card); no live Discord run. Not deployed.
 

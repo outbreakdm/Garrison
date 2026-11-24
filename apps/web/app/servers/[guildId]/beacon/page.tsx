@@ -7,19 +7,25 @@ import {
   feedLimit,
   getAlertFeeds,
   getGuildPlan,
+  getStreamRequests,
   getTwitchSubRole,
   isFeedPaused,
   listAlertState,
+  listStreamRequests,
   readAlertFeeds,
+  streamPanelWords,
+  streamUrl,
 } from "@garrison/db";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ProTag } from "@/components/cards/CardEditor";
+import { formatTime } from "@/components/format";
 import { HowItWorks } from "@/components/HowItWorks";
 import { LibraryItem } from "@/components/Library";
 import { ListHead } from "@/components/ListHead";
 import { HeadStatus } from "@/components/ModuleHead";
 import { PlansLink } from "@/components/ProUpsell";
+import { PanelPostCard } from "@/components/panels/PanelPostCard";
 import { RequestsPanel } from "@/components/RequestsPanel";
 import { FormPanel } from "@/components/settings";
 import { getDb } from "@/lib/db";
@@ -29,8 +35,11 @@ import { isDangerousRole } from "@/lib/permissions";
 import { requireGuildAccess } from "@/lib/session";
 import { ago } from "../parley/when";
 import { requestAction } from "../requests";
+import { undoChange } from "../settings/actions";
 import { addFeed, removeFeed, saveFeed } from "./actions";
 import { FeedEditor } from "./FeedEditor";
+import { saveStreamRequests } from "./request-actions";
+import { StreamRequestsEditor } from "./StreamRequestsEditor";
 import { disconnectSubRole, saveSubRole } from "./sub-roles";
 
 export const metadata: Metadata = { title: "Stream alerts" };
@@ -51,13 +60,15 @@ export default async function AlertsPage({
   const { guild } = await requireGuildAccess(guildId);
   const query = await searchParams;
   const db = await getDb();
-  const [raw, plan, states, channels, roles, flash] = await Promise.all([
+  const [raw, plan, states, channels, roles, flash, requests, waitingRequests] = await Promise.all([
     getAlertFeeds(db, guild.id),
     getGuildPlan(db, guild.id),
     listAlertState(db, guild.id),
     listTextChannels(guild.id).catch(() => []),
     listNotifiableRoles(guild.id).catch(() => []),
     readFlash(),
+    getStreamRequests(db, guild.id),
+    listStreamRequests(db, guild.id),
   ]);
   const [subRole, allRoles] = await Promise.all([
     getTwitchSubRole(db, guild.id),
@@ -147,7 +158,11 @@ export default async function AlertsPage({
         </div>
       ) : null}
 
-      <RequestsPanel guildId={guild.id} kinds={["test_alert"]} query={query} />
+      <RequestsPanel
+        guildId={guild.id}
+        kinds={["test_alert", "post_stream_panel", "stream_request_decide"]}
+        query={query}
+      />
 
       {current ? null : (
         <ListHead
@@ -294,6 +309,97 @@ export default async function AlertsPage({
           </FormPanel>
         )}
       </div>
+
+      {current ? null : (
+        <>
+          {waitingRequests.length ? (
+            <section className="g-card card-col" id="stream-requests" aria-labelledby="sr-title">
+              <h2 className="card-title" id="sr-title">
+                Streams members asked for <span className="count">{waitingRequests.length}</span>
+              </h2>
+              <ul className="answers-list">
+                {waitingRequests.map((r) => (
+                  <li className="answers-list__item" data-status="waiting" key={r.id}>
+                    <div className="answers-list__head">
+                      <strong>
+                        {ALERT_PROVIDERS[r.provider as AlertProvider]?.label ?? r.provider}:{" "}
+                        {streamUrl(r.provider as AlertProvider, r.handle) ? (
+                          <a href={streamUrl(r.provider as AlertProvider, r.handle) ?? undefined}>
+                            {r.handle}
+                          </a>
+                        ) : (
+                          r.handle
+                        )}
+                      </strong>
+                      <span className="muted">
+                        {r.username} · {formatTime(r.createdAt)}
+                        {r.note ? ` · ${r.note}` : ""}
+                      </span>
+                    </div>
+                    <div className="answers-list__actions">
+                      {(["approve", "decline"] as const).map((op) => (
+                        <form action={requestAction} key={op}>
+                          <input type="hidden" name="guildId" value={guild.id} />
+                          <input type="hidden" name="page" value="beacon" />
+                          <input type="hidden" name="kind" value="stream_request_decide" />
+                          <input type="hidden" name="id" value={r.id} />
+                          <input type="hidden" name="op" value={op} />
+                          <button
+                            type="submit"
+                            className={
+                              op === "approve"
+                                ? "g-btn g-btn--secondary g-btn--sm"
+                                : "g-btn g-btn--ghost g-btn--sm"
+                            }
+                          >
+                            {op === "approve" ? "Add their alerts" : "Decline"}
+                          </button>
+                        </form>
+                      ))}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+          <StreamRequestsEditor
+            guildId={guild.id}
+            saved={{
+              enabled: requests.requestsEnabled,
+              reviewChannelId: requests.requestReviewChannelId,
+              alertChannelId: requests.requestAlertChannelId,
+              roleId: requests.requestRoleId,
+              ...streamPanelWords(requests),
+            }}
+            channels={channels}
+            roles={roles.map((r) => ({ id: r.id, name: r.name }))}
+            action={saveStreamRequests}
+            undo={undoChange}
+            stamp={contentKey({
+              ...requests,
+              requestPanelChannelId: null,
+              requestPanelMessageId: null,
+            })}
+          />
+          <PanelPostCard
+            id="post-stream-panel"
+            guildId={guild.id}
+            page="beacon"
+            kind="post_stream_panel"
+            channels={channels}
+            posted={
+              requests.requestPanelChannelId && requests.requestPanelMessageId
+                ? {
+                    channelId: requests.requestPanelChannelId,
+                    messageId: requests.requestPanelMessageId,
+                  }
+                : null
+            }
+            suggested={requests.requestAlertChannelId}
+            blocked={requests.requestsEnabled ? null : "Turn member requests on first."}
+          />
+        </>
+      )}
 
       <section className="g-card card-col" id="sub-roles" aria-labelledby="sub-roles-title">
         <div className="card-head">
