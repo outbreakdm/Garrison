@@ -20,6 +20,8 @@ const event: OpsEvent = {
   timezone: "America/Chicago",
   repeatWeekly: true,
   status: "scheduled",
+  style: "simple",
+  teamId: null,
   reminded24hAt: null,
   reminded30mAt: null,
   createdAt: new Date(),
@@ -33,6 +35,8 @@ const s = (userId: string, role: string, spec: string | null, bench = false): Op
   signedUpAt: new Date(),
   leftAt: null,
   attended: null,
+  availability: null,
+  characterId: null,
 });
 
 describe("opsCard", () => {
@@ -82,5 +86,42 @@ describe("opsCard", () => {
 
   it("escapes user text in specs", () => {
     expect(texts(opsCard(event, [s("x", "Tank", "**Prot**")]))[1]).toContain("\\*\\*Prot\\*\\*");
+  });
+});
+
+describe("an organized raid's card", () => {
+  const organized: OpsEvent = { ...event, style: "organized", teamId: null };
+  const a = (userId: string, role: string, availability: string, spec: string | null = null) => ({
+    ...s(userId, role, spec, availability === "cant"),
+    availability,
+  });
+
+  it("asks Coming, Tentative, Late or Can't, and counts coming and late toward each role", () => {
+    const card = opsCard(
+      organized,
+      [
+        a("kel", "Tank", "coming", "Thrall · Protection Warrior"),
+        a("rook", "Tank", "late"),
+        a("mira", "Healer", "tentative"),
+        a("ash", "", "cant"),
+      ],
+      ["vex"],
+    );
+    const text = (card.blocks ?? []).map((b) => (typeof b === "string" ? b : b.text)).join("\n");
+    expect(text).toContain("**Tank** 2/4");
+    expect(text).toContain("<@kel> · Thrall · Protection Warrior");
+    expect(text).toContain("<@rook> · late");
+    expect(text).toContain("**Healer** 0/1");
+    expect(text).toContain("<@mira> · tentative");
+    expect(text).toContain("**Can't** 1");
+    expect(text).toContain("**No reply yet** 1");
+    expect(card.status).toBe("3 short");
+    expect(card.actions?.map((b) => b.toJSON())).toMatchObject([
+      { label: "Coming", custom_id: `ops:avail:${event.id}:coming` },
+      { label: "Tentative" },
+      { label: "Late" },
+      { label: "Can't" },
+      { label: "Cancel raid" },
+    ]);
   });
 });

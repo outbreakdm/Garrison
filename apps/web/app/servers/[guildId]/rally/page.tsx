@@ -15,6 +15,9 @@ import {
   listDashboardActions,
   listOpenLfg,
   listOpsForCalendar,
+  listRosterCharacters,
+  listRosterMembers,
+  listRosterTeams,
   listSignups,
   listUpcomingOps,
   memberNames,
@@ -50,6 +53,7 @@ import {
   setCalendarFeed,
 } from "./actions";
 import { LfgPanelEditor } from "./LfgPanelEditor";
+import { OrganizedRaid } from "./OrganizedRaid";
 import { saveLfgPanel } from "./panel-actions";
 import { RosterTab } from "./RosterTab";
 import { TemplatesTab } from "./templates/TemplatesTab";
@@ -68,6 +72,7 @@ const QUEUED: Record<string, string> = {
   post_lfg_panel: "Queued. Garrison posts the LFG panel in a few seconds.",
   raid_signup: "Queued. Garrison signs you up and updates the card.",
   raid_withdraw: "Queued. Garrison withdraws you and updates the card.",
+  raid_answer: "Queued. Garrison saves your answer and updates the card.",
 };
 const ERRORS: Record<string, string> = {
   invalid: "Some fields weren't valid. Nothing was queued.",
@@ -142,17 +147,36 @@ export default async function RallyPage({
     lfgPanel.lfgPanelChannelId && lfgPanel.lfgPanelMessageId
       ? { channelId: lfgPanel.lfgPanelChannelId, messageId: lfgPanel.lfgPanelMessageId }
       : null;
-  const [postMembers, raidSignups] = await Promise.all([
+  const [postMembers, raidSignups, teams, myCharacters] = await Promise.all([
     Promise.all(posts.map((p) => listActiveMembers(db, p.id))),
     Promise.all(raids.map((r) => listSignups(db, r.id))),
+    listRosterTeams(db, guild.id),
+    listRosterCharacters(db, guild.id, [session.userId]),
   ]);
+  // Organized raids for a team list who on it hasn't answered (Social members aren't expected).
+  const teamMembers = await listRosterMembers(db, guild.id, [
+    ...new Set(raids.flatMap((r) => (r.teamId ? [r.teamId] : []))),
+  ]);
+  const waitingFor = (i: number) => {
+    const r = raids[i];
+    if (!r?.teamId || r.style !== "organized") return [];
+    const answered = new Set((raidSignups[i] ?? []).map((s) => s.userId));
+    return teamMembers
+      .filter((m) => m.teamId === r.teamId && m.status !== "social" && !answered.has(m.userId))
+      .map((m) => m.userId);
+  };
   const names = await memberNames(db, guild.id, [
     ...raidSignups.flat().map((s) => s.userId),
     ...postMembers.flat().map((m) => m.userId),
     ...reliability.map((r) => r.userId),
     ...recentRaids.flatMap((r) => r.signups.map((s) => s.userId)),
+    ...raids.flatMap((_, i) => waitingFor(i)),
   ]);
-  const nameOf = (id: string) => names.get(id) ?? `Member ${id.slice(-4)}`;
+  // Roster names too: a raider who never chatted here has no Leveling name.
+  const rosterNames = new Map(
+    teamMembers.filter((m) => m.username).map((m) => [m.userId, m.username]),
+  );
+  const nameOf = (id: string) => names.get(id) ?? rosterNames.get(id) ?? `Member ${id.slice(-4)}`;
   // Only what was asked from this page: moderation and builds show on their own pages.
   const recent = allActions.filter((a) => a.kind in QUEUED).slice(0, 8);
   const working = recent.some((a) => a.status === "pending" || a.status === "running");
@@ -533,6 +557,34 @@ export default async function RallyPage({
                 <input type="checkbox" name="repeatWeekly" />
                 <span>Post it again every week</span>
               </label>
+              <div className="field-row">
+                <label className="g-field">
+                  <span>Signups</span>
+                  <select className="g-input" name="style" defaultValue="simple">
+                    <option value="simple">Simple: first come, first served by role</option>
+                    <option value="organized">
+                      Organized: members answer, officers pick the lineup
+                    </option>
+                  </select>
+                </label>
+                {teams.length ? (
+                  <label className="g-field">
+                    <span>Roster team</span>
+                    <select className="g-input" name="teamId" defaultValue="">
+                      <option value="">None</option>
+                      {teams.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+              </div>
+              <p className="g-help">
+                Organized raids ask Coming, Tentative, Late or Can't, and which character. A team
+                makes it organized and lists who on it hasn't answered yet.
+              </p>
               <p className="g-help">
                 Garrison posts it as you, with a signup card, in the time zone set in Settings. You
                 must be able to post in that channel yourself.
@@ -554,6 +606,20 @@ export default async function RallyPage({
           {raids.length ? (
             raids.map((r, i) => {
               const signups = raidSignups[i] ?? [];
+              if (r.style === "organized")
+                return (
+                  <OrganizedRaid
+                    key={r.id}
+                    guildId={guild.id}
+                    raid={r}
+                    signups={signups}
+                    waiting={waitingFor(i)}
+                    teamName={teams.find((t) => t.id === r.teamId)?.name ?? null}
+                    me={session.userId}
+                    myCharacters={myCharacters}
+                    nameOf={nameOf}
+                  />
+                );
               const seated = signups.filter((s) => !s.bench);
               const bench = signups.filter((s) => s.bench);
               const missing = r.slots.map((g) => ({

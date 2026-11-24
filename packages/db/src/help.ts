@@ -305,7 +305,7 @@ export const HELP = {
     page: "Groups and raids",
     path: "/rally",
     about:
-      "LFG cards members join (with a private voice channel when the squad fills), and raid rosters with sign-ups by role, a bench and reminders. Members can also join from the website.",
+      "LFG cards members join (with a private voice channel when the squad fills), and raids: simple ones with sign-ups by role, a bench and reminders, or organized ones where members answer Coming, Tentative, Late or Can't with a character and officers pick the lineup. Members can also join from the website.",
     steps: [
       "Groups and raids: set the server's time zone, then make LFG templates for your games.",
       "Members post groups with /lfg create; staff schedule raids with /raid create.",

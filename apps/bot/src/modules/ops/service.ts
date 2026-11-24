@@ -1,6 +1,7 @@
 import {
   claimDueReminders,
   finishPastEvents,
+  listRosterMembers,
   listSignups,
   type OpsEvent,
   type OpsSignup,
@@ -9,10 +10,30 @@ import {
 } from "@garrison/db";
 import type { Client, Guild } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
-import { cardEdit, cardMessage } from "../../lib/card.js";
+import { type Card, cardEdit, cardMessage } from "../../lib/card.js";
 import { safeText } from "../../lib/text.js";
 import { sweepAttendance } from "./attendance.js";
 import { opsCard, shortages } from "./card.js";
+
+/** Team members who haven't answered an organized raid (Social members aren't expected). */
+export async function teamWaiting(ctx: BotContext, event: OpsEvent, signups: OpsSignup[]) {
+  if (event.style !== "organized" || !event.teamId) return [];
+  const members = await listRosterMembers(ctx.db, event.guildId, [event.teamId]);
+  const answered = new Set(signups.map((s) => s.userId));
+  return members
+    .filter((m) => m.status !== "social" && !answered.has(m.userId))
+    .map((m) => m.userId);
+}
+
+/** The raid card, with its team's "No reply yet" list for an organized raid. */
+export async function raidCard(
+  ctx: BotContext,
+  event: OpsEvent,
+  signups?: OpsSignup[],
+): Promise<Card> {
+  const list = signups ?? (await listSignups(ctx.db, event.id));
+  return opsCard(event, list, await teamWaiting(ctx, event, list));
+}
 
 export async function refreshOpsCard(
   ctx: BotContext,
@@ -26,9 +47,7 @@ export async function refreshOpsCard(
     if (!channel?.isTextBased()) return;
     const message = await channel.messages.fetch(event.messageId);
     // Raids posted before the switch to V2 stay embeds until they end.
-    await message.edit(
-      cardEdit(message, opsCard(event, signups ?? (await listSignups(ctx.db, event.id)))),
-    );
+    await message.edit(cardEdit(message, await raidCard(ctx, event, signups)));
   } catch (error) {
     ctx.logger.debug("Could not refresh an Ops card", { eventId: event.id, error });
   }
@@ -89,7 +108,7 @@ export async function sweepOps(ctx: BotContext, client: Client<true>) {
     const channel = guild?.channels.cache.get(event.channelId);
     if (!channel?.isSendable()) continue;
     try {
-      const message = await channel.send(cardMessage(opsCard(event, [])));
+      const message = await channel.send(cardMessage(await raidCard(ctx, event, [])));
       await setOpsMessage(ctx.db, event.id, message.id);
     } catch (error) {
       ctx.logger.warn("Could not post next week's raid", { eventId: event.id, error });

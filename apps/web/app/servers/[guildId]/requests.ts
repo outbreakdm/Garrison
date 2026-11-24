@@ -58,6 +58,7 @@ import { wakeBot } from "@/lib/bot";
 import { getDb } from "@/lib/db";
 import { guildOwnerId, listTextChannels } from "@/lib/discord";
 import { checkPostTarget } from "@/lib/post-target";
+import { raidAnswer } from "@/lib/raid-answer";
 import { checkGuildAccess } from "@/lib/session";
 import { slotsText } from "@/lib/slots";
 
@@ -607,6 +608,10 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
       const role = field(form, "role");
       if (!p.slots.some((g) => g.name === role)) return { ok: false, error: "not_found" };
       return { ok: true, input: { kind, payload: { id: p.id, role } } };
+    }
+    case "raid_answer": {
+      const answer = await raidAnswer(db, guildId, requesterId, form);
+      return answer ? { ok: true, input: answer } : { ok: false, error: "not_found" };
     }
     case "raid_signup":
     case "raid_withdraw": {

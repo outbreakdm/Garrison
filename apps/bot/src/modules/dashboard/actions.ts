@@ -14,6 +14,7 @@ import {
   getOpsTimezone,
   getQmBuildByVersion,
   getRoleMenuPost,
+  getRosterTeam,
   grantedLevel,
   listSignups,
   MANAGER_REQUEST_KINDS,
@@ -46,9 +47,9 @@ import {
 } from "../gatehouse/service.js";
 import { doGiveawayAction, doStartGiveaway } from "../giveaways/service.js";
 import { healthFor } from "../health/command.js";
-import { opsCard, shortages } from "../ops/card.js";
+import { shortages } from "../ops/card.js";
 import { MAX_SCHEDULED } from "../ops/commands.js";
-import { announcePromotion, refreshOpsCard } from "../ops/service.js";
+import { announcePromotion, raidCard, refreshOpsCard } from "../ops/service.js";
 import { parseWhen } from "../ops/when.js";
 import { applyBotProfile } from "../profile/apply.js";
 import { undoBuild, undoSettingsNote } from "../quartermaster/service.js";
@@ -74,6 +75,7 @@ import {
   doQmEdit,
   doQmPlan,
   doQmRemove,
+  doRaidAnswer,
   doRaidSignup,
   doRaidWithdraw,
 } from "./more.js";
@@ -114,6 +116,8 @@ const createRaid = z.object({
   roles: z.string().trim().min(1).max(120),
   note: z.string().trim().max(200).nullable(),
   repeatWeekly: z.boolean(),
+  style: z.enum(["simple", "organized"]).optional(),
+  teamId: uuid.nullable().optional(),
 });
 const moveSignup = z.object({ eventId: uuid, userId: snowflake, role: z.string().min(1).max(40) });
 const callSignups = z.object({ eventId: uuid });
@@ -187,6 +191,7 @@ const SELF_SERVICE = new Set([
   "lfg_leave",
   "raid_signup",
   "raid_withdraw",
+  "raid_answer",
   // Buying from the shop on the member page: only the buyer's own coins.
   "economy_buy",
 ]);
@@ -234,6 +239,8 @@ async function doCreateRaid(ctx: BotContext, guild: Guild, member: GuildMember, 
   if (!slots.ok) return fail(slots.error);
   if ((await countScheduledOps(ctx.db, guild.id)) >= MAX_SCHEDULED)
     return fail(`This server has ${MAX_SCHEDULED} raids scheduled. Cancel one first.`);
+  const team = p.data.teamId ? await getRosterTeam(ctx.db, guild.id, p.data.teamId) : null;
+  if (p.data.teamId && !team) return fail("That roster team is gone.");
   const event = await createOpsEvent(ctx.db, {
     guildId: guild.id,
     channelId: channel.id,
@@ -244,9 +251,11 @@ async function doCreateRaid(ctx: BotContext, guild: Guild, member: GuildMember, 
     startsAt: when.value,
     timezone: tz,
     repeatWeekly: p.data.repeatWeekly,
+    style: team || p.data.style === "organized" ? "organized" : "simple",
+    teamId: team?.id ?? null,
   });
   if (!event) return fail("Garrison couldn't schedule that. Try again.");
-  const sent = await channel.send(cardMessage(opsCard(event, []))).catch(() => null);
+  const sent = await channel.send(cardMessage(await raidCard(ctx, event, []))).catch(() => null);
   if (!sent) return fail("The raid is saved, but posting the card failed.");
   await setOpsMessage(ctx.db, event.id, sent.id);
   return { ok: true, message: `Posted ${p.data.title} in #${channel.name}.` };
@@ -626,6 +635,8 @@ export async function runDashboardAction(
       return doRaidSignup(ctx, guild, member, action.payload);
     case "raid_withdraw":
       return doRaidWithdraw(ctx, guild, member, action.payload);
+    case "raid_answer":
+      return doRaidAnswer(ctx, guild, member, action.payload);
     case "qm_plan":
       return doQmPlan(ctx, guild, member, action.payload);
     case "qm_chat":

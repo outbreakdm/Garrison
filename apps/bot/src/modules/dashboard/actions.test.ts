@@ -1,6 +1,8 @@
 import {
+  addRosterCharacter,
   applySettingsChange,
   createLfgPost,
+  createOpsEvent,
   createQmPlan,
   getGatehouseSettings,
   getLfgPost,
@@ -293,6 +295,57 @@ describe("dashboard actions, run by the bot", () => {
     expect((await listSignups(ctx.db, event.id)).some((s) => s.userId === OWNER)).toBe(false);
     const again = await run(OWNER, { kind: "raid_withdraw", payload: { eventId: event.id } });
     expect(again).toMatchObject({ status: "failed", message: "You're not signed up." });
+  });
+
+  it("saves the requester's answer to an organized raid, with their own character only", async () => {
+    const [simple] = await listUpcomingOps(ctx.db, G);
+    if (!simple) throw new Error("no event");
+    const event = await createOpsEvent(ctx.db, {
+      guildId: G,
+      channelId: simple.channelId,
+      hostId: simple.hostId,
+      title: "Mythic night",
+      note: null,
+      slots: simple.slots,
+      startsAt: simple.startsAt,
+      timezone: simple.timezone,
+      repeatWeekly: false,
+      style: "organized",
+      teamId: null,
+    });
+    if (!event) throw new Error("no organized raid");
+    const mine = await addRosterCharacter(
+      ctx.db,
+      G,
+      { id: OWNER, name: "owner" },
+      { name: "Thrall", className: "Shaman", spec: "Restoration", role: "Healer" },
+    );
+    if (!mine.ok) throw new Error(mine.error);
+    const answer = (characterId: string | null, role: string | null) =>
+      run(OWNER, {
+        kind: "raid_answer",
+        payload: { eventId: event.id, availability: "coming", characterId, role },
+      });
+    expect(await answer(mine.value.id, null)).toMatchObject({
+      status: "done",
+      message: "You answered Coming for Mythic night.",
+    });
+    expect((await listSignups(ctx.db, event.id)).find((x) => x.userId === OWNER)).toMatchObject({
+      role: "Healer",
+      availability: "coming",
+      characterId: mine.value.id,
+      spec: "Thrall · Restoration Shaman",
+    });
+    expect(await answer("00000000-0000-4000-8000-000000000000", null)).toMatchObject({
+      status: "failed",
+      message: "That character isn't yours anymore.",
+    });
+    expect(
+      await run(OWNER, {
+        kind: "raid_answer",
+        payload: { eventId: simple.id, availability: "coming", characterId: null, role: "Healer" },
+      }),
+    ).toMatchObject({ status: "failed", message: "This raid takes signups by role." });
   });
 
   it("holds a moderator to the permission the action needs", async () => {

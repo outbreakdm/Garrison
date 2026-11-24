@@ -1,9 +1,11 @@
 import {
+  AVAILABILITY_LABELS,
   getCalendarToken,
   getOpsTimezone,
   listActiveMembers,
   listOpenLfg,
   listOpsForCalendar,
+  listRosterCharacters,
   listSignups,
   listUpcomingOps,
 } from "@garrison/db";
@@ -14,6 +16,7 @@ import { getDb } from "@/lib/db";
 import { env } from "@/lib/env";
 import { readFlash } from "@/lib/flash";
 import { memberSpace } from "@/lib/member";
+import { AnswerForm } from "../../servers/[guildId]/rally/OrganizedRaid";
 import { playRequest } from "./actions";
 import { MyCharacters } from "./MyCharacters";
 
@@ -37,9 +40,10 @@ export default async function PlayPage({ params }: { params: Promise<{ guildId: 
     getCalendarToken(db, guild.id),
   ]);
   const feedUrl = feed ? `${env().APP_URL}/calendar/${guild.id}/${feed}.ics` : null;
-  const [members, signups] = await Promise.all([
+  const [members, signups, myCharacters] = await Promise.all([
     Promise.all(groups.map((g) => listActiveMembers(db, g.id))),
     Promise.all(raids.slice(0, 20).map((r) => listSignups(db, r.id))),
+    listRosterCharacters(db, guild.id, [session.userId]),
   ]);
   const me = session.userId;
   const hidden = (kind: string, id: string) => (
@@ -139,6 +143,43 @@ export default async function PlayPage({ params }: { params: Promise<{ guildId: 
             {raids.slice(0, 20).map((r, i) => {
               const list = signups[i] ?? [];
               const mine = list.find((s) => s.userId === me);
+              if (r.style === "organized")
+                return (
+                  <li key={r.id} className="gw-row">
+                    <span className="gw-row__main">
+                      <span className="ticket-row__topic">{r.title}</span>
+                      <span className="ticket-row__who">
+                        {formatTime(r.startsAt, r.timezone)} · officers pick the lineup ·{" "}
+                        {
+                          list.filter(
+                            (x) => x.availability === "coming" || x.availability === "late",
+                          ).length
+                        }{" "}
+                        coming
+                      </span>
+                    </span>
+                    <span className={`g-badge ${mine ? "g-badge--go" : "g-badge--off"}`}>
+                      {mine?.availability
+                        ? `${AVAILABILITY_LABELS[mine.availability as "coming"]}${mine.role ? ` · ${mine.role}` : ""}`
+                        : "No answer yet"}
+                    </span>
+                    <span className="gw-row__actions">
+                      <AnswerForm
+                        action={playRequest}
+                        hidden={
+                          <>
+                            <input type="hidden" name="guildId" value={guild.id} />
+                            <input type="hidden" name="kind" value="raid_answer" />
+                            <input type="hidden" name="eventId" value={r.id} />
+                          </>
+                        }
+                        raid={r}
+                        mine={mine}
+                        characters={myCharacters}
+                      />
+                    </span>
+                  </li>
+                );
               return (
                 <li key={r.id} className="gw-row">
                   <span className="gw-row__main">

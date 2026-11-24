@@ -1,5 +1,6 @@
 import { and, count, desc, eq, getTableColumns, gte, inArray, lt, sql } from "drizzle-orm";
 import type { Db } from "../client";
+import type { Availability } from "../raids";
 import {
   type AntiNukePayload,
   type BotProfilePayload,
@@ -53,6 +54,15 @@ export type QueueInput =
   | { kind: "lfg_leave"; payload: IdPayload }
   | { kind: "raid_signup"; payload: RaidSignupPayload }
   | { kind: "raid_withdraw"; payload: RaidWithdrawPayload }
+  | {
+      kind: "raid_answer";
+      payload: {
+        eventId: string;
+        availability: Availability;
+        characterId: string | null;
+        role: string | null;
+      };
+    }
   | { kind: "qm_plan"; payload: QmPlanPayload }
   | { kind: "qm_chat"; payload: QmChatPayload }
   | { kind: "qm_apply"; payload: IdPayload }

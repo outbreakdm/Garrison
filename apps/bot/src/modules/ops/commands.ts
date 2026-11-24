@@ -4,6 +4,7 @@ import {
   createOpsEvent,
   getOpsEvent,
   getOpsTimezone,
+  listRosterTeams,
   listSignups,
   listUpcomingOps,
   setOpsMessage,
@@ -24,8 +25,9 @@ import { cardEdit, cardReply, ts } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { safeText } from "../../lib/text.js";
 import { parseSlots } from "../rally/parse.js";
-import { OPS_PREFIX, opsCard } from "./card.js";
-import { announcePromotion, refreshOpsCard } from "./service.js";
+import { answerButton } from "./answers.js";
+import { OPS_PREFIX } from "./card.js";
+import { announcePromotion, raidCard, refreshOpsCard } from "./service.js";
 import { parseTimeZone, parseWhen } from "./when.js";
 
 /** Scheduled events per server. Raids are planned weeks ahead; this caps abuse, not use. */
@@ -75,6 +77,21 @@ export const raid: Command = {
         )
         .addStringOption((o) =>
           o.setName("note").setDescription("Requirements or details").setMaxLength(200),
+        )
+        .addStringOption((o) =>
+          o
+            .setName("style")
+            .setDescription("How people sign up (default: Simple)")
+            .addChoices(
+              { name: "Simple: first come, first served by role", value: "simple" },
+              { name: "Organized: members answer, officers pick the lineup", value: "organized" },
+            ),
+        )
+        .addStringOption((o) =>
+          o
+            .setName("team")
+            .setDescription("Organized: the roster team it's for")
+            .setAutocomplete(true),
         ),
     )
     .addSubcommand((s) => s.setName("list").setDescription("Show upcoming raids"))
@@ -91,6 +108,16 @@ export const raid: Command = {
         ),
     )
     .toJSON(),
+  async autocomplete(interaction, ctx) {
+    const typed = interaction.options.getFocused().toLowerCase();
+    const teams = await listRosterTeams(ctx.db, interaction.guildId);
+    await interaction.respond(
+      teams
+        .filter((t) => t.name.toLowerCase().includes(typed))
+        .slice(0, 25)
+        .map((t) => ({ name: t.name, value: t.id })),
+    );
+  },
   async execute(interaction, ctx) {
     const guild = interaction.guild;
     await ensureGuild(ctx, guild);
@@ -166,6 +193,19 @@ export const raid: Command = {
       });
       return;
     }
+    // A team makes it organized: its members answer, and officers pick the lineup.
+    const askedTeam = interaction.options.getString("team");
+    const teams = askedTeam ? await listRosterTeams(ctx.db, guild.id) : [];
+    const team =
+      teams.find((t) => t.id === askedTeam) ??
+      teams.find((t) => t.name.toLowerCase() === askedTeam?.toLowerCase()) ??
+      null;
+    if (askedTeam && !team) {
+      await interaction.reply({ content: "There's no roster team by that name.", ...ephemeral });
+      return;
+    }
+    const style =
+      team || interaction.options.getString("style") === "organized" ? "organized" : "simple";
 
     const event = await createOpsEvent(ctx.db, {
       guildId: guild.id,
@@ -177,13 +217,15 @@ export const raid: Command = {
       startsAt: when.value,
       timezone: tz.value,
       repeatWeekly: interaction.options.getBoolean("repeat_weekly") ?? false,
+      style,
+      teamId: team?.id ?? null,
     });
     if (!event) {
       await interaction.reply({ content: "I couldn't schedule that. Try again.", ...ephemeral });
       return;
     }
     const response = await interaction.reply({
-      ...cardReply(opsCard(event, []), { ephemeral: false }),
+      ...cardReply(await raidCard(ctx, event, []), { ephemeral: false }),
       withResponse: true,
     });
     const sent = response.resource?.message;
@@ -196,6 +238,8 @@ export const opsButtons: ButtonHandler = {
   async execute(interaction, ctx) {
     const [, action, eventId, index] = interaction.customId.split(":");
     if (!eventId || !UUID.test(eventId)) return;
+
+    if (action === "avail") return answerButton(interaction, ctx, eventId, index ?? "");
 
     if (action === "join") {
       // Ask for an optional class or spec. The signup happens when the form comes back.
@@ -235,10 +279,7 @@ export const opsButtons: ButtonHandler = {
       }
       const cancelled = await cancelOpsEvent(ctx.db, event.id);
       await interaction.update(
-        cardEdit(
-          interaction.message,
-          opsCard(cancelled ?? event, await listSignups(ctx.db, event.id)),
-        ),
+        cardEdit(interaction.message, await raidCard(ctx, cancelled ?? event)),
       );
       return;
     }
@@ -254,7 +295,7 @@ export const opsButtons: ButtonHandler = {
         return;
       }
       await interaction.update(
-        cardEdit(interaction.message, opsCard(result.event, result.signups)),
+        cardEdit(interaction.message, await raidCard(ctx, result.event, result.signups)),
       );
       if (result.promoted)
         await announcePromotion(interaction.guild, result.event, result.promoted);

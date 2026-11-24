@@ -20,7 +20,17 @@ describe("createRaidForm", () => {
       roles: "Tank 4, Healer 8, DPS 28",
       note: null,
       repeatWeekly: true,
+      style: "simple",
+      teamId: null,
     });
+    expect(
+      createRaidForm.parse({
+        ...ok,
+        style: "organized",
+        teamId: "11111111-1111-4111-8111-111111111111",
+      }),
+    ).toMatchObject({ style: "organized", teamId: "11111111-1111-4111-8111-111111111111" });
+    expect(createRaidForm.parse({ ...ok, style: "chaos" })).toMatchObject({ style: "simple" });
   });
   it.each([
     ["channelId", "general"],

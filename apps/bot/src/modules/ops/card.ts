@@ -1,5 +1,11 @@
 import type { EmbedTone } from "@garrison/brand";
-import { capacity, type OpsEvent, type OpsSignup } from "@garrison/db";
+import {
+  AVAILABILITY_LABELS,
+  capacity,
+  isAvailability,
+  type OpsEvent,
+  type OpsSignup,
+} from "@garrison/db";
 import { ButtonBuilder, ButtonStyle } from "discord.js";
 import { type Card, capped, ts } from "../../lib/card.js";
 import { safeText } from "../../lib/text.js";
@@ -20,11 +26,109 @@ export function shortages(event: OpsEvent, signups: OpsSignup[]) {
 
 const who = (s: OpsSignup) => (s.spec ? `<@${s.userId}> · ${safeText(s.spec)}` : `<@${s.userId}>`);
 
+/** Counted toward a role in an organized raid: coming or late (tentative shows, but isn't counted). */
+const counted = (s: OpsSignup) => s.availability === "coming" || s.availability === "late";
+
+/**
+ * An organized raid's card: who's coming with which character, by role; who's tentative or
+ * late; how many can't; and (for a team's raid) who hasn't answered. Members answer with the
+ * four buttons; officers pick the lineup on the dashboard.
+ */
+export function organizedCard(event: OpsEvent, signups: OpsSignup[], waiting: string[] = []): Card {
+  const scheduled = event.status === "scheduled";
+  const answered = signups.filter((s) => isAvailability(s.availability));
+  const cant = answered.filter((s) => s.availability === "cant");
+  const short = event.slots
+    .map((g) => ({
+      name: g.name,
+      missing: g.count - answered.filter((s) => s.role === g.name && counted(s)).length,
+    }))
+    .filter((g) => g.missing > 0);
+  const shortText = short.map((g) => `${g.missing} ${g.name} short`).join(", ");
+  const status =
+    event.status === "cancelled"
+      ? "Canceled"
+      : event.status === "done"
+        ? "Done"
+        : short.length
+          ? `${short.reduce((t, g) => t + g.missing, 0)} short`
+          : "Ready";
+  const tone: EmbedTone =
+    event.status === "cancelled"
+      ? "caution"
+      : event.status === "done"
+        ? "intel"
+        : short.length
+          ? "caution"
+          : "go";
+  const details = [`Host <@${event.hostId}>`, "officers pick the lineup"];
+  if (event.repeatWeekly) details.push("repeats weekly");
+  const blocks: Card["blocks"] = [
+    {
+      text: [details.join(" · "), event.note ? safeText(event.note) : null, shortText || null]
+        .filter(Boolean)
+        .join("\n"),
+    },
+    "divider",
+  ];
+  const line = (s: OpsSignup) =>
+    `${who(s)}${s.availability === "coming" ? "" : ` · ${AVAILABILITY_LABELS[s.availability as "late"].toLowerCase()}`}`;
+  const order = { coming: 0, late: 1, tentative: 2 } as Record<string, number>;
+  for (const g of event.slots) {
+    const inRole = answered
+      .filter((s) => s.role === g.name && s.availability !== "cant")
+      .sort((a, b) => (order[a.availability ?? ""] ?? 3) - (order[b.availability ?? ""] ?? 3));
+    const n = inRole.filter(counted).length;
+    const lines = capped(inRole.map(line), SHOWN_PER_ROLE);
+    blocks.push({
+      text: [`**${safeText(g.name)}** ${n}/${g.count}`, ...lines].join("\n"),
+    });
+  }
+  const tail = [
+    cant.length ? `**Can't** ${cant.length}` : null,
+    waiting.length
+      ? `**No reply yet** ${waiting.length}\n${capped(
+          waiting.map((id) => `<@${id}>`),
+          15,
+        ).join(" ")}`
+      : null,
+  ].filter(Boolean);
+  if (tail.length) blocks.push({ text: tail.join("\n") });
+
+  const answer = (key: "coming" | "tentative" | "late" | "cant", style: ButtonStyle) =>
+    new ButtonBuilder()
+      .setCustomId(`${OPS_PREFIX}:avail:${event.id}:${key}`)
+      .setLabel(AVAILABILITY_LABELS[key])
+      .setStyle(style);
+  return {
+    tone,
+    title: safeText(event.title),
+    status,
+    lead: `${ts(event.startsAt, "F")} · ${ts(event.startsAt, "R")}`,
+    blocks,
+    actions: scheduled
+      ? [
+          answer("coming", ButtonStyle.Success),
+          answer("tentative", ButtonStyle.Secondary),
+          answer("late", ButtonStyle.Secondary),
+          answer("cant", ButtonStyle.Secondary),
+          new ButtonBuilder()
+            .setCustomId(`${OPS_PREFIX}:cancel:${event.id}`)
+            .setLabel("Cancel raid")
+            .setStyle(ButtonStyle.Danger),
+        ]
+      : undefined,
+    module: "ops",
+    ref: `${answered.filter(counted).length}/${capacity(event.slots)}`,
+  };
+}
+
 /**
  * The raid card: when, who hosts, then one block per role (who's in, how many seats
  * are open) with its Sign up button beside it. A full role still signs you up: to the bench.
  */
-export function opsCard(event: OpsEvent, signups: OpsSignup[]): Card {
+export function opsCard(event: OpsEvent, signups: OpsSignup[], waiting: string[] = []): Card {
+  if (event.style === "organized") return organizedCard(event, signups, waiting);
   const seated = signups.filter((s) => !s.bench);
   const bench = signups.filter((s) => s.bench);
   const total = capacity(event.slots);

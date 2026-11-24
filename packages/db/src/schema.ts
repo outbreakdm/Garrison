@@ -396,6 +396,13 @@ export const opsEvents = pgTable(
     timezone: text("timezone").notNull(),
     repeatWeekly: boolean("repeat_weekly").notNull().default(false),
     status: opsStatus("status").notNull().default("scheduled"),
+    /**
+     * "simple": first come, first served by role, a full role benches you. "organized": members
+     * answer Coming, Tentative, Late or Can't with a character, and officers pick the lineup.
+     */
+    style: text("style").notNull().default("simple"),
+    /** The roster team it's for: its members show as "No reply yet" until they answer. */
+    teamId: uuid("team_id").references(() => rosterTeams.id, { onDelete: "set null" }),
     reminded24hAt: timestamp("reminded_24h_at", { withTimezone: true }),
     reminded30mAt: timestamp("reminded_30m_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -407,6 +414,7 @@ export const opsEvents = pgTable(
     uniqueIndex("ops_events_one_scheduled_per_series")
       .on(t.seriesId)
       .where(sql`${t.status} = 'scheduled'`),
+    check("ops_events_style", sql`${t.style} IN ('simple', 'organized')`),
   ],
 ).enableRLS();
 
@@ -421,12 +429,27 @@ export const opsSignups = pgTable(
     role: text("role").notNull(),
     spec: text("spec"),
     bench: boolean("bench").notNull().default(false),
+    /**
+     * Organized raids: coming, tentative, late or cant. A "cant" answer is kept on the bench, so
+     * reminders and attendance (which count only those not benched) leave it out.
+     */
+    availability: text("availability"),
+    /** Organized raids: the roster character they're bringing. */
+    characterId: uuid("character_id").references(() => rosterCharacters.id, {
+      onDelete: "set null",
+    }),
     signedUpAt: timestamp("signed_up_at", { withTimezone: true }).notNull().defaultNow(),
     leftAt: timestamp("left_at", { withTimezone: true }),
     /** Showed up (seen in voice, or marked by staff). Null: not tracked or not decided yet. */
     attended: boolean("attended"),
   },
-  (t) => [primaryKey({ columns: [t.eventId, t.userId] })],
+  (t) => [
+    primaryKey({ columns: [t.eventId, t.userId] }),
+    check(
+      "ops_signups_availability",
+      sql`${t.availability} IS NULL OR ${t.availability} IN ('coming', 'tentative', 'late', 'cant')`,
+    ),
+  ],
 ).enableRLS();
 
 export type OpsEvent = typeof opsEvents.$inferSelect;
@@ -1423,6 +1446,7 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "post_shop_panel",
   "post_stream_panel",
   "stream_request_decide",
+  "raid_answer",
 ]);
 
 /**
@@ -1472,6 +1496,10 @@ export interface CreateRaidPayload {
   roles: string;
   note: string | null;
   repeatWeekly: boolean;
+  /** Organized raids ask members to answer; officers pick the lineup. Default simple. */
+  style?: "simple" | "organized";
+  /** The roster team it's for (makes it organized). */
+  teamId?: string | null;
 }
 export interface MoveSignupPayload {
   eventId: string;

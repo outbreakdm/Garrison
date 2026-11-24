@@ -18,9 +18,11 @@ then updates **Status** and the **Log** before stopping.
      Built, not deployed: **migration 0099** (`roster_teams`, `roster_members`,
      `roster_characters`); **deploy with register_commands** (`/roster` now has subcommands; the
      old view is `/roster accounts`).
-  2. [ ] Organized raids: a raid's signup style, Simple (as today) or Organized. Organized asks
+  2. [x] Organized raids: a raid's signup style, Simple (as today) or Organized. Organized asks
      Coming, Tentative, Late or Can't, and which character; a raid can be for a team, whose
      members show as "No reply yet" until they answer.
+     Built, not deployed: **migration 0100** (`ops_events.style`, `team_id`;
+     `ops_signups.availability`, `character_id`; request kind `raid_answer`).
   3. [ ] Lineup builder on the dashboard: groups (how many and how big, per raid; WoW preset 8 of
      5), drag players into a group or the bench, Fill by role, save a layout and reuse it, and
      Post lineup updates the card with the groups and pings the players picked.
@@ -1801,3 +1803,15 @@ Decided (2026-11-12, owner):
   bot reads teams and edits members' own characters). Checked in the local preview (team, find
   and add, character with the WoW role filled in, status and note, the player page as a member);
   `/roster` only by typecheck. Not deployed.
+- 2026-11-24: Organized raids (phase 2 of raid rosters and lineups). A raid's signup style is
+  Simple (as before) or Organized: `/raid create style:Organized` or `team:`, or Signups and Roster
+  team on the dashboard's Create raid. Its card asks Coming, Tentative, Late or Can't; Garrison
+  answers with the member's main (or last) character when its role is in the raid, and offers
+  dropdowns to bring another character or pick a role. The card shows each role's answers with
+  characters (Coming and Late count, Tentative shows), how many can't, and a team's members who
+  haven't answered (not Social). Can't is stored on the bench, so reminders and attendance skip
+  it with no other change. The Raids tab and the player page answer the same way (`raid_answer`,
+  re-checked by the bot: the member's own character, a role the raid has). Weekly repeats keep
+  the style and team. Migration `0100_organized_raids`. Checked in the local preview (the Raids
+  tab's organized card and answer form, queued); the Discord card and dropdowns by tests and
+  typecheck only. Not deployed.

@@ -20,6 +20,7 @@ import { giveaway } from "../modules/giveaways/commands.js";
 import { giveawayButtons, giveawayForms } from "../modules/giveaways/handlers.js";
 import { health } from "../modules/health/command.js";
 import { logs } from "../modules/ledger/commands.js";
+import { opsSelects } from "../modules/ops/answers.js";
 import { opsButtons, opsModals, raid } from "../modules/ops/commands.js";
 import { qm, qmButtons } from "../modules/quartermaster/commands.js";
 import { lfg, rallyButtons } from "../modules/rally/commands.js";
@@ -84,7 +85,7 @@ export const buttons: ButtonHandler[] = [
   decideApplicationButtons,
   triviaButtons,
 ];
-export const selects: SelectHandler[] = [roleMenuSelects, shopPickSelects, roomPicks];
+export const selects: SelectHandler[] = [roleMenuSelects, shopPickSelects, roomPicks, opsSelects];
 export const modals: ModalHandler[] = [
   opsModals,
   ticketModals,

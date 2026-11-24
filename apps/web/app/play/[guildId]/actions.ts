@@ -30,6 +30,7 @@ import { getDb } from "@/lib/db";
 import { isGuildMember } from "@/lib/discord";
 import { flashBack } from "@/lib/flash";
 import { memberCheck } from "@/lib/member";
+import { raidAnswer } from "@/lib/raid-answer";
 import { isSnowflake } from "@/lib/security";
 import { getSession } from "@/lib/session";
 
@@ -76,6 +77,8 @@ export async function playRequest(form: FormData) {
         };
     }
   }
+  // An organized raid's answer: the member's own, with their own character (checked again by the bot).
+  if (kind === "raid_answer") input = await raidAnswer(db, guild.id, session.userId, form);
   if (!input) return flashBack(path, { error: "That has changed. Refresh and try again." });
   const queued = await queueDashboardAction(
     db,

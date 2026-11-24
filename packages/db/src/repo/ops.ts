@@ -1,6 +1,7 @@
 import { and, asc, eq, gt, isNull, lte, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { isLanguage, type Language } from "../i18n";
+import { type Availability, isRaidStyle, type RaidStyle, slotFor } from "../raids";
 import {
   type LfgSlotGroup,
   type OpsEvent,
@@ -76,6 +77,8 @@ export interface CreateOpsEventInput {
   timezone: string;
   repeatWeekly: boolean;
   seriesId?: string;
+  style?: RaidStyle;
+  teamId?: string | null;
 }
 
 export async function createOpsEvent(db: Db, input: CreateOpsEventInput) {
@@ -226,6 +229,85 @@ export async function withdraw(db: Db, eventId: string, userId: string): Promise
   });
 }
 
+export type AnswerResult =
+  | { ok: true; event: OpsEvent; signups: OpsSignup[] }
+  | { ok: false; reason: "not_found" | "closed" | "not_organized" | "no_such_role" | "unchanged" };
+
+/**
+ * An answer to an organized raid: coming, tentative or late with a role (and the character
+ * they're bringing), or can't. Can't is kept on the bench, so reminders and attendance skip it.
+ */
+export async function answerRaid(
+  db: Db,
+  eventId: string,
+  userId: string,
+  answer: {
+    availability: Availability;
+    role: string | null;
+    spec: string | null;
+    characterId: string | null;
+  },
+): Promise<AnswerResult> {
+  return db.transaction(async (tx) => {
+    const [event] = await tx
+      .select()
+      .from(opsEvents)
+      .where(eq(opsEvents.id, eventId))
+      .for("update");
+    if (!event) return { ok: false, reason: "not_found" };
+    if (event.status !== "scheduled") return { ok: false, reason: "closed" };
+    if (event.style !== "organized") return { ok: false, reason: "not_organized" };
+    const cant = answer.availability === "cant";
+    const role = cant ? "" : slotFor(event.slots, answer.role);
+    if (role === null) return { ok: false, reason: "no_such_role" };
+    const spec = cant ? null : answer.spec?.slice(0, 60) || null;
+    const characterId = cant ? null : answer.characterId;
+    const [mine] = await tx
+      .select()
+      .from(opsSignups)
+      .where(and(eq(opsSignups.eventId, eventId), eq(opsSignups.userId, userId)));
+    if (
+      mine &&
+      !mine.leftAt &&
+      mine.availability === answer.availability &&
+      mine.role === role &&
+      mine.characterId === characterId &&
+      mine.spec === spec
+    )
+      return { ok: false, reason: "unchanged" };
+    await tx
+      .insert(opsSignups)
+      .values({
+        eventId,
+        userId,
+        role,
+        spec,
+        bench: cant,
+        availability: answer.availability,
+        characterId,
+      })
+      .onConflictDoUpdate({
+        target: [opsSignups.eventId, opsSignups.userId],
+        set: {
+          role,
+          spec,
+          availability: answer.availability,
+          characterId,
+          // Can't sits out; any other answer is back in the pool for the officers' lineup.
+          bench: cant,
+          leftAt: null,
+          signedUpAt: mine && !mine.leftAt ? mine.signedUpAt : new Date(),
+        },
+      });
+    const signups = await tx
+      .select()
+      .from(opsSignups)
+      .where(and(eq(opsSignups.eventId, eventId), isNull(opsSignups.leftAt)))
+      .orderBy(asc(opsSignups.signedUpAt));
+    return { ok: true, event, signups };
+  });
+}
+
 /** Cancel a scheduled event. Returns null if it wasn't scheduled. */
 export async function cancelOpsEvent(db: Db, id: string) {
   const [row] = await db
@@ -296,6 +378,8 @@ export async function finishPastEvents(db: Db, now = new Date()) {
       timezone: event.timezone,
       repeatWeekly: true,
       seriesId: event.seriesId,
+      style: isRaidStyle(event.style) ? event.style : "simple",
+      teamId: event.teamId,
     });
     if (created) next.push(created);
   }

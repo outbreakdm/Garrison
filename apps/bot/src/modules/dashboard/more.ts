@@ -1,5 +1,7 @@
 import {
+  AVAILABILITY_LABELS,
   aiTier,
+  answerRaid,
   createLfgPost,
   createQmPlan,
   getLfgPost,
@@ -9,6 +11,7 @@ import {
   latestWaitingQmBuild,
   leaveLfg,
   listActiveMembers,
+  listRosterCharacters,
   noteDashboardAction,
   qmChangeCount,
   renderWording,
@@ -23,6 +26,7 @@ import type { BotContext } from "../../commands/types.js";
 import { cardMessage } from "../../lib/card.js";
 import { formatDuration, MAX_TIMEOUT_SECONDS } from "../../lib/duration.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
+import { characterLabel } from "../ops/answers.js";
 import { announcePromotion, refreshOpsCard } from "../ops/service.js";
 import { chatTurn } from "../quartermaster/chat.js";
 import { applyHandChange } from "../quartermaster/hand.js";
@@ -89,6 +93,12 @@ const raidSignup = z.object({
   spec: z.string().trim().max(20).nullable(),
 });
 const raidWithdraw = z.object({ eventId: uuid });
+const raidAnswer = z.object({
+  eventId: uuid,
+  availability: z.enum(["coming", "tentative", "late", "cant"]),
+  characterId: uuid.nullable(),
+  role: z.string().max(40).nullable(),
+});
 const qmChat = z.object({
   message: z.string().trim().min(1).max(REQUEST_MAX),
   threadId: uuid.optional(),
@@ -332,6 +342,49 @@ export async function doRaidSignup(
     message: res.benched
       ? `${p.data.role} is full, so you're on the bench for ${event.title}.`
       : `You're signed up for ${event.title} as ${p.data.role}.`,
+  };
+}
+
+/**
+ * An answer to an organized raid from the player page: only the requester's own answer and only
+ * their own character, re-checked here.
+ */
+export async function doRaidAnswer(
+  ctx: BotContext,
+  guild: Guild,
+  member: GuildMember,
+  raw: unknown,
+) {
+  const p = raidAnswer.safeParse(raw);
+  if (!p.success) return fail("That request wasn't valid.");
+  const event = await getOpsEvent(ctx.db, guild.id, p.data.eventId);
+  if (event?.status !== "scheduled") return fail("That raid isn't scheduled anymore.");
+  const character = p.data.characterId
+    ? (await listRosterCharacters(ctx.db, guild.id, [member.id])).find(
+        (c) => c.id === p.data.characterId,
+      )
+    : null;
+  if (p.data.characterId && !character) return fail("That character isn't yours anymore.");
+  const res = await answerRaid(ctx.db, event.id, member.id, {
+    availability: p.data.availability,
+    role: p.data.role ?? character?.role ?? null,
+    spec: character ? characterLabel(character) : null,
+    characterId: character?.id ?? null,
+  });
+  if (!res.ok)
+    return fail(
+      res.reason === "no_such_role"
+        ? "Pick a role this raid has."
+        : res.reason === "unchanged"
+          ? "You've already answered like that."
+          : res.reason === "not_organized"
+            ? "This raid takes signups by role."
+            : "That raid isn't open.",
+    );
+  await refreshOpsCard(ctx, guild, res.event, res.signups);
+  return {
+    ok: true,
+    message: `You answered ${AVAILABILITY_LABELS[p.data.availability]} for ${event.title}.`,
   };
 }
 

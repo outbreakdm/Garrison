@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "./client";
+import { slotFor } from "./raids";
 import { upsertGuild } from "./repo/guilds";
-import { createOpsEvent } from "./repo/ops";
+import { answerRaid, createOpsEvent } from "./repo/ops";
 import {
   addRosterCharacter,
   addRosterMember,
@@ -230,5 +231,91 @@ describe("the roster", () => {
     );
     expect(denied).toMatch(/permission denied/);
     await exec("RESET ROLE");
+  });
+});
+
+describe("answering an organized raid", () => {
+  let db: Db;
+  let exec: (sql: string) => Promise<unknown>;
+  let close: () => Promise<void>;
+
+  beforeAll(async () => {
+    ({ db, exec, close } = await createTestDb());
+    await exec("SET ROLE garrison_bot");
+    await upsertGuild(db, { id: G, name: "Iron Vanguard" });
+  });
+  afterAll(async () => {
+    await exec("RESET ROLE");
+    await close();
+  });
+
+  const raid = (style: "simple" | "organized") =>
+    createOpsEvent(db, {
+      guildId: G,
+      channelId: "980000000000000041",
+      hostId: KEL.id,
+      title: `${style} night`,
+      note: null,
+      slots: [
+        { name: "Tank", count: 2 },
+        { name: "Healer", count: 4 },
+      ],
+      startsAt: new Date(Date.now() + 86_400_000),
+      timezone: "UTC",
+      repeatWeekly: false,
+      style,
+    });
+
+  it("matches the role to the raid's, keeps can't on the bench, and says when nothing changed", async () => {
+    expect(slotFor([{ name: "Healer", count: 1 }], " healer ")).toBe("Healer");
+    expect(slotFor([{ name: "Healer", count: 1 }], "DPS")).toBeNull();
+    const event = await raid("organized");
+    if (!event) throw new Error("no raid");
+    const coming = await answerRaid(db, event.id, KEL.id, {
+      availability: "coming",
+      role: "tank",
+      spec: "Thrall · Protection Warrior",
+      characterId: null,
+    });
+    expect(coming).toMatchObject({
+      ok: true,
+      signups: [{ userId: KEL.id, role: "Tank", bench: false, availability: "coming" }],
+    });
+    expect(
+      await answerRaid(db, event.id, KEL.id, {
+        availability: "coming",
+        role: "Tank",
+        spec: "Thrall · Protection Warrior",
+        characterId: null,
+      }),
+    ).toEqual({ ok: false, reason: "unchanged" });
+    expect(
+      await answerRaid(db, event.id, ROOK.id, {
+        availability: "late",
+        role: "DPS",
+        spec: null,
+        characterId: null,
+      }),
+    ).toEqual({ ok: false, reason: "no_such_role" });
+    const cant = await answerRaid(db, event.id, KEL.id, {
+      availability: "cant",
+      role: "Tank",
+      spec: "x",
+      characterId: null,
+    });
+    expect(cant).toMatchObject({
+      ok: true,
+      signups: [{ userId: KEL.id, role: "", bench: true, availability: "cant", spec: null }],
+    });
+    const simple = await raid("simple");
+    if (!simple) throw new Error("no raid");
+    expect(
+      await answerRaid(db, simple.id, KEL.id, {
+        availability: "coming",
+        role: "Tank",
+        spec: null,
+        characterId: null,
+      }),
+    ).toEqual({ ok: false, reason: "not_organized" });
   });
 });

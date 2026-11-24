@@ -6,6 +6,7 @@ import {
   entitlements,
   getGuildPlan,
   getOpsEvent,
+  getRosterTeam,
   listSignups,
   type QueueInput,
   queueDashboardAction,
@@ -111,7 +112,17 @@ export async function markAttendance(form: FormData) {
 
 export async function requestCreateRaid(form: FormData) {
   const { guild } = await authorize(form);
-  const keys = ["channelId", "title", "date", "time", "roles", "note", "repeatWeekly"];
+  const keys = [
+    "channelId",
+    "title",
+    "date",
+    "time",
+    "roles",
+    "note",
+    "repeatWeekly",
+    "style",
+    "teamId",
+  ];
   // Roles arrive as one row per role (slotName, slotCount); join them for the parser.
   const fields = pick(form, keys);
   const roles = slotsText(form);
@@ -119,8 +130,17 @@ export async function requestCreateRaid(form: FormData) {
   if (!parsed.success) back(guild.id, { error: "invalid" });
   else {
     const channels = await listTextChannels(guild.id).catch(() => []);
+    const team = parsed.data.teamId
+      ? await getRosterTeam(await getDb(), guild.id, parsed.data.teamId)
+      : null;
     if (!channels.some((c) => c.id === parsed.data.channelId)) back(guild.id, { error: "channel" });
-    else await queue(form, { kind: "create_raid", payload: parsed.data });
+    else if (parsed.data.teamId && !team) back(guild.id, { error: "not_found" });
+    else
+      await queue(form, {
+        kind: "create_raid",
+        // A team's raid is organized: its members answer, and officers pick the lineup.
+        payload: { ...parsed.data, style: team ? "organized" : parsed.data.style },
+      });
   }
 }
 

@@ -21,6 +21,11 @@ export const createRaidForm = z
       .max(200)
       .transform((v) => v || null),
     repeatWeekly: z.union([z.literal("on"), z.null(), z.undefined()]).transform((v) => v === "on"),
+    style: z.enum(["simple", "organized"]).catch("simple"),
+    teamId: z
+      .union([z.string().regex(/^[0-9a-f-]{36}$/), z.literal("")])
+      .nullish()
+      .transform((v) => v || null),
   })
   .transform(({ date, time, ...rest }) => ({ ...rest, when: `${date} ${time}` }));
 
@@ -62,6 +67,7 @@ export const ACTION_KIND: Record<string, string> = {
   lfg_join: "Join group",
   lfg_leave: "Leave group",
   raid_signup: "Raid signup",
+  raid_answer: "Raid answer",
   raid_withdraw: "Withdraw from raid",
   qm_plan: "Plan build",
   qm_chat: "Message the AI assistant",
