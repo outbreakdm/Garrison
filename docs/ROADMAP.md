@@ -7,6 +7,24 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
+- **Raid rosters and lineups (2026-11-24), in order, one phase per commit.** The owner's choices:
+  any game, with WoW presets; new raids start Simple (today's first come, first served); lineups
+  are built on the dashboard only; Pro gates more than one roster team and attendance on the
+  roster; saved lineups and Fill by role are free.
+  1. [x] Roster: teams (Free 1, Pro more), members with a main and alts (name, class or spec,
+     role), a status (Core, Trial, Bench, Social) and a note only officers see. Members add their
+     own characters (`/roster add`, the member page); WoW characters import from a linked
+     Battle.net account. A Roster tab on Groups and raids.
+     Built, not deployed: **migration 0099** (`roster_teams`, `roster_members`,
+     `roster_characters`); **deploy with register_commands** (`/roster` now has subcommands; the
+     old view is `/roster accounts`).
+  2. [ ] Organized raids: a raid's signup style, Simple (as today) or Organized. Organized asks
+     Coming, Tentative, Late or Can't, and which character; a raid can be for a team, whose
+     members show as "No reply yet" until they answer.
+  3. [ ] Lineup builder on the dashboard: groups (how many and how big, per raid; WoW preset 8 of
+     5), drag players into a group or the bench, Fill by role, save a layout and reuse it, and
+     Post lineup updates the card with the groups and pings the players picked.
+  4. [ ] Group (LFG) host controls: remove someone, lock the group, hand over host, ping the group.
 - **Best bot list (2026-11-20), in order, one item per step** (from the release audit's "What to
   add to be the best bot", ranked by value for effort). Commit each before the next.
   1. [x] Free AI moderation: on every plan with the standard set (harassment, hate, sexual,
@@ -1770,3 +1788,16 @@ Decided (2026-11-12, owner):
   with the reason); checked that it catches an unguarded action and page. Open: staff slash
   commands rely on Discord's default permissions, which a server admin can widen to any role
   (by design); the owner may want them checked again when they run.
+- 2026-11-24: Raid roster (phase 1 of raid rosters and lineups). Groups and raids has a Roster
+  tab: raid teams (Free 1, Pro 10, `roster.teams`), each member's status (Core, Trial, Bench,
+  Social) and a note only officers see, and members' characters (a main and up to 9 alts, each
+  with a class, spec and role). A team set to World of Warcraft checks classes and specs and fills
+  in each spec's role. Officers add people from raiders and character owners, or anyone with
+  Find a member, and edit anyone's characters. Members add, edit, remove and pick their main with
+  `/roster add|main|remove|mine` or on the player page (which also adds their Battle.net
+  characters); `/roster team` posts a team without notes; the old `/roster` view is
+  `/roster accounts`. On Pro the roster shows each member's attendance over 90 days
+  (`roster.attendance`). Migration `0099_roster` (three tables; the web edits all of them, the
+  bot reads teams and edits members' own characters). Checked in the local preview (team, find
+  and add, character with the WoW role filled in, status and note, the player page as a member);
+  `/roster` only by typecheck. Not deployed.

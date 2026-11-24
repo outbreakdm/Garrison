@@ -45,7 +45,7 @@ export const memberSpace = cache(async (guildId: string) => {
  * membership now, and that the page it changes is on. Null on any failure; never trusts an ID
  * from the form for whose data it touches (that is always the session's own user).
  */
-export async function memberCheck(guildId: string, page: "you" | "record" | "wallet") {
+export async function memberCheck(guildId: string, page: "you" | "record" | "wallet" | "groups") {
   if (!isSnowflake(guildId)) return null;
   const session = await getSession();
   if (!session) return null;
@@ -59,11 +59,14 @@ export async function memberCheck(guildId: string, page: "you" | "record" | "wal
     isGuildMember(guild.id, session.userId),
   ]);
   if (!inServer) return null;
+  // Groups and raids (with the member's own roster characters) is always open to members.
   const on =
-    page === "you"
-      ? pages.showYou && ranks.enabled
-      : page === "wallet"
-        ? economy.enabled
-        : pages.showRecord;
+    page === "groups"
+      ? true
+      : page === "you"
+        ? pages.showYou && ranks.enabled
+        : page === "wallet"
+          ? economy.enabled
+          : pages.showRecord;
   return on ? { session, guild, db } : null;
 }

@@ -123,7 +123,11 @@ Each line below is: what to do → what should happen.
 - [ ] `/link osrs` with a real RuneScape name → shows total and combat level, marked claimed.
 - [ ] Account page → **Link from Discord Connections** imports Steam, Riot, Twitch and the rest.
 - [ ] Battle.net → WoW characters with level and class.
-- [ ] `/link share` on, `/roster` → they show; off → they don't.
+- [ ] `/link share` on, `/roster accounts` → they show; off → they don't.
+- [ ] Raid roster: Groups and raids → Roster → add a WoW team; Find a member → add someone as
+      Trial with a note. `/roster add name:X class:Shaman spec:Restoration` → role Healer, first
+      character is the main; `/roster main` switches it; `/roster team` shows the team without
+      the note; the player page lists your characters and teams, never the note.
 - [ ] Roles from game stats (Pro): a rule "OSRS total level 1+" gives the role within 30
       minutes; Steam and League rules work once their keys are set (see `docs/KEYS.md`).
 

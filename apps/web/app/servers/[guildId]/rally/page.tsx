@@ -51,6 +51,7 @@ import {
 } from "./actions";
 import { LfgPanelEditor } from "./LfgPanelEditor";
 import { saveLfgPanel } from "./panel-actions";
+import { RosterTab } from "./RosterTab";
 import { TemplatesTab } from "./templates/TemplatesTab";
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -84,8 +85,8 @@ const ATTENDANCE: Record<string, string> = {
 
 export const metadata: Metadata = { title: "Groups and raids" };
 
-/** Groups and raids' tabs: open groups first, then raids, the calendar, templates and the panel. */
-const GROUP_TABS = ["groups", "raids", "calendar", "templates", "panel"] as const;
+/** Groups and raids' tabs: open groups first, then raids, the roster, the calendar, templates and the panel. */
+const GROUP_TABS = ["groups", "raids", "roster", "calendar", "templates", "panel"] as const;
 
 export default async function RallyPage({
   params,
@@ -192,6 +193,7 @@ export default async function RallyPage({
         tabs={[
           { id: "groups", label: "Groups", count: posts.length },
           { id: "raids", label: "Raids", count: raids.length },
+          { id: "roster", label: "Roster" },
           { id: "calendar", label: "Calendar" },
           { id: "templates", label: "Templates" },
           { id: "panel", label: "Panel" },
@@ -946,6 +948,12 @@ export default async function RallyPage({
             )}
           </div>
         </section>
+      </TabPanel>
+      <TabPanel id="roster" tabs={GROUP_TABS}>
+        <RosterTab
+          guildId={guild.id}
+          find={typeof query.find === "string" ? query.find.trim().slice(0, 32) : ""}
+        />
       </TabPanel>
       <TabPanel id="templates" tabs={GROUP_TABS}>
         <TemplatesTab guildId={guild.id} />

@@ -1,6 +1,8 @@
 "use server";
 
 import {
+  addRosterCharacter,
+  checkCharacter,
   cleanRankDetails,
   entitlements,
   getActiveGuild,
@@ -9,12 +11,18 @@ import {
   getLfgPost,
   getOpsEvent,
   getRanksSettings,
+  listLinks,
+  listRosterCharacters,
   memberFields,
   queueDashboardAction,
   rankCardForPlan,
   readRankCard,
+  removeRosterCharacter,
+  rosterGame,
   saveRankDetails,
+  setMainCharacter,
   shopAnswers,
+  updateRosterCharacter,
 } from "@garrison/db";
 import { redirect } from "next/navigation";
 import { wakeBot } from "@/lib/bot";
@@ -134,4 +142,131 @@ export async function saveMemberCard(form: FormData) {
   const raw = Object.fromEntries(fields.map((f) => [f.id, form.get(`f_${f.id}`) ?? ""]));
   await saveRankDetails(db, guild.id, session.userId, cleanRankDetails(fields, raw));
   return flashBack(path, { ok: "Saved. /rank shows it on your card." });
+}
+
+// --- The member's own roster characters ---------------------------------------------
+// Only the session's own characters (never a user ID from the form), only as a member now.
+
+const playPath = (guildId: string) => (isSnowflake(guildId) ? `/play/${guildId}` : "/servers");
+const UUID = /^[0-9a-f-]{36}$/;
+
+export async function addMyCharacter(form: FormData) {
+  const guildId = String(form.get("guildId") ?? "");
+  const path = playPath(guildId);
+  const ok = await memberCheck(guildId, "groups");
+  if (!ok) return flashBack(path, { error: "Join the server in Discord first." });
+  const { session, guild, db } = ok;
+  const fields = checkCharacter(
+    {
+      name: form.get("name"),
+      className: form.get("className"),
+      spec: form.get("spec"),
+      role: form.get("role"),
+    },
+    await rosterGame(db, guild.id),
+  );
+  if (!fields.ok) return flashBack(path, { error: fields.error }, "#characters");
+  const r = await addRosterCharacter(
+    db,
+    guild.id,
+    { id: session.userId, name: session.username },
+    fields.value,
+    form.get("main") === "on",
+  );
+  if (!r.ok) return flashBack(path, { error: r.error }, "#characters");
+  return flashBack(path, { ok: `Added ${r.value.name}.` }, "#characters");
+}
+
+export async function saveMyCharacter(form: FormData) {
+  const guildId = String(form.get("guildId") ?? "");
+  const path = playPath(guildId);
+  const ok = await memberCheck(guildId, "groups");
+  if (!ok) return flashBack(path, { error: "Join the server in Discord first." });
+  const id = String(form.get("characterId") ?? "");
+  if (!UUID.test(id)) return flashBack(path, { error: "That character is gone." }, "#characters");
+  const fields = checkCharacter(
+    {
+      name: form.get("name"),
+      className: form.get("className"),
+      spec: form.get("spec"),
+      role: form.get("role"),
+    },
+    await rosterGame(ok.db, ok.guild.id),
+  );
+  if (!fields.ok) return flashBack(path, { error: fields.error }, "#characters");
+  const r = await updateRosterCharacter(ok.db, ok.guild.id, id, fields.value, ok.session.userId);
+  if (!r.ok) return flashBack(path, { error: r.error }, "#characters");
+  return flashBack(path, { ok: `Saved ${r.value.name}.` }, "#characters");
+}
+
+export async function removeMyCharacter(form: FormData) {
+  const guildId = String(form.get("guildId") ?? "");
+  const path = playPath(guildId);
+  const ok = await memberCheck(guildId, "groups");
+  if (!ok) return flashBack(path, { error: "Join the server in Discord first." });
+  const id = String(form.get("characterId") ?? "");
+  const removed =
+    UUID.test(id) && (await removeRosterCharacter(ok.db, ok.guild.id, id, ok.session.userId));
+  return flashBack(
+    path,
+    removed ? { ok: "Removed." } : { error: "That character is gone." },
+    "#characters",
+  );
+}
+
+export async function setMyMain(form: FormData) {
+  const guildId = String(form.get("guildId") ?? "");
+  const path = playPath(guildId);
+  const ok = await memberCheck(guildId, "groups");
+  if (!ok) return flashBack(path, { error: "Join the server in Discord first." });
+  const id = String(form.get("characterId") ?? "");
+  const done = UUID.test(id) && (await setMainCharacter(ok.db, ok.guild.id, id, ok.session.userId));
+  return flashBack(
+    path,
+    done ? { ok: "That's your main now." } : { error: "That character is gone." },
+    "#characters",
+  );
+}
+
+/**
+ * Adds the member's own WoW characters from their Battle.net link (name and class; they pick
+ * the spec later). Only links they made themselves, verified by Battle.net.
+ */
+export async function importMyWow(form: FormData) {
+  const guildId = String(form.get("guildId") ?? "");
+  const path = playPath(guildId);
+  const ok = await memberCheck(guildId, "groups");
+  if (!ok) return flashBack(path, { error: "Join the server in Discord first." });
+  const { session, guild, db } = ok;
+  const picked = new Set(form.getAll("linkId").map(String));
+  const links = (await listLinks(db, session.userId)).filter(
+    (l) => l.provider === "wow" && l.verified && picked.has(l.id),
+  );
+  if (!links.length) return flashBack(path, { error: "Pick a character to add." }, "#characters");
+  const have = new Set(
+    (await listRosterCharacters(db, guild.id, [session.userId])).map((c) => c.name.toLowerCase()),
+  );
+  let added = 0;
+  let error: string | null = null;
+  for (const l of links) {
+    if (have.has(l.displayName.toLowerCase())) continue;
+    const className = typeof l.details.className === "string" ? l.details.className : null;
+    const fields = checkCharacter({ name: l.displayName, className }, "wow");
+    if (!fields.ok) continue;
+    const r = await addRosterCharacter(
+      db,
+      guild.id,
+      { id: session.userId, name: session.username },
+      fields.value,
+    );
+    if (r.ok) added++;
+    else error = r.error;
+  }
+  if (!added)
+    return flashBack(path, { error: error ?? "They're already on the roster." }, "#characters");
+  return flashBack(
+    path,
+    { ok: `Added ${added} character${added === 1 ? "" : "s"}. Pick each one's spec below.` },
+    "#characters",
+  );
 }

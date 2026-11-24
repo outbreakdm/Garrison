@@ -15,6 +15,7 @@ import { env } from "@/lib/env";
 import { readFlash } from "@/lib/flash";
 import { memberSpace } from "@/lib/member";
 import { playRequest } from "./actions";
+import { MyCharacters } from "./MyCharacters";
 
 export const metadata: Metadata = { title: "Groups and raids" };
 
@@ -191,6 +192,8 @@ export default async function PlayPage({ params }: { params: Promise<{ guildId: 
           <p className="queue__empty muted">No raids scheduled.</p>
         )}
       </section>
+
+      <MyCharacters guildId={guild.id} userId={me} />
 
       <section className="g-card card-col" aria-labelledby="calendar-title">
         <div className="queue__head">

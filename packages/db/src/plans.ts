@@ -422,6 +422,18 @@ export const FEATURES = {
     free: false,
     pro: true,
   },
+  "roster.teams": {
+    module: "ops",
+    about: "Raid roster teams (like Main raid, Alt raid and Mythic+)",
+    free: 1,
+    pro: 10,
+  },
+  "roster.attendance": {
+    module: "ops",
+    about: "Each roster member's attendance rate across raids, on the roster",
+    free: false,
+    pro: true,
+  },
   "ranks.boosts": {
     module: "ranks",
     about: "XP boosts by role, channel or category, and channels with no XP",

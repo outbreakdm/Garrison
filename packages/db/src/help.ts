@@ -321,6 +321,20 @@ export const HELP = {
     modules: ["rally", "ops"],
     keywords: "lfg looking for group squad raid roster signups events calendar attendance",
   },
+  "raid-roster": {
+    title: "Raid roster",
+    page: "Groups and raids",
+    path: "/rally?tab=roster",
+    about:
+      "Raid teams with each member's status (Core, Trial, Bench, Social), an officer-only note, and their characters: a main and alts with class, spec and role. WoW teams get the classes and specs, and each spec's role.",
+    steps: [
+      "Groups and raids → Roster: add a team (pick World of Warcraft for its classes and specs).",
+      "Members add their characters with /roster add or on the player page; Find a member puts anyone on a team.",
+    ],
+    commands: ["/roster add", "/roster main", "/roster mine", "/roster team"],
+    modules: ["ops"],
+    keywords: "raid roster team core trial bench social main alt character class spec officer note",
+  },
   "voice-rooms": {
     title: "Voice rooms",
     page: "Voice rooms",
@@ -372,7 +386,7 @@ export const HELP = {
     steps: [
       "Members run /link in the server. On Pro, Game accounts → Roles: add rules like “OSRS total level 2000+ → @Maxed”.",
     ],
-    commands: ["/link", "/unlink", "/roster"],
+    commands: ["/link", "/unlink", "/roster accounts"],
     modules: ["barracks"],
     keywords: "game accounts link steam battle.net riot osrs runescape roster",
   },

@@ -56,6 +56,7 @@ export * from "./repo/quartermaster";
 export * from "./repo/rally";
 export * from "./repo/ranks";
 export * from "./repo/role-menus";
+export * from "./repo/roster";
 export * from "./repo/search";
 export * from "./repo/server-insight";
 export * from "./repo/settings";
@@ -75,6 +76,7 @@ export * from "./repo/welcome";
 export * from "./responders";
 export * from "./role";
 export * from "./role-menus";
+export * from "./roster";
 export * from "./scam-links";
 export type {
   AlertStateRow,
@@ -134,7 +136,10 @@ export type {
   RankReward,
   RanksSettings,
   RoleMenuPost,
+  RosterCharacter,
+  RosterMember,
   RosterShare,
+  RosterTeam,
   SettingsChange,
   SettingsDiff,
   SettingsModule,

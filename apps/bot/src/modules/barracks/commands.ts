@@ -13,6 +13,14 @@ import { ensureGuild } from "../../lib/guild-registry.js";
 import { safeText } from "../../lib/text.js";
 import { describeLink, providerLabel } from "./format.js";
 import { fetchHiscores, isValidRsn, normalizeRsn } from "./osrs.js";
+import {
+  rosterAdd,
+  rosterAutocomplete,
+  rosterMain,
+  rosterMine,
+  rosterRemove,
+  rosterTeam,
+} from "./raid-roster.js";
 import { fetchRs3Hiscores } from "./rs3.js";
 import { syncStatRolesFor } from "./stat-roles.js";
 
@@ -232,21 +240,96 @@ export const unlink: Command = {
 export const roster: Command = {
   data: guildCommand(
     "roster",
-    "Show the game accounts members have chosen to share in this server.",
+    "Your raid characters, a team's roster, and shared game accounts.",
     null,
   )
-    .addStringOption((o) =>
-      o
-        .setName("game")
-        .setDescription("Only this game")
-        .addChoices(...PROVIDER_CHOICES),
+    .addSubcommand((s) =>
+      s
+        .setName("team")
+        .setDescription("Show a raid team: who's on it and their main characters")
+        .addStringOption((o) =>
+          o
+            .setName("team")
+            .setDescription("Which team (the first one if left out)")
+            .setAutocomplete(true),
+        ),
+    )
+    .addSubcommand((s) =>
+      s
+        .setName("add")
+        .setDescription("Add one of your characters to this server's roster")
+        .addStringOption((o) =>
+          o
+            .setName("name")
+            .setDescription("The character's name")
+            .setRequired(true)
+            .setMaxLength(32),
+        )
+        .addStringOption((o) =>
+          o.setName("class").setDescription("Class").setMaxLength(24).setAutocomplete(true),
+        )
+        .addStringOption((o) =>
+          o.setName("spec").setDescription("Spec").setMaxLength(24).setAutocomplete(true),
+        )
+        .addStringOption((o) =>
+          o
+            .setName("role")
+            .setDescription("Tank, Healer, DPS or your own (WoW: from the spec)")
+            .setMaxLength(20)
+            .setAutocomplete(true),
+        )
+        .addBooleanOption((o) => o.setName("main").setDescription("Make it your main")),
+    )
+    .addSubcommand((s) =>
+      s
+        .setName("remove")
+        .setDescription("Remove one of your characters")
+        .addStringOption((o) =>
+          o
+            .setName("character")
+            .setDescription("Which one")
+            .setRequired(true)
+            .setAutocomplete(true),
+        ),
+    )
+    .addSubcommand((s) =>
+      s
+        .setName("main")
+        .setDescription("Choose your main character")
+        .addStringOption((o) =>
+          o
+            .setName("character")
+            .setDescription("Which one")
+            .setRequired(true)
+            .setAutocomplete(true),
+        ),
+    )
+    .addSubcommand((s) => s.setName("mine").setDescription("Your characters and teams here"))
+    .addSubcommand((s) =>
+      s
+        .setName("accounts")
+        .setDescription("Game accounts members have chosen to share in this server")
+        .addStringOption((o) =>
+          o
+            .setName("game")
+            .setDescription("Only this game")
+            .addChoices(...PROVIDER_CHOICES),
+        ),
     )
     .toJSON(),
+  autocomplete: rosterAutocomplete,
   async execute(interaction, ctx) {
-    if (rateLimited(interaction.user.id)) {
-      await interaction.reply({ content: "One lookup every 10 s.", ...ephemeral });
+    const sub = interaction.options.getSubcommand();
+    // The public views post a card; each person gets one every 10 s.
+    if ((sub === "team" || sub === "accounts") && rateLimited(interaction.user.id)) {
+      await interaction.reply({ content: "One roster view every 10 s.", ...ephemeral });
       return;
     }
+    if (sub === "team") return rosterTeam(interaction, ctx);
+    if (sub === "add") return rosterAdd(interaction, ctx);
+    if (sub === "remove") return rosterRemove(interaction, ctx);
+    if (sub === "main") return rosterMain(interaction, ctx);
+    if (sub === "mine") return rosterMine(interaction, ctx);
     const provider = interaction.options.getString("game") ?? undefined;
     if (provider && !Object.hasOwn(linkProviders, provider)) return;
     const members = await getRoster(ctx.db, interaction.guild.id, provider);
@@ -257,7 +340,7 @@ export const roster: Command = {
       cardReply(
         {
           tone: "intel",
-          title: provider ? `Roster · ${providerLabel(provider)}` : "Roster",
+          title: provider ? `Game accounts · ${providerLabel(provider)}` : "Game accounts",
           lead: lines.length
             ? undefined
             : "Nobody has shared accounts here yet. Link yours with /link.",

@@ -434,6 +434,89 @@ export type OpsSignup = typeof opsSignups.$inferSelect;
 export type OpsSettings = typeof opsSettings.$inferSelect;
 
 // ---------------------------------------------------------------------------
+// Roster (raid teams and members' characters)
+// ---------------------------------------------------------------------------
+
+/** A team on the raid roster, e.g. "Main raid". `game` picks presets (roster.ts); null is any game. */
+export const rosterTeams = pgTable(
+  "roster_teams",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    game: text("game"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("roster_teams_guild").on(t.guildId),
+    check("roster_teams_name", sql`length(${t.name}) BETWEEN 1 AND 32`),
+  ],
+).enableRLS();
+
+/** Who is on a team and where they stand. The note is for officers: never shown to members. */
+export const rosterMembers = pgTable(
+  "roster_members",
+  {
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => rosterTeams.id, { onDelete: "cascade" }),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    /** Last-known name, for the roster. */
+    username: text("username").notNull().default(""),
+    status: text("status").notNull().default("core"),
+    note: text("note"),
+    addedAt: timestamp("added_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.teamId, t.userId] }),
+    index("roster_members_member").on(t.guildId, t.userId),
+    check("roster_members_status", sql`${t.status} IN ('core', 'trial', 'bench', 'social')`),
+    check("roster_members_note", sql`${t.note} IS NULL OR length(${t.note}) <= 300`),
+  ],
+).enableRLS();
+
+/** A member's character in one server, their main or an alt. Members add their own; officers can edit. */
+export const rosterCharacters = pgTable(
+  "roster_characters",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    /** Last-known name, for the roster. */
+    username: text("username").notNull().default(""),
+    name: text("name").notNull(),
+    className: text("class_name"),
+    spec: text("spec"),
+    /** What it plays in a raid, e.g. "Tank"; matched against a raid's roles. */
+    role: text("role"),
+    main: boolean("main").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("roster_characters_member").on(t.guildId, t.userId),
+    // One main per member per server; adding or choosing a main clears the old one first.
+    uniqueIndex("roster_characters_one_main").on(t.guildId, t.userId).where(sql`${t.main}`),
+    check("roster_characters_name", sql`length(${t.name}) BETWEEN 1 AND 32`),
+    check(
+      "roster_characters_fields",
+      sql`coalesce(length(${t.className}), 0) <= 24 AND coalesce(length(${t.spec}), 0) <= 24 AND coalesce(length(${t.role}), 0) <= 20`,
+    ),
+  ],
+).enableRLS();
+
+export type RosterTeam = typeof rosterTeams.$inferSelect;
+export type RosterMember = typeof rosterMembers.$inferSelect;
+export type RosterCharacter = typeof rosterCharacters.$inferSelect;
+
+// ---------------------------------------------------------------------------
 // Dashboard sessions
 // ---------------------------------------------------------------------------
 
