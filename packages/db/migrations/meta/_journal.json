@@ -673,6 +673,13 @@
       "when": 1795496103807,
       "tag": "0095_shop_panel",
       "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1795496538633,
+      "tag": "0096_voice_controls",
+      "breakpoints": true
     }
   ]
 }

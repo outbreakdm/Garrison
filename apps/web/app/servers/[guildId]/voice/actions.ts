@@ -42,6 +42,7 @@ export async function saveVoiceRooms(form: FormData): Promise<AutoResult> {
     nameTemplate: String(form.get("nameTemplate") ?? "") || null,
     userLimit: Number(form.get("userLimit") ?? 0),
     categoryId: String(form.get("categoryId") ?? "") || null,
+    controls: form.get("controls") === "on",
   };
   if (!raw.creatorChannelIds.every((id) => voice.has(id)))
     return back({ error: "Pick voice channels from this server's list." });

@@ -170,7 +170,7 @@ export const EDITABLE_FIELDS = {
     "panelSticky",
   ],
   // Checked with checkVoiceRooms before it gets here.
-  voice: ["enabled", "creatorChannelIds", "nameTemplate", "userLimit", "categoryId"],
+  voice: ["enabled", "creatorChannelIds", "nameTemplate", "userLimit", "categoryId", "controls"],
   // Checked with checkServerStats before it gets here.
   stats: ["enabled", "counters", "categoryId"],
   // Checked with checkInviteLabels before it gets here.

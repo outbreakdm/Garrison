@@ -561,7 +561,7 @@ Later phases get their checklists when they start.
   card whose button opens Discord's form, the answers becoming a card, the panel optionally
   following the cards so it stays last. Already: Applications, Verification, Tickets (Pro topic
   forms), Suggestions. Candidates, best value first:
-  [ ] Voice rooms: an owner's control panel in the room's chat (Rename and Limit open a form;
+  [x] Voice rooms: an owner's control panel in the room's chat (Rename and Limit open a form;
   Lock, Hide, Hand over) · [x] Rally LFG: a "Find a group" panel, a button per template, the
   form asking only what the template doesn't (when, note) · [ ] Reports: a "Report a problem"
   panel and a Report message app command, answers to the mod log as a card with Warn, Time out
@@ -1726,4 +1726,13 @@ Decided (2026-11-12, owner):
   the panel (shop_panel). Cards can carry a dropdown now (lib/card.ts menu). Migration
   `0095_shop_panel`. Checked in the local preview (editor, preview, question field); the
   member page's answer field only by typecheck (member pages are off there). Not deployed.
+- 2026-11-23: Voice room controls. Each new room gets a control panel in its own chat (on by
+  default; "Room controls in each room" on the Voice rooms page, and for the AI assistant):
+  Rename and Limit open a form, Lock and Hide close the room to everyone not already inside
+  (who keep access), Remove someone moves them out and keeps them out, Hand over passes the
+  room (the old owner keeps their seat). Only the owner's presses work; the panel shows the
+  owner, the state and the limit, and follows the room when it changes hands (also when the
+  owner leaves). Renames past Discord's two per ten minutes say they'll land shortly.
+  Migration `0096_voice_controls`. Checked by tests and the settings page; no live Discord
+  run. Not deployed.
 

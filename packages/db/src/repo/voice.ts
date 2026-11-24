@@ -34,6 +34,14 @@ export async function addVoiceRoom(
   await db.insert(voiceRooms).values(room).onConflictDoNothing();
 }
 
+/** The room's control panel, once Garrison has posted it in the room's chat. */
+export async function setVoiceRoomPanel(db: Db, channelId: string, messageId: string) {
+  await db
+    .update(voiceRooms)
+    .set({ panelMessageId: messageId })
+    .where(eq(voiceRooms.channelId, channelId));
+}
+
 export async function setVoiceRoomOwner(db: Db, channelId: string, ownerId: string) {
   await db.update(voiceRooms).set({ ownerId }).where(eq(voiceRooms.channelId, channelId));
 }

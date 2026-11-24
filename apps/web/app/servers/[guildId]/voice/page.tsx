@@ -13,7 +13,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { HowItWorks } from "@/components/HowItWorks";
 import { HeadNote, HeadSwitch } from "@/components/ModuleHead";
 import { CompactLayout } from "@/components/PageLayouts";
-import { CheckList, SettingsNotice } from "@/components/settings";
+import { CheckList, SettingsNotice, Switch } from "@/components/settings";
 import { TemplateField } from "@/components/TemplateField";
 import { getDb } from "@/lib/db";
 import { botPermissions, getServerLayout, memberNames } from "@/lib/discord";
@@ -187,6 +187,12 @@ export default async function VoiceRoomsPage({
                   </select>
                 </label>
               </div>
+              <Switch
+                name="controls"
+                defaultChecked={config.controls}
+                label="Room controls in each room"
+                help="Garrison posts Rename, Limit, Lock, Hide, Remove someone and Hand over in each new room's chat, for its owner. Easier than Discord's channel settings, above all on phones."
+              />
             </div>
           </AutoSaveCard>
         }

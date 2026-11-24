@@ -22,6 +22,11 @@ export interface VoiceRoomsConfig {
   userLimit: number;
   /** Where rooms go. Null: the creator channel's category. */
   categoryId: string | null;
+  /**
+   * Garrison posts the owner's controls in each new room's chat: Rename, Limit, Lock, Hide,
+   * Remove someone, Hand over. Off: only Discord's own channel settings.
+   */
+  controls: boolean;
 }
 
 export const DEFAULT_VOICE_ROOMS: VoiceRoomsConfig = {
@@ -30,6 +35,7 @@ export const DEFAULT_VOICE_ROOMS: VoiceRoomsConfig = {
   nameTemplate: null,
   userLimit: 0,
   categoryId: null,
+  controls: true,
 };
 
 export const STANDARD_ROOM_NAME = "{user}'s room";
@@ -54,6 +60,7 @@ export function readVoiceRooms(
     userLimit: Number.isInteger(limit) && limit >= 0 && limit <= VOICE_LIMITS.userLimit ? limit : 0,
     categoryId:
       typeof raw.categoryId === "string" && SNOWFLAKE.test(raw.categoryId) ? raw.categoryId : null,
+    controls: raw.controls !== false,
   };
 }
 
@@ -104,7 +111,14 @@ export function checkVoiceRooms(
     return { ok: false, error: "Pick the category from this server's list." };
   return {
     ok: true,
-    value: { enabled, creatorChannelIds: creators, nameTemplate, userLimit, categoryId },
+    value: {
+      enabled,
+      creatorChannelIds: creators,
+      nameTemplate,
+      userLimit,
+      categoryId,
+      controls: raw.controls !== false,
+    },
   };
 }
 

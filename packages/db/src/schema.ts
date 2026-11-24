@@ -2576,6 +2576,8 @@ export const voiceSettings = pgTable(
     nameTemplate: text("name_template"),
     userLimit: integer("user_limit").notNull().default(0),
     categoryId: text("category_id"),
+    /** Post the owner's controls in each new room's chat (voice-rooms.ts). */
+    controls: boolean("controls").notNull().default(true),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [check("voice_user_limit", sql`${t.userLimit} BETWEEN 0 AND 99`)],
@@ -2591,6 +2593,8 @@ export const voiceRooms = pgTable(
       .references(() => guilds.id, { onDelete: "cascade" }),
     ownerId: text("owner_id").notNull(),
     creatorChannelId: text("creator_channel_id").notNull(),
+    /** The owner's control panel in the room's chat, updated when the room changes hands. */
+    panelMessageId: text("panel_message_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("voice_rooms_guild").on(t.guildId)],

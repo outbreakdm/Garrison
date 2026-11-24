@@ -15,6 +15,18 @@ describe("voice rooms", () => {
     expect(roomName("{user}".repeat(30), "Kestrel").length).toBeLessThanOrEqual(100);
   });
 
+  it("posts the room controls unless the server turns them off", () => {
+    expect(readVoiceRooms(null).controls).toBe(true);
+    expect(readVoiceRooms({ controls: false }).controls).toBe(false);
+    expect(
+      checkVoiceRooms(
+        { enabled: true, creatorChannelIds: [A], controls: false },
+        free,
+        DEFAULT_VOICE_ROOMS,
+      ),
+    ).toMatchObject({ ok: true, value: { controls: false } });
+  });
+
   it("needs a creator channel to switch on", () => {
     const r = checkVoiceRooms({ enabled: true, creatorChannelIds: [] }, free, DEFAULT_VOICE_ROOMS);
     expect(r.ok).toBe(false);

@@ -178,6 +178,12 @@ export const QM_SETTINGS = {
         kind: "category",
         about: "where rooms go; null for the creator channel's category",
       },
+      controls: {
+        label: "Room controls",
+        kind: "bool",
+        about:
+          "post the owner's controls in each new room's chat: rename, limit, lock, hide, remove someone, hand over",
+      },
     },
   },
   automod: {

@@ -7,7 +7,7 @@ import {
   listAllVoiceRooms,
   removeVoiceRoom,
   roomName,
-  setVoiceRoomOwner,
+  setVoiceRoomPanel,
   type VoiceRoomsConfig,
 } from "@garrison/db";
 import {
@@ -21,12 +21,14 @@ import {
   type VoiceState,
 } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
+import { handOverRoom, OWNER_ALLOW, postRoomPanel } from "./controls.js";
 
 /**
  * Voice rooms (join to create). Joining a creator channel makes the member their own
  * voice channel beside it and moves them in. The owner gets Discord's own controls on
- * that one channel (rename, member limit, who may join). When the owner leaves, the room
- * passes to someone still inside; when the last person leaves, it's deleted.
+ * that one channel (rename, member limit, who may join) and, unless the server turned them
+ * off, Garrison's control panel in the room's chat (controls.ts). When the owner leaves, the
+ * room passes to someone still inside; when the last person leaves, it's deleted.
  */
 
 const SETTINGS_TTL_MS = 30_000;
@@ -45,19 +47,6 @@ async function settings(ctx: BotContext, guildId: string): Promise<VoiceRoomsCon
   cache.set(guildId, { config, at: Date.now() });
   return config;
 }
-
-/**
- * The owner's controls on their own room: rename, limit, decide who may join, move people.
- * Only permissions Garrison holds itself (Discord refuses to let a bot hand out others);
- * speaking comes from the member's roles as usual.
- */
-const OWNER_ALLOW = [
-  P.ViewChannel,
-  P.Connect,
-  P.ManageChannels,
-  P.MoveMembers,
-  P.ManageRoles,
-] as const;
 
 async function makeRoom(ctx: BotContext, member: GuildMember, creatorId: string) {
   const guild = member.guild;
@@ -95,7 +84,7 @@ async function makeRoom(ctx: BotContext, member: GuildMember, creatorId: string)
         {
           id: me.id,
           type: OverwriteType.Member,
-          allow: [P.ViewChannel, P.Connect, P.ManageChannels, P.MoveMembers],
+          allow: [P.ViewChannel, P.Connect, P.SendMessages, P.ManageChannels, P.MoveMembers],
         },
         { id: member.id, type: OverwriteType.Member, allow: [...OWNER_ALLOW] },
       ],
@@ -107,6 +96,10 @@ async function makeRoom(ctx: BotContext, member: GuildMember, creatorId: string)
       creatorChannelId: creatorId,
     });
     await member.voice.setChannel(room, "Moved into their new voice room");
+    if (config.controls) {
+      const panel = await postRoomPanel(room, member.id);
+      if (panel) await setVoiceRoomPanel(ctx.db, room.id, panel);
+    }
   } catch (error) {
     ctx.logger.warn("Could not make a voice room", { guildId: guild.id, error });
     // A room nobody could be moved into is removed straight away.
@@ -140,27 +133,17 @@ async function leftRoom(ctx: BotContext, guild: Guild, channelId: string, leaver
   const next = people.first();
   if (!next) return;
   try {
-    await channel.permissionOverwrites.delete(leaverId, "Voice room owner left");
-    await channel.permissionOverwrites.edit(
-      next.id,
-      Object.fromEntries(OWNER_ALLOW.map((bit) => [permissionName(bit), true])),
-      { reason: "Voice room passed to someone still inside" },
-    );
-    await setVoiceRoomOwner(ctx.db, channelId, next.id);
+    await handOverRoom(ctx, channel, room, next, "Voice room passed to someone still inside");
     if (channel.isSendable())
       await channel.send({
-        content: `${next} now owns this room: rename it, set a limit or choose who can join from the channel's settings.`,
+        content: room.panelMessageId
+          ? `${next} now owns this room: the controls above are yours.`
+          : `${next} now owns this room: rename it, set a limit or choose who can join from the channel's settings.`,
         allowedMentions: { users: [next.id] },
       });
   } catch (error) {
     ctx.logger.warn("Could not pass a voice room on", { guildId: guild.id, error });
   }
-}
-
-/** discord.js wants permission names in overwrite edits, not bits. */
-function permissionName(bit: bigint): keyof typeof P {
-  const entry = Object.entries(P).find(([, v]) => v === bit);
-  return entry?.[0] as keyof typeof P;
 }
 
 export async function onVoiceRoomUpdate(ctx: BotContext, before: VoiceState, after: VoiceState) {

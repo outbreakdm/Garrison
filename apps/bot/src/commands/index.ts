@@ -30,6 +30,7 @@ import {
 } from "../modules/suggestions/commands.js";
 import { ticket, ticketButtons, ticketModals } from "../modules/tickets/handlers.js";
 import { temprole } from "../modules/utilities/commands.js";
+import { roomButtons, roomForms, roomPicks } from "../modules/voice/controls.js";
 import { watchButtons, watchCommands } from "../modules/watch/commands/index.js";
 import type { ButtonHandler, Command, ModalHandler, SelectHandler } from "./types.js";
 
@@ -71,11 +72,12 @@ export const buttons: ButtonHandler[] = [
   suggestionPanelButtons,
   lfgPanelButtons,
   shopBuyButtons,
+  roomButtons,
   applyButtons,
   decideApplicationButtons,
   triviaButtons,
 ];
-export const selects: SelectHandler[] = [roleMenuSelects, shopPickSelects];
+export const selects: SelectHandler[] = [roleMenuSelects, shopPickSelects, roomPicks];
 export const modals: ModalHandler[] = [
   opsModals,
   ticketModals,
@@ -85,6 +87,7 @@ export const modals: ModalHandler[] = [
   suggestionModals,
   lfgPanelModals,
   shopForms,
+  roomForms,
 ];
 
 // Each command's description in Spanish, Portuguese, German and French: Discord shows members
