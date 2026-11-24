@@ -2,6 +2,7 @@
 
 import {
   applySettingsChange,
+  checkSuggestionPanel,
   checkSuggestions,
   entitlements,
   getGuildPlan,
@@ -47,8 +48,50 @@ export async function saveSuggestions(form: FormData): Promise<AutoResult> {
     return back(result.reason === "unchanged" ? "unchanged" : { error: "Try again in a minute." });
   return back({
     ok: checked.value.enabled
-      ? "Saved. Members can use /suggest now."
+      ? "Saved. Post the panel below, or members can use /suggest."
       : "Saved. Suggestions are off; cards already posted keep their votes.",
+    changeId: result.change.id,
+  });
+}
+
+/**
+ * The suggestions panel and its form. Text left as the standard is stored as none; posting it
+ * is a request to the bot (post_suggestion_panel), which uses what's saved here.
+ */
+export async function saveSuggestionPanel(form: FormData): Promise<AutoResult> {
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  if (!access) redirect("/servers");
+  const { guild, session } = access;
+  const back = (outcome: Outcome) => answer(form, `/servers/${guild.id}/suggestions`, outcome);
+  let questions: unknown = [];
+  try {
+    questions = JSON.parse(String(form.get("questions") ?? "[]"));
+  } catch {
+    return back({ error: "Refresh the page and try again." });
+  }
+  const checked = checkSuggestionPanel({
+    panelTitle: String(form.get("panelTitle") ?? ""),
+    panelBody: String(form.get("panelBody") ?? ""),
+    buttonLabel: String(form.get("buttonLabel") ?? ""),
+    questions,
+    panelSticky: form.get("panelSticky") === "on",
+  });
+  if (!checked.ok) return back({ error: checked.error });
+  const db = await getDb();
+  const before = await getSuggestionSettings(db, guild.id);
+  const result = await applySettingsChange(db, {
+    guildId: guild.id,
+    module: "suggestions",
+    patch: { ...checked.value },
+    userId: session.userId,
+    username: session.username,
+  });
+  if (!result.ok)
+    return back(result.reason === "unchanged" ? "unchanged" : { error: "Try again in a minute." });
+  return back({
+    ok: before.panelMessageId
+      ? "Saved the panel. Post it again below to update the one in Discord."
+      : "Saved the panel. Post it below when it's ready.",
     changeId: result.change.id,
   });
 }

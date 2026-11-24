@@ -2,6 +2,7 @@ import { and, count, desc, eq, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { type Suggestion, suggestionSettings, suggestions, suggestionVotes } from "../schema";
 import { readSuggestions, type SuggestionStatus, type SuggestionsConfig } from "../suggestions";
+import type { VerifyAnswer } from "../verify-questions";
 
 export async function getSuggestionSettings(db: Db, guildId: string): Promise<SuggestionsConfig> {
   const [row] = await db
@@ -19,6 +20,8 @@ export async function createSuggestion(
     authorId: string;
     authorName: string;
     text: string;
+    /** Every answer from the panel's form; none from /suggest. */
+    answers?: VerifyAnswer[] | null;
     anonymous: boolean;
   },
 ): Promise<Suggestion> {
@@ -37,6 +40,21 @@ export async function createSuggestion(
       if (attempt >= 2) throw error;
     }
   }
+}
+
+/**
+ * Where the suggestions panel now is: the bot records it after posting, so it can post it again
+ * under new suggestions (and take the old one down). Not a setting: no history.
+ */
+export async function setSuggestionPanelMessage(
+  db: Db,
+  guildId: string,
+  at: { channelId: string; messageId: string } | null,
+) {
+  await db
+    .update(suggestionSettings)
+    .set({ panelChannelId: at?.channelId ?? null, panelMessageId: at?.messageId ?? null })
+    .where(eq(suggestionSettings.guildId, guildId));
 }
 
 export async function setSuggestionMessage(

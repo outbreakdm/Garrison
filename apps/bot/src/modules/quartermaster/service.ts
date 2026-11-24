@@ -1754,17 +1754,25 @@ async function applyPlanPosts(
     w.kind === "giveaway" && w.giveaway ? [w.giveaway] : [],
   );
   // Loaded here: the dashboard's request handlers import this file.
-  const [{ doPostRoleMenu }, { postMessageNow }, { doPostTicketPanel }, { doStartGiveaway }] =
-    await Promise.all([
-      import("../dashboard/actions.js"),
-      import("../dispatch/service.js"),
-      import("../tickets/dashboard.js"),
-      import("../giveaways/service.js"),
-    ]);
+  const [
+    { doPostRoleMenu },
+    { postMessageNow },
+    { doPostTicketPanel },
+    { doStartGiveaway },
+    { doPostSuggestionPanel },
+  ] = await Promise.all([
+    import("../dashboard/actions.js"),
+    import("../dispatch/service.js"),
+    import("../tickets/dashboard.js"),
+    import("../giveaways/service.js"),
+    import("../suggestions/service.js"),
+  ]);
   const handlers: Record<QmPost["kind"], [PostHandler, string]> = {
     role_menu: [doPostRoleMenu, "menuId"],
     ticket_panel: [doPostTicketPanel, "panelId"],
     message: [postMessageNow, "messageId"],
+    // One panel per server: its item id is "suggestions", and the handler takes the channel.
+    suggestion_panel: [doPostSuggestionPanel, "panelId"],
   };
   const member = await guild.members.fetch(build.requestedById).catch(() => null);
   if (!member) return "The admin who asked for this plan has left, so nothing was posted.";

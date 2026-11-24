@@ -8,6 +8,9 @@ import {
   SUGGESTION_STATUS_LABEL,
   SUGGESTION_STATUSES,
   type SuggestionStatus,
+  suggestionPanel,
+  suggestionQuestions,
+  type VerifyAnswer,
 } from "@garrison/db";
 import type { Metadata } from "next";
 import { AutoSaveCard } from "@/components/AutoSave";
@@ -27,7 +30,8 @@ import { requireGuildAccess } from "@/lib/session";
 import { ago } from "../parley/when";
 import { requestAction } from "../requests";
 import { undoChange } from "../settings/actions";
-import { saveSuggestions } from "./actions";
+import { saveSuggestionPanel, saveSuggestions } from "./actions";
+import { PanelEditor } from "./PanelEditor";
 
 export const metadata: Metadata = { title: "Suggestions" };
 
@@ -63,6 +67,9 @@ export default async function SuggestionsPage({
   const ent = entitlements(plan);
   const total = SUGGESTION_STATUSES.reduce((n, s) => n + (counts[s] ?? 0), 0);
   const base = `/servers/${guild.id}/suggestions`;
+  const channelName = (id: string | null) => channels.find((c) => c.id === id)?.name ?? null;
+  const panel = { ...suggestionPanel(config), questions: suggestionQuestions(config) };
+  const posted = config.panelChannelId && config.panelMessageId ? config.panelChannelId : null;
 
   return (
     <>
@@ -70,11 +77,13 @@ export default async function SuggestionsPage({
         <div>
           <h1>Suggestions</h1>
           <p>
-            Members post ideas with <code>/suggest</code>, and the server votes on them.
+            Members post ideas from the suggestions panel or <code>/suggest</code>, and the server
+            votes on them.
           </p>
           <HowItWorks>
-            Each idea becomes a card in your suggestions channel with For and Against buttons. Mark
-            it Planned, Done or Declined here, with a note the card shows.
+            The panel's button opens a form. Each idea becomes a card in your suggestions channel
+            with For and Against buttons. Mark it Planned, Done or Declined here, with a note the
+            card shows.
           </HowItWorks>
         </div>
         <HeadSwitch
@@ -103,57 +112,132 @@ export default async function SuggestionsPage({
         </div>
       ) : null}
       <SettingsNotice query={query} />
-      <RequestsPanel guildId={guild.id} kinds={["suggestion_status"]} query={query} />
+      <RequestsPanel
+        guildId={guild.id}
+        kinds={["suggestion_status", "post_suggestion_panel"]}
+        query={query}
+      />
 
       <CompactLayout
         liveFirst={list.length > 0}
         settings={
-          <AutoSaveCard
-            id="settings"
-            title="Suggestions"
-            action={saveSuggestions}
-            undo={undoChange}
-            guildId={guild.id}
-            stamp={contentKey(config)}
-            saveLabel="Save suggestions"
-          >
-            <p className="g-help">Off stops /suggest; cards already posted keep their votes.</p>
-            <label className="g-field" htmlFor="channelId">
-              <span>Post suggestions in</span>
-              <select
-                className="g-input"
-                id="channelId"
-                name="channelId"
-                defaultValue={config.channelId ?? ""}
-              >
-                <option value="">Pick a channel</option>
-                {channels.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    #{c.name}
-                  </option>
-                ))}
-              </select>
-              <span className="g-help">
-                A channel members can read but not post in keeps it tidy: Garrison posts the cards.
-              </span>
-            </label>
-            <label className="switch">
-              <input
-                type="checkbox"
-                name="anonymous"
-                defaultChecked={config.anonymous}
-                disabled={!ent["suggestions.anonymous"] && !config.anonymous}
-              />
-              <span className="switch__text">
-                <span>
-                  Anonymous suggestions <ProTag on={ent["suggestions.anonymous"]} />
-                </span>
+          <>
+            <AutoSaveCard
+              id="settings"
+              title="Suggestions"
+              action={saveSuggestions}
+              undo={undoChange}
+              guildId={guild.id}
+              stamp={contentKey(config)}
+              saveLabel="Save suggestions"
+            >
+              <p className="g-help">Off stops /suggest; cards already posted keep their votes.</p>
+              <label className="g-field" htmlFor="channelId">
+                <span>Post suggestions in</span>
+                <select
+                  className="g-input"
+                  id="channelId"
+                  name="channelId"
+                  defaultValue={config.channelId ?? ""}
+                >
+                  <option value="">Pick a channel</option>
+                  {channels.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      #{c.name}
+                    </option>
+                  ))}
+                </select>
                 <span className="g-help">
-                  Cards don't say who posted. You still see it here, to deal with abuse.
+                  A channel members can read but not post in keeps it tidy: Garrison posts the
+                  cards.
                 </span>
-              </span>
-            </label>
-          </AutoSaveCard>
+              </label>
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  name="anonymous"
+                  defaultChecked={config.anonymous}
+                  disabled={!ent["suggestions.anonymous"] && !config.anonymous}
+                />
+                <span className="switch__text">
+                  <span>
+                    Anonymous suggestions <ProTag on={ent["suggestions.anonymous"]} />
+                  </span>
+                  <span className="g-help">
+                    Cards don't say who posted. You still see it here, to deal with abuse.
+                  </span>
+                </span>
+              </label>
+            </AutoSaveCard>
+            <PanelEditor
+              guildId={guild.id}
+              saved={panel}
+              sticky={config.panelSticky}
+              channel={channelName(config.channelId)}
+              action={saveSuggestionPanel}
+              undo={undoChange}
+              stamp={contentKey({ ...panel, sticky: config.panelSticky })}
+            />
+            <section className="g-card sg-post" aria-labelledby="sg-post-title">
+              <h2 className="card-title" id="sg-post-title">
+                Post the panel
+              </h2>
+              <p className="card-sub">
+                {posted ? (
+                  <>
+                    It's in #{channelName(posted) ?? "a deleted channel"}.{" "}
+                    <a
+                      href={`https://discord.com/channels/${guild.id}/${posted}/${config.panelMessageId}`}
+                    >
+                      Open in Discord
+                    </a>
+                    . Posting again moves it and takes the old one down.
+                  </>
+                ) : (
+                  "Not posted yet. Your suggestions channel is the usual place."
+                )}
+              </p>
+              {/* Keyed by where it would go, so a channel saved above shows here at once. */}
+              <form
+                action={requestAction}
+                className="sg-post__form"
+                key={posted ?? config.channelId ?? ""}
+              >
+                <input type="hidden" name="guildId" value={guild.id} />
+                <input type="hidden" name="page" value="suggestions" />
+                <input type="hidden" name="kind" value="post_suggestion_panel" />
+                <label className="g-field" htmlFor="panelChannelId">
+                  <span className="g-label">Post it in</span>
+                  <select
+                    className="g-input"
+                    id="panelChannelId"
+                    name="channelId"
+                    required
+                    defaultValue={posted ?? config.channelId ?? ""}
+                  >
+                    <option value="" disabled>
+                      Pick a channel
+                    </option>
+                    {channels.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        #{c.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="submit"
+                  className="g-btn g-btn--primary g-btn--sm"
+                  disabled={!config.enabled || !config.channelId}
+                >
+                  {posted ? "Post again" : "Post the panel"}
+                </button>
+              </form>
+              {!config.enabled || !config.channelId ? (
+                <p className="g-help">Turn suggestions on and pick their channel first.</p>
+              ) : null}
+            </section>
+          </>
         }
         live={
           <>
@@ -194,6 +278,16 @@ export default async function SuggestionsPage({
                           </span>
                         </div>
                         <p className="sg-row__text">{s.text}</p>
+                        {Array.isArray(s.answers) && s.answers.length > 1 ? (
+                          <dl className="sg-row__answers">
+                            {(s.answers as VerifyAnswer[]).slice(1).map((a) => (
+                              <div key={a.label}>
+                                <dt>{a.label}</dt>
+                                <dd>{a.value}</dd>
+                              </div>
+                            ))}
+                          </dl>
+                        ) : null}
                         <span className="ticket-row__who">
                           {s.authorName}
                           {s.anonymous ? " (hidden on the card)" : ""} · {ago(s.createdAt)}
@@ -259,8 +353,8 @@ export default async function SuggestionsPage({
                   }
                 >
                   {config.enabled
-                    ? "When a member uses /suggest, it shows up here."
-                    : "Turn suggestions on and pick a channel, then members can use /suggest."}
+                    ? "When a member suggests something from the panel or /suggest, it shows up here."
+                    : "Turn suggestions on and pick a channel, then post the panel."}
                 </EmptyState>
               )}
             </section>

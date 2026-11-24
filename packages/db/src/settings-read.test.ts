@@ -26,6 +26,12 @@ describe("readSettings", () => {
       enabled: true,
       channelId: "123456789012345678",
       anonymous: false,
+      // The panel and its form (0092), unset: the standard ones.
+      panelTitle: null,
+      panelBody: null,
+      buttonLabel: null,
+      questions: null,
+      panelSticky: true,
     });
   });
 

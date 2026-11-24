@@ -645,6 +645,13 @@
       "when": 1795478691293,
       "tag": "0091_welcome_image_alone",
       "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "7",
+      "when": 1795482046164,
+      "tag": "0092_suggestion_panel",
+      "breakpoints": true
     }
   ]
 }

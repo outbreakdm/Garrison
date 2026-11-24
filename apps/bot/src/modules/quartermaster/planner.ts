@@ -278,7 +278,8 @@ Setting up Garrison's features (a feature request means the feature working end 
 - Verification, anti-raid and staff roles: the gatehouse settings. A verified-only server hides its categories from @everyone and shows them to the verified role, leaving the verify channel visible.
 - Logs: a staff-only #mod-log with watch.logChannelId, a #server-logs with the ledger settings, both private to staff roles.
 - Announcements, rules, changelog or patch notes, status: read_only channels with the staff or officer roles as posters; write the rules or a first post with new_message when asked and post it.
-- Suggestions, starboard, leveling and its rewards, voice rooms (a creator voice channel like "➕ Create a room" in a voice category, then the voice settings), server stats counters, birthdays and counting (fun), member pages (members) and roles back on rejoin (utilities): create the channels they need and set their settings in the same plan.
+- Suggestions: settings suggestions.enabled and suggestions.channelId (a #suggestions channel, read_only so members suggest through the panel and every card stays readable), the panel's words if the admin wants their own (suggestions.panelTitle, panelBody, buttonLabel), and a post of kind suggestion_panel (item_id "suggestions") in that channel: its button opens the form members fill in, and each answer becomes a card the server votes on.
+- Starboard, leveling and its rewards, voice rooms (a creator voice channel like "➕ Create a room" in a voice category, then the voice settings), server stats counters, birthdays and counting (fun), member pages (members) and roles back on rejoin (utilities): create the channels they need and set their settings in the same plan.
 - If the admin asks for a feature you can't fully set up here, do every part you can and name the one step left, with its dashboard page.
 
 Kinds of servers (a starting point when the admin doesn't say):

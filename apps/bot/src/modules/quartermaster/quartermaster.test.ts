@@ -961,13 +961,16 @@ describe("AI assistant chat", () => {
     expect((await chatTurn(ctx, bot, f.guild, asker(f), { message: "what's on?" })).ok).toBe(true);
     const overview = JSON.parse(looked.overview ?? "{}");
     expect(overview).toMatchObject({ plan: "free", supplies_left: FREE, supplies_in_pool: FREE });
-    expect(overview.modules).toContainEqual({
-      module: "suggestions",
-      page: "Suggestions",
-      enabled: true,
-      channelId: `#ideas (${ideas})`,
-      anonymous: false,
-    });
+    // With the panel's words beside them (0092).
+    expect(overview.modules).toContainEqual(
+      expect.objectContaining({
+        module: "suggestions",
+        page: "Suggestions",
+        enabled: true,
+        channelId: `#ideas (${ideas})`,
+        anonymous: false,
+      }),
+    );
     expect(overview.modules).toContainEqual({
       module: "starboard",
       page: "Starboard",
@@ -976,7 +979,17 @@ describe("AI assistant chat", () => {
     expect(JSON.parse(looked.module ?? "{}")).toEqual({
       module: "suggestions",
       page: "Suggestions",
-      settings: { enabled: true, channelId: `#ideas (${ideas})`, anonymous: false },
+      settings: {
+        enabled: true,
+        channelId: `#ideas (${ideas})`,
+        anonymous: false,
+        // The panel and its form, unset: the standard ones (0092).
+        panelTitle: null,
+        panelBody: null,
+        buttonLabel: null,
+        questions: null,
+        panelSticky: true,
+      },
     });
     // Anti-nuke isn't readable or editable here: it stays an owner-only command.
     expect(looked.bad).toMatch(/Unknown module/);
@@ -1011,7 +1024,7 @@ describe("AI assistant chat", () => {
     if (!built.ok) throw new Error(built.error);
     expect(built.failed).toBeNull();
     expect(built.created.map((c) => c.kind)).toEqual(["channel", "setting", "setting"]);
-    expect(await readSettings(ctx.db, "q22", "suggestions")).toEqual({
+    expect(await readSettings(ctx.db, "q22", "suggestions")).toMatchObject({
       enabled: true,
       channelId: "q22-1",
       anonymous: false,

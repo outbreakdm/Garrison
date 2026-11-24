@@ -21,7 +21,12 @@ import { readRoleMenus } from "./role-menus";
 import type { QmPost, QmSettingChange, SettingsModule } from "./schema";
 import { checkServerStats, readServerStats, STAT_KINDS } from "./server-stats";
 import { checkStarboard, readStarboard, STARBOARD_LIMITS } from "./starboard";
-import { checkSuggestions, readSuggestions } from "./suggestions";
+import {
+  checkSuggestionPanel,
+  checkSuggestions,
+  readSuggestions,
+  SUGGESTION_PANEL,
+} from "./suggestions";
 import { checkTicketOptions, readTicketConfig, readTicketPanels, TICKET_LIMITS } from "./tickets";
 import { UTILITY_LIMITS } from "./utilities";
 import { checkVoiceRooms, readVoiceRooms, VOICE_LIMITS } from "./voice-rooms";
@@ -95,9 +100,31 @@ export const QM_SETTINGS = {
   suggestions: {
     label: "Suggestions",
     fields: {
-      enabled: on("members post ideas with /suggest and vote on them; needs channelId"),
+      enabled: on(
+        "members post ideas from the suggestions panel or /suggest and vote on them; needs channelId",
+      ),
       channelId: { label: "Channel", kind: "textChannel", about: "where suggestions are posted" },
       anonymous: { label: "Anonymous", kind: "bool", about: "Pro: cards don't show who posted" },
+      panelTitle: {
+        label: "Panel title",
+        kind: "text",
+        about: `the suggestions panel's title; null for "${SUGGESTION_PANEL.title}"`,
+      },
+      panelBody: {
+        label: "Panel text",
+        kind: "text",
+        about: "a line or two under it on how suggesting works; null for the standard text",
+      },
+      buttonLabel: {
+        label: "Panel button",
+        kind: "text",
+        about: `the button that opens the form; null for "${SUGGESTION_PANEL.button}"`,
+      },
+      panelSticky: {
+        label: "Panel stays at the bottom",
+        kind: "bool",
+        about: "the panel is posted again under each new suggestion in its channel",
+      },
     },
   },
   starboard: {
@@ -719,7 +746,14 @@ const MODULES: Record<
 > = {
   suggestions: {
     read: (row) => ({ ...readSuggestions(row) }),
-    check: (b, p, e) => widen(checkSuggestions({ ...b, ...p }, e, readSuggestions(b))),
+    check: (b, p, e) => {
+      const board = checkSuggestions({ ...b, ...p }, e, readSuggestions(b));
+      if (!board.ok) return board;
+      // The panel's words; its questions are the dashboard's, so the saved ones carry over.
+      const panel = checkSuggestionPanel({ ...b, ...p });
+      if (!panel.ok) return panel;
+      return { ok: true, value: { ...b, ...board.value, ...panel.value } };
+    },
   },
   starboard: {
     read: (row) => ({ ...readStarboard(row) }),
@@ -1441,15 +1475,21 @@ export function resolveQmSettingRefs(change: QmSettingChange, ids: Map<string, s
 
 /** The most posts one plan makes. */
 export const QM_POSTS_MAX = 10;
-export const QM_POST_KINDS = ["role_menu", "ticket_panel", "message"] as const;
+export const QM_POST_KINDS = ["role_menu", "ticket_panel", "message", "suggestion_panel"] as const;
 const POST_TEXT: Record<QmPost["kind"], string> = {
   role_menu: "Role menu",
   ticket_panel: "Ticket panel",
   message: "Saved message",
+  suggestion_panel: "Suggestions panel",
 };
+/** The suggestions panel is one per server: it posts by this id. */
+export const SUGGESTION_PANEL_ITEM = { id: "suggestions", name: "Suggestions panel" } as const;
 export const qmPostLabel = (kind: QmPost["kind"]) => POST_TEXT[kind];
 
-/** The role menus, ticket panels and saved messages this server has, by id and name. */
+/**
+ * The role menus, ticket panels and saved messages this server has, by id and name, and its
+ * suggestions panel (one per server, posted with the server's saved words and form).
+ */
 export async function qmPostables(db: Db, guildId: string) {
   const [menus, tickets, messages] = await Promise.all([
     readSettings(db, guildId, "roles"),
@@ -1461,6 +1501,7 @@ export async function qmPostables(db: Db, guildId: string) {
     role_menu: pick(readRoleMenus(menus?.menus ?? [])),
     ticket_panel: pick(readTicketPanels(tickets?.panels ?? [])),
     message: pick(readMessages(messages?.messages ?? [])),
+    suggestion_panel: [{ ...SUGGESTION_PANEL_ITEM }],
   } satisfies Record<QmPost["kind"], { id: string; name: string }[]>;
 }
 
@@ -1496,6 +1537,7 @@ export async function checkQmPosts(
     role_menu: [...saved.role_menu, ...made("role_menu")],
     ticket_panel: [...saved.ticket_panel, ...made("ticket_panel")],
     message: [...saved.message, ...made("message")],
+    suggestion_panel: saved.suggestion_panel,
   };
   // Something the plan makes is named by its ref; it posts by its id.
   proposals = proposals.map((p) => {

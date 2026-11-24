@@ -557,6 +557,21 @@ Later phases get their checklists when they start.
 - **Barracks:** [x] more game accounts (RuneScape 3, claimed) · [x] roles that follow game stats (Pro `barracks.statRoles`; migration `0047_stat_roles`)
 - **Quartermaster:** [x] server templates that copy a layout (Pro `qm.templates`; migration `0048_server_templates`) · [x] scheduled backups (shares
   the Gatehouse backup engine; weekly on Pro)
+- **Panels that open a form (proposed 2026-11-23, after the suggestions panel):** a posted
+  card whose button opens Discord's form, the answers becoming a card, the panel optionally
+  following the cards so it stays last. Already: Applications, Verification, Tickets (Pro topic
+  forms), Suggestions. Candidates, best value first:
+  [ ] Voice rooms: an owner's control panel in the room's chat (Rename and Limit open a form;
+  Lock, Hide, Hand over) · [ ] Rally LFG: a "Find a group" panel, a button per template, the
+  form asking only what the template doesn't (when, note) · [ ] Reports: a "Report a problem"
+  panel and a Report message app command, answers to the mod log as a card with Warn, Time out
+  and Dismiss · [ ] Birthdays: an "Add your birthday" panel (month from a list, day typed) ·
+  [ ] Tickets: topic forms on the shared question model (a line under each, short or paragraph,
+  optional questions, answers as the ticket's first card) · [ ] Economy: a shop panel, with a
+  form for items staff fulfil ("which color?") that goes with the purchase · [ ] Stream alerts:
+  "Add my stream" for members, staff approve on the dashboard · [ ] Barracks: "Link your
+  account" panel · [ ] Giveaways: an optional entry question. The suggestions panel's pieces
+  (PanelEditor, the questions rows, keepPanelLast) become shared ones with the second of these.
 
 ## New modules (in build order)
 
@@ -1672,4 +1687,15 @@ Decided (2026-11-12, owner):
   The AI assistant can set all of it, but with preset backgrounds only. Migration
   `0091_welcome_image_alone` (four columns, web and bot grants) must be applied to production
   by hand before the deploy. Deployed (everything, commands registered).
+- 2026-11-23: Suggestions panel. Staff post a panel (Suggestions page, "Post the panel", or an
+  AI assistant plan's suggestion_panel post) whose button opens Discord's form: the server's
+  questions (up to five; the first is the idea and required, the rest optional; the standard
+  two until edited), their title, text and button. The answers become the suggestion card (the
+  idea, then each other answer under its question), and with "Keep the panel at the bottom" on
+  Garrison posts it again under each new card in its channel (one move at a time per server).
+  /suggest without an idea opens the same form. Migration `0092_suggestion_panel` (panel and
+  form columns, `suggestions.answers`, request kind post_suggestion_panel, grants) must be
+  applied to production by hand before the deploy. Checked in the local preview (save, form
+  editor, preview, posting request); the bot's side has tests but no live Discord run yet.
+  Deployed (everything, commands registered).
 

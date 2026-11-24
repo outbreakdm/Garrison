@@ -1,8 +1,14 @@
 import type { Suggestion } from "@garrison/db";
-import { nextVote } from "@garrison/db";
+import { DEFAULT_SUGGESTIONS, nextVote } from "@garrison/db";
 import { describe, expect, it } from "vitest";
 import { cardMessage, cardTexts } from "../../lib/card.js";
-import { parseSuggestionId, suggestionCard, votingOpen } from "./service.js";
+import {
+  parseSuggestionId,
+  suggestionCard,
+  suggestionModal,
+  suggestionPanelMessage,
+  votingOpen,
+} from "./service.js";
 
 const base: Suggestion = {
   id: "00000000-0000-4000-8000-000000000001",
@@ -11,6 +17,7 @@ const base: Suggestion = {
   authorId: "42",
   authorName: "kel",
   text: "Add a #clips channel @everyone",
+  answers: null,
   anonymous: false,
   status: "open",
   up: 3,
@@ -64,5 +71,53 @@ describe("suggestions", () => {
     expect(texts.some((t) => t.startsWith("[For"))).toBe(false);
     expect(votingOpen({ status: "planned" })).toBe(true);
     expect(votingOpen({ status: "declined" })).toBe(false);
+  });
+
+  it("shows the form's other answers under their questions", () => {
+    const texts = cardTexts(
+      cardMessage(
+        suggestionCard({
+          ...base,
+          text: "A clips channel",
+          answers: [
+            { label: "Your idea", value: "A clips channel" },
+            { label: "Why it would help", value: "Highlights get lost in #general" },
+          ],
+        }),
+      ),
+    ).join("\n");
+    expect(texts).toContain("A clips channel");
+    expect(texts).toContain("**Why it would help**\nHighlights get lost in #general");
+    // The idea shows once, as the card's text, not again under its question.
+    expect(texts).not.toContain("**Your idea**");
+  });
+});
+
+describe("the suggestions panel", () => {
+  it("posts the server's words with the button that opens the form", () => {
+    const texts = cardTexts(suggestionPanelMessage(DEFAULT_SUGGESTIONS)).join("\n");
+    expect(texts).toContain("Got an idea?");
+    expect(texts).toContain("[Suggest an idea]");
+    const own = cardTexts(
+      suggestionPanelMessage({
+        ...DEFAULT_SUGGESTIONS,
+        panelTitle: "Ideas box",
+        buttonLabel: "Pitch it",
+      }),
+    ).join("\n");
+    expect(own).toContain("Ideas box");
+    expect(own).toContain("[Pitch it]");
+  });
+
+  it("opens a form whose first question is required and the rest optional", () => {
+    const form = suggestionModal(DEFAULT_SUGGESTIONS).toJSON();
+    const inputs = form.components.map(
+      (c) => (c as { component: { custom_id: string; required?: boolean } }).component,
+    );
+    expect(inputs.map((i) => [i.custom_id, i.required])).toEqual([
+      ["theidea", true],
+      ["whyhelp", false],
+    ]);
+    expect(form.title).toBe("Suggest an idea");
   });
 });

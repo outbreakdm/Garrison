@@ -108,6 +108,7 @@ const REQUEST_PAGE: Record<string, string> = {
   post_verify_panel: "/gatehouse?tab=verification",
   verify_decide: "/gatehouse#answers",
   post_application_panel: "/applications",
+  post_suggestion_panel: "/suggestions#panel",
   application_decide: "/applications#review",
   anti_nuke: "/gatehouse?tab=antinuke",
   undo_case: "/watch",

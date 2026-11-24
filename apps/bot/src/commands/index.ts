@@ -20,7 +20,12 @@ import { lfg, rallyButtons } from "../modules/rally/commands.js";
 import { leaderboard, rank, rankcard, rankcardModals, ranks } from "../modules/ranks/commands.js";
 import { tag } from "../modules/responders/commands.js";
 import { roleMenuButtons, roleMenuSelects } from "../modules/roles/handlers.js";
-import { suggest, suggestionButtons } from "../modules/suggestions/commands.js";
+import {
+  suggest,
+  suggestionButtons,
+  suggestionModals,
+  suggestionPanelButtons,
+} from "../modules/suggestions/commands.js";
 import { ticket, ticketButtons, ticketModals } from "../modules/tickets/handlers.js";
 import { temprole } from "../modules/utilities/commands.js";
 import { watchButtons, watchCommands } from "../modules/watch/commands/index.js";
@@ -61,6 +66,7 @@ export const buttons: ButtonHandler[] = [
   ticketButtons,
   giveawayButtons,
   suggestionButtons,
+  suggestionPanelButtons,
   applyButtons,
   decideApplicationButtons,
   triviaButtons,
@@ -72,6 +78,7 @@ export const modals: ModalHandler[] = [
   rankcardModals,
   questionModals,
   applicationModals,
+  suggestionModals,
 ];
 
 // Each command's description in Spanish, Portuguese, German and French: Discord shows members

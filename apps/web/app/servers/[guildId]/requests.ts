@@ -27,6 +27,7 @@ import {
   getQuarantine,
   getRoleMenus,
   getSuggestion,
+  getSuggestionSettings,
   getTemplate,
   getTicket,
   getTicketConfig,
@@ -342,6 +343,16 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
         ok: true,
         input: { kind, payload: { id: a.id, approve: field(form, "op") === "approve" } },
       };
+    }
+    case "post_suggestion_panel": {
+      const channelId = field(form, "channelId");
+      const [config, channels] = await Promise.all([
+        getSuggestionSettings(db, guildId),
+        listTextChannels(guildId).catch(() => []),
+      ]);
+      if (!config.enabled || !config.channelId) return { ok: false, error: "suggestions_off" };
+      if (!channels.some((c) => c.id === channelId)) return { ok: false, error: "channel" };
+      return { ok: true, input: { kind, payload: { channelId } } };
     }
     case "suggestion_status": {
       const status = SUGGESTION_STATUSES.find((s) => s === field(form, "status"));

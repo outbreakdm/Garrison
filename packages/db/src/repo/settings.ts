@@ -148,7 +148,18 @@ export const EDITABLE_FIELDS = {
     "regexAllow",
   ],
   // Checked with checkSuggestions before it gets here.
-  suggestions: ["enabled", "channelId", "anonymous"],
+  // The board with checkSuggestions, the panel and its form with checkSuggestionPanel. Where
+  // the panel is posted is the bot's to record (setSuggestionPanelMessage), not a setting.
+  suggestions: [
+    "enabled",
+    "channelId",
+    "anonymous",
+    "panelTitle",
+    "panelBody",
+    "buttonLabel",
+    "questions",
+    "panelSticky",
+  ],
   // Checked with checkVoiceRooms before it gets here.
   voice: ["enabled", "creatorChannelIds", "nameTemplate", "userLimit", "categoryId"],
   // Checked with checkServerStats before it gets here.

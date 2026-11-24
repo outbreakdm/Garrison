@@ -879,7 +879,7 @@ export interface QmSettingChange {
  * into a channel (an id, or the ref of a channel the same plan creates).
  */
 export interface QmPost {
-  kind: "role_menu" | "ticket_panel" | "message";
+  kind: "role_menu" | "ticket_panel" | "message" | "suggestion_panel";
   itemId: string;
   /** The item's name when the plan was drafted, for the preview. */
   name: string;
@@ -1328,6 +1328,7 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "application_decide",
   "undo_cases",
   "ticket_bulk",
+  "post_suggestion_panel",
 ]);
 
 /**
@@ -2863,6 +2864,17 @@ export const suggestionSettings = pgTable("suggestion_settings", {
   enabled: boolean("enabled").notNull().default(false),
   channelId: text("channel_id"),
   anonymous: boolean("anonymous").notNull().default(false),
+  /** The panel members press to suggest; null is the standard text (suggestions.ts). */
+  panelTitle: text("panel_title"),
+  panelBody: text("panel_body"),
+  buttonLabel: text("button_label"),
+  /** The form its button opens; null or empty is the standard two questions. */
+  questions: jsonb("questions").$type<VerifyQuestion[]>(),
+  /** Post the panel again under each new suggestion, so it stays at the bottom. */
+  panelSticky: boolean("panel_sticky").notNull().default(true),
+  /** Where Garrison posted the panel (the bot records it). */
+  panelChannelId: text("panel_channel_id"),
+  panelMessageId: text("panel_message_id"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
 
@@ -2880,7 +2892,10 @@ export const suggestions = pgTable(
     number: integer("number").notNull(),
     authorId: text("author_id").notNull(),
     authorName: text("author_name").notNull(),
+    /** The idea itself: the form's first answer, or what /suggest was given. */
     text: text("text").notNull(),
+    /** Every answer from the panel's form, labelled, for the card; null from /suggest. */
+    answers: jsonb("answers").$type<VerifyAnswer[]>(),
     anonymous: boolean("anonymous").notNull().default(false),
     status: text("status").notNull().default("open"),
     up: integer("up").notNull().default(0),

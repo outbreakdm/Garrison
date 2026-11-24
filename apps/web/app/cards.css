@@ -2923,3 +2923,30 @@
 .dc__attachment {
   max-width: 520px;
 }
+
+/* Suggestions: the form's other answers under the idea, and posting the panel. */
+.sg-row__answers {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+}
+.sg-row__answers dt {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.sg-row__answers dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.sg-post__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+.sg-post__form .g-field {
+  flex: 1 1 220px;
+}
