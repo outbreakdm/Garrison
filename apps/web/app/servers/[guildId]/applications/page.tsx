@@ -168,7 +168,7 @@ export default async function ApplicationsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { guildId } = await params;
-  const { guild } = await requireGuildAccess(guildId);
+  const { guild } = await requireGuildAccess(guildId, "applications");
   const query = await searchParams;
   const db = await getDb();
   const [raw, plan, recent, channels, allRoles, flash] = await Promise.all([

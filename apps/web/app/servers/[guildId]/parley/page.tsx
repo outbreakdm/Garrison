@@ -71,7 +71,7 @@ export default async function TicketsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { guildId } = await params;
-  const { guild } = await requireGuildAccess(guildId);
+  const { guild } = await requireGuildAccess(guildId, "parley");
   const query = await searchParams;
   const view: TicketView = isView(query.view) ? query.view : "staff";
   const q = cleanQuery(query.q);

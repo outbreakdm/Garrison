@@ -51,7 +51,7 @@ export default async function SuggestionsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const { guildId } = await params;
-  const { guild } = await requireGuildAccess(guildId);
+  const { guild } = await requireGuildAccess(guildId, "suggestions");
   // On but can't work (a missing channel, a missing permission): said in the head.
   const status = await pageStatus(guild.id, "/suggestions");
   const query = await searchParams;

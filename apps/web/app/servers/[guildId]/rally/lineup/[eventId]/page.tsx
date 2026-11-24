@@ -36,7 +36,7 @@ export default async function LineupPage({
   params: Promise<{ guildId: string; eventId: string }>;
 }) {
   const { guildId, eventId } = await params;
-  const { guild, role } = await requireGuildAccess(guildId);
+  const { guild, role } = await requireGuildAccess(guildId, "rally");
   if (!/^[0-9a-f-]{36}$/.test(eventId)) notFound();
   const db = await getDb();
   const event = await getOpsEvent(db, guild.id, eventId);

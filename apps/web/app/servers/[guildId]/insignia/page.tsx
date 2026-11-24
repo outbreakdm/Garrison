@@ -47,7 +47,7 @@ export default async function RoleMenusPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { guildId } = await params;
-  const { guild } = await requireGuildAccess(guildId);
+  const { guild } = await requireGuildAccess(guildId, "insignia");
   const query = await searchParams;
   const db = await getDb();
   const [raw, plan, posts, channels, roles, botTop, serverEmoji] = await Promise.all([

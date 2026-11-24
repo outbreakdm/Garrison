@@ -24,7 +24,7 @@ import { checkGuildAccess } from "@/lib/session";
  * card is stored as null, so a server that never customized has nothing saved.
  */
 export async function saveRankCard(form: FormData): Promise<AutoResult> {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""), "editor", "ranks");
   if (!access) redirect("/servers");
   const { guild, session } = access;
   const back = (outcome: Outcome) => answer(form, `/servers/${guild.id}/ranks`, outcome, "#card");
@@ -63,7 +63,7 @@ export async function saveRankCard(form: FormData): Promise<AutoResult> {
  * Free can still clear its boosts.
  */
 export async function saveBoosts(form: FormData): Promise<AutoResult> {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""), "editor", "ranks");
   if (!access) redirect("/servers");
   const { guild, session } = access;
   const back = (outcome: Outcome) => answer(form, `/servers/${guild.id}/ranks`, outcome, "#boosts");

@@ -36,7 +36,7 @@ const ACCOUNT_TABS = ["shared", "rules"] as const;
 
 export default async function BarracksPage({ params }: { params: Promise<{ guildId: string }> }) {
   const { guildId } = await params;
-  const { guild } = await requireGuildAccess(guildId);
+  const { guild } = await requireGuildAccess(guildId, "barracks");
   const db = await getDb();
   const [roster, rawRules, plan, roles, flash] = await Promise.all([
     getRoster(db, guild.id),

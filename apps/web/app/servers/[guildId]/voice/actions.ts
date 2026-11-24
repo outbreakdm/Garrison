@@ -19,7 +19,7 @@ import { checkGuildAccess } from "@/lib/session";
  * channel (or category) in this server.
  */
 export async function saveVoiceRooms(form: FormData): Promise<AutoResult> {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""), "editor", "voice");
   if (!access) redirect("/servers");
   const { guild, session } = access;
   const back = (outcome: Outcome) => answer(form, `/servers/${guild.id}/voice`, outcome);

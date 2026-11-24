@@ -1,6 +1,12 @@
 "use client";
 
-import { type DashboardRole, MANAGER_REQUEST_KINDS } from "@garrison/db/cards";
+import {
+  type AccessSwitch,
+  type DashboardRole,
+  MANAGER_REQUEST_KINDS,
+  switchFor,
+} from "@garrison/db/cards";
+import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 /**
@@ -12,8 +18,25 @@ import { useEffect } from "react";
  * - editor: the forms only managers may send: a request for a manager-only kind (moderation,
  *   lockdown, backups, templates, applying a build, seasons) or a form marked
  *   data-need="manager" (the plan, appeals, who has access).
+ * - an access group: per area. Where it gives View, every change is locked as for a viewer;
+ *   where it gives Edit, manager-only requests stay locked unless the group has that switch.
  */
-export function AccessGuard({ role }: { role: DashboardRole }) {
+export function AccessGuard({
+  role,
+  areas = null,
+  switches = [],
+}: {
+  role: DashboardRole;
+  /** Their access per area, or null when a Viewer or Editor grant covers every area alike. */
+  areas?: Record<string, "view" | "edit"> | null;
+  switches?: AccessSwitch[];
+}) {
+  const pathname = usePathname();
+  // /servers/<id>/<area>/…: the area this page belongs to.
+  const area = pathname.split("/")[3] ?? "";
+  const canEdit = areas ? areas[area] === "edit" : role === "editor";
+  const switchKey = switches.join(",");
+  // biome-ignore lint/correctness/useExhaustiveDependencies: switchKey stands for switches
   useEffect(() => {
     if (role === "manager") return;
     const main = document.getElementById("content");
@@ -21,15 +44,16 @@ export function AccessGuard({ role }: { role: DashboardRole }) {
 
     const locked = (form: HTMLFormElement) => {
       if (form.method.toLowerCase() !== "post") return false;
-      if (role === "viewer") return true;
+      if (!canEdit) return true;
       if (form.dataset.need === "manager") return true;
       const kind = form.querySelector<HTMLInputElement>('input[name="kind"]')?.value;
-      return Boolean(kind && MANAGER_REQUEST_KINDS.has(kind));
+      if (!kind || !MANAGER_REQUEST_KINDS.has(kind)) return false;
+      const needs = switchFor(kind);
+      return !needs || !switches.includes(needs);
     };
-    const why =
-      role === "viewer"
-        ? "You can view this server's dashboard, not change it."
-        : "Needs Manage Server in Discord.";
+    const why = !canEdit
+      ? "You can view this page, not change it."
+      : "Needs Manage Server in Discord.";
 
     const lockAll = () => {
       for (const form of main.querySelectorAll("form")) {
@@ -71,6 +95,6 @@ export function AccessGuard({ role }: { role: DashboardRole }) {
       watch.disconnect();
       main.removeEventListener("submit", stop, true);
     };
-  }, [role]);
+  }, [role, canEdit, switchKey]);
   return null;
 }

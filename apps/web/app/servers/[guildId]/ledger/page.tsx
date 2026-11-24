@@ -37,7 +37,7 @@ export default async function LedgerPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const { guildId } = await params;
-  const { guild } = await requireGuildAccess(guildId);
+  const { guild } = await requireGuildAccess(guildId, "ledger");
   const q = await searchParams;
   // Filters come from the URL: accept only known shapes, ignore anything else.
   // A member by name or ID: a name is looked up in the server, its first match is used.

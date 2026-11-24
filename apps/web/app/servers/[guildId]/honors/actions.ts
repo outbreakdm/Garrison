@@ -21,7 +21,7 @@ import { checkGuildAccess } from "@/lib/session";
  * and checks every channel belongs to this server.
  */
 export async function saveStarboard(form: FormData): Promise<AutoResult> {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""), "editor", "honors");
   if (!access) redirect("/servers");
   const { guild, session } = access;
   const back = (outcome: Outcome) => answer(form, `/servers/${guild.id}/honors`, outcome);

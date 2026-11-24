@@ -32,7 +32,7 @@ export default async function MemberPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { guildId, userId } = await params;
-  const { guild, session } = await requireGuildAccess(guildId);
+  const { guild, session } = await requireGuildAccess(guildId, "watch");
   if (!/^\d{17,20}$/.test(userId)) notFound();
   const query = await searchParams;
   const db = await getDb();

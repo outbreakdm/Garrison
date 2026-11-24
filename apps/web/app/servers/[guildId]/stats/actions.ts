@@ -19,7 +19,7 @@ import { checkGuildAccess } from "@/lib/session";
  * belongs to this server. The counters come as one JSON list (the editor's rows).
  */
 export async function saveServerStats(form: FormData): Promise<AutoResult> {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""), "editor", "stats");
   if (!access) redirect("/servers");
   const { guild, session } = access;
   const back = (outcome: Outcome) => answer(form, `/servers/${guild.id}/stats`, outcome);

@@ -33,7 +33,7 @@ export default async function ServerStatsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const { guildId } = await params;
-  const { guild } = await requireGuildAccess(guildId);
+  const { guild } = await requireGuildAccess(guildId, "stats");
   const status = await pageStatus(guild.id, "/stats");
   const query = await searchParams;
   const db = await getDb();

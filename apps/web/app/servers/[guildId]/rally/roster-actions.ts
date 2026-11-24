@@ -40,7 +40,7 @@ const back = (guildId: string, outcome: { ok: string } | { error: string }, anch
   flashBack(`/servers/${guildId}/rally`, outcome, `?tab=roster${anchor ? `#${anchor}` : ""}`);
 
 async function load(form: FormData) {
-  const access = await checkGuildAccess(text(form, "guildId"));
+  const access = await checkGuildAccess(text(form, "guildId"), "editor", "rally");
   if (!access) redirect("/servers");
   return { ...access, db: await getDb() };
 }

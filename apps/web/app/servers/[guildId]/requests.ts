@@ -38,6 +38,7 @@ import {
   isPanelPaused,
   isPaused,
   MANAGER_REQUEST_KINDS,
+  mayRequest,
   parseAmount,
   parseDiscordLink,
   type QueueInput,
@@ -718,16 +719,22 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
 }
 
 export async function requestAction(form: FormData) {
-  const access = await checkGuildAccess(field(form, "guildId"));
+  // Anyone with access to this server gets this far; what they may ask for is checked below.
+  const access = await checkGuildAccess(field(form, "guildId"), "viewer", "any");
   if (!access) redirect("/servers");
   const { session, guild } = access;
   const asked = field(form, "page");
   const page = PAGES.has(asked) || MEMBER_PAGE.test(asked) || TICKET_PAGE.test(asked) ? asked : "";
   const base = `/servers/${guild.id}${page ? `/${page}` : ""}`;
-  // Acting on members or the server's structure through the bot is a manager's call: the bot
-  // holds powers an editor may not have in Discord.
-  if (MANAGER_REQUEST_KINDS.has(field(form, "kind")) && access.role !== "manager")
-    redirect(`${base}?${new URLSearchParams({ error: "manager_only" })}#requests`);
+  // Edit on the request's area (View for one that only changes the requester's own place). Acting
+  // on members or the server's structure through the bot also needs a manager, or a group
+  // trusted with that switch: the bot holds powers an editor may not have in Discord.
+  if (access.access && !mayRequest(access.access, field(form, "kind")))
+    redirect(
+      `${base}?${new URLSearchParams({
+        error: MANAGER_REQUEST_KINDS.has(field(form, "kind")) ? "manager_only" : "no_access",
+      })}#requests`,
+    );
   // On the AI assistant, a draft's requests report in the Your server panel.
   const kind = field(form, "kind");
   const where =

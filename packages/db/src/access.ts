@@ -12,6 +12,10 @@
  * and removal is in Settings history and can be undone. Access is re-checked on every request.
  */
 
+import type { dashboardActionKind } from "./schema";
+
+type DashboardActionKind = (typeof dashboardActionKind.enumValues)[number];
+
 export const ACCESS_LEVELS = ["viewer", "editor"] as const;
 export type AccessLevel = (typeof ACCESS_LEVELS)[number];
 /** What someone can do on a server's dashboard, highest last. */
@@ -331,3 +335,123 @@ export function resolveAccess(
 /** May this access do `need` on `area`? View is enough to look; changing needs Edit. */
 export const allows = (access: ResolvedAccess, area: AccessArea, need: AreaLevel) =>
   need === "view" ? !!access.areas[area] : access.areas[area] === "edit";
+
+/** Requests that only change the requester's own place (a group, a raid, their own coins). */
+export const SELF_REQUESTS: ReadonlySet<string> = new Set([
+  "lfg_join",
+  "lfg_leave",
+  "raid_signup",
+  "raid_withdraw",
+  "raid_answer",
+  "economy_buy",
+  "web_verify",
+]);
+
+/**
+ * The area each dashboard request belongs to: making it needs Edit there (self-service requests
+ * need View), and a manager-only one also needs its switch. Null: no group can make it.
+ */
+export const REQUEST_AREAS: Record<DashboardActionKind, AccessArea | null> = {
+  create_raid: "rally",
+  move_signup: "rally",
+  call_signups: "rally",
+  cancel_raid: "rally",
+  close_lfg: "rally",
+  create_lfg: "rally",
+  lfg_join: "rally",
+  lfg_leave: "rally",
+  raid_signup: "rally",
+  raid_withdraw: "rally",
+  raid_answer: "rally",
+  post_lineup: "rally",
+  post_lfg_panel: "rally",
+  lockdown_start: "gatehouse",
+  lockdown_end: "gatehouse",
+  release_quarantine: "gatehouse",
+  anti_nuke: "gatehouse",
+  post_verify_panel: "gatehouse",
+  verify_decide: "gatehouse",
+  backup_create: "gatehouse",
+  backup_restore: "gatehouse",
+  undo_case: "watch",
+  undo_cases: "watch",
+  mod_action: "watch",
+  purge: "watch",
+  qm_plan: "quartermaster",
+  qm_apply: "quartermaster",
+  qm_cancel: "quartermaster",
+  qm_chat: "quartermaster",
+  qm_remove: "quartermaster",
+  qm_edit: "quartermaster",
+  undo_build: "quartermaster",
+  template_save: "quartermaster",
+  template_apply: "quartermaster",
+  run_health: "settings",
+  bot_profile: "settings",
+  post_role_menu: "insignia",
+  post_message: "dispatch",
+  post_ticket_panel: "parley",
+  ticket_action: "parley",
+  ticket_bulk: "parley",
+  start_giveaway: "spoils",
+  giveaway_action: "spoils",
+  test_alert: "beacon",
+  post_stream_panel: "beacon",
+  stream_request_decide: "beacon",
+  season_start: "ranks",
+  suggestion_status: "suggestions",
+  post_suggestion_panel: "suggestions",
+  economy_adjust: "economy",
+  economy_purchase: "economy",
+  post_shop_panel: "economy",
+  economy_buy: null,
+  web_verify: null,
+  post_application_panel: "applications",
+  application_decide: "applications",
+};
+
+/**
+ * May this access make this request? Managers aside: Edit on its area (View for self-service),
+ * and for a manager-only request, the switch for it too.
+ */
+export function mayRequest(access: ResolvedAccess, kind: string): boolean {
+  const area = (REQUEST_AREAS as Record<string, AccessArea | null>)[kind];
+  if (!area) return false;
+  if (!allows(access, area, SELF_REQUESTS.has(kind) ? "view" : "edit")) return false;
+  if (!MANAGER_REQUEST_KINDS.has(kind)) return true;
+  const needs = switchFor(kind);
+  return !!needs && access.switches.includes(needs);
+}
+
+/**
+ * The area each settings module is changed (and undone) from. Null: managers only (who has
+ * access, member pages and the public page).
+ */
+export const SETTINGS_AREAS: Record<string, AccessArea | null> = {
+  watch: "watch",
+  escalation: "watch",
+  automod: "watch",
+  gatehouse: "gatehouse",
+  ledger: "ledger",
+  ops: "rally",
+  rally: "rally",
+  ranks: "ranks",
+  rewards: "ranks",
+  roles: "insignia",
+  welcome: "herald",
+  messages: "dispatch",
+  tickets: "parley",
+  alerts: "beacon",
+  starboard: "honors",
+  barracks: "barracks",
+  voice: "voice",
+  suggestions: "suggestions",
+  stats: "stats",
+  invites: "invites",
+  economy: "economy",
+  applications: "applications",
+  utilities: "utilities",
+  fun: "fun",
+  access: null,
+  members: null,
+};

@@ -21,7 +21,7 @@ then updates **Status** and the **Log** before stopping.
   1. [x] Groups: rules (`access.ts`: areas, switches, groups, the resolver), migration, the
      Settings → Access editor (managers only), tests. Built, not deployed: **migration 0103**
      (`dashboard_access.groups`). Groups are saved but reach nothing until phase 2 passes areas.
-  2. [ ] Enforcement: `checkGuildAccess`/`requireGuildAccess` take the area; every page and
+  2. [x] Enforcement: `checkGuildAccess`/`requireGuildAccess` take the area; every page and
      action under `/servers/<id>/<area>` passes its own (the access-gates test fails on any that
      don't); request kinds map to an area and a switch; the menu shows only areas they can view.
   3. [ ] Members' view: the server list includes servers where a group gives access, a "What you
@@ -1869,3 +1869,13 @@ Decided (2026-11-12, owner):
   and `requireGuildAccess(guildId, area)` use it, and with no area only the grants count, so a
   group reaches nothing until phase 2 names the areas. Migration `0103_access_groups`. Checked
   in the local preview (make, save areas and a switch, add a role). Not deployed.
+- 2026-11-24: Access groups (phase 2 of 3): groups take effect. Every page and action under
+  `/servers/<id>/<area>/` passes its area (62 checks; the access-gates test now fails on any
+  that doesn't); the Overview, layout, search and help take "any" access; module saves kept in
+  settings/actions.ts check their own area (`SETTINGS_AREAS`), and undo only reaches modules
+  whose area they may edit. Dashboard requests map to an area (`REQUEST_AREAS`, every kind):
+  Edit there, View for self-service ones, and a manager-only one also needs its switch
+  (`mayRequest`), checked on the dashboard and again by the bot. The menu shows a group-only
+  member just their areas (plus Overview and Help); the form lock follows the page's area.
+  Checked in the local preview as a member whose role is in a group (Giveaways edit, Logs view):
+  the menu, Logs readable, Moderation not found. Not deployed.

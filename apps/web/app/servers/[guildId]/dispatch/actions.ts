@@ -30,7 +30,7 @@ const back = (form: FormData, guildId: string, outcome: Outcome, open = "") =>
   answer(form, `/servers/${guildId}/dispatch`, outcome, open ? `?edit=${open}#${open}` : "");
 
 async function load(form: FormData) {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""), "editor", "dispatch");
   if (!access) redirect("/servers");
   const db = await getDb();
   const [raw, plan] = await Promise.all([

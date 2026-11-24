@@ -50,7 +50,7 @@ export default async function GiveawaysPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { guildId } = await params;
-  const { guild } = await requireGuildAccess(guildId);
+  const { guild } = await requireGuildAccess(guildId, "spoils");
   const query = await searchParams;
   const db = await getDb();
   const [plan, list, channels, roles] = await Promise.all([

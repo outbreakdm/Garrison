@@ -17,7 +17,7 @@ import { checkGuildAccess } from "@/lib/session";
 
 /** Suggestions settings. Re-checks access, the plan, and that the channel is in this server. */
 export async function saveSuggestions(form: FormData): Promise<AutoResult> {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""), "editor", "suggestions");
   if (!access) redirect("/servers");
   const { guild, session } = access;
   const back = (outcome: Outcome) => answer(form, `/servers/${guild.id}/suggestions`, outcome);
@@ -59,7 +59,7 @@ export async function saveSuggestions(form: FormData): Promise<AutoResult> {
  * is a request to the bot (post_suggestion_panel), which uses what's saved here.
  */
 export async function saveSuggestionPanel(form: FormData): Promise<AutoResult> {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""), "editor", "suggestions");
   if (!access) redirect("/servers");
   const { guild, session } = access;
   const back = (outcome: Outcome) => answer(form, `/servers/${guild.id}/suggestions`, outcome);

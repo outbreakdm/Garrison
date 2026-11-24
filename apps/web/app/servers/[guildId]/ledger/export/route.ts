@@ -19,7 +19,7 @@ const cell = (v: unknown) => {
 
 export async function GET(req: Request, { params }: { params: Promise<{ guildId: string }> }) {
   const { guildId } = await params;
-  const access = await checkGuildAccess(guildId, "viewer");
+  const access = await checkGuildAccess(guildId, "viewer", "ledger");
   if (!access) return new Response("Not found", { status: 404 });
   const db = await getDb();
   if (!entitlements(await getGuildPlan(db, access.guild.id))["ledger.export"])

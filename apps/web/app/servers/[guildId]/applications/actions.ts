@@ -28,7 +28,11 @@ import { checkGuildAccess } from "@/lib/session";
 const crypto01 = () => randomInt(0, 1_000_000) / 1_000_000;
 
 async function load(form: FormData) {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(
+    String(form.get("guildId") ?? ""),
+    "editor",
+    "applications",
+  );
   if (!access) redirect("/servers");
   const db = await getDb();
   const [raw, plan] = await Promise.all([

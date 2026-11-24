@@ -27,7 +27,7 @@ const back = (guildId: string, outcome: { ok: string } | { error: string }, anch
   flashBack(`/servers/${guildId}/rally`, outcome, `?tab=templates${anchor ? `#${anchor}` : ""}`);
 
 async function load(form: FormData) {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""), "editor", "rally");
   if (!access) redirect("/servers");
   const db = await getDb();
   const [raw, plan] = await Promise.all([

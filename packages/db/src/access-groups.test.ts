@@ -4,6 +4,7 @@ import {
   type AccessGroup,
   allows,
   checkAccessGroups,
+  mayRequest,
   readAccessGroups,
   resolveAccess,
   switchFor,
@@ -69,5 +70,25 @@ describe("access groups", () => {
       error: "This server's plan allows 1 access group.",
     });
     expect(checkAccessGroups([hosts], 2)).toEqual({ ok: true, value: [hosts] });
+  });
+
+  it("lets a group make requests in its areas, and manager-only ones only with their switch", () => {
+    const mods: AccessGroup = {
+      ...hosts,
+      areas: { spoils: "edit", watch: "edit", rally: "view" },
+      switches: [],
+    };
+    const a = resolveAccess([], [mods], KEL, [MODS]);
+    if (!a) throw new Error("no access");
+    expect(mayRequest(a, "start_giveaway")).toBe(true);
+    expect(mayRequest(a, "post_message")).toBe(false);
+    expect(mayRequest(a, "mod_action")).toBe(false);
+    expect(mayRequest(a, "raid_signup")).toBe(true);
+    expect(mayRequest(a, "create_raid")).toBe(false);
+    expect(mayRequest(a, "economy_buy")).toBe(false);
+    const trusted = resolveAccess([], [{ ...mods, switches: ["moderate"] }], KEL, [MODS]);
+    if (!trusted) throw new Error("no access");
+    expect(mayRequest(trusted, "mod_action")).toBe(true);
+    expect(mayRequest(trusted, "lockdown_start")).toBe(false);
   });
 });

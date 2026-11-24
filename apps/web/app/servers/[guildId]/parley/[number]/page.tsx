@@ -36,7 +36,7 @@ export default async function TicketPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { guildId, number: raw } = await params;
-  const { guild } = await requireGuildAccess(guildId);
+  const { guild } = await requireGuildAccess(guildId, "parley");
   const query = await searchParams;
   const number = Number(raw);
   if (!Number.isInteger(number) || number < 1) notFound();

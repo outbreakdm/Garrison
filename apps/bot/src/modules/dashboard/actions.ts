@@ -7,7 +7,7 @@ import {
   createOpsEvent,
   type DashboardAction,
   finishDashboardAction,
-  getAccessGrants,
+  getDashboardAccess,
   getGatehouseSettings,
   getLfgPost,
   getOpsEvent,
@@ -15,10 +15,11 @@ import {
   getQmBuildByVersion,
   getRoleMenuPost,
   getRosterTeam,
-  grantedLevel,
   listSignups,
   MANAGER_REQUEST_KINDS,
+  mayRequest,
   recordRoleMenuPost,
+  resolveAccess,
   saveHealthSnapshot,
   setOpsMessage,
   signUp,
@@ -213,11 +214,15 @@ async function requester(
   if (!member) return null;
   if (guild.ownerId === member.id || member.permissions.has(PermissionFlagsBits.ManageGuild))
     return member;
-  if (MANAGER_REQUEST_KINDS.has(kind)) return null;
-  const grants = await getAccessGrants(ctx.db, guild.id).catch(() => []);
-  if (!grants.length) return null;
+  // Grants and access groups, read again: Edit on the request's area, and for a manager-only
+  // request the switch a manager trusted their group with.
+  const { grants, groups } = await getDashboardAccess(ctx.db, guild.id).catch(() => ({
+    grants: [],
+    groups: [],
+  }));
   const roleIds = [...(member.roles?.cache?.keys() ?? [])];
-  return grantedLevel(grants, member.id, roleIds) === "editor" ? member : null;
+  const access = resolveAccess(grants, groups, member.id, roleIds);
+  return access && mayRequest(access, kind) ? member : null;
 }
 
 async function doCreateRaid(ctx: BotContext, guild: Guild, member: GuildMember, raw: unknown) {

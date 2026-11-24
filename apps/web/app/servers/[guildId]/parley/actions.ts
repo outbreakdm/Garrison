@@ -35,7 +35,7 @@ const back = (guildId: string, outcome: { ok: string } | { error: string }, open
   flashBack(`/servers/${guildId}/parley`, outcome, `${open ? `?edit=${open}#${open}` : ""}`);
 
 async function load(form: FormData) {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""), "editor", "parley");
   if (!access) redirect("/servers");
   const db = await getDb();
   const [config, plan] = await Promise.all([
@@ -179,7 +179,7 @@ export async function saveTicketOptions(form: FormData): Promise<AutoResult> {
 
 /** A staff note on a ticket. Only the dashboard shows it; the member never sees it. */
 export async function addNote(form: FormData) {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""), "editor", "parley");
   if (!access) redirect("/servers");
   const number = Number(form.get("number"));
   const path = `/servers/${access.guild.id}/parley/${number}`;

@@ -67,7 +67,7 @@ export default async function EconomyPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const { guildId } = await params;
-  const { guild, role } = await requireGuildAccess(guildId);
+  const { guild, role } = await requireGuildAccess(guildId, "economy");
   const query = await searchParams;
   const find = typeof query.find === "string" ? query.find.trim().slice(0, 32) : "";
   const db = await getDb();

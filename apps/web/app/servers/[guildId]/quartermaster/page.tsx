@@ -111,7 +111,7 @@ export default async function QuartermasterPage({
 }) {
   const { guildId } = await params;
   const query = await searchParams;
-  const { guild, session, role } = await requireGuildAccess(guildId);
+  const { guild, session, role } = await requireGuildAccess(guildId, "quartermaster");
   const db = await getDb();
   const fresh = query.fresh === "1";
   // A past conversation reopened from the list, or the latest one.

@@ -33,7 +33,7 @@ const back = (guildId: string, query: Record<string, string>) =>
   redirect(`/servers/${guildId}/rally?${new URLSearchParams(query)}`);
 
 async function authorize(form: FormData) {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""), "editor", "rally");
   if (!access) redirect("/servers");
   return access;
 }

@@ -132,6 +132,35 @@ describe("every dashboard entry point checks who's asking", () => {
     expect(access).toMatch(/checkGuildAccess\(.*"manager"\)/);
   });
 
+  it("names the area in every check under a dashboard area, so access groups reach only theirs", () => {
+    // /servers/[guildId]/<area>/…: a check without the area would ignore what groups allow.
+    const missing: string[] = [];
+    for (const path of files(join(APP, "servers", "[guildId]"), (p) => /\.tsx?$/.test(p))) {
+      const id = rel(path);
+      const area = id.split("/")[2] ?? "";
+      if (!id.includes("/", "servers/[guildId]/".length) || ["plan", "help", "search"].includes(area))
+        continue;
+      const source = readFileSync(path, "utf8");
+      for (const m of source.matchAll(/\b(requireGuildAccess|checkGuildAccess)\(/g)) {
+        // The call's top-level arguments, past nested parentheses.
+        const args: string[] = [""];
+        for (let i = (m.index ?? 0) + m[0].length, depth = 1; i < source.length; i++) {
+          const c = source[i] as string;
+          if (c === "(") depth++;
+          if (c === ")" && --depth === 0) break;
+          if (c === "," && depth === 1) args.push("");
+          else args[args.length - 1] += c;
+        }
+        const named = args.map((a) => a.trim()).filter(Boolean);
+        const last = named.at(-1) ?? "";
+        const enough = m[1] === "requireGuildAccess" ? named.length >= 2 : named.length >= 3;
+        if (enough || /"manager"/.test(last) || /need === "manager"/.test(last)) continue;
+        missing.push(`${id}: ${m[1]}(${named.join(", ").slice(0, 60)})`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+
   it("checks access in every server page itself", () => {
     const pages = files(APP, (p) => p.endsWith("page.tsx"));
     const open = pages

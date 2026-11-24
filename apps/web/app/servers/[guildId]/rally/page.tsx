@@ -101,7 +101,7 @@ export default async function RallyPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { guildId } = await params;
-  const { guild, session } = await requireGuildAccess(guildId);
+  const { guild, session } = await requireGuildAccess(guildId, "rally");
   const query = await searchParams;
   const db = await getDb();
   const [

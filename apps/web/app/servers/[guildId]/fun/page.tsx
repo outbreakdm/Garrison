@@ -15,7 +15,7 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 
 export default async function FunPage({ params }: { params: Promise<{ guildId: string }> }) {
   const { guildId } = await params;
-  const { guild } = await requireGuildAccess(guildId);
+  const { guild } = await requireGuildAccess(guildId, "fun");
   const db = await getDb();
   const [settings, state, birthdays, channels, allRoles, flash] = await Promise.all([
     getFunSettings(db, guild.id),

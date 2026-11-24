@@ -23,7 +23,11 @@ import { checkGuildAccess } from "@/lib/session";
 
 /** Delete one of your own server templates. Only ever the signed-in member's. */
 export async function removeTemplate(form: FormData) {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(
+    String(form.get("guildId") ?? ""),
+    "editor",
+    "quartermaster",
+  );
   if (!access) redirect("/servers");
   const id = String(form.get("templateId") ?? "");
   const ok =
@@ -43,7 +47,11 @@ const SNOWFLAKE = /^\d{17,20}$/;
  * saved through Settings history, where it can be undone.
  */
 export async function saveFeature(form: FormData) {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(
+    String(form.get("guildId") ?? ""),
+    "editor",
+    "quartermaster",
+  );
   if (!access) redirect("/servers");
   const { guild, session } = access;
   const back = (outcome: { ok: string } | { error: string }) =>
@@ -134,7 +142,7 @@ const HAND_ERRORS: Record<string, string> = {
  * it against the server, and costs no supplies. Managers only, like applying a build.
  */
 export async function handEdit(guildId: string, change: QmEditPayload): Promise<HandEditResult> {
-  const access = await checkGuildAccess(guildId);
+  const access = await checkGuildAccess(guildId, "editor", "quartermaster");
   if (!access) return { ok: false, error: "Sign in again to make changes." };
   if (access.role !== "manager")
     return { ok: false, error: "Only managers of this server can change it here." };
@@ -183,7 +191,7 @@ export async function rateReply(
   feedback: 1 | -1 | null,
   note?: string,
 ): Promise<{ ok: boolean }> {
-  const access = await checkGuildAccess(guildId);
+  const access = await checkGuildAccess(guildId, "editor", "quartermaster");
   if (!access || !/^[0-9a-f-]{36}$/.test(messageId)) return { ok: false };
   if (feedback !== 1 && feedback !== -1 && feedback !== null) return { ok: false };
   const ok = await rateQmReply(await getDb(), {

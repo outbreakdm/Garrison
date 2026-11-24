@@ -1,6 +1,7 @@
 "use server";
 
 import {
+  type AccessArea,
   applySettingsChange,
   checkPublicPage,
   checkVerifyQuestions,
@@ -8,6 +9,8 @@ import {
   getGuildPlan,
   getMemberPages,
   publicSlugTaken,
+  SETTINGS_AREAS,
+  SETTINGS_MODULES,
   type SettingsModule,
   undoSettingsChange,
 } from "@garrison/db";
@@ -93,9 +96,13 @@ function failed(form: FormData, guildId: string, place: Place, error: string): A
   );
 }
 
-async function authorize(form: FormData) {
+/**
+ * Edit on the area a save belongs to (Moderation's settings need Edit on Moderation, and so
+ * on). "any" is for undo, which then checks the change's own area.
+ */
+async function authorize(form: FormData, area: AccessArea | "any") {
   const guildId = String(form.get("guildId") ?? "");
-  const access = await checkGuildAccess(guildId);
+  const access = await checkGuildAccess(guildId, area === "any" ? "viewer" : "editor", area);
   // Same answer for "no access" and "no such server".
   if (!access) redirect("/servers");
   return access;
@@ -118,7 +125,7 @@ async function save(
   place: Place,
   what: string = module,
 ): Promise<AutoResult> {
-  const { session, guild } = await authorize(form);
+  const { session, guild } = await authorize(form, SETTINGS_AREAS[module] ?? "settings");
   const result = await applySettingsChange(await getDb(), {
     guildId: guild.id,
     module,
@@ -131,7 +138,7 @@ async function save(
 }
 
 export async function saveWatch(form: FormData): Promise<AutoResult> {
-  const { guild } = await authorize(form);
+  const { guild } = await authorize(form, "watch");
   const parsed = watchForm.safeParse(
     pick(form, ["logChannelId", "dmMembers", "appealText", "appealsEnabled"]),
   );
@@ -149,7 +156,7 @@ export async function saveWatch(form: FormData): Promise<AutoResult> {
 
 /** Anti-raid thresholds, the alert channel and the staff roles that keep talking in a lockdown. */
 export async function saveAntiRaid(form: FormData): Promise<AutoResult> {
-  const { guild } = await authorize(form);
+  const { guild } = await authorize(form, "gatehouse");
   const parsed = antiRaidForm.safeParse(
     pick(form, [
       "alertChannelId",
@@ -177,7 +184,7 @@ export async function saveAntiRaid(form: FormData): Promise<AutoResult> {
 
 /** Weekly backups (Pro). A server back on Free can still turn them off. */
 export async function saveBackupWeekly(form: FormData): Promise<AutoResult> {
-  const { guild } = await authorize(form);
+  const { guild } = await authorize(form, "gatehouse");
   const on = form.get("backupWeekly") === "on";
   if (on && !entitlements(await getGuildPlan(await getDb(), guild.id))["backups.weekly"])
     return failed(form, guild.id, PLACES.backups, "pro");
@@ -185,7 +192,7 @@ export async function saveBackupWeekly(form: FormData): Promise<AutoResult> {
 }
 
 export async function saveVerification(form: FormData): Promise<AutoResult> {
-  const { guild } = await authorize(form);
+  const { guild } = await authorize(form, "gatehouse");
   const parsed = verificationForm.safeParse(
     pick(form, ["verifyRoleId", "verifyMinAccountAgeDays", "verifyWeb"]),
   );
@@ -207,7 +214,7 @@ export async function saveVerification(form: FormData): Promise<AutoResult> {
  * with the bot's own rules; the answers channel must be one of this server's text channels.
  */
 export async function saveVerifyQuestions(form: FormData): Promise<AutoResult> {
-  const { guild } = await authorize(form);
+  const { guild } = await authorize(form, "gatehouse");
   let list: unknown;
   try {
     list = JSON.parse(String(form.get("verifyQuestions") ?? "[]"));
@@ -231,7 +238,7 @@ export async function saveVerifyQuestions(form: FormData): Promise<AutoResult> {
 
 /** Level rewards are edited on the Ranks page and saved like any other setting. */
 export async function saveRewards(form: FormData): Promise<AutoResult> {
-  const { guild } = await authorize(form);
+  const { guild } = await authorize(form, "ranks");
   const parsed = parseRewards(form);
   if (!parsed.ok) return failed(form, guild.id, PLACES.rewards, `reward_${parsed.error}`);
   else {
@@ -248,14 +255,14 @@ export async function saveRewards(form: FormData): Promise<AutoResult> {
 }
 
 export async function saveOps(form: FormData): Promise<AutoResult> {
-  const { guild } = await authorize(form);
+  const { guild } = await authorize(form, "rally");
   const parsed = opsForm.safeParse(pick(form, ["timezone", "language"]));
   if (!parsed.success) return failed(form, guild.id, PLACES.ops, "timezone");
   else return save("ops", form, parsed.data, PLACES.ops);
 }
 
 export async function saveRanks(form: FormData): Promise<AutoResult> {
-  const { guild } = await authorize(form);
+  const { guild } = await authorize(form, "ranks");
   const parsed = ranksForm.safeParse(
     pick(form, ["enabled", "voiceXp", "announce", "announceChannelId"]),
   );
@@ -266,7 +273,7 @@ export async function saveRanks(form: FormData): Promise<AutoResult> {
 }
 
 export async function saveLedger(form: FormData): Promise<AutoResult> {
-  const { guild } = await authorize(form);
+  const { guild } = await authorize(form, "ledger");
   const parsed = ledgerForm.safeParse(
     pick(form, ["channelId", "retentionDays", "keepMessageText"]),
   );
@@ -278,14 +285,14 @@ export async function saveLedger(form: FormData): Promise<AutoResult> {
 
 /** The escalation ladder is edited on the Watch page, and saved like any other setting. */
 export async function saveLadder(form: FormData): Promise<AutoResult> {
-  const { guild } = await authorize(form);
+  const { guild } = await authorize(form, "watch");
   const parsed = parseLadder(form);
   if (!parsed.success) return failed(form, guild.id, PLACES.ladder, "ladder");
   else return save("escalation", form, { rules: parsed.data }, PLACES.ladder);
 }
 
 export async function undoChange(form: FormData): Promise<AutoResult> {
-  const { session, guild, role } = await authorize(form);
+  const { session, guild, role, access } = await authorize(form, "any");
   const changeId = String(form.get("changeId") ?? "");
   if (!/^[0-9a-f-]{36}$/.test(changeId) || !isSnowflake(guild.id))
     return failed(form, guild.id, PLACES.history, "not_found");
@@ -295,7 +302,14 @@ export async function undoChange(form: FormData): Promise<AutoResult> {
     guild.id,
     changeId,
     { userId: session.userId, username: session.username },
-    role === "manager" ? [] : ["access", "members"],
+    // Undo is a change too: only modules whose area they may edit. Who has access and member
+    // pages stay a manager's.
+    role === "manager"
+      ? []
+      : SETTINGS_MODULES.filter((m) => {
+          const area = SETTINGS_AREAS[m];
+          return !area || !access || access.areas[area] !== "edit";
+        }),
   );
   if (!result.ok) return failed(form, guild.id, PLACES.history, result.reason);
   return saved(form, guild.id, PLACES.history, "undo");

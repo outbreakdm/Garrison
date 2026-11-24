@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Help" };
  */
 export default async function HelpPage({ params }: { params: Promise<{ guildId: string }> }) {
   const { guildId } = await params;
-  const { guild } = await requireGuildAccess(guildId);
+  const { guild } = await requireGuildAccess(guildId, "any");
   const base = `/servers/${guild.id}`;
   return (
     <>

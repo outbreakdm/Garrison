@@ -17,7 +17,7 @@ export async function GET(
 ) {
   const { guildId, number: raw } = await params;
   const notFound = () => new Response("Not found", { status: 404 });
-  const access = await checkGuildAccess(guildId, "viewer");
+  const access = await checkGuildAccess(guildId, "viewer", "parley");
   const number = Number(raw);
   if (!access || !Number.isInteger(number) || number < 1) return notFound();
   const db = await getDb();

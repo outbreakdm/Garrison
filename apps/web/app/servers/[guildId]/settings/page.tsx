@@ -191,7 +191,7 @@ export default async function SettingsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { guildId } = await params;
-  const { guild, role } = await requireGuildAccess(guildId);
+  const { guild, role } = await requireGuildAccess(guildId, "settings");
   const query = await searchParams;
   const db = await getDb();
   // Managers find people to give access to (a GET search, like Moderation's).

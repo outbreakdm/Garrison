@@ -35,7 +35,7 @@ export default async function InvitesPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const { guildId } = await params;
-  const { guild } = await requireGuildAccess(guildId);
+  const { guild } = await requireGuildAccess(guildId, "invites");
   const query = await searchParams;
   const db = await getDb();
   const [labels, plan, invites, roles, stats, flash] = await Promise.all([

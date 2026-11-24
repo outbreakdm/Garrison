@@ -16,7 +16,7 @@ export default async function SearchPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { guildId } = await params;
-  const { guild } = await requireGuildAccess(guildId);
+  const { guild } = await requireGuildAccess(guildId, "any");
   const q = cleanQuery((await searchParams).q);
   const base = `/servers/${guild.id}`;
   const db = await getDb();

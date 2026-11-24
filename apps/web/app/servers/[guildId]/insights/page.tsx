@@ -20,7 +20,7 @@ export default async function InsightsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const { guildId } = await params;
-  const { guild, role } = await requireGuildAccess(guildId);
+  const { guild, role } = await requireGuildAccess(guildId, "insights");
   const query = await searchParams;
   const db = await getDb();
   const ent = entitlements(await getGuildPlan(db, guild.id));

@@ -30,7 +30,11 @@ import { checkGuildAccess } from "@/lib/session";
  */
 
 async function access(form: FormData, need: DashboardRole = "editor") {
-  const a = await checkGuildAccess(String(form.get("guildId") ?? ""), need);
+  const a = await checkGuildAccess(
+    String(form.get("guildId") ?? ""),
+    need,
+    need === "manager" ? undefined : "watch",
+  );
   if (!a) redirect("/servers");
   return a;
 }

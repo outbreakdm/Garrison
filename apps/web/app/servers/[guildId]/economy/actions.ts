@@ -31,7 +31,7 @@ const json = (form: FormData, key: string): unknown => {
  * channels must be this server's, and a shop role can't carry admin or moderation powers.
  */
 export async function saveEconomy(form: FormData): Promise<AutoResult> {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""), "editor", "economy");
   if (!access) redirect("/servers");
   const { guild, session } = access;
   const back = (outcome: Outcome) =>
@@ -105,7 +105,7 @@ export async function saveEconomy(form: FormData): Promise<AutoResult> {
  * the shop as it's saved then.
  */
 export async function saveShopPanel(form: FormData): Promise<AutoResult> {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""), "editor", "economy");
   if (!access) redirect("/servers");
   const { guild, session } = access;
   const back = (outcome: Outcome) => answer(form, `/servers/${guild.id}/economy`, outcome);

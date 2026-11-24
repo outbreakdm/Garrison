@@ -33,7 +33,7 @@ const WELCOME_TABS = ["join", "leave", "dm"] as const;
 
 export default async function WelcomePage({ params }: { params: Promise<{ guildId: string }> }) {
   const { guildId } = await params;
-  const { guild, session } = await requireGuildAccess(guildId);
+  const { guild, session } = await requireGuildAccess(guildId, "herald");
   const status = await pageStatus(guild.id, "/herald");
   const db = await getDb();
   const [w, plan, channels, roles, botTop, overview, me] = await Promise.all([

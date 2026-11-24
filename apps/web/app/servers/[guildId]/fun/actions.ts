@@ -13,7 +13,7 @@ import { checkGuildAccess } from "@/lib/session";
  * the role to this server's (never a role with moderation powers), and saves with history.
  */
 export async function saveFun(form: FormData) {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""), "editor", "fun");
   if (!access) redirect("/servers");
   const { guild, session } = access;
   const back = (outcome: { ok: string } | { error: string }) =>

@@ -20,7 +20,7 @@ import { checkGuildAccess } from "@/lib/session";
  * uses what's saved here.
  */
 export async function saveLfgPanel(form: FormData): Promise<AutoResult> {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""), "editor", "rally");
   if (!access) redirect("/servers");
   const { guild, session } = access;
   const back = (outcome: Outcome) => answer(form, `/servers/${guild.id}/rally`, outcome);

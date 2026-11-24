@@ -291,7 +291,7 @@ export default async function OverviewPage({
 }) {
   const { guildId } = await params;
   const query = await searchParams;
-  const { guild } = await requireGuildAccess(guildId);
+  const { guild } = await requireGuildAccess(guildId, "any");
   const db = await getDb();
   const [o, cases, activity, health, [build], actions, ins, counts, mods, names, bot] =
     await Promise.all([

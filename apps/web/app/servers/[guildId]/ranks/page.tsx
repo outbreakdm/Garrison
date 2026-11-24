@@ -51,7 +51,7 @@ export default async function RanksPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { guildId } = await params;
-  const { guild, session } = await requireGuildAccess(guildId);
+  const { guild, session } = await requireGuildAccess(guildId, "ranks");
   const query = await searchParams;
   const db = await getDb();
   const [settings, top, rewards, roles, channels, plan, flash, layout, seasons] = await Promise.all(

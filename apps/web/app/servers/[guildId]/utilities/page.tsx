@@ -121,7 +121,7 @@ function ClearFields({ c, channels }: { c: ClearRule | null; channels: Channel[]
 
 export default async function UtilitiesPage({ params }: { params: Promise<{ guildId: string }> }) {
   const { guildId } = await params;
-  const { guild } = await requireGuildAccess(guildId);
+  const { guild } = await requireGuildAccess(guildId, "utilities");
   const db = await getDb();
   const [s, plan, timed, channels, allRoles, flash] = await Promise.all([
     getUtilitySettings(db, guild.id),

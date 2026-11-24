@@ -48,7 +48,7 @@ async function save(
   ok: string,
   open: string,
 ): Promise<AutoResult> {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""), "editor", "herald");
   if (!access) redirect("/servers");
   const db = await getDb();
   const guildId = access.guild.id;

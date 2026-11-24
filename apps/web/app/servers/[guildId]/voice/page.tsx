@@ -39,7 +39,7 @@ export default async function VoiceRoomsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const { guildId } = await params;
-  const { guild } = await requireGuildAccess(guildId);
+  const { guild } = await requireGuildAccess(guildId, "voice");
   // On but can't work (a missing channel, a missing permission): said in the head.
   const status = await pageStatus(guild.id, "/voice");
   const query = await searchParams;

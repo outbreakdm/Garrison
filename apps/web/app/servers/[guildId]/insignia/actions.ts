@@ -32,7 +32,7 @@ const back = (guildId: string, outcome: { ok: string } | { error: string }, open
   flashBack(`/servers/${guildId}/insignia`, outcome, `${open ? `?edit=${open}#${open}` : ""}`);
 
 async function load(form: FormData) {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""), "editor", "insignia");
   if (!access) redirect("/servers");
   const db = await getDb();
   const [raw, plan] = await Promise.all([

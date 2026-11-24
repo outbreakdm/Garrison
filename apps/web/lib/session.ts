@@ -98,11 +98,12 @@ export const dashboardRole = cache(
  *
  * `area` is the dashboard section it belongs to: with it, a viewer needs View there and an
  * editor needs Edit (a Viewer or Editor grant covers every area; an access group, only its
- * own). Without it, only a Viewer or Editor grant counts, so access groups never reach
+ * own). "any" is for what every person with access sees (the Overview, search, help): View
+ * only. Without an area, only a Viewer or Editor grant counts, so access groups never reach
  * anything that doesn't say which area it is.
  */
 export const checkGuildAccess = cache(
-  async (guildId: string, need: DashboardRole = "editor", area?: AccessArea) => {
+  async (guildId: string, need: DashboardRole = "editor", area?: AccessArea | "any") => {
     if (typeof guildId !== "string" || !isSnowflake(guildId)) return null;
     // Independent reads, so neither waits for the other.
     const [session, guild] = await Promise.all([
@@ -114,9 +115,12 @@ export const checkGuildAccess = cache(
     if (!a) return null;
     if (!a.manager) {
       if (need === "manager") return null;
-      const ok = area
-        ? allows(a.access, area, need === "editor" ? "edit" : "view")
-        : !!a.access.level && atLeast(a.access.level, need);
+      const ok =
+        area === "any"
+          ? need === "viewer"
+          : area
+            ? allows(a.access, area, need === "editor" ? "edit" : "view")
+            : !!a.access.level && atLeast(a.access.level, need);
       if (!ok) return null;
     }
     const role: DashboardRole = a.manager ? "manager" : (a.access.level ?? "viewer");
@@ -129,7 +133,7 @@ export const checkGuildAccess = cache(
  * users go to login; a "no" is a 404, so the dashboard never confirms which servers exist.
  * Discord not answering is an error instead, shown with "Try again" by error.tsx.
  */
-export const requireGuildAccess = cache(async (guildId: string, area?: AccessArea) => {
+export const requireGuildAccess = cache(async (guildId: string, area?: AccessArea | "any") => {
   await requireSession(`/servers/${isSnowflake(guildId) ? guildId : ""}`);
   const access = await checkGuildAccess(guildId, "viewer", area);
   if (!access) notFound();

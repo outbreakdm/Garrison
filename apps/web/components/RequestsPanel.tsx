@@ -14,7 +14,8 @@ export const REQUEST_ERRORS: Record<string, string> = {
   edit_not_ours: "Garrison only updates messages it posted from Messages.",
   owner_only: "Only the server owner can change anti-nuke.",
   manager_only:
-    "That acts on members or the server itself, so it needs Manage Server in Discord. Ask someone who has it.",
+    "That acts on members or the server itself, so it needs Manage Server in Discord, or an access group trusted with it. Ask someone who has Manage Server.",
+  no_access: "Your access here lets you look, not change this. Ask someone with Manage Server.",
   owner_only_restore: "Only the server owner can restore a backup.",
   season_pro: "Seasons are part of Garrison Pro. Nothing was queued.",
   template_pro: "Server templates are part of Garrison Pro. Nothing was queued.",

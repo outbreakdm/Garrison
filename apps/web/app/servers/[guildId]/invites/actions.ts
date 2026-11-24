@@ -22,7 +22,7 @@ import { checkGuildAccess } from "@/lib/session";
  * invite would get it).
  */
 export async function saveInviteLabels(form: FormData): Promise<AutoResult> {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""), "editor", "invites");
   if (!access) redirect("/servers");
   const { guild, session } = access;
   const back = (outcome: Outcome) => answer(form, `/servers/${guild.id}/invites`, outcome);

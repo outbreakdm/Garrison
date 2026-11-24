@@ -28,7 +28,7 @@ export const metadata: Metadata = { title: "Starboard" };
 
 export default async function StarboardPage({ params }: { params: Promise<{ guildId: string }> }) {
   const { guildId } = await params;
-  const { guild } = await requireGuildAccess(guildId);
+  const { guild } = await requireGuildAccess(guildId, "honors");
   // On but can't work (a missing channel, a missing permission): said in the head.
   const status = await pageStatus(guild.id, "/honors");
   const db = await getDb();

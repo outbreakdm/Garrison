@@ -27,7 +27,7 @@ const UUID = /^[0-9a-f-]{36}$/;
 const text = (form: FormData, key: string) => String(form.get(key) ?? "");
 
 async function load(form: FormData) {
-  const access = await checkGuildAccess(text(form, "guildId"));
+  const access = await checkGuildAccess(text(form, "guildId"), "editor", "rally");
   if (!access) redirect("/servers");
   const eventId = text(form, "eventId");
   const db = await getDb();

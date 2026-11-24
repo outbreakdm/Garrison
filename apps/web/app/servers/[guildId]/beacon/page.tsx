@@ -57,7 +57,7 @@ export default async function AlertsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { guildId } = await params;
-  const { guild } = await requireGuildAccess(guildId);
+  const { guild } = await requireGuildAccess(guildId, "beacon");
   const query = await searchParams;
   const db = await getDb();
   const [raw, plan, states, channels, roles, flash, requests, waitingRequests] = await Promise.all([

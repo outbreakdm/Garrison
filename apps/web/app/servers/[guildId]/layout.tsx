@@ -33,8 +33,8 @@ export default async function ServerLayout({
   const { guildId } = await params;
   // Pages check access too: layouts don't re-run on every navigation.
   // The switcher's server list needs only the session, so it loads beside the access check.
-  const [{ session, guild, role }, guilds, theme, tier, mods] = await Promise.all([
-    requireGuildAccess(guildId),
+  const [{ session, guild, role, access }, guilds, theme, tier, mods] = await Promise.all([
+    requireGuildAccess(guildId, "any"),
     // The switcher lists your servers and ones shared with you (each confirmed live).
     requireSession(`/servers/${guildId}`).then(async (s) => {
       const [own, shared] = await Promise.all([
@@ -51,6 +51,8 @@ export default async function ServerLayout({
   // Blocked if anything on a page can't work, else on if anything is (Moderation: automod
   // or its log channel), else off.
   const states = pageStates(mods);
+  // Someone in access groups only sees the areas their groups open (and the Overview and Help).
+  const visible = access && !access.level ? Object.keys(access.areas) : null;
   // Menu groups folded last time (a name that isn't a group matches nothing).
   const folded = readFolded((await cookies()).get("nav_folded")?.value);
   return (
@@ -60,7 +62,13 @@ export default async function ServerLayout({
           <Logo />
         </a>
         <ServerSwitcher guild={guild} guilds={guilds} variant="card" />
-        <ServerNav guildId={guild.id} variant="rail" states={states} folded={folded} />
+        <ServerNav
+          guildId={guild.id}
+          variant="rail"
+          states={states}
+          folded={folded}
+          areas={visible}
+        />
         <PlanFoot guildId={guild.id} tier={tier} />
       </aside>
       <div className="console__body">
@@ -72,12 +80,16 @@ export default async function ServerLayout({
           guilds={guilds}
           railed
         />
-        <ServerNav guildId={guild.id} variant="sheet" states={states} />
+        <ServerNav guildId={guild.id} variant="sheet" states={states} areas={visible} />
         <main id="content" className="main">
           {role === "manager" ? null : <AccessNote role={role} />}
           <PageTransition>{children}</PageTransition>
         </main>
-        <AccessGuard role={role} />
+        <AccessGuard
+          role={role}
+          areas={access ? access.areas : null}
+          switches={access?.switches ?? []}
+        />
       </div>
       <Toaster />
       {tier === "free" ? (

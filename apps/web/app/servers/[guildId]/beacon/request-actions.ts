@@ -14,7 +14,7 @@ import { checkGuildAccess } from "@/lib/session";
  * this server's; posting the panel and deciding are requests to the bot.
  */
 export async function saveStreamRequests(form: FormData): Promise<AutoResult> {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""), "editor", "beacon");
   if (!access) redirect("/servers");
   const { guild, session } = access;
   const back = (outcome: Outcome) => answer(form, `/servers/${guild.id}/beacon`, outcome);

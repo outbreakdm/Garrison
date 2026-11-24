@@ -131,12 +131,15 @@ export function ServerNav({
   variant,
   states = {},
   folded: foldedAtLoad = [],
+  areas = null,
 }: {
   guildId: string;
   variant: "rail" | "sheet";
   states?: ModuleStates;
   /** Rail groups folded last time (from the cookie). */
   folded?: string[];
+  /** The areas an access group opens for them; null shows every page. */
+  areas?: string[] | null;
 }) {
   const pathname = usePathname();
   const [folded, setFolded] = useState<ReadonlySet<string>>(() => new Set(foldedAtLoad));
@@ -194,13 +197,18 @@ export function ServerNav({
   // Sub-pages (LFG templates, a ticket) keep their module lit.
   const isCurrent = (href: string, own: string) =>
     pathname === href || Boolean(own && pathname.startsWith(`${href}/`));
+  // Access groups: only the areas they open, plus the Overview and Help; never the plan.
+  const shown = (path: string) =>
+    !areas || path === "" || path === "/help" || areas.includes(path.slice(1));
   const groups = GROUPS.map((g) => ({
     ...g,
-    items: g.items.map((item) => {
-      const href = `${base}${item.href}`;
-      return { ...item, href, path: item.href, current: isCurrent(href, item.href) };
-    }),
-  }));
+    items: g.items
+      .filter((item) => shown(item.href))
+      .map((item) => {
+        const href = `${base}${item.href}`;
+        return { ...item, href, path: item.href, current: isCurrent(href, item.href) };
+      }),
+  })).filter((g) => g.items.length);
   const all = groups.flatMap((g) => g.items);
   // Search isn't in the menu; on phones this bar is the page's visible title, so it says so.
   const here =

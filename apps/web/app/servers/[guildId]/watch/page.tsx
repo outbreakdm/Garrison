@@ -92,7 +92,7 @@ export default async function WatchPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { guildId } = await params;
-  const { guild } = await requireGuildAccess(guildId);
+  const { guild } = await requireGuildAccess(guildId, "watch");
   // On but can't work (a missing channel, a missing permission): said in the head.
   const status = await pageStatus(guild.id, "/watch");
   const query = await searchParams;

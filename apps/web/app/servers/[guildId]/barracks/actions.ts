@@ -21,7 +21,7 @@ import { checkGuildAccess } from "@/lib/session";
  * again before giving it). A server back on Free can still clear its rules.
  */
 export async function saveStatRoles(form: FormData): Promise<AutoResult> {
-  const access = await checkGuildAccess(String(form.get("guildId") ?? ""));
+  const access = await checkGuildAccess(String(form.get("guildId") ?? ""), "editor", "barracks");
   if (!access) redirect("/servers");
   const { guild, session } = access;
   const back = (outcome: Outcome) =>
