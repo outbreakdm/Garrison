@@ -8,7 +8,7 @@ ALTER TABLE "rally_settings" ADD COLUMN "lfg_panel_templates" text[] DEFAULT '{}
 ALTER TABLE "rally_settings" ADD COLUMN "lfg_panel_other" boolean DEFAULT true NOT NULL;--> statement-breakpoint
 ALTER TABLE "rally_settings" ADD COLUMN "lfg_panel_sticky" boolean DEFAULT true NOT NULL;--> statement-breakpoint
 ALTER TABLE "rally_settings" ADD COLUMN "lfg_panel_channel_id" text;--> statement-breakpoint
-ALTER TABLE "rally_settings" ADD COLUMN "lfg_panel_message_id" text;;--> statement-breakpoint
+ALTER TABLE "rally_settings" ADD COLUMN "lfg_panel_message_id" text;--> statement-breakpoint
 -- The dashboard saves the panel. INSERT covers every column: a new row names them all.
 GRANT INSERT (lfg_panel_title, lfg_panel_body, lfg_panel_templates, lfg_panel_other, lfg_panel_sticky, lfg_panel_channel_id, lfg_panel_message_id), UPDATE (lfg_panel_title, lfg_panel_body, lfg_panel_templates, lfg_panel_other, lfg_panel_sticky) ON public.rally_settings TO garrison_web;--> statement-breakpoint
 -- The bot records where it posted the panel, and the AI assistant writes LFG settings through
