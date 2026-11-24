@@ -215,16 +215,17 @@ describe("server stats, in the database", () => {
     await exec("RESET ROLE");
   });
 
-  it("the bot can't change the counters", async () => {
+  it("the bot changes the counters only through a settings change (an AI assistant plan)", async () => {
     await exec("SET ROLE garrison_bot");
-    await expect(
-      applySettingsChange(db, {
+    // Since 0094: with history and undo, like the dashboard's.
+    expect(
+      await applySettingsChange(db, {
         guildId: G,
         module: "stats",
         patch: { enabled: false },
         ...owner,
       }),
-    ).rejects.toThrow();
+    ).toMatchObject({ ok: true });
     await exec("RESET ROLE");
   });
 });

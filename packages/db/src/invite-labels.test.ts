@@ -97,7 +97,7 @@ describe("invite labels and stats, in the database", () => {
   });
   afterAll(() => close());
 
-  it("the dashboard saves labels with history; the bot reads them", async () => {
+  it("the dashboard saves labels with history; the bot reads them and writes a plan's", async () => {
     await exec("SET ROLE garrison_web");
     const checked = checkInviteLabels([label("ironVG", { roleId: ROLE })], free, []);
     if (!checked.ok) throw new Error(checked.error);
@@ -112,9 +112,16 @@ describe("invite labels and stats, in the database", () => {
     await exec("RESET ROLE");
     await exec("SET ROLE garrison_bot");
     expect(await getInviteLabels(db, G)).toMatchObject([{ code: "ironVG", roleId: ROLE }]);
-    await expect(
-      applySettingsChange(db, { guildId: G, module: "invites", patch: { labels: [] }, ...owner }),
-    ).rejects.toThrow();
+    // Since 0094 the bot writes the labels an AI assistant plan adds, with history like the
+    // dashboard's.
+    expect(
+      await applySettingsChange(db, {
+        guildId: G,
+        module: "invites",
+        patch: { labels: [] },
+        ...owner,
+      }),
+    ).toMatchObject({ ok: true });
     await exec("RESET ROLE");
   });
 
