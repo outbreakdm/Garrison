@@ -211,6 +211,7 @@ then updates **Status** and the **Log** before stopping.
 | 11 | Giveaways and starboard | **Code done**, not deployed: needs migrations 0030 and 0031 |
 | — | Depth for current modules (backlog below), slotted between phases | Not started |
 | — | Final polish (2026-11-23): critique fixes, Pro yearly $89.99, selling points, drafts that build up until applied, bulk actions | **Deployed** 2026-11-23 (migration 0089 applied); the owner swaps the Stripe yearly price (`docs/RELEASE.md`) |
+| — | Security review (2026-11-23): who can reach each page, action and route, and whether plans can be skipped | **Done**: no gaps found; a test now guards every entry point (not deployed: test only) |
 
 ## How plans work
 
@@ -1752,4 +1753,20 @@ Decided (2026-11-12, owner):
   repeating giveaway asks again. The AI assistant still starts giveaways without entry rules.
   Migration `0098_giveaway_question` (two columns, no grant changes). Deployed
   (everything, commands registered, with 0094-0097).
-
+- 2026-11-23: Security review of the dashboard, the member pages and the bot. Who can reach
+  what: every server action (each one is a public POST endpoint) reaches an access check, at
+  editor level or above for changes; viewer-level checks only read. Manager only: who gets
+  in, member pages, the public page, the plan and billing, Insights share links, appeal
+  decisions; undo keeps access and member changes to managers; comping a plan is staff only,
+  and neither the website nor the bot can write a plan row. Members (the /play pages and
+  appeals) only see and change their own rows; buying and joining are re-checked by the bot.
+  Plans: every Pro feature is checked where it runs (the save checks in packages/db, the
+  bot's entitlements, the export routes and pages), not only in the editor, so a hand-made
+  request can't turn one on. Webhooks check signatures; the calendar feed compares its token
+  in constant time. Staff buttons in Discord check the presser each time (purchases,
+  verification, stream requests, applications, backups, raids, AI plans, case undo, voice
+  rooms). No gaps found. New `apps/web/lib/access-gates.test.ts` reads the source and fails
+  on any server action, page or route handler without a check (the few open ones are listed
+  with the reason); checked that it catches an unguarded action and page. Open: staff slash
+  commands rely on Discord's default permissions, which a server admin can widen to any role
+  (by design); the owner may want them checked again when they run.
