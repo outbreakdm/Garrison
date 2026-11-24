@@ -1886,3 +1886,6 @@ Decided (2026-11-12, owner):
   note at the top of every page says which groups, what they open (view only marked) and what
   they're trusted with, the plan footer is hidden from them, and `/access` (everyone, private)
   says the same in Discord. Checked in the local preview as a group member. Not deployed.
+- 2026-11-24: Deployed raid rosters and lineups (phases 1 to 4) and access groups (phases 1 to 3):
+  migrations 0099 to 0103 applied to production and recorded (ids 100 to 104), then everything
+  with register_commands (run 45423198122, `315adfc`).
