@@ -1,5 +1,5 @@
 import { and, inArray, sql } from "drizzle-orm";
-import { type AccessGrant, readAccessGrants } from "../access";
+import { type AccessGrant, type AccessGroup, readAccessGrants, readAccessGroups } from "../access";
 import type { Db } from "../client";
 import { dashboardAccess } from "../schema";
 
@@ -10,6 +10,18 @@ export async function getAccessGrants(db: Db, guildId: string): Promise<AccessGr
     .from(dashboardAccess)
     .where(sql`${dashboardAccess.guildId} = ${guildId}`);
   return readAccessGrants(row?.grants);
+}
+
+/** Both lists that give access here: the Viewer and Editor grants, and the access groups. */
+export async function getDashboardAccess(
+  db: Db,
+  guildId: string,
+): Promise<{ grants: AccessGrant[]; groups: AccessGroup[] }> {
+  const [row] = await db
+    .select({ grants: dashboardAccess.grants, groups: dashboardAccess.groups })
+    .from(dashboardAccess)
+    .where(sql`${dashboardAccess.guildId} = ${guildId}`);
+  return { grants: readAccessGrants(row?.grants), groups: readAccessGroups(row?.groups) };
 }
 
 /** Servers whose list names this user directly, for their server list. Access is checked live. */

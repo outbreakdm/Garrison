@@ -1,6 +1,6 @@
 import {
   entitlements,
-  getAccessGrants,
+  getDashboardAccess,
   getGuildLanguage,
   getGuildPlan,
   getMemberPages,
@@ -32,6 +32,7 @@ import { siteUrl } from "@/lib/hosts";
 import { requireGuildAccess } from "@/lib/session";
 import { FIELD_LABELS, ladderText, templatesChangeText } from "@/lib/settings-schema";
 import { requestAction } from "../requests";
+import { AccessGroupsPanel } from "./AccessGroupsPanel";
 import { AccessPanel } from "./AccessPanel";
 import { saveMemberPages, saveOps, savePublicPage, undoChange } from "./actions";
 import { BotProfileForm } from "./BotProfileForm";
@@ -198,8 +199,8 @@ export default async function SettingsPage({
     role === "manager" && typeof query.access_q === "string"
       ? query.access_q.trim().slice(0, 32)
       : "";
-  const [grants, found, flash, memberPages] = await Promise.all([
-    getAccessGrants(db, guild.id),
+  const [{ grants, groups }, found, flash, memberPages] = await Promise.all([
+    getDashboardAccess(db, guild.id),
     accessQuery ? searchMembers(guild.id, accessQuery).catch(() => null) : Promise.resolve([]),
     readFlash(),
     getMemberPages(db, guild.id),
@@ -416,6 +417,14 @@ export default async function SettingsPage({
           grants={grants}
           roles={roles}
           query={accessQuery}
+          found={found}
+        />
+        <AccessGroupsPanel
+          guildId={guild.id}
+          manager={role === "manager"}
+          plan={plan}
+          groups={groups}
+          roles={roles}
           found={found}
         />
       </TabPanel>

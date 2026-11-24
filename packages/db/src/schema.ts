@@ -18,7 +18,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { AccessGrant } from "./access";
+import type { AccessGrant, AccessGroup } from "./access";
 import type { AlertFeed } from "./alerts";
 import type { ApplicationForm } from "./applications";
 import type { ServerBackup } from "./backups";
@@ -685,12 +685,18 @@ export const dashboardAccess = pgTable(
       .primaryKey()
       .references(() => guilds.id, { onDelete: "cascade" }),
     grants: jsonb("grants").$type<AccessGrant[]>().notNull().default(sql`'[]'::jsonb`),
+    /** Access groups (src/access.ts AccessGroup): areas and switches for their people and roles. */
+    groups: jsonb("groups").$type<AccessGroup[]>().notNull().default(sql`'[]'::jsonb`),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     check(
       "access_grants_list",
       sql`jsonb_typeof(${t.grants}) = 'array' AND jsonb_array_length(${t.grants}) <= 25`,
+    ),
+    check(
+      "access_groups_list",
+      sql`jsonb_typeof(${t.groups}) = 'array' AND jsonb_array_length(${t.groups}) <= 15`,
     ),
     index("dashboard_access_grants").using("gin", t.grants),
   ],

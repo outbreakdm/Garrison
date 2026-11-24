@@ -119,3 +119,215 @@ export const MANAGER_REQUEST_KINDS: ReadonlySet<string> = new Set([
   "economy_adjust",
   "economy_purchase",
 ]);
+
+// --- Access groups -------------------------------------------------------------------
+// Managers make named groups ("Giveaway hosts", "Raid officers") that give their people and
+// roles None, View or Edit per dashboard area, and optionally switches for the manager-only
+// requests above. Viewer and Editor grants stay as they are: Viewer is View on every area,
+// Editor is Edit on every area. Who has access, member pages, the public page, the plan and
+// billing are never an area: they stay with managers.
+
+/** Dashboard areas, by the section's folder under /servers/<id>/. */
+export const ACCESS_AREAS = {
+  watch: "Moderation",
+  gatehouse: "Security",
+  ledger: "Logs",
+  invites: "Invites",
+  herald: "Welcome",
+  insignia: "Role menus",
+  dispatch: "Messages",
+  parley: "Tickets",
+  applications: "Applications",
+  beacon: "Stream alerts",
+  spoils: "Giveaways",
+  honors: "Starboard",
+  suggestions: "Suggestions",
+  economy: "Economy",
+  rally: "Groups and raids",
+  voice: "Voice rooms",
+  ranks: "Leveling",
+  barracks: "Game accounts",
+  quartermaster: "AI assistant",
+  insights: "Insights",
+  stats: "Server stats",
+  fun: "Fun",
+  utilities: "Utilities",
+  settings: "Settings",
+} as const;
+export type AccessArea = keyof typeof ACCESS_AREAS;
+export const isAccessArea = (v: unknown): v is AccessArea =>
+  typeof v === "string" && Object.hasOwn(ACCESS_AREAS, v);
+
+/** The manager-only requests a group can be trusted with, by family. */
+export const ACCESS_SWITCHES = {
+  moderate: {
+    label: "Moderate members",
+    about: "Warn, time out, kick and ban, purge messages, undo cases, release quarantine",
+    kinds: ["mod_action", "purge", "undo_case", "undo_cases", "release_quarantine"],
+  },
+  lockdown: {
+    label: "Lock down the server",
+    about: "Start and end a lockdown, and the anti-nuke response",
+    kinds: ["lockdown_start", "lockdown_end", "anti_nuke"],
+  },
+  backups: {
+    label: "Backups and templates",
+    about: "Make and restore backups, save and apply server templates",
+    kinds: ["backup_create", "backup_restore", "template_save", "template_apply"],
+  },
+  coins: {
+    label: "Coins and purchases",
+    about: "Give or take coins, and decide on shop purchases",
+    kinds: ["economy_adjust", "economy_purchase"],
+  },
+  verify: {
+    label: "Verification decisions",
+    about: "Approve or deny verification answers (gives the verified role)",
+    kinds: ["verify_decide"],
+  },
+  ai_build: {
+    label: "Apply AI builds",
+    about: "Apply or edit what the AI assistant drafted, and undo a build",
+    kinds: ["qm_apply", "qm_edit", "undo_build"],
+  },
+  season: {
+    label: "Start a new season",
+    about: "Reset Leveling into a new season",
+    kinds: ["season_start"],
+  },
+} as const;
+export type AccessSwitch = keyof typeof ACCESS_SWITCHES;
+export const isAccessSwitch = (v: unknown): v is AccessSwitch =>
+  typeof v === "string" && Object.hasOwn(ACCESS_SWITCHES, v);
+
+/** The switch a manager-only request needs, or null for a request any editor of its area makes. */
+export function switchFor(kind: string): AccessSwitch | null {
+  for (const [key, s] of Object.entries(ACCESS_SWITCHES))
+    if ((s.kinds as readonly string[]).includes(kind)) return key as AccessSwitch;
+  return null;
+}
+
+export type AreaLevel = "view" | "edit";
+
+export interface AccessGroupMember {
+  kind: "user" | "role";
+  id: string;
+  /** Their name when added, for the list only. Never used to decide access. */
+  name: string;
+}
+
+export interface AccessGroup {
+  id: string;
+  name: string;
+  areas: Partial<Record<AccessArea, AreaLevel>>;
+  switches: AccessSwitch[];
+  members: AccessGroupMember[];
+}
+
+export const GROUP_LIMITS = { name: 32, members: 25 } as const;
+
+/** The stored groups, read defensively: anything malformed is dropped, never trusted. */
+export function readAccessGroups(raw: unknown): AccessGroup[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((g) => {
+    if (!g || typeof g !== "object") return [];
+    const r = g as Record<string, unknown>;
+    if (typeof r.id !== "string" || !/^[a-z0-9]{6,16}$/.test(r.id)) return [];
+    if (typeof r.name !== "string" || !r.name.trim()) return [];
+    const areas: AccessGroup["areas"] = {};
+    if (r.areas && typeof r.areas === "object")
+      for (const [area, level] of Object.entries(r.areas as Record<string, unknown>))
+        if (isAccessArea(area) && (level === "view" || level === "edit")) areas[area] = level;
+    const switches = Array.isArray(r.switches)
+      ? [...new Set(r.switches.filter(isAccessSwitch))]
+      : [];
+    const members = Array.isArray(r.members)
+      ? r.members.flatMap((m): AccessGroupMember[] => {
+          if (!m || typeof m !== "object") return [];
+          const { kind, id, name } = m as Record<string, unknown>;
+          if ((kind !== "user" && kind !== "role") || typeof id !== "string" || !SNOWFLAKE.test(id))
+            return [];
+          return [{ kind, id, name: typeof name === "string" ? name : "" }];
+        })
+      : [];
+    return [
+      { id: r.id, name: r.name.trim().slice(0, GROUP_LIMITS.name), areas, switches, members },
+    ];
+  });
+}
+
+/** Groups the dashboard wants to save, checked whole against the plan's number of groups. */
+export function checkAccessGroups(
+  raw: unknown,
+  limit: number,
+): { ok: true; value: AccessGroup[] } | { ok: false; error: string } {
+  if (!Array.isArray(raw))
+    return { ok: false, error: "That list wasn't valid. Refresh and try again." };
+  const value = readAccessGroups(raw);
+  if (value.length !== raw.length)
+    return { ok: false, error: "A group needs a name; pick people and roles from this server." };
+  if (value.length > limit)
+    return {
+      ok: false,
+      error: `This server's plan allows ${limit} access ${limit === 1 ? "group" : "groups"}.`,
+    };
+  const names = new Set<string>();
+  for (const g of value) {
+    const key = g.name.toLowerCase();
+    if (names.has(key)) return { ok: false, error: `There's already a group called ${g.name}.` };
+    names.add(key);
+    if (g.members.length > GROUP_LIMITS.members)
+      return { ok: false, error: `${g.name}: up to ${GROUP_LIMITS.members} people and roles.` };
+    const seen = new Set<string>();
+    for (const m of g.members) {
+      if (seen.has(`${m.kind}:${m.id}`))
+        return { ok: false, error: `${g.name}: each person or role can be listed once.` };
+      seen.add(`${m.kind}:${m.id}`);
+    }
+  }
+  return { ok: true, value };
+}
+
+/** What a member may do here, short of a manager. */
+export interface ResolvedAccess {
+  areas: Partial<Record<AccessArea, AreaLevel>>;
+  switches: AccessSwitch[];
+  /** Viewer or Editor from the plain grants, for what still asks for a level. */
+  level: AccessLevel | null;
+  /** The groups that gave them access, by name. */
+  groups: string[];
+}
+
+const AREA_KEYS = Object.keys(ACCESS_AREAS) as AccessArea[];
+
+/**
+ * A member's access: the highest of their grants (Viewer: View on every area; Editor: Edit on
+ * every area) and every group they or one of their roles is in. Null when nothing gives access.
+ */
+export function resolveAccess(
+  grants: readonly AccessGrant[],
+  groups: readonly AccessGroup[],
+  userId: string,
+  roleIds: readonly string[],
+): ResolvedAccess | null {
+  const roles = new Set(roleIds);
+  const level = grantedLevel(grants, userId, roleIds);
+  const areas: ResolvedAccess["areas"] = {};
+  if (level) for (const a of AREA_KEYS) areas[a] = level === "editor" ? "edit" : "view";
+  const switches = new Set<AccessSwitch>();
+  const named: string[] = [];
+  for (const g of groups) {
+    const inIt = g.members.some((m) => (m.kind === "user" ? m.id === userId : roles.has(m.id)));
+    if (!inIt) continue;
+    named.push(g.name);
+    for (const [area, lvl] of Object.entries(g.areas) as [AccessArea, AreaLevel][])
+      if (lvl === "edit" || !areas[area]) areas[area] = lvl;
+    for (const s of g.switches) switches.add(s);
+  }
+  if (!level && !named.length) return null;
+  return { areas, switches: [...switches], level, groups: named };
+}
+
+/** May this access do `need` on `area`? View is enough to look; changing needs Edit. */
+export const allows = (access: ResolvedAccess, area: AccessArea, need: AreaLevel) =>
+  need === "view" ? !!access.areas[area] : access.areas[area] === "edit";

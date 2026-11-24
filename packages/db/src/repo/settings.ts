@@ -102,7 +102,7 @@ export const EDITABLE_FIELDS = {
     "countingChannelId",
   ],
   // Who else may use the dashboard; checked with checkAccessGrants before it gets here.
-  access: ["grants"],
+  access: ["grants", "groups"],
   // Which member pages show (docs/MEMBER_PAGES.md).
   // The public page's fields are checked with checkPublicPage before they get here.
   members: [

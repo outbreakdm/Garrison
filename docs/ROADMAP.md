@@ -7,6 +7,26 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
+- **Access groups (2026-11-24), in order, one phase per commit.** From a community suggestion
+  ("let mods run giveaways on the dashboard"). The owner's choices: dashboard only (Discord
+  commands keep Discord's own permissions); per-area None, View or Edit plus switches for the
+  sensitive actions; Free 2 groups, Pro 15 (`access.groups`); members see their own access.
+  Design: `dashboard_access.groups` (jsonb, saved through applySettingsChange "access", so
+  history and undo) holds groups `{ id, name, areas: { <area>: "view"|"edit" }, switches: [],
+  members: [{ kind, id, name }] }`. Today's Viewer and Editor grants stay as the built-in groups.
+  A member's access is the union of their grants and groups; Manage Server is everything. Areas
+  are the dashboard's sections (folder names); switches unlock MANAGER_REQUEST_KINDS by family
+  (moderate, lockdown, backups, coins, verify, ai_build, season). Who has access, member pages,
+  the public page, the plan and billing never go to a group.
+  1. [x] Groups: rules (`access.ts`: areas, switches, groups, the resolver), migration, the
+     Settings → Access editor (managers only), tests. Built, not deployed: **migration 0103**
+     (`dashboard_access.groups`). Groups are saved but reach nothing until phase 2 passes areas.
+  2. [ ] Enforcement: `checkGuildAccess`/`requireGuildAccess` take the area; every page and
+     action under `/servers/<id>/<area>` passes its own (the access-gates test fails on any that
+     don't); request kinds map to an area and a switch; the menu shows only areas they can view.
+  3. [ ] Members' view: the server list includes servers where a group gives access, a "What you
+     can do here" panel on the Overview, and `/access` in Discord (private, read-only).
+
 - **Raid rosters and lineups (2026-11-24), in order, one phase per commit.** The owner's choices:
   any game, with WoW presets; new raids start Simple (today's first come, first served); lineups
   are built on the dashboard only; Pro gates more than one roster team and attendance on the
@@ -1840,3 +1860,12 @@ Decided (2026-11-12, owner):
   are told; members can still switch role) and ping the group (members only, once every 10
   minutes). Migration `0102_lfg_host`. Checked by tests and typecheck; no live Discord run. Not
   deployed.
+- 2026-11-24: Access groups (phase 1 of 3). Settings → Access has Access groups under Dashboard
+  access: managers make named groups (Free 2, Pro 15, `access.groups`), give each None, View or
+  Edit on 24 dashboard areas, tick the manager-only request families it's trusted with
+  (moderate, lockdown, backups, coins, verify, AI builds, season), and add roles or people found
+  by name. Saved with the grants through applySettingsChange ("access": history and undo).
+  `resolveAccess` merges Viewer/Editor grants and groups; `checkGuildAccess(guildId, need, area)`
+  and `requireGuildAccess(guildId, area)` use it, and with no area only the grants count, so a
+  group reaches nothing until phase 2 names the areas. Migration `0103_access_groups`. Checked
+  in the local preview (make, save areas and a switch, add a role). Not deployed.

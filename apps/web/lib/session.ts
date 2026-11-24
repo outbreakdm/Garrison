@@ -1,11 +1,14 @@
 import "server-only";
 import {
+  type AccessArea,
+  allows,
   atLeast,
   type DashboardRole,
-  getAccessGrants,
   getActiveGuild,
+  getDashboardAccess,
   getWebSession,
-  grantedLevel,
+  type ResolvedAccess,
+  resolveAccess,
   touchWebSession,
 } from "@garrison/db";
 import { cookies } from "next/headers";
@@ -54,48 +57,81 @@ export async function requireSession(next = "/servers") {
 }
 
 /**
- * What this user may do on this server's dashboard right now: "manager" with Manage Server
- * (or as owner), else the level a manager gave them or one of their roles (viewer or
- * editor), else null. Asked of Discord live, membership included; fails closed. Throws when
- * Discord can't answer right now, so a rate limit never reads as "not yours".
+ * What this user may do on this server's dashboard right now: everything as a manager (Manage
+ * Server, or the owner), else what their grants and access groups give them (src/access.ts
+ * resolveAccess), else null. Asked of Discord live, membership included; fails closed. Throws
+ * when Discord can't answer right now, so a rate limit never reads as "not yours".
+ */
+export const guildAccessFor = cache(
+  async (
+    guildId: string,
+    userId: string,
+  ): Promise<{ manager: true } | { manager: false; access: ResolvedAccess } | null> => {
+    const member = await memberNow(guildId, userId);
+    if (!member) return null;
+    if (member.manage) return { manager: true };
+    const { grants, groups } = await getDashboardAccess(await getDb(), guildId);
+    const access = resolveAccess(grants, groups, userId, member.roleIds);
+    return access ? { manager: false, access } : null;
+  },
+);
+
+/**
+ * The plain level for lists and labels: "manager", the Viewer or Editor grant, or "viewer" for
+ * someone who only has access through a group (what they can open is still decided per area).
  */
 export const dashboardRole = cache(
   async (guildId: string, userId: string): Promise<DashboardRole | null> => {
-    const member = await memberNow(guildId, userId);
-    if (!member) return null;
-    if (member.manage) return "manager";
-    return grantedLevel(await getAccessGrants(await getDb(), guildId), userId, member.roleIds);
+    const a = await guildAccessFor(guildId, userId);
+    if (!a) return null;
+    return a.manager ? "manager" : (a.access.level ?? "viewer");
   },
 );
 
 /**
  * May the current session do `need` on this server right now? Checks the session, the ID's
- * shape, that Garrison is in the server, and the user's live role there. Returns null when
- * any of that says no, and throws when Discord can't answer (never grants access either way). Server Actions call this directly: they are public POST endpoints, so page checks
- * don't cover them. The default is "editor": a change needs at least an editor, so an action
- * that forgets to say what it needs is still closed to viewers.
+ * shape, that Garrison is in the server, and the user's live access there. Returns null when
+ * any of that says no, and throws when Discord can't answer (never grants access either way).
+ * Server Actions call this directly: they are public POST endpoints, so page checks don't cover
+ * them. The default is "editor": a change needs at least an editor, so an action that forgets
+ * to say what it needs is still closed to viewers.
+ *
+ * `area` is the dashboard section it belongs to: with it, a viewer needs View there and an
+ * editor needs Edit (a Viewer or Editor grant covers every area; an access group, only its
+ * own). Without it, only a Viewer or Editor grant counts, so access groups never reach
+ * anything that doesn't say which area it is.
  */
-export const checkGuildAccess = cache(async (guildId: string, need: DashboardRole = "editor") => {
-  if (typeof guildId !== "string" || !isSnowflake(guildId)) return null;
-  // Independent reads, so neither waits for the other.
-  const [session, guild] = await Promise.all([
-    getSession(),
-    getDb().then((db) => getActiveGuild(db, guildId)),
-  ]);
-  if (!session || !guild) return null;
-  const role = await dashboardRole(guildId, session.userId);
-  if (!role || !atLeast(role, need)) return null;
-  return { session, guild, role };
-});
+export const checkGuildAccess = cache(
+  async (guildId: string, need: DashboardRole = "editor", area?: AccessArea) => {
+    if (typeof guildId !== "string" || !isSnowflake(guildId)) return null;
+    // Independent reads, so neither waits for the other.
+    const [session, guild] = await Promise.all([
+      getSession(),
+      getDb().then((db) => getActiveGuild(db, guildId)),
+    ]);
+    if (!session || !guild) return null;
+    const a = await guildAccessFor(guildId, session.userId);
+    if (!a) return null;
+    if (!a.manager) {
+      if (need === "manager") return null;
+      const ok = area
+        ? allows(a.access, area, need === "editor" ? "edit" : "view")
+        : !!a.access.level && atLeast(a.access.level, need);
+      if (!ok) return null;
+    }
+    const role: DashboardRole = a.manager ? "manager" : (a.access.level ?? "viewer");
+    return { session, guild, role, access: a.manager ? null : a.access };
+  },
+);
 
 /**
- * The gate for every server page: anyone with access, viewers included. Signed-out users go
- * to login; a "no" is a 404, so the dashboard never confirms which servers exist. Discord not
- * answering is an error instead, shown with "Try again" by error.tsx.
+ * The gate for every server page: anyone with access to `area` (viewers included). Signed-out
+ * users go to login; a "no" is a 404, so the dashboard never confirms which servers exist.
+ * Discord not answering is an error instead, shown with "Try again" by error.tsx.
  */
-export const requireGuildAccess = cache(async (guildId: string) => {
+export const requireGuildAccess = cache(async (guildId: string, area?: AccessArea) => {
   await requireSession(`/servers/${isSnowflake(guildId) ? guildId : ""}`);
-  const access = await checkGuildAccess(guildId, "viewer");
+  const access = await checkGuildAccess(guildId, "viewer", area);
   if (!access) notFound();
   return access;
 });

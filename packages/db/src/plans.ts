@@ -167,7 +167,8 @@ export type Module =
   | "applications"
   | "utilities"
   | "members"
-  | "insights";
+  | "insights"
+  | "access";
 
 interface Feature<T> {
   module: Module;
@@ -464,6 +465,12 @@ export const FEATURES = {
       "AI assistant supplies a month: a message costs what its AI really uses, on Fast or Smart, and each change a plan makes costs 1 (Agency: 11,000 shared by its servers; Free: 100 per person across all their servers, Fast only)",
     free: AI_SUPPLIES_PER_MONTH.free,
     pro: AI_SUPPLIES_PER_MONTH.pro,
+  },
+  "access.groups": {
+    module: "access",
+    about: "Access groups: per-area dashboard access for your mods and helpers",
+    free: 2,
+    pro: 15,
   },
   "rally.templates": {
     module: "rally",
