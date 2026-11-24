@@ -24,6 +24,7 @@ import { opsSelects } from "../modules/ops/answers.js";
 import { opsButtons, opsModals, raid } from "../modules/ops/commands.js";
 import { qm, qmButtons } from "../modules/quartermaster/commands.js";
 import { lfg, rallyButtons } from "../modules/rally/commands.js";
+import { rallySelects } from "../modules/rally/host.js";
 import { lfgPanelButtons, lfgPanelModals } from "../modules/rally/panel-handlers.js";
 import { leaderboard, rank, rankcard, rankcardModals, ranks } from "../modules/ranks/commands.js";
 import { tag } from "../modules/responders/commands.js";
@@ -85,7 +86,13 @@ export const buttons: ButtonHandler[] = [
   decideApplicationButtons,
   triviaButtons,
 ];
-export const selects: SelectHandler[] = [roleMenuSelects, shopPickSelects, roomPicks, opsSelects];
+export const selects: SelectHandler[] = [
+  roleMenuSelects,
+  shopPickSelects,
+  roomPicks,
+  opsSelects,
+  rallySelects,
+];
 export const modals: ModalHandler[] = [
   opsModals,
   ticketModals,

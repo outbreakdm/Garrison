@@ -28,7 +28,11 @@ then updates **Status** and the **Log** before stopping.
      Post lineup updates the card with the groups and pings the players picked.
      Built, not deployed: **migration 0101** (`ops_events.groups`, `lineup_posted_at`;
      `ops_signups.group_no`; `ops_lineups`; request kind `post_lineup`).
-  4. [ ] Group (LFG) host controls: remove someone, lock the group, hand over host, ping the group.
+  4. [x] Group (LFG) host controls: remove someone, lock the group, hand over host, ping the group.
+     Built, not deployed: **migration 0102** (`lfg_posts.locked`, `pinged_at`).
+  All four phases built and committed, not deployed. Deploying them: apply **migrations 0099 to
+  0102** in order (Supabase MCP, recording each in `drizzle.__drizzle_migrations`), then deploy
+  **everything with register_commands** (`/roster` subcommands, `/raid create style: team:`).
 - **Best bot list (2026-11-20), in order, one item per step** (from the release audit's "What to
   add to be the best bot", ranked by value for effort). Commit each before the next.
   1. [x] Free AI moderation: on every plan with the standard set (harassment, hate, sexual,
@@ -1828,4 +1832,11 @@ Decided (2026-11-12, owner):
   takes them out of their group. Viewers see the board; editors change it. Migration
   `0101_lineups` (web may set groups, group and bench; the bot posts). Checked in the local preview
   (Fill by role, Save, Save and post queued); the posted card and ping by tests only. Not
+  deployed.
+- 2026-11-24: Group host controls (phase 4 of raid rosters and lineups, the last). A group's card
+  has Manage beside Leave and Close: for the host or anyone with Manage Messages (checked on every
+  press), it opens a private panel to remove someone (as if they left, voice access included),
+  hand the group to a member who hosts nothing else here, lock it (Join turns off and newcomers
+  are told; members can still switch role) and ping the group (members only, once every 10
+  minutes). Migration `0102_lfg_host`. Checked by tests and typecheck; no live Discord run. Not
   deployed.

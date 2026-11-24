@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, isNotNull, isNull, lte, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import type { PanelPlace } from "../panels";
 import type { GuildPlan } from "../plans";
@@ -94,7 +94,7 @@ export type JoinResult =
   | { ok: true; post: LfgPost; members: LfgMember[]; becameFull: boolean; switched: boolean }
   | {
       ok: false;
-      reason: "not_found" | "closed" | "already" | "full" | "slot_full" | "no_such_slot";
+      reason: "not_found" | "closed" | "already" | "full" | "slot_full" | "no_such_slot" | "locked";
     };
 
 /**
@@ -120,6 +120,8 @@ export async function joinLfg(
     const mine = active.find((m) => m.userId === userId);
     if (mine && (requested === undefined || mine.slotName === requested))
       return { ok: false, reason: "already" };
+    // A locked group takes nobody new; members can still switch role.
+    if (post.locked && !mine) return { ok: false, reason: "locked" };
 
     const pick = pickSlot(
       post.slots,
@@ -195,6 +197,80 @@ export async function leaveLfg(db: Db, postId: string, userId: string): Promise<
       .orderBy(asc(lfgMembers.joinedAt));
     return { ok: true, post: updated ?? post, members, hostLeft };
   });
+}
+
+// --- Host controls ------------------------------------------------------------------
+
+/** Lock or unlock an open group. Null when it isn't open anymore. */
+export async function setLfgLocked(db: Db, postId: string, locked: boolean) {
+  const [row] = await db
+    .update(lfgPosts)
+    .set({ locked })
+    .where(and(eq(lfgPosts.id, postId), inArray(lfgPosts.status, ["open", "full"])))
+    .returning();
+  return row ?? null;
+}
+
+export type HandOverResult =
+  | { ok: true; post: LfgPost }
+  | { ok: false; reason: "closed" | "not_member" | "hosts_another" };
+
+/** Make a member the host. They must be in the group and not host another open group here. */
+export async function handOverLfg(
+  db: Db,
+  postId: string,
+  newHostId: string,
+): Promise<HandOverResult> {
+  return db.transaction(async (tx) => {
+    const [post] = await tx.select().from(lfgPosts).where(eq(lfgPosts.id, postId)).for("update");
+    if (!post || (post.status !== "open" && post.status !== "full"))
+      return { ok: false, reason: "closed" };
+    const [member] = await tx
+      .select()
+      .from(lfgMembers)
+      .where(
+        and(
+          eq(lfgMembers.postId, postId),
+          eq(lfgMembers.userId, newHostId),
+          isNull(lfgMembers.leftAt),
+        ),
+      );
+    if (!member || newHostId === post.hostId) return { ok: false, reason: "not_member" };
+    const [other] = await tx
+      .select({ id: lfgPosts.id })
+      .from(lfgPosts)
+      .where(
+        and(
+          eq(lfgPosts.guildId, post.guildId),
+          eq(lfgPosts.hostId, newHostId),
+          inArray(lfgPosts.status, ["open", "full"]),
+        ),
+      )
+      .limit(1);
+    if (other) return { ok: false, reason: "hosts_another" };
+    const [row] = await tx
+      .update(lfgPosts)
+      .set({ hostId: newHostId })
+      .where(eq(lfgPosts.id, postId))
+      .returning();
+    return row ? { ok: true, post: row } : { ok: false, reason: "closed" };
+  });
+}
+
+/** Claims the group's ping: one every 10 minutes. Null while it's cooling down. */
+export async function claimLfgPing(db: Db, postId: string, now = new Date()) {
+  const [row] = await db
+    .update(lfgPosts)
+    .set({ pingedAt: now })
+    .where(
+      and(
+        eq(lfgPosts.id, postId),
+        inArray(lfgPosts.status, ["open", "full"]),
+        or(isNull(lfgPosts.pingedAt), lt(lfgPosts.pingedAt, new Date(now.getTime() - 10 * 60_000))),
+      ),
+    )
+    .returning();
+  return row ?? null;
 }
 
 /**

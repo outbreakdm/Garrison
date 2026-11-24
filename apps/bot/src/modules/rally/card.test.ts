@@ -38,6 +38,8 @@ const post: LfgPost = {
   templateId: null,
   wording: null,
   notifiedAt: null,
+  locked: false,
+  pingedAt: null,
 };
 const member = (userId: string, slotName: string): LfgMember => ({
   postId: post.id,
@@ -108,6 +110,12 @@ describe("lfgCard", () => {
       ...groups(card).map((b) => buttonOf(b)?.label),
       ...(card.actions ?? []).map((b) => (b.toJSON() as { label: string }).label),
     ];
-    expect(labels).toEqual(["Join fireteam", "Bail", "Disband"]);
+    expect(labels).toEqual(["Join fireteam", "Bail", "Manage", "Disband"]);
+  });
+
+  it("says when the host locked it, and turns Join off", () => {
+    const card = lfgCard({ ...post, locked: true }, []);
+    expect(card.lead).toContain("locked by the host");
+    expect(groups(card).every((b) => buttonOf(b)?.disabled)).toBe(true);
   });
 });

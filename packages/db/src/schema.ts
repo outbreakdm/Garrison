@@ -324,6 +324,10 @@ export const lfgPosts = pgTable(
     wording: jsonb("wording").$type<RallyWording & { voice: boolean }>(),
     /** When Garrison notified the template's role about this post (Pro). */
     notifiedAt: timestamp("notified_at", { withTimezone: true }),
+    /** The host locked it: nobody new can join until it's unlocked. */
+    locked: boolean("locked").notNull().default(false),
+    /** When the host last pinged the group (one ping every 10 minutes). */
+    pingedAt: timestamp("pinged_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     closedAt: timestamp("closed_at", { withTimezone: true }),
   },

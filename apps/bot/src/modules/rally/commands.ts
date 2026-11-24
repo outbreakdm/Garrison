@@ -20,6 +20,7 @@ import type { BotContext, ButtonHandler, Command } from "../../commands/types.js
 import { cardEdit, cardReply } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { lfgCard, RALLY_PREFIX, safeText } from "./card.js";
+import { hostButton } from "./host.js";
 import { keepLfgPanelLast } from "./panel.js";
 import { LIFETIME_AFTER_START_MS, matchSlot, parseSlots, parseStart } from "./parse.js";
 import { announceFullSquad, refreshCard, syncVoiceAccess } from "./service.js";
@@ -298,6 +299,9 @@ export const rallyButtons: ButtonHandler = {
     }
     const userId = interaction.user.id;
 
+    if (action === "manage" || action === "lock" || action === "ping")
+      return hostButton(interaction, ctx, action, post.id);
+
     if (action === "close") {
       const canModerate = interaction.memberPermissions.has(PermissionFlagsBits.ManageMessages);
       if (userId !== post.hostId && !canModerate) {
@@ -342,6 +346,7 @@ export const rallyButtons: ButtonHandler = {
           full: renderWording("{Group}'s full.", postWording(post.wording)),
           slot_full: `${group.name || "That role"} is full. Pick another role.`,
           no_such_slot: "That role doesn't exist anymore.",
+          locked: "The host locked this group: nobody new can join.",
         }[result.reason];
         await interaction.reply({ content: msg, ...ephemeral });
         return;

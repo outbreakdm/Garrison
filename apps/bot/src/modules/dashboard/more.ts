@@ -293,6 +293,7 @@ export async function doLfgJoin(ctx: BotContext, guild: Guild, member: GuildMemb
         full: renderWording("{Group}'s full.", postWording(post.wording)),
         slot_full: `${group.name || "That role"} is full. Pick another role.`,
         no_such_slot: "That role doesn't exist anymore.",
+        locked: "The host locked this group: nobody new can join.",
       }[result.reason],
     );
   await refreshCard(ctx, guild, result.post);

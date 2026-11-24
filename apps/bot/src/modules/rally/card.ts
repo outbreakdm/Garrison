@@ -40,6 +40,7 @@ export function lfgCard(post: LfgPost, members: LfgMember[]): Card {
     post.startsAt.getTime() <= Date.now() + 60_000 ? "starts now" : `starts ${ts(post.startsAt)}`,
   ];
   if (post.repeatWeekly && active) lead.push("weekly");
+  if (post.locked && active) lead.push("locked by the host");
   if (post.note)
     lead.push(
       w.requirement ? `${safeText(w.requirement)}: ${safeText(post.note)}` : safeText(post.note),
@@ -67,8 +68,12 @@ export function lfgCard(post: LfgPost, members: LfgMember[]): Card {
               "Join",
             ),
           )
-          .setStyle(open && post.status !== "full" ? ButtonStyle.Primary : ButtonStyle.Secondary)
-          .setDisabled(post.status === "full" || !open)
+          .setStyle(
+            open && post.status !== "full" && !post.locked
+              ? ButtonStyle.Primary
+              : ButtonStyle.Secondary,
+          )
+          .setDisabled(post.status === "full" || !open || post.locked)
       : undefined;
     return {
       text: `**${name}** ${inGroup.length}/${group.count}\n${seats.join(" · ")}`,
@@ -87,6 +92,10 @@ export function lfgCard(post: LfgPost, members: LfgMember[]): Card {
           new ButtonBuilder()
             .setCustomId(`${RALLY_PREFIX}:leave:${post.id}`)
             .setLabel(label(renderWording(w.leave, w), "Leave"))
+            .setStyle(ButtonStyle.Secondary),
+          new ButtonBuilder()
+            .setCustomId(`${RALLY_PREFIX}:manage:${post.id}`)
+            .setLabel("Manage")
             .setStyle(ButtonStyle.Secondary),
           new ButtonBuilder()
             .setCustomId(`${RALLY_PREFIX}:close:${post.id}`)

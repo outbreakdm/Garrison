@@ -142,6 +142,10 @@ Each line below is: what to do → what should happen.
       groups), drag one player to the bench, Save and post → the card shows Group 1… and the
       bench, and one message pings only the players in groups. Save as a lineup, then Use it on
       next week's raid.
+- [ ] Group host controls: `/lfg create`, someone joins → Manage (only the host or a moderator):
+      Remove them (and their voice access), Lock (Join turns off; a newcomer is told it's
+      locked), Ping the group (a second ping within 10 min is refused), Hand the group to a member
+      (the card shows the new host).
 - [ ] Raid roster: Groups and raids → Roster → add a WoW team; Find a member → add someone as
   Trial with a note. `/roster add name:X class:Shaman spec:Restoration` → role Healer, first
   character is the main; `/roster main` switches it; `/roster team` shows the team without
