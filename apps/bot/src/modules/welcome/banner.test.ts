@@ -10,8 +10,8 @@ describe("welcome image", () => {
       accent: null,
       avatarUrl: null,
       name: "Rook of the Iron Vanguard",
-      server: "Iron Vanguard",
-      count: 1284,
+      top: "Welcome to Iron Vanguard",
+      bottom: "Member #1,284",
     });
     const img = await loadImage(png);
     expect([img.width, img.height]).toEqual([BANNER_WIDTH, BANNER_HEIGHT]);

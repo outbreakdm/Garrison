@@ -7,11 +7,12 @@ import {
   lockedCardFields,
   restoreLockedCard,
   WELCOME_PLACEHOLDERS,
+  welcomeImageLines,
 } from "@garrison/db/cards";
 import { useMemo, useState } from "react";
 import { AutoSaveCard, useSaveSignal } from "@/components/AutoSave";
-import { CardEditor, ProNotice, ProTag } from "@/components/cards/CardEditor";
-import { CardPreview } from "@/components/cards/CardPreview";
+import { AccentField, CardEditor, ProNotice, ProTag } from "@/components/cards/CardEditor";
+import { CardPreview, ImageMessagePreview } from "@/components/cards/CardPreview";
 import { WelcomeBannerView } from "@/components/cards/WelcomeBannerView";
 import type { AutoResult } from "@/lib/autosave";
 import { usePickedWelcomeImage } from "./WelcomeImage";
@@ -78,9 +79,11 @@ function WelcomeCardFields({
   const [enabled, setEnabled] = useState(saved.enabled);
   const [channelId, setChannelId] = useState(saved.channelId ?? "");
   const [card, setCard] = useState(saved.card);
-  // The welcome image picked in its own panel below, drawn into the card as the bot sends it.
+  // The welcome image set up in its own panel below, drawn as the bot will send it: in the
+  // card, or on its own as the whole message (the card isn't sent then).
   const picked = usePickedWelcomeImage();
-  const banner = part === "join" && ent["welcome.image"] ? picked : null;
+  const image = part === "join" && ent["welcome.image"] && picked?.image != null ? picked : null;
+  const alone = image?.alone ?? false;
 
   const names = useMemo(
     () => ({
@@ -89,11 +92,20 @@ function WelcomeCardFields({
     }),
     [roleNames, channels],
   );
-  const filled = fillWelcome(
-    card,
-    { userId: SAMPLE_ID, name: sample.name, server: sample.server, count: SAMPLE_COUNT },
-    { mention: part !== "leave" },
-  );
+  const vars = { userId: SAMPLE_ID, name: sample.name, server: sample.server, count: SAMPLE_COUNT };
+  const filled = fillWelcome(card, vars, { mention: part !== "leave" });
+  const banner = image ? (
+    <WelcomeBannerView
+      background={image.image ?? ""}
+      accent={card.accent}
+      name={sample.name}
+      avatar={sample.avatar}
+      {...welcomeImageLines(
+        { joinImageTop: image.top.trim() || null, joinImageBottom: image.bottom.trim() || null },
+        vars,
+      )}
+    />
+  ) : null;
 
   const lockedCard = lockedCardFields(card, ent, saved.card);
   const lockedLabels = [
@@ -164,34 +176,54 @@ function WelcomeCardFields({
           ) : null}
         </div>
 
-        <CardEditor
-          card={card}
-          onChange={setCard}
-          idPrefix={part}
-          vars={WELCOME_PLACEHOLDERS.map((p) => ({
-            key: p.token.slice(1, -1),
-            label: p.token.slice(1, -1).replace(/^./, (c) => c.toUpperCase()),
-            about: part === "leave" && p.token === "{user}" ? "their name (they've left)" : p.about,
-          }))}
-          plan={{
-            accent: ent["cards.accent"],
-            images: ent["cards.images"],
-            footer: ent["cards.footer"],
-            embed: ent["cards.embed"],
-          }}
-        />
-        <p className="g-help">
-          Type @ to add:{" "}
-          {WELCOME_PLACEHOLDERS.filter((p) => part !== "leave" || p.token !== "{user}").map(
-            (p, i) => (
-              <span key={p.token}>
-                {i ? ", " : ""}
-                <code className="placeholder">{p.token}</code> {p.about}
-              </span>
-            ),
-          )}
-          {part === "leave" ? ". They've left, so {user} becomes their name." : "."}
-        </p>
+        {alone ? (
+          <div className="editor-group">
+            <p className="g-help">
+              The welcome image goes on its own, so this card isn't sent. Its lines and how it's
+              posted are under Welcome image below.
+            </p>
+            <AccentField
+              id={id("accent")}
+              label="Image accent"
+              tag={<ProTag on={ent["cards.accent"]} />}
+              help="The ring around their avatar and the line above their name."
+              value={card.accent}
+              onChange={(accent) => setCard({ ...card, accent })}
+            />
+          </div>
+        ) : (
+          <>
+            <CardEditor
+              card={card}
+              onChange={setCard}
+              idPrefix={part}
+              vars={WELCOME_PLACEHOLDERS.map((p) => ({
+                key: p.token.slice(1, -1),
+                label: p.token.slice(1, -1).replace(/^./, (c) => c.toUpperCase()),
+                about:
+                  part === "leave" && p.token === "{user}" ? "their name (they've left)" : p.about,
+              }))}
+              plan={{
+                accent: ent["cards.accent"],
+                images: ent["cards.images"],
+                footer: ent["cards.footer"],
+                embed: ent["cards.embed"],
+              }}
+            />
+            <p className="g-help">
+              Type @ to add:{" "}
+              {WELCOME_PLACEHOLDERS.filter((p) => part !== "leave" || p.token !== "{user}").map(
+                (p, i) => (
+                  <span key={p.token}>
+                    {i ? ", " : ""}
+                    <code className="placeholder">{p.token}</code> {p.about}
+                  </span>
+                ),
+              )}
+              {part === "leave" ? ". They've left, so {user} becomes their name." : "."}
+            </p>
+          </>
+        )}
 
         <ProNotice labels={lockedLabels} onReset={undoPro} planHref={planHref} />
         {needsChannel && !lockedLabels.length ? (
@@ -205,23 +237,21 @@ function WelcomeCardFields({
           <span className="g-label">Preview in Discord</span>
           <span className="g-help">As if you just {part === "leave" ? "left" : "joined"}</span>
         </div>
-        <CardPreview
-          card={filled}
-          channel={part === "dm" ? "Direct message" : (names.channels.get(channelId) ?? null)}
-          names={names}
-          media={
-            banner !== null ? (
-              <WelcomeBannerView
-                background={banner}
-                accent={card.accent}
-                name={sample.name}
-                server={sample.server}
-                count={SAMPLE_COUNT}
-                avatar={sample.avatar}
-              />
-            ) : undefined
-          }
-        />
+        {alone && banner ? (
+          <ImageMessagePreview
+            channel={names.channels.get(channelId) ?? null}
+            text={image?.ping ? `<@${SAMPLE_ID}>` : null}
+            names={names}
+            image={banner}
+          />
+        ) : (
+          <CardPreview
+            card={filled}
+            channel={part === "dm" ? "Direct message" : (names.channels.get(channelId) ?? null)}
+            names={names}
+            media={banner ?? undefined}
+          />
+        )}
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ import {
   getGuildPlan,
   getWelcome,
   type WelcomeConfig,
+  welcomeImageLines,
 } from "@garrison/db";
 import { AttachmentBuilder, type GuildMember, type PartialGuildMember } from "discord.js";
 import type { BotContext } from "../../commands/types.js";
@@ -71,9 +72,29 @@ function message(card: CustomCard, ent: Entitlements, member: GuildMember | Part
   };
 }
 
+const welcomeFile = (png: Buffer, name: string) =>
+  new AttachmentBuilder(png, { name: "welcome.png", description: `Welcome, ${name}` });
+
 /**
- * The welcome card, with the drawn welcome image under it on Pro. If drawing
- * fails, the card goes out on its own: a welcome should never be lost to art.
+ * The welcome image as the whole message: no card, and a mention of the new member above it
+ * when the server wants one (only them: the image's own text never pings).
+ */
+export function aloneMessage(
+  png: Buffer,
+  ping: boolean,
+  member: { id: string; displayName: string },
+) {
+  return {
+    ...(ping ? { content: `<@${member.id}>` } : {}),
+    files: [welcomeFile(png, member.displayName)],
+    allowedMentions: { users: ping ? [member.id] : [] },
+  };
+}
+
+/**
+ * The welcome card, with the drawn welcome image in it on Pro, or the image on its own when
+ * the server picked that. If drawing fails, the card goes out instead: a welcome should never
+ * be lost to art.
  */
 async function joinMessage(w: WelcomeConfig, ent: Entitlements, member: GuildMember) {
   if (!w.joinImage || !ent["welcome.image"]) return message(w.joinCard, ent, member);
@@ -82,18 +103,13 @@ async function joinMessage(w: WelcomeConfig, ent: Entitlements, member: GuildMem
     accent: w.joinCard.accent,
     avatarUrl: member.displayAvatarURL({ extension: "png", size: 256 }),
     name: member.displayName,
-    server: member.guild.name,
-    count: member.guild.memberCount,
+    ...welcomeImageLines(w, vars(member)),
   }).catch(() => null);
   if (!png) return message(w.joinCard, ent, member);
+  if (w.joinImageAlone) return aloneMessage(png, w.joinImagePing, member);
   return {
     ...message({ ...w.joinCard, image: "attachment://welcome.png" }, ent, member),
-    files: [
-      new AttachmentBuilder(png, {
-        name: "welcome.png",
-        description: `Welcome, ${member.displayName}`,
-      }),
-    ],
+    files: [welcomeFile(png, member.displayName)],
   };
 }
 

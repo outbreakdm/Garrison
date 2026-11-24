@@ -1664,4 +1664,12 @@ Decided (2026-11-12, owner):
   member #128, on the picked background or image (WelcomeBannerView, matched against the bot's
   render). It follows the image panel live (WelcomeImageProvider) and notes what it can't show:
   a link still to paste, an image only Discord loads, a link the save refuses. Deployed (dashboard).
+- 2026-11-23: The welcome image can be the whole welcome message. The Welcome image panel picks
+  how it's posted ("In the welcome card" or "On its own"), whether a mention of the new member
+  goes above it (on by default), and the lines above and below their name ({name}, {server},
+  {count}; empty goes back to "Welcome to {server}" and "Member #{count}"). On its own, the
+  welcome card panel trades its editor for the image's accent and previews the bare image.
+  The AI assistant can set all of it, but with preset backgrounds only. Migration
+  `0091_welcome_image_alone` (four columns, web and bot grants) must be applied to production
+  by hand before the deploy. Deployed (everything, commands registered).
 

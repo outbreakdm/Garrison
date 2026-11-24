@@ -638,6 +638,13 @@
       "when": 1795455845367,
       "tag": "0090_qm_more_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 91,
+      "version": "7",
+      "when": 1795478691293,
+      "tag": "0091_welcome_image_alone",
+      "breakpoints": true
     }
   ]
 }

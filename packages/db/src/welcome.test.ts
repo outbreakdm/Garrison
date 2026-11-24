@@ -7,7 +7,15 @@ import { applySettingsChange } from "./repo/settings";
 import { getWelcome } from "./repo/welcome";
 import { welcomeSettings } from "./schema";
 import { createTestDb } from "./testing";
-import { checkWelcome, DEFAULT_WELCOME, fillWelcome, readWelcome } from "./welcome";
+import {
+  checkWelcome,
+  DEFAULT_WELCOME,
+  fillWelcome,
+  readWelcome,
+  WELCOME_IMAGE_LINE_MAX,
+  WELCOME_IMAGE_TOP,
+  welcomeImageLines,
+} from "./welcome";
 
 const free = entitlements("free");
 const pro = entitlements("pro");
@@ -72,6 +80,63 @@ describe("welcome rules", () => {
     });
   });
 
+  it("posts the image on its own with the server's own lines, on Pro", () => {
+    const free = entitlements("free");
+    const pro = entitlements("pro");
+    expect(
+      checkWelcome(
+        {
+          joinImageAlone: true,
+          joinImagePing: false,
+          joinImageTop: "  Hey   {name} ",
+          joinImageBottom: "",
+        },
+        pro,
+        DEFAULT_WELCOME,
+      ),
+    ).toEqual({
+      ok: true,
+      value: {
+        joinImageAlone: true,
+        joinImagePing: false,
+        joinImageTop: "Hey {name}",
+        joinImageBottom: null,
+      },
+    });
+    // The standard text is stored as null, so it follows the standard if it changes.
+    expect(checkWelcome({ joinImageTop: WELCOME_IMAGE_TOP }, pro, DEFAULT_WELCOME)).toMatchObject({
+      value: { joinImageTop: null },
+    });
+    expect(
+      checkWelcome(
+        { joinImageBottom: "x".repeat(WELCOME_IMAGE_LINE_MAX + 1) },
+        pro,
+        DEFAULT_WELCOME,
+      ).ok,
+    ).toBe(false);
+    // Free can't change them, but saving what's already there passes (the panel sends it all).
+    expect(checkWelcome({ joinImageAlone: true }, free, DEFAULT_WELCOME).ok).toBe(false);
+    expect(checkWelcome({ joinImageTop: "Hi" }, free, DEFAULT_WELCOME).ok).toBe(false);
+    expect(
+      checkWelcome({ joinImageAlone: true, joinImageTop: "Hi" }, free, {
+        ...DEFAULT_WELCOME,
+        joinImageAlone: true,
+        joinImageTop: "Hi",
+      }).ok,
+    ).toBe(true);
+  });
+
+  it("fills the image's lines without pinging anyone", () => {
+    const vars = { userId: "1", name: "Scout", server: "Iron Vanguard", count: 1280 };
+    expect(welcomeImageLines(DEFAULT_WELCOME, vars)).toEqual({
+      top: "Welcome to Iron Vanguard",
+      bottom: "Member #1,280",
+    });
+    expect(
+      welcomeImageLines({ joinImageTop: "Hi {user}", joinImageBottom: "{count} strong" }, vars),
+    ).toEqual({ top: "Hi Scout", bottom: "1,280 strong" });
+  });
+
   it("falls back to defaults for anything stored that doesn't parse", () => {
     expect(readWelcome(null)).toEqual(DEFAULT_WELCOME);
     expect(readWelcome({ joinCard: { nope: 1 }, joinRoleIds: ["x", R[0]] })).toEqual({
@@ -110,11 +175,15 @@ describe("welcome storage, under each role's grants", () => {
     const w = await getWelcome(db, G);
     expect(w).toMatchObject({ joinEnabled: true, joinChannelId: C, joinRoleIds: [R[0]] });
     expect(w.joinCard).toEqual(DEFAULT_WELCOME.joinCard);
-    // The bot may change the switches, channels, join roles and (since 0090, for the AI
-    // assistant's welcome writes) the cards' text, never the welcome image.
+    // The bot may change the switches, channels, join roles, (since 0090) the cards' text and
+    // (since 0091) the welcome image: all of it is the AI assistant's to write. Never the row's
+    // server.
     await db.update(welcomeSettings).set({ joinEnabled: true });
     await db.update(welcomeSettings).set({ joinCard: DEFAULT_WELCOME.leaveCard });
-    const err = await Promise.resolve(db.update(welcomeSettings).set({ joinImage: null })).then(
+    await db
+      .update(welcomeSettings)
+      .set({ joinImage: "frost", joinImageAlone: true, joinImagePing: false, joinImageTop: "Hi" });
+    const err = await Promise.resolve(db.update(welcomeSettings).set({ guildId: "other" })).then(
       () => null,
       (e: Error & { cause?: Error }) => `${e.message} ${e.cause?.message ?? ""}`,
     );

@@ -129,15 +129,27 @@ export async function saveJoinRoles(form: FormData): Promise<AutoResult> {
   );
 }
 
-/** The welcome image (Pro): off, a preset background, or an image uploaded to Discord. */
+/**
+ * The welcome image (Pro): off, a preset background, or an image uploaded to Discord; and how
+ * it's posted (in the welcome card or on its own, with or without a mention) and its lines.
+ */
 export async function saveWelcomeImage(form: FormData): Promise<AutoResult> {
   const choice = String(form.get("background") ?? "");
   const image = choice === "image" ? String(form.get("imageUrl") ?? "").trim() : choice;
   // "Your image" picked before its link is pasted: nothing to save yet.
   if (choice === "image" && !image && isAuto(form)) return { status: "unchanged" };
+  // How it's posted and its lines come only from Pro, where those fields are enabled.
+  const style = form.has("layout")
+    ? {
+        joinImageAlone: form.get("layout") === "alone",
+        joinImagePing: form.get("ping") === "on",
+        joinImageTop: String(form.get("top") ?? ""),
+        joinImageBottom: String(form.get("bottom") ?? ""),
+      }
+    : {};
   return save(
     form,
-    { joinImage: image || null },
+    { joinImage: image || null, ...style },
     image ? "Saved the welcome image." : "The welcome image is off.",
     "image",
   );

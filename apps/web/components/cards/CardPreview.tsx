@@ -45,6 +45,56 @@ export function CardPreview({
   const footer = card.footer ?? STANDARD_FOOTER;
   const thumb = card.thumbnail;
   return (
+    <DiscordFrame channel={channel}>
+      <div className="dc-card" ref={box}>
+        <div className={thumb ? "dc-card__head dc-card__head--thumb" : "dc-card__head"}>
+          <div className="dc-card__titles">
+            {card.author ? <div className="dc-sub dc-card__author">{card.author}</div> : null}
+            <div className="dc-h dc-h3">
+              {card.url ? (
+                <span className="dc-card__link">{card.title || "Untitled card"}</span>
+              ) : (
+                card.title || "Untitled card"
+              )}
+            </div>
+          </div>
+          {thumb ? <PreviewImage url={thumb} className="dc-card__thumb" label="Thumbnail" /> : null}
+        </div>
+        {card.blocks.length ? <hr className="dc-card__rule" /> : null}
+        {card.blocks.map((b, i) =>
+          b.kind === "divider" ? (
+            // biome-ignore lint/suspicious/noArrayIndexKey: blocks have no IDs; order is the identity
+            <hr className="dc-card__rule" key={i} />
+          ) : b.kind === "field" ? (
+            // biome-ignore lint/suspicious/noArrayIndexKey: as above
+            <div className="dc-card__text dc-card__field" key={i}>
+              <strong>{b.name || "Field name"}</strong>
+              <DiscordMarkdown text={b.value || "Value"} names={names} />
+            </div>
+          ) : (
+            // biome-ignore lint/suspicious/noArrayIndexKey: as above
+            <div className="dc-card__text" key={i}>
+              <DiscordMarkdown text={b.text} names={names} />
+            </div>
+          ),
+        )}
+        {media ??
+          (card.image ? (
+            <PreviewImage url={card.image} className="dc-card__image" label="Banner image" />
+          ) : null)}
+        {controls ? <div className="dc-card__controls">{controls}</div> : null}
+        {footer ? <div className="dc-sub">{footer}</div> : null}
+      </div>
+    </DiscordFrame>
+  );
+}
+
+/**
+ * Garrison's message in a channel, drawn as Discord draws it: the channel, Garrison's avatar,
+ * name, App tag and time, then whatever the message holds.
+ */
+function DiscordFrame({ channel, children }: { channel?: string | null; children: ReactNode }) {
+  return (
     <figure className="dc" aria-label="Preview of the message in Discord">
       <div className="dc__channel">
         <span className="dc__hash" aria-hidden="true">
@@ -69,50 +119,37 @@ export function CardPreview({
             <span className="dc__app">App</span>
             <span className="dc__time">Today at 21:04</span>
           </div>
-          <div className="dc-card" ref={box}>
-            <div className={thumb ? "dc-card__head dc-card__head--thumb" : "dc-card__head"}>
-              <div className="dc-card__titles">
-                {card.author ? <div className="dc-sub dc-card__author">{card.author}</div> : null}
-                <div className="dc-h dc-h3">
-                  {card.url ? (
-                    <span className="dc-card__link">{card.title || "Untitled card"}</span>
-                  ) : (
-                    card.title || "Untitled card"
-                  )}
-                </div>
-              </div>
-              {thumb ? (
-                <PreviewImage url={thumb} className="dc-card__thumb" label="Thumbnail" />
-              ) : null}
-            </div>
-            {card.blocks.length ? <hr className="dc-card__rule" /> : null}
-            {card.blocks.map((b, i) =>
-              b.kind === "divider" ? (
-                // biome-ignore lint/suspicious/noArrayIndexKey: blocks have no IDs; order is the identity
-                <hr className="dc-card__rule" key={i} />
-              ) : b.kind === "field" ? (
-                // biome-ignore lint/suspicious/noArrayIndexKey: as above
-                <div className="dc-card__text dc-card__field" key={i}>
-                  <strong>{b.name || "Field name"}</strong>
-                  <DiscordMarkdown text={b.value || "Value"} names={names} />
-                </div>
-              ) : (
-                // biome-ignore lint/suspicious/noArrayIndexKey: as above
-                <div className="dc-card__text" key={i}>
-                  <DiscordMarkdown text={b.text} names={names} />
-                </div>
-              ),
-            )}
-            {media ??
-              (card.image ? (
-                <PreviewImage url={card.image} className="dc-card__image" label="Banner image" />
-              ) : null)}
-            {controls ? <div className="dc-card__controls">{controls}</div> : null}
-            {footer ? <div className="dc-sub">{footer}</div> : null}
-          </div>
+          {children}
         </div>
       </div>
     </figure>
+  );
+}
+
+/**
+ * A message that's an image and nothing else, as Discord shows an attachment: an optional
+ * line of text above it (a mention), then the image at Discord's size.
+ */
+export function ImageMessagePreview({
+  channel,
+  text,
+  names,
+  image,
+}: {
+  channel?: string | null;
+  text?: string | null;
+  names: MentionNames;
+  image: ReactNode;
+}) {
+  return (
+    <DiscordFrame channel={channel}>
+      {text ? (
+        <div className="dc__content">
+          <DiscordMarkdown text={text} names={names} />
+        </div>
+      ) : null}
+      <div className="dc__attachment">{image}</div>
+    </DiscordFrame>
   );
 }
 

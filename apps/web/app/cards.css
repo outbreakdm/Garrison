@@ -2861,9 +2861,9 @@
   height: 100%;
   object-fit: cover;
 }
-.welcome-banner__welcome,
+.welcome-banner__top,
 .welcome-banner__name,
-.welcome-banner__number {
+.welcome-banner__bottom {
   position: absolute;
   right: 6%;
   left: 6%;
@@ -2873,7 +2873,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.welcome-banner__welcome {
+.welcome-banner__top {
   top: 22cqw;
   font-size: 2.2cqw;
   font-weight: 600;
@@ -2884,7 +2884,7 @@
   font: 700 5.6cqw / 1 var(--font-display);
   color: #ffffff;
 }
-.welcome-banner__number {
+.welcome-banner__bottom {
   top: 31.3cqw;
   font-size: 2cqw;
   color: #8c96a3;
@@ -2904,4 +2904,22 @@
   color: #c9d1db;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+/* The welcome image panel: how it's posted and its lines only once there's an image, and the
+   mention only when it goes on its own. */
+.welcome-image:has(input[name="background"][value=""]:checked) .welcome-image__more,
+.welcome-image:not(:has(input[name="layout"][value="alone"]:checked)) .welcome-image__ping {
+  display: none;
+}
+
+/* A message that's only text and an attachment (the welcome image on its own). Discord shows
+   an attachment at most about 520 pixels wide. */
+.dc__content {
+  margin-bottom: 4px;
+  color: #dbdee1;
+  font-size: 15px;
+  line-height: 22px;
+}
+.dc__attachment {
+  max-width: 520px;
 }

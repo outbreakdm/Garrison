@@ -141,6 +141,58 @@ export function RowTools({
   );
 }
 
+/** A card's accent color: a swatch, its hex code, and a way back to the standard volt. */
+export function AccentField({
+  id,
+  label = "Accent color",
+  tag,
+  help,
+  value,
+  onChange,
+}: {
+  id: string;
+  label?: string;
+  tag?: ReactNode;
+  help?: string;
+  /** Null is the standard accent. */
+  value: string | null;
+  onChange: (accent: string | null) => void;
+}) {
+  const pick = (v: string) => onChange(v === STANDARD_ACCENT ? null : v);
+  return (
+    <div className="g-field">
+      <label htmlFor={id} className="field-label">
+        {label} {tag}
+      </label>
+      <div className="color-field">
+        <input
+          type="color"
+          className="color-field__swatch"
+          aria-label={`Pick the ${label.toLowerCase()}`}
+          value={value ?? STANDARD_ACCENT}
+          onChange={(e) => pick(e.target.value)}
+        />
+        <HexInput
+          id={id}
+          label={`${label}, as a hex code`}
+          value={value ?? STANDARD_ACCENT}
+          onChange={pick}
+        />
+        {value ? (
+          <button
+            type="button"
+            className="g-btn g-btn--ghost g-btn--sm"
+            onClick={() => onChange(null)}
+          >
+            Use volt
+          </button>
+        ) : null}
+      </div>
+      {help ? <span className="g-help">{help}</span> : null}
+    </div>
+  );
+}
+
 /** A #rrggbb field that lets you type freely and only reports whole colors. */
 export function HexInput({
   id,
@@ -248,37 +300,12 @@ export function CardEditor({
       <fieldset className="editor-group">
         <legend className="g-label">Look</legend>
         <div className="field-row">
-          <div className="g-field">
-            <label htmlFor={id("accent")} className="field-label">
-              Accent color {tag(plan.accent)}
-            </label>
-            <div className="color-field">
-              <input
-                type="color"
-                className="color-field__swatch"
-                aria-label="Pick the accent color"
-                value={card.accent ?? STANDARD_ACCENT}
-                onChange={(e) =>
-                  set({ accent: e.target.value === STANDARD_ACCENT ? null : e.target.value })
-                }
-              />
-              <HexInput
-                id={id("accent")}
-                label="Accent color, as a hex code"
-                value={card.accent ?? STANDARD_ACCENT}
-                onChange={(v) => set({ accent: v === STANDARD_ACCENT ? null : v })}
-              />
-              {card.accent ? (
-                <button
-                  type="button"
-                  className="g-btn g-btn--ghost g-btn--sm"
-                  onClick={() => set({ accent: null })}
-                >
-                  Use volt
-                </button>
-              ) : null}
-            </div>
-          </div>
+          <AccentField
+            id={id("accent")}
+            tag={tag(plan.accent)}
+            value={card.accent}
+            onChange={(accent) => set({ accent })}
+          />
           <label className="g-field" htmlFor={id("thumbnail")}>
             <span className="field-label">Thumbnail {tag(plan.images)}</span>
             <input

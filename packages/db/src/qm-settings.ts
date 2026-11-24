@@ -15,6 +15,7 @@ import { readMessages } from "./messages";
 import { type Entitlements, FEATURES } from "./plans";
 import { PUBLIC_ABOUT_MAX } from "./public-page";
 import { checkTemplates, DEFAULT_WORDING } from "./rally";
+import { RANK_BACKGROUNDS } from "./rank-cards";
 import { readSettings } from "./repo/settings";
 import { readRoleMenus } from "./role-menus";
 import type { QmPost, QmSettingChange, SettingsModule } from "./schema";
@@ -24,7 +25,13 @@ import { checkSuggestions, readSuggestions } from "./suggestions";
 import { checkTicketOptions, readTicketConfig, readTicketPanels, TICKET_LIMITS } from "./tickets";
 import { UTILITY_LIMITS } from "./utilities";
 import { checkVoiceRooms, readVoiceRooms, VOICE_LIMITS } from "./voice-rooms";
-import { checkWelcome, readWelcome } from "./welcome";
+import {
+  checkWelcome,
+  readWelcome,
+  WELCOME_IMAGE_BOTTOM,
+  WELCOME_IMAGE_LINE_MAX,
+  WELCOME_IMAGE_TOP,
+} from "./welcome";
 
 /**
  * The settings the AI assistant may change, and how each is checked (docs/AI_ASSISTANT.md,
@@ -221,6 +228,34 @@ export const QM_SETTINGS = {
         label: "Roles on join",
         kind: "roles",
         about: "given to everyone who joins (Free: 1)",
+      },
+      joinImage: {
+        label: "Welcome image",
+        kind: "enum",
+        about:
+          "Pro: a drawn image of the new member (avatar, name, lines below) on this background; off for none. A server's own picture is set on the dashboard",
+        options: ["off", ...Object.keys(RANK_BACKGROUNDS)],
+      },
+      joinImageAlone: {
+        label: "Image on its own",
+        kind: "bool",
+        about:
+          "Pro: the welcome image is the whole message, with no card; false puts it in the card",
+      },
+      joinImagePing: {
+        label: "Mention with the image",
+        kind: "bool",
+        about: "with the image on its own, mention the new member above it",
+      },
+      joinImageTop: {
+        label: "Image top line",
+        kind: "text",
+        about: `Pro: drawn above their name, in capitals, ${WELCOME_IMAGE_LINE_MAX} characters at most; {server}, {name} and {count} work; null for "${WELCOME_IMAGE_TOP}"`,
+      },
+      joinImageBottom: {
+        label: "Image bottom line",
+        kind: "text",
+        about: `Pro: drawn under their name; null for "${WELCOME_IMAGE_BOTTOM}"`,
       },
     },
   },
@@ -701,7 +736,9 @@ const MODULES: Record<
   welcome: {
     read: (row) => ({ ...readWelcome(row) }),
     check: (b, p, e) => {
-      const r = checkWelcome(p, e, readWelcome(b));
+      // The assistant turns the image off with "off" (its choices are words, not null).
+      const patch = p.joinImage === "off" ? { ...p, joinImage: null } : p;
+      const r = checkWelcome(patch, e, readWelcome(b));
       return r.ok ? { ok: true, value: { ...b, ...r.value } } : r;
     },
   },

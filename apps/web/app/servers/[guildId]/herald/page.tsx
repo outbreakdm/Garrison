@@ -4,6 +4,8 @@ import {
   getOverview,
   getWelcome,
   JOIN_ROLES_MAX,
+  WELCOME_IMAGE_BOTTOM,
+  WELCOME_IMAGE_TOP,
   type WelcomeConfig,
 } from "@garrison/db";
 import type { Metadata } from "next";
@@ -54,6 +56,14 @@ export default async function WelcomePage({ params }: { params: Promise<{ guildI
   const roleSlots = Math.max(roleLimit, w.joinRoleIds.length);
 
   const flash = await readFlash();
+  // The welcome image as saved: the panel's fields and the card preview start from it.
+  const image = {
+    image: w.joinImage,
+    alone: w.joinImageAlone,
+    ping: w.joinImagePing,
+    top: w.joinImageTop ?? WELCOME_IMAGE_TOP,
+    bottom: w.joinImageBottom ?? WELCOME_IMAGE_BOTTOM,
+  };
 
   const common = {
     guildId: guild.id,
@@ -127,7 +137,7 @@ export default async function WelcomePage({ params }: { params: Promise<{ guildI
       <TabPanel id="join" tabs={WELCOME_TABS}>
         {/* One column: the card, the image drawn under it, then the roles given on join. */}
         <SetupLayout>
-          <WelcomeImageProvider saved={w.joinImage}>
+          <WelcomeImageProvider saved={image}>
             {part("join", { enabled: w.joinEnabled, channelId: w.joinChannelId, card: w.joinCard })}
 
             <AutoSaveCard
@@ -136,16 +146,17 @@ export default async function WelcomePage({ params }: { params: Promise<{ guildI
               action={saveWelcomeImage}
               undo={undoChange}
               guildId={guild.id}
-              stamp={contentKey(w.joinImage)}
+              stamp={contentKey(image)}
               saveLabel="Save welcome image"
               aside={<ProTag on={ent["welcome.image"]} />}
             >
               <p className="g-help">
-                Drawn into the welcome card in place of its own image: the new member's avatar,
-                their name and their member number. The card's preview shows it as you pick.
+                A drawn image of each new member: their avatar and name, with a line of your own
+                above and below. It goes in the welcome card, or on its own as the whole message.
+                The card's preview above shows it as you pick.
                 {w.joinImage && !ent["welcome.image"] ? " Saved on Pro, paused on Free." : ""}
               </p>
-              <WelcomeImageFields saved={w.joinImage} pro={ent["welcome.image"]} />
+              <WelcomeImageFields saved={image} pro={ent["welcome.image"]} />
             </AutoSaveCard>
           </WelcomeImageProvider>
           <AutoSaveCard

@@ -3,9 +3,11 @@ import { createCanvas } from "@napi-rs/canvas";
 import { cover, fetchImage, fit, registerFonts } from "../ranks/render.js";
 
 /**
- * The welcome image (Pro): the new member's avatar, "Welcome", their name and
- * their member number, on a preset background or the server's own image (fetched
- * only from Discord's CDN). Drawn with the rank card's fonts and helpers.
+ * The welcome image (Pro): the new member's avatar, the server's line above their
+ * name ("Welcome to <server>" until it writes its own), their name and the line
+ * under it (their member number), on a preset background or the server's own
+ * image (fetched only from Discord's CDN). Drawn with the rank card's fonts and
+ * helpers. The dashboard's preview draws the same (WelcomeBannerView).
  */
 
 export const BANNER_WIDTH = 1000;
@@ -16,8 +18,10 @@ export interface BannerInput {
   accent: string | null;
   avatarUrl: string | null;
   name: string;
-  server: string;
-  count: number;
+  /** Above their name, drawn in capitals; placeholders already filled (welcomeImageLines). */
+  top: string;
+  /** Under their name. */
+  bottom: string;
 }
 
 export async function renderWelcomeBanner(input: BannerInput): Promise<Buffer> {
@@ -73,12 +77,12 @@ export async function renderWelcomeBanner(input: BannerInput): Promise<Buffer> {
   ctx.textBaseline = "alphabetic";
   ctx.fillStyle = accent;
   ctx.font = "22px Inter SemiBold";
-  ctx.fillText(fit(ctx, `WELCOME TO ${input.server.toUpperCase()}`, BANNER_WIDTH - 120), cx, 238);
+  ctx.fillText(fit(ctx, input.top.toUpperCase(), BANNER_WIDTH - 120), cx, 238);
   ctx.fillStyle = "#ffffff";
   ctx.font = "56px Saira";
   ctx.fillText(fit(ctx, input.name, BANNER_WIDTH - 120), cx, 296);
   ctx.fillStyle = "#8c96a3";
   ctx.font = "20px Inter";
-  ctx.fillText(`Member #${input.count.toLocaleString("en-US")}`, cx, 330);
+  ctx.fillText(fit(ctx, input.bottom, BANNER_WIDTH - 120), cx, 330);
   return canvas.encode("png");
 }

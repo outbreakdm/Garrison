@@ -25,7 +25,21 @@ export interface WelcomeConfig {
   joinRoleIds: string[];
   /** Pro: a drawn welcome image (background key or Discord image link). Null: off. */
   joinImage: string | null;
+  /** The welcome image posted on its own, with no card: the image is the whole message. */
+  joinImageAlone: boolean;
+  /** With the image on its own: mention the new member above it (the card's {user} ping). */
+  joinImagePing: boolean;
+  /** The image's line above their name; null is WELCOME_IMAGE_TOP. Placeholders work. */
+  joinImageTop: string | null;
+  /** The image's line under their name; null is WELCOME_IMAGE_BOTTOM. */
+  joinImageBottom: string | null;
 }
+
+/** The welcome image's lines around the member's name, until a server writes its own. */
+export const WELCOME_IMAGE_TOP = "Welcome to {server}";
+export const WELCOME_IMAGE_BOTTOM = "Member #{count}";
+/** Longest line on the welcome image: it's drawn on one line, and longer ones are cut short. */
+export const WELCOME_IMAGE_LINE_MAX = 60;
 
 /** Words in a card that become the member's details when it's sent. */
 export const WELCOME_PLACEHOLDERS = [
@@ -57,6 +71,10 @@ export const DEFAULT_WELCOME: WelcomeConfig = {
   },
   joinRoleIds: [],
   joinImage: null,
+  joinImageAlone: false,
+  joinImagePing: true,
+  joinImageTop: null,
+  joinImageBottom: null,
 };
 
 export interface WelcomeVars {
@@ -93,6 +111,38 @@ export function fillWelcome(
   };
 }
 
+/**
+ * The welcome image's two lines for this member, placeholders filled. The image never pings,
+ * so {user} is their name, as on a leave card.
+ */
+export function welcomeImageLines(
+  w: Pick<WelcomeConfig, "joinImageTop" | "joinImageBottom">,
+  vars: WelcomeVars,
+) {
+  return {
+    top: fill(w.joinImageTop ?? WELCOME_IMAGE_TOP, vars, false),
+    bottom: fill(w.joinImageBottom ?? WELCOME_IMAGE_BOTTOM, vars, false),
+  };
+}
+
+/** A line for the welcome image: one line, trimmed; empty or the standard text is null. */
+function imageLine(v: unknown, standard: string): Parsed<string | null> {
+  if (v === null || v === undefined) return { ok: true, value: null };
+  if (typeof v !== "string") return { ok: false, error: "The image's lines are text." };
+  const line = v.replace(/\s+/g, " ").trim();
+  if (line.length > WELCOME_IMAGE_LINE_MAX)
+    return {
+      ok: false,
+      error: `Each line on the welcome image is up to ${WELCOME_IMAGE_LINE_MAX} characters.`,
+    };
+  return { ok: true, value: line && line !== standard ? line : null };
+}
+
+const IMAGE_LINES = [
+  ["joinImageTop", WELCOME_IMAGE_TOP],
+  ["joinImageBottom", WELCOME_IMAGE_BOTTOM],
+] as const;
+
 const SNOWFLAKE = /^\d{17,20}$/;
 
 function channel(v: unknown, label: string): Parsed<string | null> {
@@ -112,11 +162,21 @@ export function readWelcome(
     const card = parseCard(raw[key]);
     if (card.ok) out[key] = card.value;
   }
-  for (const key of ["joinEnabled", "leaveEnabled", "dmEnabled"] as const)
+  for (const key of [
+    "joinEnabled",
+    "leaveEnabled",
+    "dmEnabled",
+    "joinImageAlone",
+    "joinImagePing",
+  ] as const)
     if (typeof raw[key] === "boolean") out[key] = raw[key];
   for (const key of ["joinChannelId", "leaveChannelId"] as const) {
     const c = channel(raw[key], "");
     if (c.ok) out[key] = c.value;
+  }
+  for (const [key, standard] of IMAGE_LINES) {
+    const line = imageLine(raw[key], standard);
+    if (line.ok) out[key] = line.value;
   }
   if (
     typeof raw.joinImage === "string" &&
@@ -192,6 +252,27 @@ export function checkWelcome(
         return { ok: false, error: "The welcome image is part of Garrison Pro." };
       out.joinImage = v;
     } else out.joinImage = null;
+  }
+  // How the image is posted and what it says: part of the Pro welcome image, so a server back
+  // on Free keeps what it saved (paused) and can't change it.
+  const proImage = (key: keyof WelcomeConfig, v: unknown) =>
+    ent["welcome.image"] || v === before[key]
+      ? null
+      : { ok: false as const, error: "The welcome image is part of Garrison Pro." };
+  for (const key of ["joinImageAlone", "joinImagePing"] as const) {
+    if (!(key in patch)) continue;
+    const v = patch[key] === true;
+    const refused = proImage(key, v);
+    if (refused) return refused;
+    out[key] = v;
+  }
+  for (const [key, standard] of IMAGE_LINES) {
+    if (!(key in patch)) continue;
+    const line = imageLine(patch[key], standard);
+    if (!line.ok) return line;
+    const refused = proImage(key, line.value);
+    if (refused) return refused;
+    out[key] = line.value;
   }
   const next = { ...before, ...out };
   if (next.joinEnabled && !next.joinChannelId)

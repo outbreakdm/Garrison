@@ -11,25 +11,26 @@ import { useLayoutEffect, useRef } from "react";
 
 /**
  * The welcome image as the bot draws it (apps/bot/src/modules/welcome/banner.ts, 1000 × 360):
- * the member's avatar in an accent ring, "Welcome to <server>", their name and their member
- * number, on a preset background or the server's own image under a dark wash. Sizes are in
- * container units, so it scales with the preview like the attachment does in Discord. Colors
- * go in through the CSSOM (the CSP allows that, not style attributes).
+ * the member's avatar in an accent ring, the server's line above their name (in capitals),
+ * their name and the line under it, on a preset background or the server's own image under a
+ * dark wash. Sizes are in container units, so it scales with the preview like the attachment
+ * does in Discord. Colors go in through the CSSOM (the CSP allows that, not style attributes).
  */
 export function WelcomeBannerView({
   background,
   accent,
   name,
-  server,
-  count,
+  top,
+  bottom,
   avatar,
 }: {
   /** A preset background's key, an image link, or "" while "Your image" waits for its link. */
   background: string;
   accent: string | null;
   name: string;
-  server: string;
-  count: number;
+  /** The lines around their name, placeholders filled (welcomeImageLines). */
+  top: string;
+  bottom: string;
   avatar: string | null;
 }) {
   const box = useRef<HTMLDivElement>(null);
@@ -58,14 +59,12 @@ export function WelcomeBannerView({
     el.style.setProperty("--wb-image", image ? `url("${encodeURI(image)}")` : "none");
   }, [preset, ring, image]);
 
-  const number = `Member #${count.toLocaleString("en-US")}`;
-  const welcome = `Welcome to ${server}`;
   return (
     <div
       className={`welcome-banner${image ? " welcome-banner--image" : ""}`}
       ref={box}
       role="img"
-      aria-label={`Welcome image: ${name}'s avatar, ${welcome}, ${name}, ${number}`}
+      aria-label={`Welcome image: ${name}'s avatar, ${top}, ${name}, ${bottom}`}
     >
       <span className="welcome-banner__avatar" aria-hidden="true">
         {name.slice(0, 1).toUpperCase()}
@@ -74,14 +73,14 @@ export function WelcomeBannerView({
           <img src={avatar} alt="" loading="lazy" />
         ) : null}
       </span>
-      <span className="welcome-banner__welcome" aria-hidden="true">
-        {welcome.toUpperCase()}
+      <span className="welcome-banner__top" aria-hidden="true">
+        {top.toUpperCase()}
       </span>
       <span className="welcome-banner__name" aria-hidden="true">
         {name}
       </span>
-      <span className="welcome-banner__number" aria-hidden="true">
-        {number}
+      <span className="welcome-banner__bottom" aria-hidden="true">
+        {bottom}
       </span>
       {note ? (
         <span className="welcome-banner__note" aria-hidden="true">

@@ -2005,6 +2005,13 @@ export const welcomeSettings = pgTable("welcome_settings", {
   joinRoleIds: text("join_role_ids").array().notNull().default(sql`'{}'::text[]`),
   /** Pro: a drawn welcome image on the welcome card. A rank-card background key or a Discord image link; null is off. */
   joinImage: text("join_image"),
+  /** The welcome image posted on its own, instead of in the welcome card. */
+  joinImageAlone: boolean("join_image_alone").notNull().default(false),
+  /** With the image on its own: mention the new member above it. */
+  joinImagePing: boolean("join_image_ping").notNull().default(true),
+  /** The image's lines around the member's name; null is the standard text (welcome.ts). */
+  joinImageTop: text("join_image_top"),
+  joinImageBottom: text("join_image_bottom"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
 export type RallySettings = typeof rallySettings.$inferSelect;

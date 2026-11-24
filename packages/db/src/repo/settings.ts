@@ -117,6 +117,10 @@ export const EDITABLE_FIELDS = {
     "dmCard",
     "joinRoleIds",
     "joinImage",
+    "joinImageAlone",
+    "joinImagePing",
+    "joinImageTop",
+    "joinImageBottom",
   ],
   // Panels are checked with checkTicketPanels, the rest with checkTicketOptions.
   // Feeds are checked with checkAlertFeeds before they get here.
