@@ -570,7 +570,7 @@ Later phases get their checklists when they start.
   optional questions, answers as the ticket's first card) · [x] Economy: a shop panel, with a
   form for items staff fulfil ("which color?") that goes with the purchase · [x] Stream alerts:
   "Add my stream" for members, staff approve on the dashboard · [ ] Barracks: "Link your
-  account" panel · [ ] Giveaways: an optional entry question. The suggestions panel's pieces
+  account" panel · [x] Giveaways: an optional entry question. The suggestions panel's pieces
   (PanelEditor, the questions rows, keepPanelLast) become shared ones with the second of these.
 
 ## New modules (in build order)
@@ -1745,4 +1745,10 @@ Decided (2026-11-12, owner):
   deleted after 90 days. The AI assistant can turn it on, pick the channels and post the panel
   (stream_panel). Migration `0097_stream_requests`. Checked in the local preview (settings
   save, preview, posting card); no live Discord run. Not deployed.
+- 2026-11-23: Giveaway entry question (Pro, with the other entry rules). A giveaway can ask one
+  thing to enter ("Your in-game name?"): the card says so, Enter checks the role and level
+  first and then opens the form, and the answer is kept with the entry. At the draw the host
+  gets the winners' answers by DM, and the Giveaways page shows them under the winners. A
+  repeating giveaway asks again. The AI assistant still starts giveaways without entry rules.
+  Migration `0098_giveaway_question` (two columns, no grant changes). Not deployed.
 

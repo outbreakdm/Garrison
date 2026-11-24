@@ -29,6 +29,11 @@ export interface GiveawayDraft {
   accent: string | null;
   /** Pro: start the same giveaway again as soon as this one is drawn. */
   repeat: boolean;
+  /**
+   * Pro: one thing to answer to enter ("Your in-game name?"); the answer is kept with the entry
+   * so staff can hand the prize over. Null: Enter enters at once.
+   */
+  question: string | null;
 }
 
 export const GIVEAWAY_LIMITS = {
@@ -38,6 +43,9 @@ export const GIVEAWAY_LIMITS = {
   bonusRoles: 3,
   extra: 10,
   minLevel: 500,
+  /** What Discord's form shows of a question. */
+  question: 45,
+  answer: 200,
 } as const;
 export const RUNNING_HARD_MAX = FEATURES["giveaways.running"].pro;
 
@@ -116,10 +124,17 @@ export function checkGiveaway(
     accent = a === STANDARD_ACCENT ? null : a;
   }
   const repeat = raw.repeat === true || raw.repeat === "on";
-  if (!rules && (requiredRoleId || minLevel || bonusRoles.length || accent || repeat))
+  const question = line(raw.question) || null;
+  if (question && question.length > GIVEAWAY_LIMITS.question)
     return {
       ok: false,
-      error: "Entry rules, bonus entries, repeating and your own color are part of Garrison Pro.",
+      error: `Discord's form shows ${GIVEAWAY_LIMITS.question} characters of a question.`,
+    };
+  if (!rules && (requiredRoleId || minLevel || bonusRoles.length || accent || repeat || question))
+    return {
+      ok: false,
+      error:
+        "Entry rules, a question to enter, bonus entries, repeating and your own color are part of Garrison Pro.",
     };
   return {
     ok: true,
@@ -134,8 +149,22 @@ export function checkGiveaway(
       bonusRoles,
       accent,
       repeat,
+      question,
     },
   };
+}
+
+/** A member's answer to a giveaway's question: needed when it asks one. */
+export function giveawayAnswer(
+  g: { question: string | null },
+  answer: unknown,
+): Parsed<string | null> {
+  if (!g.question) return { ok: true, value: null };
+  const value = typeof answer === "string" ? answer.trim() : "";
+  if (!value) return { ok: false, error: `Answer “${g.question}” to enter.` };
+  if (value.length > GIVEAWAY_LIMITS.answer)
+    return { ok: false, error: `Keep the answer under ${GIVEAWAY_LIMITS.answer} characters.` };
+  return { ok: true, value };
 }
 
 /** How many entries a member gets: one, plus each bonus role they hold. */

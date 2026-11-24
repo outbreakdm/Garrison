@@ -7,13 +7,17 @@ import {
   drawWinners,
   enterGiveaway,
   entitlements,
+  entryAnswers,
   entryWeight,
   finishGiveaway,
+  GIVEAWAY_LIMITS,
   type Giveaway,
   getGiveaway,
   getGuildPlan,
   getMemberRank,
+  giveawayAnswer,
   giveawayEntryCounts,
+  hasEntered,
   leaveGiveaway,
   listDueGiveaways,
   listGiveawayEntries,
@@ -29,8 +33,12 @@ import {
   type Client,
   type Guild,
   type GuildMember,
+  LabelBuilder,
   type MessageActionRowComponentBuilder,
+  ModalBuilder,
   PermissionFlagsBits,
+  TextInputBuilder,
+  TextInputStyle,
 } from "discord.js";
 import { z } from "zod";
 import type { BotContext } from "../../commands/types.js";
@@ -45,6 +53,8 @@ import { safeText } from "../../lib/text.js";
 
 export const GIVEAWAY_PREFIX = "gw";
 const enterId = (id: string) => `gw:e:${id}`;
+/** The form a giveaway with a question opens; submitting it enters. */
+export const GIVEAWAY_FORM_PREFIX = "gwform";
 const leaveId = (id: string) => `gw:l:${id}`;
 export function parseGiveawayId(customId: string) {
   const m = /^gw:([el]):([0-9a-f-]{36})$/.exec(customId);
@@ -70,6 +80,7 @@ export function giveawayMessage(
     `**Hosted by** <@${g.hostId}>`,
     g.requiredRoleId ? `**Open to** <@&${g.requiredRoleId}>` : null,
     g.minLevel ? `**Needs** level ${g.minLevel} in Ranks` : null,
+    g.question && running ? `**To enter** answer “${safeText(g.question)}”` : null,
     g.bonusRoles.length
       ? `**Bonus entries** ${g.bonusRoles.map((b) => `<@&${b.roleId}> +${b.extra}`).join(", ")}`
       : null,
@@ -139,6 +150,7 @@ export async function drawGiveaway(ctx: BotContext, guild: Guild, g: Giveaway) {
   if (!done) return false;
   await refreshCard(ctx, guild, done, entries.length);
   await announce(guild, done, winners);
+  await tellHost(ctx, guild, done, winners);
   if (done.repeat) await runAgain(ctx, guild, done);
   return true;
 }
@@ -168,16 +180,79 @@ async function runAgain(ctx: BotContext, guild: Guild, g: Giveaway) {
     bonusRoles: g.bonusRoles,
     accent: g.accent,
     repeat: true,
+    question: g.question,
   });
   const posted = await channel.send(giveawayMessage(next, 0, ent)).catch(() => null);
   if (posted) await setGiveawayMessage(ctx.db, next.id, posted.id);
 }
 
-/** A member pressed Enter (or Leave). Every rule is checked as saved now. */
+/**
+ * The winners' answers to the giveaway's question, to the host by DM, so they can hand the
+ * prize over (the dashboard shows them too). Nothing when it asks nothing or DMs are closed.
+ */
+async function tellHost(ctx: BotContext, guild: Guild, g: Giveaway, winners: string[]) {
+  if (!g.question || !winners.length) return;
+  const answers = await entryAnswers(ctx.db, g.id, winners);
+  const host = await guild.members.fetch(g.hostId).catch(() => null);
+  await host
+    ?.send({
+      content: [
+        `The giveaway for **${safeText(g.prize)}** in ${safeText(guild.name)} was drawn. ${safeText(g.question)}`,
+        ...winners.map((id) => `- <@${id}>: ${safeText(answers.get(id) ?? "(no answer)")}`),
+      ].join("\n"),
+      allowedMentions: { parse: [] },
+    })
+    .catch(() => null);
+}
+
+/** Why this member can't enter (the giveaway's over, a role or level it needs), or null. */
+export async function entryBlock(
+  ctx: BotContext,
+  member: GuildMember,
+  g: Giveaway | null,
+): Promise<Card | null> {
+  if (g?.status !== "running" || g.endsAt.getTime() <= Date.now())
+    return note("This giveaway is over", "Keep an eye out for the next one.");
+  if (g.requiredRoleId && !member.roles.cache.has(g.requiredRoleId))
+    return note("Not open to you", `This giveaway is for members with <@&${g.requiredRoleId}>.`);
+  if (g.minLevel) {
+    const rank = await getMemberRank(ctx.db, member.guild.id, member.id);
+    if ((rank?.level ?? 0) < g.minLevel)
+      return note(
+        "Not yet",
+        `This giveaway needs level ${g.minLevel} in Ranks. You're level ${rank?.level ?? 0}.`,
+      );
+  }
+  return null;
+}
+
+/** The giveaway's question, as Discord's form; submitting it enters. */
+export function giveawayForm(g: Giveaway) {
+  return new ModalBuilder()
+    .setCustomId(`${GIVEAWAY_FORM_PREFIX}:${g.id}`)
+    .setTitle(`Enter: ${g.prize}`.slice(0, 45))
+    .addLabelComponents(
+      new LabelBuilder()
+        .setLabel(g.question ?? "Your answer")
+        .setTextInputComponent(
+          new TextInputBuilder()
+            .setCustomId("answer")
+            .setStyle(TextInputStyle.Short)
+            .setMaxLength(GIVEAWAY_LIMITS.answer)
+            .setRequired(true),
+        ),
+    );
+}
+
+/**
+ * A member pressed Enter (or Leave), or sent the giveaway's form (`answer`). Every rule is
+ * checked as saved now.
+ */
 export async function pressGiveaway(
   ctx: BotContext,
   member: GuildMember,
   press: { kind: "enter" | "leave"; id: string },
+  answer?: string,
 ): Promise<{ card: Card; leave?: ButtonBuilder }> {
   const g = await getGiveaway(ctx.db, member.guild.id, press.id);
   if (!g || g.status !== "running" || g.endsAt.getTime() <= Date.now())
@@ -192,22 +267,15 @@ export async function pressGiveaway(
       ),
     };
   }
-  if (g.requiredRoleId && !member.roles.cache.has(g.requiredRoleId))
-    return {
-      card: note("Not open to you", `This giveaway is for members with <@&${g.requiredRoleId}>.`),
-    };
-  if (g.minLevel) {
-    const rank = await getMemberRank(ctx.db, member.guild.id, member.id);
-    if ((rank?.level ?? 0) < g.minLevel)
-      return {
-        card: note(
-          "Not yet",
-          `This giveaway needs level ${g.minLevel} in Ranks. You're level ${rank?.level ?? 0}.`,
-        ),
-      };
-  }
+  const blocked = await entryBlock(ctx, member, g);
+  if (blocked) return { card: blocked };
+  // A giveaway that asks something takes the answer from its form; checked again here.
+  const answered = (await hasEntered(ctx.db, g.id, member.id))
+    ? { ok: true as const, value: null }
+    : giveawayAnswer(g, answer);
+  if (!answered.ok) return { card: note("Not entered", answered.error) };
   const weight = entryWeight(g.bonusRoles, member.roles.cache.keys());
-  const fresh = await enterGiveaway(ctx.db, g.id, member.id, weight);
+  const fresh = await enterGiveaway(ctx.db, g.id, member.id, weight, answered.value);
   const leave = new ButtonBuilder()
     .setCustomId(leaveId(g.id))
     .setLabel("Leave the giveaway")
@@ -296,6 +364,7 @@ export async function doStartGiveaway(
     bonusRoles: d.bonusRoles,
     accent: d.accent,
     repeat: d.repeat,
+    question: d.question,
   });
   const posted = await channel.send(giveawayMessage(g, 0, ent));
   await setGiveawayMessage(ctx.db, g.id, posted.id);

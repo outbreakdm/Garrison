@@ -232,6 +232,7 @@ async function build(form: FormData, guildId: string, requesterId: string): Prom
           })),
           accent: field(form, "accent") || null,
           repeat: field(form, "repeat") === "on",
+          question: field(form, "question") || null,
         },
         ent,
       );

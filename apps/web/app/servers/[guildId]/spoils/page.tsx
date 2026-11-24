@@ -1,5 +1,6 @@
 import {
   entitlements,
+  entryAnswers,
   GIVEAWAY_DURATIONS,
   GIVEAWAY_LIMITS,
   getGuildPlan,
@@ -74,6 +75,14 @@ export default async function GiveawaysPage({
     ).flatMap((m) => (m ? [[m.id, m.name] as const] : [])),
   );
   const channelName = new Map(channels.map((c) => [c.id, c.name]));
+  // What winners answered, for finished giveaways that asked something.
+  const answers = new Map(
+    await Promise.all(
+      list
+        .filter((g) => g.status === "ended" && g.question && g.winnerIds.length)
+        .map(async (g) => [g.id, await entryAnswers(db, g.id, g.winnerIds)] as const),
+    ),
+  );
   const pro = ent["giveaways.rules"];
   const show = SHOWS.find((k) => k === query.show) ?? "all";
   const shown = show === "all" ? list : list.filter((g) => g.status === show);
@@ -161,6 +170,16 @@ export default async function GiveawaysPage({
                           : ""}
                       {g.repeat && g.status === "running" ? " · runs again when drawn" : ""}
                     </span>
+                    {answers.get(g.id)?.size ? (
+                      <dl className="sg-row__answers">
+                        {g.winnerIds.map((id) => (
+                          <div key={id}>
+                            <dt>@{names.get(id) ?? "member"}</dt>
+                            <dd>{answers.get(g.id)?.get(id) ?? "No answer"}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    ) : null}
                   </span>
                   <span
                     className={`g-badge ${g.status === "running" ? "g-badge--go" : g.status === "cancelled" ? "g-badge--caution" : "g-badge--off"}`}
@@ -314,6 +333,20 @@ export default async function GiveawaysPage({
                 />
               </label>
             </div>
+            <label className="g-field" htmlFor="question">
+              <span>Ask something to enter</span>
+              <input
+                className="g-input"
+                id="question"
+                name="question"
+                maxLength={GIVEAWAY_LIMITS.question}
+                placeholder="Your in-game name? Leave empty to ask nothing"
+              />
+              <span className="g-help">
+                Enter opens a form with this question. Winners' answers show here and go to you by
+                DM, so you can hand the prize over.
+              </span>
+            </label>
             <div className="bonus-rows" id="bonus-rows">
               <span className="g-help">Bonus entries for roles, like boosters (up to 3).</span>
               {[0, 1, 2].map((i) => (

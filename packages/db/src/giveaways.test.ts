@@ -1,12 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "./client";
-import { checkGiveaway, drawWinners, entryWeight } from "./giveaways";
+import { checkGiveaway, drawWinners, entryWeight, giveawayAnswer } from "./giveaways";
 import { entitlements } from "./plans";
 import {
   createGiveaway,
   enterGiveaway,
+  entryAnswers,
   finishGiveaway,
   giveawayEntryCounts,
+  hasEntered,
   leaveGiveaway,
   listDueGiveaways,
   listGiveawayEntries,
@@ -49,6 +51,18 @@ describe("giveaway rules", () => {
         pro,
       ).ok,
     ).toBe(false);
+  });
+
+  it("asks one question to enter, on Pro, and needs its answer", () => {
+    expect(checkGiveaway({ ...base, question: "Your in-game name?" }, free).ok).toBe(false);
+    expect(checkGiveaway({ ...base, question: "  Your   in-game name? " }, pro)).toMatchObject({
+      ok: true,
+      value: { question: "Your in-game name?" },
+    });
+    expect(checkGiveaway({ ...base, question: "x".repeat(46) }, pro).ok).toBe(false);
+    expect(giveawayAnswer({ question: "Name?" }, " ")).toMatchObject({ ok: false });
+    expect(giveawayAnswer({ question: "Name?" }, " Rook ")).toEqual({ ok: true, value: "Rook" });
+    expect(giveawayAnswer({ question: null }, "ignored")).toEqual({ ok: true, value: null });
   });
 
   it("weighs entries by bonus roles and draws different winners", () => {
@@ -112,9 +126,12 @@ describe("giveaway storage, under each role's grants", () => {
       bonusRoles: [],
       accent: null,
       repeat: false,
+      question: "Your in-game name?",
     });
-    expect(await enterGiveaway(db, g.id, "u1", 1)).toBe(true);
+    expect(await enterGiveaway(db, g.id, "u1", 1, "Rook")).toBe(true);
     expect(await enterGiveaway(db, g.id, "u1", 1)).toBe(false);
+    expect(await hasEntered(db, g.id, "u1")).toBe(true);
+    expect(await entryAnswers(db, g.id, ["u1", "u9"])).toEqual(new Map([["u1", "Rook"]]));
     await enterGiveaway(db, g.id, "u2", 3);
     await leaveGiveaway(db, g.id, "u2");
     expect(await listGiveawayEntries(db, g.id)).toEqual([{ userId: "u1", weight: 1 }]);

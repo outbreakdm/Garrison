@@ -2381,6 +2381,8 @@ export const giveaways = pgTable(
     drawnIds: text("drawn_ids").array().notNull().default(sql`'{}'::text[]`),
     /** Start the same giveaway again as soon as this one is drawn (Pro). */
     repeat: boolean("repeat").notNull().default(false),
+    /** Pro: one thing to answer to enter; the answers are kept with the entries. */
+    question: text("question"),
     /** Entries as last shown on the card, so it's edited only when the count changes. */
     shownEntries: integer("shown_entries").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -2402,6 +2404,8 @@ export const giveawayEntries = pgTable(
       .references(() => giveaways.id, { onDelete: "cascade" }),
     userId: text("user_id").notNull(),
     weight: integer("weight").notNull().default(1),
+    /** Their answer to the giveaway's question, for staff handing the prize over. */
+    answer: text("answer"),
     enteredAt: timestamp("entered_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

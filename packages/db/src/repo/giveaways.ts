@@ -49,14 +49,45 @@ export async function countRunningGiveaways(db: Db, guildId: string) {
   return row?.n ?? 0;
 }
 
-/** Enter a member. False when they were already in. */
-export async function enterGiveaway(db: Db, giveawayId: string, userId: string, weight: number) {
+/** Enter a member, with their answer when the giveaway asks one. False when they were already in. */
+export async function enterGiveaway(
+  db: Db,
+  giveawayId: string,
+  userId: string,
+  weight: number,
+  answer: string | null = null,
+) {
   const rows = await db
     .insert(giveawayEntries)
-    .values({ giveawayId, userId, weight })
+    .values({ giveawayId, userId, weight, answer })
     .onConflictDoNothing()
     .returning({ userId: giveawayEntries.userId });
   return rows.length > 0;
+}
+
+/** Is this member in the draw already? */
+export async function hasEntered(db: Db, giveawayId: string, userId: string) {
+  const [row] = await db
+    .select({ userId: giveawayEntries.userId })
+    .from(giveawayEntries)
+    .where(and(eq(giveawayEntries.giveawayId, giveawayId), eq(giveawayEntries.userId, userId)));
+  return Boolean(row);
+}
+
+/** What these members answered to the giveaway's question (the winners, for staff). */
+export async function entryAnswers(
+  db: Db,
+  giveawayId: string,
+  userIds: string[],
+): Promise<Map<string, string>> {
+  if (!userIds.length) return new Map();
+  const rows = await db
+    .select({ userId: giveawayEntries.userId, answer: giveawayEntries.answer })
+    .from(giveawayEntries)
+    .where(
+      and(eq(giveawayEntries.giveawayId, giveawayId), inArray(giveawayEntries.userId, userIds)),
+    );
+  return new Map(rows.flatMap((r) => (r.answer ? [[r.userId, r.answer] as const] : [])));
 }
 
 export async function leaveGiveaway(db: Db, giveawayId: string, userId: string) {

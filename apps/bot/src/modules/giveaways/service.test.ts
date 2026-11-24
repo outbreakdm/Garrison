@@ -1,7 +1,7 @@
 import { entitlements, type Giveaway } from "@garrison/db";
 import { describe, expect, it } from "vitest";
 import { cardTexts } from "../../lib/card.js";
-import { giveawayMessage, parseGiveawayId } from "./service.js";
+import { giveawayForm, giveawayMessage, parseGiveawayId } from "./service.js";
 
 const ID = "0b5b3a4e-1c2d-4e5f-8a9b-0c1d2e3f4a5b";
 const g = {
@@ -23,6 +23,19 @@ type Node = { type: number; custom_id?: string; components?: Node[] };
 const all = (n: Node): Node[] => [n, ...(n.components ?? []).flatMap(all)];
 const buttons = (m: { components: { toJSON(): unknown }[] }) =>
   all(m.components[0]?.toJSON() as Node).filter((n) => n.type === 2);
+
+describe("a giveaway that asks a question", () => {
+  const asks = { ...g, question: "Your in-game name?" } as Giveaway;
+
+  it("says so on the card, and opens a form with it", () => {
+    expect(cardTexts(giveawayMessage(asks, 0, entitlements("pro"))).join("\n")).toContain(
+      "**To enter** answer “Your in-game name?”",
+    );
+    const form = giveawayForm(asks).toJSON();
+    expect(form.custom_id).toBe(`gwform:${ID}`);
+    expect(JSON.stringify(form)).toContain("Your in-game name?");
+  });
+});
 
 describe("giveaway cards", () => {
   it("shows the rules and an Enter button while running", () => {
