@@ -68,6 +68,7 @@ import {
   doLfgJoin,
   doLfgLeave,
   doModAction,
+  doPostLineup,
   doPurge,
   doQmApply,
   doQmCancel,
@@ -637,6 +638,8 @@ export async function runDashboardAction(
       return doRaidWithdraw(ctx, guild, member, action.payload);
     case "raid_answer":
       return doRaidAnswer(ctx, guild, member, action.payload);
+    case "post_lineup":
+      return doPostLineup(ctx, guild, action.payload);
     case "qm_plan":
       return doQmPlan(ctx, guild, member, action.payload);
     case "qm_chat":

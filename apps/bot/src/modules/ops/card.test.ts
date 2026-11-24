@@ -22,6 +22,8 @@ const event: OpsEvent = {
   status: "scheduled",
   style: "simple",
   teamId: null,
+  groups: null,
+  lineupPostedAt: null,
   reminded24hAt: null,
   reminded30mAt: null,
   createdAt: new Date(),
@@ -37,6 +39,7 @@ const s = (userId: string, role: string, spec: string | null, bench = false): Op
   attended: null,
   availability: null,
   characterId: null,
+  groupNo: null,
 });
 
 describe("opsCard", () => {
@@ -123,5 +126,25 @@ describe("an organized raid's card", () => {
       { label: "Can't" },
       { label: "Cancel raid" },
     ]);
+  });
+
+  it("shows the groups and the bench once the lineup is posted", () => {
+    const posted: OpsEvent = {
+      ...organized,
+      groups: { count: 2, size: 5 },
+      lineupPostedAt: new Date(),
+    };
+    const card = opsCard(posted, [
+      { ...a("kel", "Tank", "coming", "Thrall · Protection Warrior"), groupNo: 1 },
+      { ...a("mira", "Healer", "late"), groupNo: 2 },
+      { ...a("rook", "Tank", "coming"), bench: true },
+    ]);
+    const text = (card.blocks ?? []).map((b) => (typeof b === "string" ? b : b.text)).join("|");
+    expect(text).toContain("**Group 1**");
+    expect(text).toContain("<@kel> · Thrall · Protection Warrior (Tank)");
+    expect(text).toContain("**Group 2**");
+    expect(text).toContain("<@mira> · late (Healer)");
+    expect(text).toContain("**Bench** 1");
+    expect(text).not.toContain("**Tank**");
   });
 });

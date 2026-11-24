@@ -189,6 +189,9 @@ export function OrganizedRaid({
           {signups.filter((s) => s.availability === "tentative").length} tentative · {cant.length}{" "}
           can't
         </span>
+        <a className="g-btn g-btn--primary" href={`/servers/${guildId}/rally/lineup/${raid.id}`}>
+          {raid.lineupPostedAt ? "Edit the lineup" : "Pick the lineup"}
+        </a>
         <details className="confirm">
           <summary className="confirm__toggle g-btn g-btn--ghost">Cancel raid…</summary>
           <form action={requestAction}>

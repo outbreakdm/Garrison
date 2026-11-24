@@ -68,6 +68,7 @@ export const ACTION_KIND: Record<string, string> = {
   lfg_leave: "Leave group",
   raid_signup: "Raid signup",
   raid_answer: "Raid answer",
+  post_lineup: "Post lineup",
   raid_withdraw: "Withdraw from raid",
   qm_plan: "Plan build",
   qm_chat: "Message the AI assistant",

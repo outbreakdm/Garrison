@@ -54,6 +54,7 @@ export type QueueInput =
   | { kind: "lfg_leave"; payload: IdPayload }
   | { kind: "raid_signup"; payload: RaidSignupPayload }
   | { kind: "raid_withdraw"; payload: RaidWithdrawPayload }
+  | { kind: "post_lineup"; payload: { eventId: string } }
   | {
       kind: "raid_answer";
       payload: {

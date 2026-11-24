@@ -346,6 +346,16 @@ describe("dashboard actions, run by the bot", () => {
         payload: { eventId: simple.id, availability: "coming", characterId: null, role: "Healer" },
       }),
     ).toMatchObject({ status: "failed", message: "This raid takes signups by role." });
+    // Posting the lineup: nobody placed yet, and a simple raid has no lineup.
+    expect(await run(OWNER, { kind: "post_lineup", payload: { eventId: event.id } })).toMatchObject(
+      {
+        status: "done",
+        message: "Posted the lineup for Mythic night: nobody is in a group yet.",
+      },
+    );
+    expect(
+      await run(OWNER, { kind: "post_lineup", payload: { eventId: simple.id } }),
+    ).toMatchObject({ status: "failed" });
   });
 
   it("holds a moderator to the permission the action needs", async () => {

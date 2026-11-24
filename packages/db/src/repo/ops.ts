@@ -1,7 +1,13 @@
 import { and, asc, eq, gt, isNull, lte, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { isLanguage, type Language } from "../i18n";
-import { type Availability, isRaidStyle, type RaidStyle, slotFor } from "../raids";
+import {
+  type Availability,
+  isRaidStyle,
+  type LineupGroups,
+  type RaidStyle,
+  slotFor,
+} from "../raids";
 import {
   type LfgSlotGroup,
   type OpsEvent,
@@ -79,6 +85,7 @@ export interface CreateOpsEventInput {
   seriesId?: string;
   style?: RaidStyle;
   teamId?: string | null;
+  groups?: LineupGroups | null;
 }
 
 export async function createOpsEvent(db: Db, input: CreateOpsEventInput) {
@@ -293,8 +300,10 @@ export async function answerRaid(
           spec,
           availability: answer.availability,
           characterId,
-          // Can't sits out; any other answer is back in the pool for the officers' lineup.
-          bench: cant,
+          // Can't sits out and leaves their group. Any other answer keeps the officers' call
+          // (a group or the bench), or after a Can't is back in the pool for the lineup.
+          bench: cant || (!!mine && !mine.leftAt && mine.availability !== "cant" && mine.bench),
+          groupNo: cant || !mine || mine.leftAt ? null : mine.groupNo,
           leftAt: null,
           signedUpAt: mine && !mine.leftAt ? mine.signedUpAt : new Date(),
         },
@@ -380,6 +389,7 @@ export async function finishPastEvents(db: Db, now = new Date()) {
       seriesId: event.seriesId,
       style: isRaidStyle(event.style) ? event.style : "simple",
       teamId: event.teamId,
+      groups: event.groups,
     });
     if (created) next.push(created);
   }

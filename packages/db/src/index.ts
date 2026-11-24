@@ -48,6 +48,7 @@ export * from "./repo/guilds";
 export * from "./repo/insights";
 export * from "./repo/invites";
 export * from "./repo/ledger";
+export * from "./repo/lineups";
 export * from "./repo/messages";
 export * from "./repo/metrics";
 export * from "./repo/notes";
@@ -115,6 +116,7 @@ export type {
   NewLedgerEvent,
   NewModCase,
   OpsEvent,
+  OpsLineup,
   OpsSettings,
   OpsSignup,
   PostMessagePayload,

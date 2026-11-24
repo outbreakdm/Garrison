@@ -13,6 +13,7 @@ import {
   listActiveMembers,
   listRosterCharacters,
   noteDashboardAction,
+  postLineup,
   qmChangeCount,
   renderWording,
   setLfgMessage,
@@ -26,6 +27,7 @@ import type { BotContext } from "../../commands/types.js";
 import { cardMessage } from "../../lib/card.js";
 import { formatDuration, MAX_TIMEOUT_SECONDS } from "../../lib/duration.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
+import { safeText } from "../../lib/text.js";
 import { characterLabel } from "../ops/answers.js";
 import { announcePromotion, refreshOpsCard } from "../ops/service.js";
 import { chatTurn } from "../quartermaster/chat.js";
@@ -386,6 +388,36 @@ export async function doRaidAnswer(
     ok: true,
     message: `You answered ${AVAILABILITY_LABELS[p.data.availability]} for ${event.title}.`,
   };
+}
+
+/**
+ * Posts an organized raid's lineup: the card shows the groups, anyone not in a group sits on the
+ * bench, and one message pings exactly the players picked.
+ */
+export async function doPostLineup(ctx: BotContext, guild: Guild, raw: unknown) {
+  const p = raidWithdraw.safeParse(raw);
+  if (!p.success) return fail("That request wasn't valid.");
+  const posted = await postLineup(ctx.db, guild.id, p.data.eventId);
+  if (!posted) return fail("That raid isn't an organized raid that's still scheduled.");
+  const { event, signups } = posted;
+  await refreshOpsCard(ctx, guild, event, signups);
+  const picked = signups.filter((s) => s.groupNo && s.availability !== "cant");
+  if (!picked.length)
+    return { ok: true, message: `Posted the lineup for ${event.title}: nobody is in a group yet.` };
+  const lines = [`The lineup for **${safeText(event.title)}** is up.`];
+  for (let n = 1; n <= (event.groups?.count ?? 0); n++) {
+    const group = picked.filter((s) => s.groupNo === n);
+    if (group.length) lines.push(`Group ${n}: ${group.map((s) => `<@${s.userId}>`).join(" ")}`);
+  }
+  const channel = guild.channels.cache.get(event.channelId);
+  if (channel?.isSendable())
+    await channel
+      .send({
+        content: lines.join("\n").slice(0, 2000),
+        allowedMentions: { users: picked.map((s) => s.userId), roles: [], parse: [] },
+      })
+      .catch(() => {});
+  return { ok: true, message: `Posted the lineup for ${event.title}: ${picked.length} in groups.` };
 }
 
 export async function doRaidWithdraw(

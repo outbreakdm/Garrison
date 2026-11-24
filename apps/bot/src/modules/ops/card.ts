@@ -74,16 +74,38 @@ export function organizedCard(event: OpsEvent, signups: OpsSignup[], waiting: st
   const line = (s: OpsSignup) =>
     `${who(s)}${s.availability === "coming" ? "" : ` · ${AVAILABILITY_LABELS[s.availability as "late"].toLowerCase()}`}`;
   const order = { coming: 0, late: 1, tentative: 2 } as Record<string, number>;
-  for (const g of event.slots) {
-    const inRole = answered
-      .filter((s) => s.role === g.name && s.availability !== "cant")
-      .sort((a, b) => (order[a.availability ?? ""] ?? 3) - (order[b.availability ?? ""] ?? 3));
-    const n = inRole.filter(counted).length;
-    const lines = capped(inRole.map(line), SHOWN_PER_ROLE);
-    blocks.push({
-      text: [`**${safeText(g.name)}** ${n}/${g.count}`, ...lines].join("\n"),
-    });
-  }
+  if (event.lineupPostedAt && event.groups) {
+    // The lineup is up: one block per group, then the bench.
+    const roleOf = (s: OpsSignup) => (s.role ? ` (${safeText(s.role)})` : "");
+    for (let n = 1; n <= event.groups.count; n++) {
+      const inGroup = answered.filter((s) => s.groupNo === n && s.availability !== "cant");
+      if (!inGroup.length) continue;
+      blocks.push({
+        text: [`**Group ${n}**`, ...inGroup.map((s) => `${line(s)}${roleOf(s)}`)].join("\n"),
+      });
+    }
+    const bench = answered.filter((s) => s.bench && s.availability !== "cant");
+    if (bench.length)
+      blocks.push({
+        text: [
+          `**Bench** ${bench.length}`,
+          ...capped(
+            bench.map((s) => `${line(s)}${roleOf(s)}`),
+            SHOWN_PER_ROLE,
+          ),
+        ].join("\n"),
+      });
+  } else
+    for (const g of event.slots) {
+      const inRole = answered
+        .filter((s) => s.role === g.name && s.availability !== "cant")
+        .sort((a, b) => (order[a.availability ?? ""] ?? 3) - (order[b.availability ?? ""] ?? 3));
+      const n = inRole.filter(counted).length;
+      const lines = capped(inRole.map(line), SHOWN_PER_ROLE);
+      blocks.push({
+        text: [`**${safeText(g.name)}** ${n}/${g.count}`, ...lines].join("\n"),
+      });
+    }
   const tail = [
     cant.length ? `**Can't** ${cant.length}` : null,
     waiting.length

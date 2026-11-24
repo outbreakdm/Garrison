@@ -23,9 +23,11 @@ then updates **Status** and the **Log** before stopping.
      members show as "No reply yet" until they answer.
      Built, not deployed: **migration 0100** (`ops_events.style`, `team_id`;
      `ops_signups.availability`, `character_id`; request kind `raid_answer`).
-  3. [ ] Lineup builder on the dashboard: groups (how many and how big, per raid; WoW preset 8 of
+  3. [x] Lineup builder on the dashboard: groups (how many and how big, per raid; WoW preset 8 of
      5), drag players into a group or the bench, Fill by role, save a layout and reuse it, and
      Post lineup updates the card with the groups and pings the players picked.
+     Built, not deployed: **migration 0101** (`ops_events.groups`, `lineup_posted_at`;
+     `ops_signups.group_no`; `ops_lineups`; request kind `post_lineup`).
   4. [ ] Group (LFG) host controls: remove someone, lock the group, hand over host, ping the group.
 - **Best bot list (2026-11-20), in order, one item per step** (from the release audit's "What to
   add to be the best bot", ranked by value for effort). Commit each before the next.
@@ -1815,3 +1817,15 @@ Decided (2026-11-12, owner):
   the style and team. Migration `0100_organized_raids`. Checked in the local preview (the Raids
   tab's organized card and answer form, queued); the Discord card and dropdowns by tests and
   typecheck only. Not deployed.
+- 2026-11-24: Lineups (phase 3 of raid rosters and lineups). An organized raid's Pick the lineup
+  (Raids tab) opens `/servers/<id>/rally/lineup/<raid>`: a board of members who answered, dragged
+  or moved with each one's menu into groups (count and size per raid, 1 to 10 each; WoW teams
+  start at groups of 5, up to 8) or the bench. Fill by role (free) puts Coming, then Late, then
+  Tentative, up to each role's count, spreading each role across groups. Save and post (the bot,
+  `post_lineup`) shows groups and the bench on the card, benches anyone not in a group so
+  reminders and attendance follow, and pings only the players in groups. Saved lineups (free, 10
+  per server) put members back where they were. Answering again keeps a member's place; Can't
+  takes them out of their group. Viewers see the board; editors change it. Migration
+  `0101_lineups` (web may set groups, group and bench; the bot posts). Checked in the local preview
+  (Fill by role, Save, Save and post queued); the posted card and ping by tests only. Not
+  deployed.

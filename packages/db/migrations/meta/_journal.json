@@ -708,6 +708,13 @@
       "when": 1795530211241,
       "tag": "0100_organized_raids",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1795530920888,
+      "tag": "0101_lineups",
+      "breakpoints": true
     }
   ]
 }

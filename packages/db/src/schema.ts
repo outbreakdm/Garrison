@@ -29,6 +29,7 @@ import type { InviteLabel } from "./invite-labels";
 import type { SavedMessage } from "./messages";
 import type { GuildPlan } from "./plans";
 import type { QmWrite } from "./qm-writes";
+import type { LineupGroups } from "./raids";
 import type { RallyTemplate, RallyWording } from "./rally";
 import type { RankBoost } from "./rank-boosts";
 import type { RankCardStyle } from "./rank-cards";
@@ -403,6 +404,10 @@ export const opsEvents = pgTable(
     style: text("style").notNull().default("simple"),
     /** The roster team it's for: its members show as "No reply yet" until they answer. */
     teamId: uuid("team_id").references(() => rosterTeams.id, { onDelete: "set null" }),
+    /** Organized raids: how many groups, and how big (raids.ts LineupGroups). Null: not set yet. */
+    groups: jsonb("groups").$type<LineupGroups>(),
+    /** When officers posted the lineup: the card shows the groups from then on. */
+    lineupPostedAt: timestamp("lineup_posted_at", { withTimezone: true }),
     reminded24hAt: timestamp("reminded_24h_at", { withTimezone: true }),
     reminded30mAt: timestamp("reminded_30m_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -438,6 +443,8 @@ export const opsSignups = pgTable(
     characterId: uuid("character_id").references(() => rosterCharacters.id, {
       onDelete: "set null",
     }),
+    /** Organized raids: the group officers put them in (1 is the first). Null: not placed. */
+    groupNo: integer("group_no"),
     signedUpAt: timestamp("signed_up_at", { withTimezone: true }).notNull().defaultNow(),
     leftAt: timestamp("left_at", { withTimezone: true }),
     /** Showed up (seen in voice, or marked by staff). Null: not tracked or not decided yet. */
@@ -452,6 +459,27 @@ export const opsSignups = pgTable(
   ],
 ).enableRLS();
 
+/** A lineup saved to reuse: the group layout and who goes where, by member. */
+export const opsLineups = pgTable(
+  "ops_lineups",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    guildId: text("guild_id")
+      .notNull()
+      .references(() => guilds.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    groups: jsonb("groups").$type<LineupGroups>().notNull(),
+    /** [{ userId, group }]: group 0 is the bench. */
+    places: jsonb("places").$type<{ userId: string; group: number }[]>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("ops_lineups_guild").on(t.guildId),
+    check("ops_lineups_name", sql`length(${t.name}) BETWEEN 1 AND 40`),
+  ],
+).enableRLS();
+
+export type OpsLineup = typeof opsLineups.$inferSelect;
 export type OpsEvent = typeof opsEvents.$inferSelect;
 export type OpsSignup = typeof opsSignups.$inferSelect;
 export type OpsSettings = typeof opsSettings.$inferSelect;
@@ -1447,6 +1475,7 @@ export const dashboardActionKind = pgEnum("dashboard_action_kind", [
   "post_stream_panel",
   "stream_request_decide",
   "raid_answer",
+  "post_lineup",
 ]);
 
 /**

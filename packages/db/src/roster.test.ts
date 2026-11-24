@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "./client";
-import { slotFor } from "./raids";
+import { checkGroups, defaultGroups, fillByRole, type Placement, slotFor } from "./raids";
 import { upsertGuild } from "./repo/guilds";
+import { listLineupLayouts, postLineup, saveLineup, saveLineupLayout } from "./repo/lineups";
 import { answerRaid, createOpsEvent } from "./repo/ops";
 import {
   addRosterCharacter,
@@ -317,5 +318,133 @@ describe("answering an organized raid", () => {
         characterId: null,
       }),
     ).toEqual({ ok: false, reason: "not_organized" });
+  });
+});
+
+describe("an organized raid's lineup", () => {
+  let db: Db;
+  let exec: (sql: string) => Promise<unknown>;
+  let close: () => Promise<void>;
+  const P = (n: number) => `98000000000000010${n}`;
+
+  beforeAll(async () => {
+    ({ db, exec, close } = await createTestDb());
+    await exec("SET ROLE garrison_bot");
+    await upsertGuild(db, { id: G, name: "Iron Vanguard" });
+    await exec("RESET ROLE");
+  });
+  afterAll(() => close());
+
+  it("fills by role, Coming first, spreading the first role across groups", () => {
+    const placed = fillByRole(
+      [
+        { userId: "t1", role: "Tank", availability: "coming" },
+        { userId: "h1", role: "Healer", availability: "tentative" },
+        { userId: "t2", role: "Tank", availability: "coming" },
+        { userId: "t3", role: "Tank", availability: "late" },
+        { userId: "h2", role: "Healer", availability: "coming" },
+        { userId: "d1", role: "DPS", availability: "coming" },
+        { userId: "x", role: "", availability: "cant" },
+      ],
+      [
+        { name: "Tank", count: 2 },
+        { name: "Healer", count: 2 },
+        { name: "DPS", count: 4 },
+      ],
+      { count: 2, size: 2 },
+    );
+    expect(Object.fromEntries(placed)).toEqual({
+      t1: 1,
+      t2: 2,
+      h2: 1,
+      h1: 2,
+      d1: "bench",
+      t3: "bench",
+    });
+    expect(defaultGroups([{ count: 20 }], "wow")).toEqual({ count: 4, size: 5 });
+    expect(defaultGroups([{ count: 60 }], "wow")).toEqual({ count: 8, size: 5 });
+    expect(checkGroups({ count: "11", size: "5" })).toBeNull();
+  });
+
+  it("saves places on the dashboard, keeps them when people answer again, and posts", async () => {
+    await exec("SET ROLE garrison_bot");
+    const event = await createOpsEvent(db, {
+      guildId: G,
+      channelId: "980000000000000041",
+      hostId: KEL.id,
+      title: "Lineup night",
+      note: null,
+      slots: [
+        { name: "Tank", count: 1 },
+        { name: "DPS", count: 3 },
+      ],
+      startsAt: new Date(Date.now() + 86_400_000),
+      timezone: "UTC",
+      repeatWeekly: false,
+      style: "organized",
+    });
+    if (!event) throw new Error("no raid");
+    const say = (n: number, availability: "coming" | "late" | "cant", role: string) =>
+      answerRaid(db, event.id, P(n), { availability, role, spec: null, characterId: null });
+    await say(1, "coming", "Tank");
+    await say(2, "coming", "DPS");
+    await say(3, "late", "DPS");
+    await say(4, "cant", "DPS");
+    await exec("RESET ROLE");
+
+    await exec("SET ROLE garrison_web");
+    const groups = { count: 2, size: 2 };
+    expect(
+      await saveLineup(db, G, event.id, groups, new Map([[P(4), 1 as Placement]])),
+    ).toMatchObject({ ok: false, error: "Someone who can't come is in the lineup." });
+    expect(
+      await saveLineup(
+        db,
+        G,
+        event.id,
+        groups,
+        new Map<string, Placement>([
+          [P(1), 1],
+          [P(2), 1],
+          [P(3), 1],
+        ]),
+      ),
+    ).toMatchObject({ ok: false, error: "Group 1 has more than 2 players." });
+    expect(
+      await saveLineup(
+        db,
+        G,
+        event.id,
+        groups,
+        new Map<string, Placement>([
+          [P(1), 1],
+          [P(2), 2],
+          [P(3), "bench"],
+        ]),
+      ),
+    ).toEqual({ ok: true, value: null });
+    expect(await saveLineupLayout(db, G, event.id, "Farm night")).toEqual({
+      ok: true,
+      value: "Farm night",
+    });
+    const [layout] = await listLineupLayouts(db, G);
+    expect(layout?.places).toEqual([
+      { userId: P(1), group: 1 },
+      { userId: P(2), group: 2 },
+      { userId: P(3), group: 0 },
+    ]);
+    await exec("RESET ROLE");
+
+    await exec("SET ROLE garrison_bot");
+    // Answering again keeps the officers' call; Can't leaves the group.
+    await say(3, "coming", "DPS");
+    await say(2, "cant", "DPS");
+    const posted = await postLineup(db, G, event.id);
+    const by = new Map(posted?.signups.map((s) => [s.userId, s]));
+    expect(posted?.event.lineupPostedAt).toBeInstanceOf(Date);
+    expect(by.get(P(1))).toMatchObject({ groupNo: 1, bench: false });
+    expect(by.get(P(2))).toMatchObject({ groupNo: null, bench: true, availability: "cant" });
+    expect(by.get(P(3))).toMatchObject({ groupNo: null, bench: true });
+    await exec("RESET ROLE");
   });
 });

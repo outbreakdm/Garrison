@@ -716,6 +716,69 @@ a.topbar__user:hover {
   cursor: pointer;
 }
 
+/* Lineup board */
+.lineup-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+.lineup-tools .g-field {
+  width: 140px;
+}
+.lineup-tools__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+.lineup-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-3);
+}
+.lineup-zone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 140px;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.lineup-zone--side {
+  border-style: dashed;
+}
+.lineup-zone__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lineup-chip {
+  display: grid;
+  gap: 4px;
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  cursor: grab;
+}
+.lineup-chip--drag {
+  opacity: 0.5;
+}
+.lineup-chip__who {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.lineup-chip__what {
+  font-size: 12px;
+}
+
 /* Rally templates */
 .template > summary::-webkit-details-marker {
   display: none;

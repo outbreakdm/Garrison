@@ -138,6 +138,10 @@ Each line below is: what to do → what should happen.
   Tentative, Late or Can't and lists the team under No reply yet. Coming with a roster
   character answers as it (its role); the dropdowns switch character or role; Can't leaves
   the reminders. The player page and the Raids tab answer the same way.
+- [ ] Lineup: Raids → an organized raid → Pick the lineup → Fill by role (tanks in different
+      groups), drag one player to the bench, Save and post → the card shows Group 1… and the
+      bench, and one message pings only the players in groups. Save as a lineup, then Use it on
+      next week's raid.
 - [ ] Raid roster: Groups and raids → Roster → add a WoW team; Find a member → add someone as
   Trial with a note. `/roster add name:X class:Shaman spec:Restoration` → role Healer, first
   character is the main; `/roster main` switches it; `/roster team` shows the team without
