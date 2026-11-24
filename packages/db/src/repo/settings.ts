@@ -301,7 +301,7 @@ async function writeLadder(tx: Tx, guildId: string, ladder: LadderStep[]) {
     );
 }
 
-const TABLES = {
+export const SETTINGS_TABLES = {
   watch: watchSettings,
   gatehouse: gatehouseSettings,
   ops: opsSettings,
@@ -384,7 +384,7 @@ async function lockRow(tx: Tx, module: SettingsModule, guildId: string): Promise
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`garrison:ladder:${guildId}`}))`);
     return { rules: await readLadder(tx, guildId) };
   }
-  const table = TABLES[module];
+  const table = SETTINGS_TABLES[module];
   if (LAZY.has(module)) {
     // These rows are created lazily, with the column defaults.
     await tx
@@ -414,7 +414,7 @@ export async function readSettings(
     const rules = await readLadder(db, guildId);
     return rules.length ? { rules } : null;
   }
-  const table = TABLES[module];
+  const table = SETTINGS_TABLES[module];
   const [row] = (await db.select().from(table).where(eq(table.guildId, guildId))) as Row[];
   if (!row) return null;
   return Object.fromEntries(EDITABLE_FIELDS[module].map((f) => [f, row[f] ?? null]));
@@ -435,14 +435,14 @@ export async function readManySettings(
 ): Promise<Map<SettingsModule, Record<string, unknown> | null>> {
   const out = new Map<SettingsModule, Record<string, unknown> | null>();
   const wanted = [...new Set(modules)];
-  const joined = wanted.filter((m): m is keyof typeof TABLES => m in TABLES);
-  const alone: SettingsModule[] = wanted.filter((m) => !(m in TABLES));
+  const joined = wanted.filter((m): m is keyof typeof SETTINGS_TABLES => m in SETTINGS_TABLES);
+  const alone: SettingsModule[] = wanted.filter((m) => !(m in SETTINGS_TABLES));
   if (joined.length) {
     type Query = ReturnType<typeof base>;
     const base = () => db.select().from(guilds).$dynamic();
     let query: Query = base();
     for (const m of joined) {
-      const table = TABLES[m];
+      const table = SETTINGS_TABLES[m];
       query = query.leftJoin(table, eq(table.guildId, guilds.id)) as unknown as Query;
     }
     const [row] = (await query.where(eq(guilds.id, guildId))) as unknown as Record<
@@ -451,7 +451,7 @@ export async function readManySettings(
     >[];
     if (row)
       for (const m of joined) {
-        const found = row[getTableName(TABLES[m])];
+        const found = row[getTableName(SETTINGS_TABLES[m])];
         out.set(
           m,
           found ? Object.fromEntries(EDITABLE_FIELDS[m].map((f) => [f, found[f] ?? null])) : null,

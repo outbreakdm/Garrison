@@ -1712,4 +1712,8 @@ Decided (2026-11-12, owner):
   plans adding LFG templates needed (they failed when applied until now). Checked in the local
   preview (panel tab, saving, form preview, posting request); no live Discord run.
   Deployed (everything, commands registered).
+- 2026-11-23: AI assistant plans that changed voice XP, raid attendance, stream alert feeds, the
+  economy, invite labels or server stats failed when applied: the bot could only read those
+  settings. Migration `0094_qm_grants` gives it the grants and policies, and qm-grants.test.ts
+  checks every setting the assistant may change against the bot's grants. Not deployed.
 
