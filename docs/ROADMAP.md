@@ -1715,7 +1715,7 @@ Decided (2026-11-12, owner):
 - 2026-11-23: AI assistant plans that changed voice XP, raid attendance, stream alert feeds, the
   economy, invite labels or server stats failed when applied: the bot could only read those
   settings. Migration `0094_qm_grants` gives it the grants and policies, and qm-grants.test.ts
-  checks every setting the assistant may change against the bot's grants. Not deployed.
+  checks every setting the assistant may change against the bot's grants. Deployed.
 - 2026-11-23: Shop panel (Economy). The Setup tab's Shop panel posts the shop as a card with a
   "Buy something…" dropdown: picking an item shows its price and the member's balance with
   Buy and Cancel (nothing is spent before Buy), and Garrison edits the panel after each
@@ -1725,7 +1725,7 @@ Decided (2026-11-12, owner):
   waiting list. The AI assistant can set the panel's words, give items a question and post
   the panel (shop_panel). Cards can carry a dropdown now (lib/card.ts menu). Migration
   `0095_shop_panel`. Checked in the local preview (editor, preview, question field); the
-  member page's answer field only by typecheck (member pages are off there). Not deployed.
+  member page's answer field only by typecheck (member pages are off there). Deployed.
 - 2026-11-23: Voice room controls. Each new room gets a control panel in its own chat (on by
   default; "Room controls in each room" on the Voice rooms page, and for the AI assistant):
   Rename and Limit open a form, Lock and Hide close the room to everyone not already inside
@@ -1734,7 +1734,7 @@ Decided (2026-11-12, owner):
   owner, the state and the limit, and follows the room when it changes hands (also when the
   owner leaves). Renames past Discord's two per ten minutes say they'll land shortly.
   Migration `0096_voice_controls`. Checked by tests and the settings page; no live Discord
-  run. Not deployed.
+  run. Deployed.
 - 2026-11-23: Stream requests (Stream alerts). Members' streams on the Stream alerts page: members
   ask for their own Twitch, Kick or YouTube channel from a request panel (its form: the
   platform from a list, their channel as a name or link, a note); the request goes to a staff
@@ -1744,11 +1744,12 @@ Decided (2026-11-12, owner):
   limit; the member hears back by DM. One waiting request per member; decided ones are
   deleted after 90 days. The AI assistant can turn it on, pick the channels and post the panel
   (stream_panel). Migration `0097_stream_requests`. Checked in the local preview (settings
-  save, preview, posting card); no live Discord run. Not deployed.
+  save, preview, posting card); no live Discord run. Deployed.
 - 2026-11-23: Giveaway entry question (Pro, with the other entry rules). A giveaway can ask one
   thing to enter ("Your in-game name?"): the card says so, Enter checks the role and level
   first and then opens the form, and the answer is kept with the entry. At the draw the host
   gets the winners' answers by DM, and the Giveaways page shows them under the winners. A
   repeating giveaway asks again. The AI assistant still starts giveaways without entry rules.
-  Migration `0098_giveaway_question` (two columns, no grant changes). Not deployed.
+  Migration `0098_giveaway_question` (two columns, no grant changes). Deployed
+  (everything, commands registered, with 0094-0097).
 
