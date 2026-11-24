@@ -9,6 +9,14 @@ import {
   resolveAccess,
   switchFor,
 } from "./access";
+import {
+  getDashboardAccess,
+  listGuildIdsGrantedTo,
+  listGuildIdsWithRoleGrants,
+} from "./repo/access";
+import { upsertGuild } from "./repo/guilds";
+import { applySettingsChange } from "./repo/settings";
+import { createTestDb } from "./testing";
 
 const KEL = "980000000000000031";
 const ROOK = "980000000000000032";
@@ -90,5 +98,38 @@ describe("access groups", () => {
     if (!trusted) throw new Error("no access");
     expect(mayRequest(trusted, "mod_action")).toBe(true);
     expect(mayRequest(trusted, "lockdown_start")).toBe(false);
+  });
+});
+
+describe("finding servers a group shares", () => {
+  it("lists servers where a group names the person, or gives access by role", async () => {
+    const { db, exec, close } = await createTestDb();
+    try {
+      await exec("SET ROLE garrison_bot");
+      await upsertGuild(db, { id: "980000000000000077", name: "Iron Vanguard" });
+      await exec("RESET ROLE");
+      await exec("SET ROLE garrison_web");
+      const r = await applySettingsChange(db, {
+        guildId: "980000000000000077",
+        module: "access",
+        patch: {
+          groups: [
+            { ...hosts, members: [...hosts.members, { kind: "user", id: ROOK, name: "rook" }] },
+          ],
+        },
+        userId: KEL,
+        username: "kel",
+      });
+      expect(r.ok).toBe(true);
+      expect(await listGuildIdsGrantedTo(db, ROOK)).toEqual(["980000000000000077"]);
+      expect(await listGuildIdsGrantedTo(db, KEL)).toEqual([]);
+      expect(await listGuildIdsWithRoleGrants(db, ["980000000000000077"])).toEqual([
+        "980000000000000077",
+      ]);
+      expect((await getDashboardAccess(db, "980000000000000077")).groups).toHaveLength(1);
+      await exec("RESET ROLE");
+    } finally {
+      await close();
+    }
   });
 });

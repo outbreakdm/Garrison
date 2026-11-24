@@ -342,10 +342,16 @@ export const COMMAND_DESCRIPTIONS: Record<string, Omit<Phrase, "en">> = {
     fr: "Retirer un compte de jeu lié.",
   },
   roster: {
-    es: "Muestra las cuentas de juego que los miembros comparten aquí.",
-    pt: "Mostrar as contas de jogo que os membros compartilham aqui.",
-    de: "Zeige die Spielkonten, die Mitglieder hier teilen.",
-    fr: "Afficher les comptes de jeu que les membres partagent ici.",
+    es: "Tus personajes de raid, el roster de un equipo y las cuentas compartidas.",
+    pt: "Seus personagens de raide, o roster de uma equipe e as contas compartilhadas.",
+    de: "Deine Raid-Charaktere, der Kader eines Teams und geteilte Spielkonten.",
+    fr: "Tes personnages de raid, le roster d'une équipe et les comptes partagés.",
+  },
+  access: {
+    es: "Lo que puedes abrir en el panel de Garrison de este servidor.",
+    pt: "O que você pode abrir no painel do Garrison deste servidor.",
+    de: "Was du im Garrison-Dashboard dieses Servers öffnen kannst.",
+    fr: "Ce que tu peux ouvrir sur le tableau de bord Garrison de ce serveur.",
   },
   ticket: {
     es: "Gestiona el ticket de este canal.",

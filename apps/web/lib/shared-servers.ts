@@ -6,7 +6,7 @@ import {
   listGuildIdsWithRoleGrants,
 } from "@garrison/db";
 import { getDb } from "./db";
-import { dashboardRole } from "./session";
+import { guildAccessFor } from "./session";
 
 type Session = { userId: string; manageableGuildIds: string[]; memberGuildIds: string[] };
 
@@ -28,11 +28,19 @@ export async function listSharedGuilds(session: Session) {
   if (!candidates.length) return [];
   const guilds = await listActiveGuilds(db, candidates);
   // One server Discord can't answer for right now is left out, not the whole list.
-  const roles = await Promise.all(
-    guilds.map((g) => dashboardRole(g.id, session.userId).catch(() => null)),
+  const found = await Promise.all(
+    guilds.map((g) => guildAccessFor(g.id, session.userId).catch(() => null)),
   );
   return guilds.flatMap((g, i) => {
-    const role = roles[i];
-    return role && role !== "manager" ? [{ ...g, level: role as AccessLevel }] : [];
+    const a = found[i];
+    if (!a || a.manager) return [];
+    // Access only through groups lists the groups; a Viewer or Editor grant, its level.
+    return [
+      {
+        ...g,
+        level: (a.access.level ?? "viewer") as AccessLevel,
+        groups: a.access.level ? [] : a.access.groups,
+      },
+    ];
   });
 }

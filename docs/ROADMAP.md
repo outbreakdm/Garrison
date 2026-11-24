@@ -24,8 +24,10 @@ then updates **Status** and the **Log** before stopping.
   2. [x] Enforcement: `checkGuildAccess`/`requireGuildAccess` take the area; every page and
      action under `/servers/<id>/<area>` passes its own (the access-gates test fails on any that
      don't); request kinds map to an area and a switch; the menu shows only areas they can view.
-  3. [ ] Members' view: the server list includes servers where a group gives access, a "What you
+  3. [x] Members' view: the server list includes servers where a group gives access, a "What you
      can do here" panel on the Overview, and `/access` in Discord (private, read-only).
+  All three built and committed, not deployed. Deploying: apply **migration 0103** (after 0099 to
+  0102), then deploy **everything with register_commands** (`/access`).
 
 - **Raid rosters and lineups (2026-11-24), in order, one phase per commit.** The owner's choices:
   any game, with WoW presets; new raids start Simple (today's first come, first served); lineups
@@ -1879,3 +1881,8 @@ Decided (2026-11-12, owner):
   member just their areas (plus Overview and Help); the form lock follows the page's area.
   Checked in the local preview as a member whose role is in a group (Giveaways edit, Logs view):
   the menu, Logs readable, Moderation not found. Not deployed.
+- 2026-11-24: Access groups (phase 3 of 3): members' view. The server list shows servers where a
+  group names them or one of their roles ("Shared with you", labelled with the group's name), the
+  note at the top of every page says which groups, what they open (view only marked) and what
+  they're trusted with, the plan footer is hidden from them, and `/access` (everyone, private)
+  says the same in Discord. Checked in the local preview as a group member. Not deployed.

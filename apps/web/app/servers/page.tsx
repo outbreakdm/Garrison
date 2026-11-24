@@ -250,7 +250,11 @@ export default async function ServersPage({
                         <span className="server-tile__id">
                           <span className="server-tile__name">{g.name}</span>
                           <span className="server-tile__state">
-                            {g.level === "editor" ? "You can change settings" : "You can view"}
+                            {g.groups.length
+                              ? g.groups.join(", ")
+                              : g.level === "editor"
+                                ? "You can change settings"
+                                : "You can view"}
                           </span>
                         </span>
                       </span>

@@ -430,9 +430,13 @@ export const HELP = {
     page: "Settings",
     path: "/settings?tab=access",
     about:
-      "Who besides people with Manage Server can open this dashboard, and as viewer, editor or manager.",
-    steps: ["Settings → Access: add a person or a role and pick what they can do."],
-    keywords: "dashboard access permissions editor manager viewer staff",
+      "Who besides people with Manage Server can open this dashboard: Viewers and Editors see or change every page; access groups open chosen pages (None, View or Edit each) and can be trusted with moderation, lockdown, backups, coins and more.",
+    steps: [
+      "Settings → Access: add a person or a role as a Viewer or an Editor.",
+      "Or under Access groups: make a group (like Giveaway hosts), pick what it can open, then add roles or people. Members check theirs with /access.",
+    ],
+    commands: ["/access"],
+    keywords: "dashboard access permissions editor manager viewer staff groups mods helpers",
   },
   "bot-profile": {
     title: "Garrison's profile",

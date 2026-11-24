@@ -1,4 +1,13 @@
-import { aiTier, formatPrice, listActiveGuilds, PRICING } from "@garrison/db";
+import {
+  ACCESS_AREAS,
+  ACCESS_SWITCHES,
+  type AccessArea,
+  aiTier,
+  formatPrice,
+  listActiveGuilds,
+  PRICING,
+  type ResolvedAccess,
+} from "@garrison/db";
 import { cookies } from "next/headers";
 import type { ReactNode } from "react";
 import { AccessGuard } from "@/components/AccessGuard";
@@ -69,7 +78,7 @@ export default async function ServerLayout({
           folded={folded}
           areas={visible}
         />
-        <PlanFoot guildId={guild.id} tier={tier} />
+        {visible ? null : <PlanFoot guildId={guild.id} tier={tier} />}
       </aside>
       <div className="console__body">
         <Topbar
@@ -82,7 +91,7 @@ export default async function ServerLayout({
         />
         <ServerNav guildId={guild.id} variant="sheet" states={states} areas={visible} />
         <main id="content" className="main">
-          {role === "manager" ? null : <AccessNote role={role} />}
+          {role === "manager" ? null : <AccessNote role={role} access={access} />}
           <PageTransition>{children}</PageTransition>
         </main>
         <AccessGuard
@@ -115,14 +124,37 @@ function readFolded(raw: string | undefined): string[] {
   }
 }
 
-/** For someone with shared access: what they can do here, in a line. */
-function AccessNote({ role }: { role: "viewer" | "editor" }) {
+/**
+ * For someone with shared access: what they can do here, in a line. Through access groups it
+ * names the groups, what they open, and what they're trusted with.
+ */
+function AccessNote({
+  role,
+  access,
+}: {
+  role: "viewer" | "editor";
+  access: ResolvedAccess | null;
+}) {
+  if (access && !access.level) {
+    const open = (Object.entries(access.areas) as [AccessArea, "view" | "edit"][])
+      .map(([a, l]) => `${ACCESS_AREAS[a]}${l === "edit" ? "" : " (view only)"}`)
+      .join(", ");
+    const trusted = access.switches.map((s) => ACCESS_SWITCHES[s].label.toLowerCase()).join(", ");
+    return (
+      <p className="access-note" role="note">
+        <span className="g-badge">{access.groups.join(", ")}</span>
+        {`You can open ${open || "nothing yet"}.`}
+        {trusted ? ` Trusted with: ${trusted}.` : ""} The rest stays with its managers.
+      </p>
+    );
+  }
   return (
     <p className="access-note" role="note">
       <span className="g-badge">{role === "viewer" ? "Viewer" : "Editor"}</span>
       {role === "viewer"
         ? "You can see everything on this server's dashboard. Changes are up to its managers and editors."
         : "You can change settings and post. Moderation, backups, the plan and who has access stay with people who have Manage Server."}
+      {access?.groups.length ? ` Also in ${access.groups.join(", ")}.` : ""}
     </p>
   );
 }

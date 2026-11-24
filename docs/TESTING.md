@@ -146,6 +146,11 @@ Each line below is: what to do → what should happen.
       Remove them (and their voice access), Lock (Join turns off; a newcomer is told it's
       locked), Ping the group (a second ping within 10 min is refused), Hand the group to a member
       (the card shows the new host).
+- [ ] Access groups: Settings → Access → make "Giveaway hosts" (Giveaways Edit, Logs View), add
+      a role. Someone with only that role: the server is under Shared with you; the menu shows
+      Overview, Logs, Giveaways, Help; Logs is read-only; Moderation is "not found"; a giveaway
+      starts; `/access` lists the same. Tick "Coins and purchases" plus Economy Edit → Give or
+      take works for them; without the switch it's refused.
 - [ ] Raid roster: Groups and raids → Roster → add a WoW team; Find a member → add someone as
   Trial with a note. `/roster add name:X class:Shaman spec:Restoration` → role Healer, first
   character is the main; `/roster main` switches it; `/roster team` shows the team without

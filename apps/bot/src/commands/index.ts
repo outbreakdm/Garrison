@@ -10,6 +10,7 @@ import {
   decideApplicationButtons,
 } from "../modules/applications/service.js";
 import { link, roster, unlink } from "../modules/barracks/commands.js";
+import { accessCommand } from "../modules/dashboard/access-command.js";
 import { economyCommands, purchaseButtons } from "../modules/economy/commands.js";
 import { shopBuyButtons, shopForms, shopPickSelects } from "../modules/economy/panel-handlers.js";
 import { birthday } from "../modules/fun/birthday.js";
@@ -57,6 +58,7 @@ export const commands: Command[] = [
   link,
   unlink,
   roster,
+  accessCommand,
   ticket,
   giveaway,
   suggest,

@@ -24,19 +24,20 @@ export async function getDashboardAccess(
   return { grants: readAccessGrants(row?.grants), groups: readAccessGroups(row?.groups) };
 }
 
-/** Servers whose list names this user directly, for their server list. Access is checked live. */
+/** Servers whose grants or access groups name this user directly, for their server list. Access is checked live. */
 export async function listGuildIdsGrantedTo(db: Db, userId: string): Promise<string[]> {
   if (!/^\d{17,20}$/.test(userId)) return [];
   const rows = await db
     .select({ guildId: dashboardAccess.guildId })
     .from(dashboardAccess)
     .where(
-      sql`${dashboardAccess.grants} @> ${JSON.stringify([{ kind: "user", id: userId }])}::jsonb`,
+      sql`(${dashboardAccess.grants} @> ${JSON.stringify([{ kind: "user", id: userId }])}::jsonb
+        OR ${dashboardAccess.groups} @> ${JSON.stringify([{ members: [{ kind: "user", id: userId }] }])}::jsonb)`,
     );
   return rows.map((r) => r.guildId);
 }
 
-/** Of these servers, the ones that give access by role (each then needs a live role check). */
+/** Of these servers, the ones that give access by role, in a grant or a group (each then needs a live role check). */
 export async function listGuildIdsWithRoleGrants(db: Db, guildIds: string[]): Promise<string[]> {
   const ids = guildIds.filter((id) => /^\d{17,20}$/.test(id)).slice(0, 200);
   if (!ids.length) return [];
@@ -46,7 +47,8 @@ export async function listGuildIdsWithRoleGrants(db: Db, guildIds: string[]): Pr
     .where(
       and(
         inArray(dashboardAccess.guildId, ids),
-        sql`${dashboardAccess.grants} @> ${JSON.stringify([{ kind: "role" }])}::jsonb`,
+        sql`(${dashboardAccess.grants} @> ${JSON.stringify([{ kind: "role" }])}::jsonb
+          OR ${dashboardAccess.groups} @> ${JSON.stringify([{ members: [{ kind: "role" }] }])}::jsonb)`,
       ),
     );
   return rows.map((r) => r.guildId);
