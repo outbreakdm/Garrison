@@ -308,6 +308,25 @@ describe("answering an organized raid", () => {
       ok: true,
       signups: [{ userId: KEL.id, role: "", bench: true, availability: "cant", spec: null }],
     });
+    // Can't remembers the character, so answering again brings the same one.
+    const mine = await addRosterCharacter(db, G, ROOK, fields("Varian", { role: "Tank" }));
+    if (!mine.ok) throw new Error(mine.error);
+    await answerRaid(db, event.id, ROOK.id, {
+      availability: "coming",
+      role: "Tank",
+      spec: "Varian",
+      characterId: mine.value.id,
+    });
+    const out = await answerRaid(db, event.id, ROOK.id, {
+      availability: "cant",
+      role: null,
+      spec: null,
+      characterId: null,
+    });
+    expect(out.ok && out.signups.find((x) => x.userId === ROOK.id)).toMatchObject({
+      availability: "cant",
+      characterId: mine.value.id,
+    });
     const simple = await raid("simple");
     if (!simple) throw new Error("no raid");
     expect(

@@ -1,3 +1,4 @@
+import { inviteUrl } from "@garrison/brand";
 import { type Interaction, MessageFlags } from "discord.js";
 import { buttons, commandsByName, modals, selects } from "./commands/index.js";
 import type { BotContext } from "./commands/types.js";
@@ -35,10 +36,12 @@ export async function handleInteraction(interaction: Interaction, ctx: BotContex
 
   if (!interaction.inCachedGuild()) {
     if (interaction.isRepliable()) {
-      await interaction.reply({
-        content: "Garrison commands work inside a server.",
-        flags: MessageFlags.Ephemeral,
-      });
+      // In a server Garrison isn't in (the app was added to someone's account, not the server),
+      // say how to add it; in DMs, that commands work in a server.
+      const content = interaction.guildId
+        ? `Garrison isn't in this server yet, so its commands can't work here. Someone with Manage Server can add it: <${inviteUrl(interaction.applicationId, interaction.guildId)}>`
+        : "Garrison commands work inside a server.";
+      await interaction.reply({ content, flags: MessageFlags.Ephemeral });
     }
     return;
   }

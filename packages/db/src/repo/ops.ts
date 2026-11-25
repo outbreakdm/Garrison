@@ -268,11 +268,12 @@ export async function answerRaid(
     const role = cant ? "" : slotFor(event.slots, answer.role);
     if (role === null) return { ok: false, reason: "no_such_role" };
     const spec = cant ? null : answer.spec?.slice(0, 60) || null;
-    const characterId = cant ? null : answer.characterId;
     const [mine] = await tx
       .select()
       .from(opsSignups)
       .where(and(eq(opsSignups.eventId, eventId), eq(opsSignups.userId, userId)));
+    // Can't keeps the character they last brought, so answering again brings it back.
+    const characterId = cant ? (mine?.characterId ?? null) : answer.characterId;
     if (
       mine &&
       !mine.leftAt &&

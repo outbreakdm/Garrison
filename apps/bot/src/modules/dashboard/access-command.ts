@@ -5,14 +5,17 @@ import {
   getDashboardAccess,
   resolveAccess,
 } from "@garrison/db";
-import { PermissionFlagsBits } from "discord.js";
-import { ephemeral, guildCommand } from "../../commands/builders.js";
+import { MessageFlags, PermissionFlagsBits } from "discord.js";
+import { guildCommand } from "../../commands/builders.js";
 import type { Command } from "../../commands/types.js";
 
 /**
  * /access: what you can do on this server's dashboard, privately. Read-only; managers change
  * access on the dashboard (Settings → Access). Discord's own permissions still decide commands.
  */
+/** Private, and without a big preview of the dashboard link under the reply. */
+const QUIET = MessageFlags.Ephemeral | MessageFlags.SuppressEmbeds;
+
 export const accessCommand: Command = {
   data: guildCommand(
     "access",
@@ -30,7 +33,7 @@ export const accessCommand: Command = {
     ) {
       await interaction.reply({
         content: `You have Manage Server, so the whole dashboard is yours, including who else gets in.${link}`,
-        ...ephemeral,
+        flags: QUIET,
       });
       return;
     }
@@ -40,7 +43,7 @@ export const accessCommand: Command = {
       await interaction.reply({
         content:
           "You don't have access to this server's dashboard. Someone with Manage Server can give it to you on the dashboard (Settings → Access).",
-        ...ephemeral,
+        flags: QUIET,
       });
       return;
     }
@@ -65,6 +68,6 @@ export const accessCommand: Command = {
           `Trusted with: ${access.switches.map((s) => ACCESS_SWITCHES[s].label.toLowerCase()).join(", ")}`,
         );
     }
-    await interaction.reply({ content: `${lines.join("\n")}${link}`, ...ephemeral });
+    await interaction.reply({ content: `${lines.join("\n")}${link}`, flags: QUIET });
   },
 };
