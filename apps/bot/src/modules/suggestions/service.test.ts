@@ -49,7 +49,9 @@ describe("suggestions", () => {
     const texts = cardTexts(cardMessage(suggestionCard(base)));
     const all = texts.join("\n");
     expect(all).toContain("Suggestion #12");
-    expect(all).toContain("by kel");
+    expect(all).toContain(`by <@${base.authorId}>`);
+    // The idea is set off as a quote.
+    expect(all).toContain(`> `);
     expect(all).toContain("3 for, 1 against (75% for)");
     expect(all).not.toContain("@everyone");
     expect(texts).toContain("[For · 3]");

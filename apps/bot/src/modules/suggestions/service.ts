@@ -80,9 +80,15 @@ export function suggestionCard(s: Suggestion): Card {
     tone: TONE[status] ?? "volt",
     title: `Suggestion #${s.number}`,
     status: SUGGESTION_STATUS_LABEL[status] ?? "Open",
-    lead: s.anonymous ? "Anonymous" : `by ${safeText(s.authorName)}`,
+    lead: s.anonymous ? "Anonymous" : `by <@${s.authorId}>`,
     blocks: [
-      { text: safeText(s.text) },
+      // The idea itself, set off as a quote so it reads as the member's words.
+      {
+        text: safeText(s.text)
+          .split("\n")
+          .map((line) => `> ${line}`)
+          .join("\n"),
+      },
       // The form's other answers, each under its question (the first one is the text above).
       ...(Array.isArray(s.answers) ? (s.answers as VerifyAnswer[]).slice(1) : []).map((a) => ({
         text: `**${safeText(a.label)}**\n${safeText(a.value)}`,

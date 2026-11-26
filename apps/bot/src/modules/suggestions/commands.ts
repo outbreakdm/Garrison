@@ -1,5 +1,5 @@
 import { getSuggestionSettings, SUGGESTION_LIMITS, suggestionQuestions } from "@garrison/db";
-import type { Interaction } from "discord.js";
+import { ButtonBuilder, ButtonStyle, type Interaction } from "discord.js";
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { BotContext, ButtonHandler, Command, ModalHandler } from "../../commands/types.js";
 import { cardEdit, cardReply, notice } from "../../lib/card.js";
@@ -21,9 +21,16 @@ const outcomeReply = (outcome: { ok: boolean; message: string; url?: string }) =
   cardReply({
     tone: outcome.ok ? "go" : "caution",
     title: outcome.ok ? "Suggestion posted" : "Not posted",
-    blocks: [
-      { text: outcome.ok && outcome.url ? `${outcome.message} ${outcome.url}` : outcome.message },
-    ],
+    blocks: [{ text: outcome.message }],
+    actions:
+      outcome.ok && outcome.url
+        ? [
+            new ButtonBuilder()
+              .setStyle(ButtonStyle.Link)
+              .setLabel("View suggestion")
+              .setURL(outcome.url),
+          ]
+        : [],
     module: "forum",
   });
 

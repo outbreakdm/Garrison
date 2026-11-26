@@ -158,7 +158,7 @@ export const shop: Command = {
     await interaction.reply(
       cardReply({
         title: "Shop",
-        lead: "Buy with /buy",
+        lead: `Buy with ${slash("buy")}`,
         blocks: [{ text: lines.join("\n") }],
         module: "treasury",
       }),
@@ -197,7 +197,7 @@ export const buyCommand: Command = {
     }
     await interaction.deferReply(ephemeral);
     const result = await buy(ctx, interaction.guild, interaction.member, item?.id ?? asked);
-    await interaction.editReply(result.message);
+    await interaction.editReply(notice(result.message, result.ok ? "go" : "caution"));
   },
 };
 
@@ -254,7 +254,15 @@ export const moneyCommand: Command = {
       },
       { id: interaction.user.id, name: interaction.user.username },
     );
-    await interaction.reply(notice(result.message, "intel"));
+    // Name who it went to: the shared message (also shown on the dashboard) says "They".
+    await interaction.reply(
+      result.ok
+        ? notice(
+            `${sign > 0 ? "Gave" : "Took"} ${money(result.currency, amount)} ${sign > 0 ? "to" : "from"} <@${user.id}>. They have ${money(result.currency, result.balance)} now.`,
+            "go",
+          )
+        : notice(result.message, "caution"),
+    );
   },
 };
 
@@ -286,7 +294,7 @@ export const purchaseButtons: ButtonHandler = {
       id: interaction.user.id,
       name: interaction.user.username,
     });
-    await interaction.editReply(result.message);
+    await interaction.editReply(notice(result.message, result.ok ? "go" : "caution"));
   },
 };
 

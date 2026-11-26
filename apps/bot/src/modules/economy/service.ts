@@ -338,9 +338,9 @@ export async function staffAdjust(
   guild: Guild,
   input: { userId: string; amount: number; reason: string },
   actor: { id: string; name: string },
-): Promise<Outcome> {
+) {
   const config = await economyOf(ctx, guild.id);
-  if (!config.enabled) return { ok: false, message: OFF };
+  if (!config.enabled) return { ok: false as const, message: OFF };
   const result = await adjustBalance(ctx.db, {
     guildId: guild.id,
     userId: input.userId,
@@ -352,11 +352,13 @@ export async function staffAdjust(
   });
   if (!result.ok)
     return {
-      ok: false,
+      ok: false as const,
       message: `They only have ${money(config.currency, result.balance)}, so nothing was taken.`,
     };
   return {
-    ok: true,
+    ok: true as const,
     message: `${input.amount > 0 ? "Gave" : "Took"} ${money(config.currency, Math.abs(input.amount))}. They have ${money(config.currency, result.balance)} now.`,
+    balance: result.balance,
+    currency: config.currency,
   };
 }
