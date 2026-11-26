@@ -82,6 +82,6 @@ export const lfgPanelModals: ModalHandler = {
       },
       { fromPanel: true },
     );
-    await interaction.editReply(result.message);
+    await interaction.editReply(notice(result.message, result.ok ? "go" : "caution"));
   },
 };

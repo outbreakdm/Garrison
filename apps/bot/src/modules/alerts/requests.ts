@@ -349,7 +349,7 @@ export const streamForms: ModalHandler = {
       handle: text("handle"),
       note: text("note"),
     });
-    await interaction.editReply(result.message);
+    await interaction.editReply(notice(result.message, result.ok ? "go" : "caution"));
   },
 };
 
@@ -378,7 +378,7 @@ export const streamDecideButtons: ButtonHandler = {
         name: interaction.user.username,
       },
     );
-    await interaction.editReply(result.message);
+    await interaction.editReply(notice(result.message, result.ok ? "go" : "caution"));
   },
 };
 

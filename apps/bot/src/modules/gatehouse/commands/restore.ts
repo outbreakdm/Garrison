@@ -1,6 +1,6 @@
 import { ephemeral } from "../../../commands/builders.js";
 import type { ButtonHandler } from "../../../commands/types.js";
-import { patchButton } from "../../../lib/card.js";
+import { notice, patchButton } from "../../../lib/card.js";
 import { RESTORE_PREFIX, restoreButtonId, restoreQuarantine } from "../anti-nuke.js";
 
 const UUID = /^[0-9a-f-]{36}$/;
@@ -14,7 +14,7 @@ export const restoreButton: ButtonHandler = {
     await interaction.deferReply(ephemeral);
     const result = await restoreQuarantine(ctx, interaction.guild, id, interaction.member);
     if (!result.ok) {
-      await interaction.editReply(result.error);
+      await interaction.editReply(notice(result.error, "alert"));
       return;
     }
     // Only the button changes, in whichever format the alert was posted.

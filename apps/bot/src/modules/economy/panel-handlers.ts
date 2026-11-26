@@ -76,6 +76,6 @@ export const shopForms: ModalHandler = {
     } catch {}
     await interaction.deferReply(ephemeral);
     const result = await buy(ctx, interaction.guild, interaction.member, itemId, answer);
-    await interaction.editReply(result.message);
+    await interaction.editReply(notice(result.message, result.ok ? "go" : "caution"));
   },
 };

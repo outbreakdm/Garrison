@@ -53,7 +53,7 @@ export const note: Command = {
     const notes = await listMemberNotes(ctx.db, interaction.guild.id, user.id, 10);
     await interaction.reply(
       cardReply({
-        title: `Notes on ${safeText(user.username)}`,
+        title: `Notes on ${safeText(user.displayName)}`,
         blocks: notes.length
           ? notes.map((n) => ({
               text: `${safeText(n.body)}\n-# ${safeText(n.authorName)} · ${ts(n.createdAt)}`,

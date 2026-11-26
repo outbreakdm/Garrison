@@ -160,7 +160,7 @@ export function settingsCard(s: GatehouseSettings, saved: boolean): Card {
   });
   return {
     tone: saved ? "go" : "volt",
-    title: saved ? "Gatehouse settings saved" : "Gatehouse settings",
+    title: saved ? "Security settings saved" : "Security settings",
     blocks: [
       group("Alerts", [
         {

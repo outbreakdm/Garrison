@@ -296,7 +296,7 @@ export const qmButtons: ButtonHandler = {
         interaction.user.username,
       );
       if (!result.ok) {
-        await interaction.editReply(result.error);
+        await interaction.editReply(notice(result.error, "alert"));
         return;
       }
       const extra = [

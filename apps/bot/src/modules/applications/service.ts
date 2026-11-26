@@ -315,7 +315,7 @@ export const applicationModals: ModalHandler = {
     }
     await interaction.deferReply(ephemeral);
     const result = await receiveApplication(ctx, interaction.member, formId, given);
-    await interaction.editReply(result.message);
+    await interaction.editReply(notice(result.message, result.ok ? "go" : "caution"));
   },
 };
 
@@ -337,7 +337,7 @@ export const decideApplicationButtons: ButtonHandler = {
       choice === "accept",
       interaction.user.username,
     );
-    await interaction.editReply(result.message);
+    await interaction.editReply(notice(result.message, result.ok ? "go" : "caution"));
   },
 };
 

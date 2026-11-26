@@ -48,7 +48,7 @@ export const moderation: Command = {
     await interaction.reply(
       cardReply({
         tone: changed ? "go" : "volt",
-        title: changed ? "Watch settings saved" : "Watch settings",
+        title: changed ? "Moderation settings saved" : "Moderation settings",
         facts: [
           {
             label: "Log channel",

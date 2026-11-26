@@ -59,7 +59,7 @@ export const logs: Command = {
       await interaction.reply(
         cardReply({
           tone: "intel",
-          title: `Ledger for ${safeText(user.username)}`,
+          title: `Log for ${safeText(user.displayName)}`,
           lead: lines.length ? undefined : "No events in the log for this member.",
           blocks: lines.length ? [{ text: lines.join("\n") }] : [],
           module: "ledger",
@@ -84,7 +84,7 @@ export const logs: Command = {
     await interaction.reply(
       cardReply({
         tone: saved ? "go" : "volt",
-        title: saved ? "Ledger settings saved" : "Ledger settings",
+        title: saved ? "Log settings saved" : "Log settings",
         facts: [
           { label: "Posting to", value: s.channelId ? `<#${s.channelId}>` : "Dashboard only" },
           { label: "Kept for", value: `${s.retentionDays} days` },

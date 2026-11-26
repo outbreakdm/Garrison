@@ -43,7 +43,7 @@ export const purge: Command = {
       { amount, user, reason },
     );
     if (!result.ok) {
-      await interaction.editReply(result.error);
+      await interaction.editReply(notice(result.error, "alert"));
       return;
     }
     const created = result.case;

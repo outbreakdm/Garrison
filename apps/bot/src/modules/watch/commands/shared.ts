@@ -35,7 +35,7 @@ export async function runMemberAction(
     action,
   );
   if (problem) {
-    await interaction.editReply(problem);
+    await interaction.editReply(notice(problem, "alert"));
     return;
   }
 
@@ -50,7 +50,7 @@ export async function runMemberAction(
     deleteMessageSeconds: opts.deleteMessageSeconds,
   });
   if (!result.ok) {
-    await interaction.editReply(result.error);
+    await interaction.editReply(notice(result.error, "alert"));
     return;
   }
 

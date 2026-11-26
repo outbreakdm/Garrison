@@ -88,7 +88,7 @@ export const lockdown: Command = {
       pauseInvites: interaction.options.getBoolean("pause_invites") ?? true,
     });
     if (!result.ok) {
-      await interaction.editReply(result.error);
+      await interaction.editReply(notice(result.error, "alert"));
       return;
     }
     // The card already says how to lift it and carries the reference.
