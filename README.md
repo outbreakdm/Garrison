@@ -4,6 +4,8 @@
 
 Garrison is an all-in-one Discord bot for gaming communities: moderation, security, LFG and raid signups in one fast bot.
 
+**Need help?** Join the [Garrison support server](https://discord.gg/q3F9qkHS4U).
+
 ## Repository layout
 
 ```

@@ -1,3 +1,4 @@
+import { brand } from "@garrison/brand";
 import type { Metadata } from "next";
 import { Art } from "@/components/Art";
 import { Logo } from "@/components/Logo";
@@ -35,6 +36,9 @@ export default async function LoginPage({
         <a className="g-btn g-btn--primary" href={`/auth/login?next=${encodeURIComponent(next)}`}>
           Sign in with Discord
         </a>
+        <p className="muted">
+          Trouble signing in? Ask in the <a href={brand.supportUrl}>support server</a>.
+        </p>
       </div>
     </main>
   );

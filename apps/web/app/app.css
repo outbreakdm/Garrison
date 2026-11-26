@@ -47,7 +47,8 @@ h2 {
 .topbar__spacer {
   flex: 1;
 }
-.topbar__user {
+.topbar__user,
+.topbar__help {
   color: var(--text-muted);
   font-size: 14px;
 }
@@ -424,11 +425,13 @@ textarea.g-input {
     display: none;
   }
 }
-a.topbar__user {
+a.topbar__user,
+a.topbar__help {
   text-decoration: none;
   color: var(--text-muted);
 }
-a.topbar__user:hover {
+a.topbar__user:hover,
+a.topbar__help:hover {
   color: var(--text);
 }
 .list-row {

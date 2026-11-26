@@ -1,3 +1,4 @@
+import { brand } from "@garrison/brand";
 import { Logo } from "./Logo";
 import { SearchBox } from "./SearchBox";
 import { ThemeToggle } from "./ThemeToggle";
@@ -41,6 +42,9 @@ export function Topbar({ username, theme, back, guild, guilds = [] }: TopbarProp
       <span className="topbar__spacer" />
       {guild ? <SearchBox guildId={guild.id} /> : null}
       <ThemeToggle back={back} theme={theme} />
+      <a className="topbar__help" href={brand.supportUrl}>
+        Help
+      </a>
       <a className="topbar__user" href="/account">
         {username}
       </a>

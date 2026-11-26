@@ -91,6 +91,7 @@ export default async function Home() {
           <a href="#security">Security</a>
           <a href="#pricing">Pricing</a>
           <a href="/status">Status</a>
+          <a href={brand.supportUrl}>Support</a>
         </nav>
         <span className="topbar__spacer" />
         <ThemeToggle back="/" theme={theme} />
@@ -227,6 +228,7 @@ export default async function Home() {
       <footer className="landing__foot">
         <Logo />
         <span className="muted">{brand.tagline}</span>
+        <a href={brand.supportUrl}>Support server</a>
       </footer>
     </div>
   );

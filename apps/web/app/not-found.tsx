@@ -1,3 +1,4 @@
+import { brand } from "@garrison/brand";
 import { Art } from "@/components/Art";
 import { Logo } from "@/components/Logo";
 
@@ -13,6 +14,9 @@ export default function NotFound() {
         <a className="g-btn g-btn--secondary" href="/servers">
           Back to your servers
         </a>
+        <p className="muted">
+          Think this is wrong? Ask in the <a href={brand.supportUrl}>support server</a>.
+        </p>
       </div>
     </main>
   );

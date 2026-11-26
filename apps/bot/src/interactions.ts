@@ -1,8 +1,10 @@
+import { brand } from "@garrison/brand";
 import { type Interaction, MessageFlags } from "discord.js";
 import { buttons, commandsByName, modals } from "./commands/index.js";
 import type { BotContext } from "./commands/types.js";
 
-const FAILURE = "Something went wrong on my side. Try again in a moment.";
+// Angle brackets stop Discord unfurling the invite into a big card.
+const FAILURE = `Something went wrong on my side. Try again in a moment. If it keeps happening, tell us in the support server: <${brand.supportUrl}>`;
 
 export async function handleInteraction(interaction: Interaction, ctx: BotContext) {
   if (interaction.isAutocomplete()) {

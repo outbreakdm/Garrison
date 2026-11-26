@@ -80,6 +80,8 @@ export const brand = {
   tagline: "Guard the gate. Rally the squad.",
   oneLiner:
     "Moderation, security, LFG and raid signups in one fast bot, with everything a server needs to stay safe included free.",
+  /** The Garrison support server on Discord: linked from the bot's error replies, /health and the website. */
+  supportUrl: "https://discord.gg/q3F9qkHS4U",
 } as const;
 
 /** Ledger event types and their labels, shared by bot embeds and the dashboard filter. */

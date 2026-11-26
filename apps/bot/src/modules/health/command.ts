@@ -1,3 +1,4 @@
+import { brand } from "@garrison/brand";
 import { getGatehouseSettings, getWatchSettings, saveHealthSnapshot } from "@garrison/db";
 import {
   ActionRowBuilder,
@@ -91,16 +92,22 @@ export const health: Command = {
       module: "gatehouse",
       ref: "health",
     });
-    const components = needsReinvite
-      ? [
-          new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder()
-              .setStyle(ButtonStyle.Link)
-              .setLabel("Fix permissions")
-              .setURL(fixPermissionsUrl(interaction.client.user.id, interaction.guild.id)),
-          ),
-        ]
-      : [];
+    const row = new ActionRowBuilder<ButtonBuilder>();
+    if (needsReinvite) {
+      row.addComponents(
+        new ButtonBuilder()
+          .setStyle(ButtonStyle.Link)
+          .setLabel("Fix permissions")
+          .setURL(fixPermissionsUrl(interaction.client.user.id, interaction.guild.id)),
+      );
+    }
+    row.addComponents(
+      new ButtonBuilder()
+        .setStyle(ButtonStyle.Link)
+        .setLabel("Support server")
+        .setURL(brand.supportUrl),
+    );
+    const components = [row];
     await interaction.editReply({ embeds: [embed], components });
   },
 };

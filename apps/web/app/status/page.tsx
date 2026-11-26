@@ -1,3 +1,4 @@
+import { brand } from "@garrison/brand";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
@@ -16,6 +17,9 @@ export default async function StatusPage() {
           <Logo />
         </Link>
         <span className="topbar__spacer" />
+        <a className="g-btn g-btn--ghost" href={brand.supportUrl}>
+          Support
+        </a>
         <Link className="g-btn g-btn--ghost" href={home}>
           Home
         </Link>
