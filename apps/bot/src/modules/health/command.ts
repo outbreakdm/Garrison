@@ -1,3 +1,4 @@
+import { brand } from "@garrison/brand";
 import { getGatehouseSettings, getWatchSettings, saveHealthSnapshot } from "@garrison/db";
 import {
   ButtonBuilder,
@@ -23,6 +24,13 @@ import {
  * Checks grouped by what they ask of you: fix now, worth a look, passed. Each fix is a setting
  * on the dashboard, so with problems the card links there (to the Overview's health check).
  */
+/** A link to the Garrison support server, for when a check can't be fixed from here. */
+const supportButton = () =>
+  new ButtonBuilder()
+    .setStyle(ButtonStyle.Link)
+    .setLabel("Support server")
+    .setURL(brand.supportUrl);
+
 export function healthCard(
   checks: Check[],
   fixButton: ButtonBuilder | null,
@@ -52,13 +60,10 @@ export function healthCard(
       : "All checks passed",
     lead: problems ? `${ok.length} of ${checks.length} checks passed` : undefined,
     blocks,
-    actions: problems
-      ? dashboardButton
-        ? [dashboardButton]
-        : undefined
-      : fixButton
-        ? [fixButton]
-        : undefined,
+    actions: [
+      ...(problems ? (dashboardButton ? [dashboardButton] : []) : fixButton ? [fixButton] : []),
+      supportButton(),
+    ],
     module: "gatehouse",
     ref: "health",
   };

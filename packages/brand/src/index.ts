@@ -98,6 +98,8 @@ export const brand = {
   tagline: "Guard the gate. Rally the squad.",
   oneLiner:
     "Run your Discord server from one dashboard: moderation, anti-raid, logs, tickets, LFG and raids, and an AI server builder. Everything a server needs to stay safe is free.",
+  /** The Garrison support server on Discord: linked from error replies, /health and the website. */
+  supportUrl: "https://discord.gg/q3F9qkHS4U",
 } as const;
 
 /** Ledger event types and their labels, shared by bot embeds and the dashboard filter. */

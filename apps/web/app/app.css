@@ -49,7 +49,8 @@ h2 {
 .topbar__spacer {
   flex: 1;
 }
-.topbar__user {
+.topbar__user,
+.topbar__help {
   color: var(--text-muted);
   font-size: 14px;
 }
@@ -299,11 +300,13 @@ textarea.g-input {
     padding: 0 var(--space-4) var(--space-8);
   }
 }
-a.topbar__user {
+a.topbar__user,
+a.topbar__help {
   text-decoration: none;
   color: var(--text-muted);
 }
-a.topbar__user:hover {
+a.topbar__user:hover,
+a.topbar__help:hover {
   color: var(--text);
 }
 .list-row {
@@ -2158,7 +2161,8 @@ h1 {
   padding: 4px var(--space-2) 4px 4px;
   border-radius: var(--radius-md);
 }
-a.topbar__user:hover {
+a.topbar__user:hover,
+a.topbar__help:hover {
   background: var(--surface-raised);
 }
 .topbar__user .avatar {

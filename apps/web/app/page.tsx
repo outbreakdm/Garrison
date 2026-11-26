@@ -289,6 +289,12 @@ const HELP: { title: string; text: string; href: string; link: string }[] = [
     link: "Open the status page",
   },
   {
+    title: "Ask in the support server",
+    text: "Questions, setup help and feature ideas: the Garrison Discord has the team and other server owners in it.",
+    href: brand.supportUrl,
+    link: "Join the support server",
+  },
+  {
     title: "Write to a person",
     text: `Billing, a bug, or something Garrison did that it shouldn't have: email ${LEGAL.contact} and a person answers.`,
     href: `mailto:${LEGAL.contact}`,
@@ -1182,6 +1188,7 @@ export default async function Home() {
             <a href="#security">Security</a>
             <a href="#pricing">Pricing</a>
             <a href="#help">Help</a>
+            <a href={brand.supportUrl}>Support server</a>
             <a href="/status">Status</a>
             <Link href={dashboard}>Dashboard</Link>
             <a href="/terms">Terms</a>

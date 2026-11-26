@@ -1,3 +1,4 @@
+import { brand } from "@garrison/brand";
 import type { Metadata } from "next";
 import { Art } from "@/components/Art";
 import { Logo } from "@/components/Logo";
@@ -45,6 +46,9 @@ export default async function LoginPage({
         <p className="legal-note">
           By signing in, you agree to the <a href="/terms">Terms of Service</a> and{" "}
           <a href="/privacy">Privacy Policy</a>.
+        </p>
+        <p className="legal-note">
+          Trouble signing in? Ask in the <a href={brand.supportUrl}>support server</a>.
         </p>
       </div>
     </main>
