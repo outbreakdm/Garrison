@@ -8,6 +8,7 @@ import {
 } from "discord.js";
 import { ephemeral, guildCommand } from "../../../commands/builders.js";
 import type { ButtonHandler, Command } from "../../../commands/types.js";
+import { notice } from "../../../lib/card.js";
 import { ensureGuild } from "../../../lib/guild-registry.js";
 import { VERIFY_BUTTON_ID, verifyPanel } from "../embeds.js";
 import { questionsForm, questionsOf } from "../questions.js";
@@ -50,10 +51,9 @@ export const verify: Command = {
     if (interaction.options.getSubcommand() === "off") {
       await updateGatehouseSettings(ctx.db, interaction.guild.id, { verifyRoleId: null });
       invalidateGatehouseSettings(interaction.guild.id);
-      await interaction.reply({
-        content: "Verification is off. Delete the old Verify message when you're ready.",
-        ...ephemeral,
-      });
+      await interaction.reply(
+        notice("Verification is off. Delete the old Verify message when you're ready.", "go"),
+      );
       return;
     }
 
@@ -63,20 +63,24 @@ export const verify: Command = {
     const me = interaction.guild.members.me ?? (await interaction.guild.members.fetchMe());
 
     if (role.managed || role.id === interaction.guild.roles.everyone.id) {
-      await interaction.reply({
-        content: `<@&${role.id}> is managed by Discord or an integration. Pick a normal role.`,
-        ...ephemeral,
-      });
+      await interaction.reply(
+        notice(
+          `<@&${role.id}> is managed by Discord or an integration. Pick a normal role.`,
+          "alert",
+        ),
+      );
       return;
     }
     if (
       !me.permissions.has(PermissionFlagsBits.ManageRoles) ||
       role.position >= me.roles.highest.position
     ) {
-      await interaction.reply({
-        content: `I can't give <@&${role.id}>: my role sits below it. Drag Garrison above it in Server Settings → Roles.`,
-        ...ephemeral,
-      });
+      await interaction.reply(
+        notice(
+          `I can't give <@&${role.id}>: my role sits below it. Drag Garrison above it in Server Settings → Roles.`,
+          "alert",
+        ),
+      );
       return;
     }
     if (
@@ -84,10 +88,12 @@ export const verify: Command = {
         .permissionsFor(me)
         ?.has([PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks])
     ) {
-      await interaction.reply({
-        content: `I can't post in <#${channel.id}>. Give Garrison Send Messages and Embed Links there.`,
-        ...ephemeral,
-      });
+      await interaction.reply(
+        notice(
+          `I can't post in <#${channel.id}>. Give Garrison Send Messages and Embed Links there.`,
+          "alert",
+        ),
+      );
       return;
     }
 
@@ -98,10 +104,9 @@ export const verify: Command = {
     invalidateGatehouseSettings(interaction.guild.id);
     const settings = await getGatehouseSettings(ctx.db, interaction.guild.id);
     await channel.send(verifyPanel(settings));
-    await interaction.reply({
-      content: `Saved. The Verify button is up in <#${channel.id}> and gives <@&${role.id}>.`,
-      ...ephemeral,
-    });
+    await interaction.reply(
+      notice(`Saved. The Verify button is up in <#${channel.id}> and gives <@&${role.id}>.`, "go"),
+    );
   },
 };
 
@@ -130,14 +135,13 @@ export const verifyButton: ButtonHandler = {
     if (questions.length) {
       const ready = await verifyReady(ctx, interaction.member);
       if (!ready.ok) {
-        await interaction.reply({ content: ready.message, ...ephemeral });
+        await interaction.reply(notice(ready.message, "intel"));
         return;
       }
       if (await waitingVerifyAnswers(ctx.db, interaction.guildId, interaction.user.id)) {
-        await interaction.reply({
-          content: "Your answers are with the staff. You'll get the role once they approve.",
-          ...ephemeral,
-        });
+        await interaction.reply(
+          notice("Your answers are with the staff. You'll get the role once they approve.", "go"),
+        );
         return;
       }
       await interaction.showModal(

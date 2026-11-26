@@ -1,8 +1,8 @@
 import { randomInt } from "node:crypto";
-import { ButtonBuilder, type ButtonInteraction, ButtonStyle, MessageFlags } from "discord.js";
+import { ButtonBuilder, type ButtonInteraction, ButtonStyle } from "discord.js";
 import { guildCommand } from "../../commands/builders.js";
 import type { ButtonHandler, Command } from "../../commands/types.js";
-import { type Card, cardMessage, cardReply } from "../../lib/card.js";
+import { type Card, cardMessage, cardReply, notice } from "../../lib/card.js";
 
 /**
  * /trivia (best bot item 12): a question with four answers; the first member to pick the right
@@ -189,16 +189,16 @@ export const triviaButtons: ButtonHandler = {
     const [, id, pick] = interaction.customId.split(":");
     const round = id ? rounds.get(id) : undefined;
     if (!round || round.over) {
-      await interaction.reply({ content: "This question is over.", flags: MessageFlags.Ephemeral });
+      await interaction.reply(notice("This question is over.", "alert"));
       return;
     }
     if (round.guessed.has(interaction.user.id)) {
-      await interaction.reply({ content: "One guess each.", flags: MessageFlags.Ephemeral });
+      await interaction.reply(notice("One guess each.", "caution"));
       return;
     }
     round.guessed.add(interaction.user.id);
     if (Number(pick) !== round.right) {
-      await interaction.reply({ content: "Not that one.", flags: MessageFlags.Ephemeral });
+      await interaction.reply(notice("Not that one.", "alert"));
       return;
     }
     round.over = true;

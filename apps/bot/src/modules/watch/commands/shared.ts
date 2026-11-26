@@ -1,7 +1,7 @@
 import type { ChatInputCommandInteraction } from "discord.js";
 import { ephemeral } from "../../../commands/builders.js";
 import type { BotContext } from "../../../commands/types.js";
-import { cardMessage } from "../../../lib/card.js";
+import { cardMessage, notice } from "../../../lib/card.js";
 import { canUndo, type MemberAction } from "../copy.js";
 import { confirmationCard } from "../embeds.js";
 import { applyMemberAction, checkMemberAction } from "../service.js";
@@ -22,7 +22,7 @@ export async function runMemberAction(
   const reason = interaction.options.getString("reason")?.slice(0, REASON_MAX) ?? null;
 
   if (!member && action !== "ban") {
-    await interaction.reply({ content: `<@${target.id}> isn't in this server.`, ...ephemeral });
+    await interaction.reply(notice(`<@${target.id}> isn't in this server.`, "alert"));
     return;
   }
 

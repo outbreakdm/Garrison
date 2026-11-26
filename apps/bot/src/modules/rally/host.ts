@@ -19,6 +19,7 @@ import {
 } from "discord.js";
 import { ephemeral } from "../../commands/builders.js";
 import type { BotContext, SelectHandler } from "../../commands/types.js";
+import { notice } from "../../lib/card.js";
 import { RALLY_PREFIX, safeText } from "./card.js";
 import { refreshCard, syncVoiceAccess } from "./service.js";
 
@@ -104,11 +105,11 @@ export async function hostButton(
 ) {
   const post = await getLfgPost(ctx.db, interaction.guild.id, postId);
   if (!post || (post.status !== "open" && post.status !== "full")) {
-    await interaction.reply({ content: "This group is closed.", ...ephemeral });
+    await interaction.reply(notice("This group is closed.", "alert"));
     return;
   }
   if (!mayManage(interaction, post)) {
-    await interaction.reply({ content: NOT_HOST, ...ephemeral });
+    await interaction.reply(notice(NOT_HOST, "alert"));
     return;
   }
   if (action === "manage") {
@@ -162,7 +163,7 @@ export const rallySelects: SelectHandler = {
       return;
     }
     if (!mayManage(interaction, post)) {
-      await interaction.reply({ content: NOT_HOST, ...ephemeral });
+      await interaction.reply(notice(NOT_HOST, "alert"));
       return;
     }
     const target = interaction.values[0] ?? "";

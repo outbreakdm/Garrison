@@ -1,6 +1,6 @@
 import { PermissionFlagsBits } from "discord.js";
 import type { Command } from "../../../commands/types.js";
-import { cardMessage } from "../../../lib/card.js";
+import { cardMessage, notice } from "../../../lib/card.js";
 import { purgeCard } from "../embeds.js";
 import { purgeMessages } from "../purge.js";
 import { ephemeral, REASON_MAX, watchCommand } from "./shared.js";
@@ -31,10 +31,7 @@ export const purge: Command = {
     const channel = interaction.channel;
 
     if (!channel || !("bulkDelete" in channel)) {
-      await interaction.reply({
-        content: "I can only purge text channels and threads.",
-        ...ephemeral,
-      });
+      await interaction.reply(notice("I can only purge text channels and threads.", "alert"));
       return;
     }
     await interaction.deferReply(ephemeral);

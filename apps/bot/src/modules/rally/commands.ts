@@ -15,9 +15,9 @@ import {
   setLfgMessage,
 } from "@garrison/db";
 import { type Guild, PermissionFlagsBits, type SendableChannels } from "discord.js";
-import { ephemeral, guildCommand } from "../../commands/builders.js";
+import { guildCommand } from "../../commands/builders.js";
 import type { BotContext, ButtonHandler, Command } from "../../commands/types.js";
-import { cardEdit, cardReply } from "../../lib/card.js";
+import { cardEdit, cardReply, notice } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { lfgCard, RALLY_PREFIX, safeText } from "./card.js";
 import { hostButton } from "./host.js";
@@ -106,10 +106,7 @@ export const lfg: Command = {
     if (sub === "list") {
       const posts = await listOpenLfg(ctx.db, guild.id);
       if (!posts.length) {
-        await interaction.reply({
-          content: "No open groups. Post one with `/lfg create`.",
-          ...ephemeral,
-        });
+        await interaction.reply(notice("No open groups. Post one with `/lfg create`.", "intel"));
         return;
       }
       const lines = await Promise.all(
@@ -136,45 +133,51 @@ export const lfg: Command = {
       const mine = await findOpenLfgByHost(ctx.db, guild.id, interaction.user.id);
       const closed = mine ? await closeLfg(ctx.db, mine.id) : null;
       if (!closed) {
-        await interaction.reply({ content: "You don't have an open group.", ...ephemeral });
+        await interaction.reply(notice("You don't have an open group.", "intel"));
         return;
       }
       await refreshCard(ctx, guild, closed);
       const stop = closed.repeatWeekly && interaction.options.getBoolean("stop_repeating") === true;
       if (stop) await markLfgRepeated(ctx.db, closed.id);
-      await interaction.reply({
-        content: !closed.repeatWeekly
-          ? "Closed your group."
-          : stop
-            ? "Closed your group. It won't be posted again."
-            : "Closed your group. It posts again next week; `/lfg close stop_repeating:True` on that one ends it.",
-        ...ephemeral,
-      });
+      await interaction.reply(
+        notice(
+          !closed.repeatWeekly
+            ? "Closed your group."
+            : stop
+              ? "Closed your group. It won't be posted again."
+              : "Closed your group. It posts again next week; `/lfg close stop_repeating:True` on that one ends it.",
+          "intel",
+        ),
+      );
       return;
     }
 
     const channel = interaction.channel;
     if (!channel?.isSendable()) {
-      await interaction.reply({ content: "I can't post in this channel.", ...ephemeral });
+      await interaction.reply(notice("I can't post in this channel.", "alert"));
       return;
     }
     const { templates } = await cachedTemplates(ctx, guild.id);
     const picked = interaction.options.getString("template");
     const template = findTemplate(templates, picked);
     if (picked && !template) {
-      await interaction.reply({
-        content: templates.length
-          ? `No template called "${safeText(picked)}". Pick one from the list.`
-          : "This server has no templates yet. A moderator can add them on the dashboard.",
-        ...ephemeral,
-      });
+      await interaction.reply(
+        notice(
+          templates.length
+            ? `No template called "${safeText(picked)}". Pick one from the list.`
+            : "This server has no templates yet. A moderator can add them on the dashboard.",
+          "caution",
+        ),
+      );
       return;
     }
     if (template?.channelIds.length && !template.channelIds.includes(channel.id)) {
-      await interaction.reply({
-        content: `${safeText(template.name)} groups go in ${template.channelIds.map((c) => `<#${c}>`).join(", ")}.`,
-        ...ephemeral,
-      });
+      await interaction.reply(
+        notice(
+          `${safeText(template.name)} groups go in ${template.channelIds.map((c) => `<#${c}>`).join(", ")}.`,
+          "intel",
+        ),
+      );
       return;
     }
     // What the player typed wins; otherwise the template's defaults.
@@ -185,20 +188,19 @@ export const lfg: Command = {
       typedSize ?? template?.size ?? null,
     );
     if (!slots.ok) {
-      await interaction.reply({ content: slots.error, ...ephemeral });
+      await interaction.reply(notice(slots.error, "alert"));
       return;
     }
     const start = parseStart(interaction.options.getString("starts"));
     if (!start.ok) {
-      await interaction.reply({ content: start.error, ...ephemeral });
+      await interaction.reply(notice(start.error, "alert"));
       return;
     }
     const hostSlot = matchSlot(slots.value, interaction.options.getString("my_role"));
     if (hostSlot === null) {
-      await interaction.reply({
-        content: `Pick your role from: ${slots.value.map((g) => g.name).join(", ")}.`,
-        ...ephemeral,
-      });
+      await interaction.reply(
+        notice(`Pick your role from: ${slots.value.map((g) => g.name).join(", ")}.`, "caution"),
+      );
       return;
     }
 
@@ -220,10 +222,9 @@ export const lfg: Command = {
       repeatWeekly: interaction.options.getBoolean("repeat_weekly") === true,
     });
     if (!post) {
-      await interaction.reply({
-        content: "You already have an open group. Close it with `/lfg close` first.",
-        ...ephemeral,
-      });
+      await interaction.reply(
+        notice("You already have an open group. Close it with `/lfg close` first.", "caution"),
+      );
       return;
     }
     const members = await listActiveMembers(ctx.db, post.id);
@@ -294,7 +295,7 @@ export const rallyButtons: ButtonHandler = {
     if (!postId || !UUID.test(postId)) return;
     const post = await getLfgPost(ctx.db, interaction.guild.id, postId);
     if (!post) {
-      await interaction.reply({ content: "That group is gone.", ...ephemeral });
+      await interaction.reply(notice("That group is gone.", "alert"));
       return;
     }
     const userId = interaction.user.id;
@@ -305,10 +306,9 @@ export const rallyButtons: ButtonHandler = {
     if (action === "close") {
       const canModerate = interaction.memberPermissions.has(PermissionFlagsBits.ManageMessages);
       if (userId !== post.hostId && !canModerate) {
-        await interaction.reply({
-          content: "Only the host or a moderator can close this group.",
-          ...ephemeral,
-        });
+        await interaction.reply(
+          notice("Only the host or a moderator can close this group.", "alert"),
+        );
         return;
       }
       const closed = await closeLfg(ctx.db, post.id);
@@ -326,7 +326,7 @@ export const rallyButtons: ButtonHandler = {
       if (!result.ok) {
         const msg =
           result.reason === "not_member" ? "You're not in this group." : "This group is closed.";
-        await interaction.reply({ content: msg, ...ephemeral });
+        await interaction.reply(notice(msg, "intel"));
         return;
       }
       await interaction.update(cardEdit(interaction.message, lfgCard(result.post, result.members)));
@@ -348,7 +348,7 @@ export const rallyButtons: ButtonHandler = {
           no_such_slot: "That role doesn't exist anymore.",
           locked: "The host locked this group: nobody new can join.",
         }[result.reason];
-        await interaction.reply({ content: msg, ...ephemeral });
+        await interaction.reply(notice(msg, "intel"));
         return;
       }
       await interaction.update(cardEdit(interaction.message, lfgCard(result.post, result.members)));

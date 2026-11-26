@@ -1,11 +1,11 @@
 import { listCasesForTarget } from "@garrison/db";
 import { PermissionFlagsBits } from "discord.js";
 import type { Command } from "../../../commands/types.js";
-import { cardReply, ts } from "../../../lib/card.js";
+import { cardReply, notice, ts } from "../../../lib/card.js";
 import { formatDuration } from "../../../lib/duration.js";
 import { safeText } from "../../../lib/text.js";
 import { actionNoun, NO_REASON } from "../copy.js";
-import { ephemeral, watchCommand } from "./shared.js";
+import { watchCommand } from "./shared.js";
 
 const LIMIT = 10;
 
@@ -21,10 +21,7 @@ export const history: Command = {
     const user = interaction.options.getUser("user", true);
     const cases = await listCasesForTarget(ctx.db, interaction.guild.id, user.id, LIMIT);
     if (!cases.length) {
-      await interaction.reply({
-        content: `<@${user.id}> has no cases. Clean record.`,
-        ...ephemeral,
-      });
+      await interaction.reply(notice(`<@${user.id}> has no cases. Clean record.`, "go"));
       return;
     }
     // One case per line: the action leads, then the reason, then when. Undone cases are struck through.

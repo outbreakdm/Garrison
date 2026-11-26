@@ -14,7 +14,7 @@ import {
 import { PermissionFlagsBits } from "discord.js";
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { BotContext, ButtonHandler, Command } from "../../commands/types.js";
-import { cardReply } from "../../lib/card.js";
+import { cardReply, notice } from "../../lib/card.js";
 import { safeText } from "../../lib/text.js";
 import { shopForm } from "./panel.js";
 import { buy, decidePurchase, economyOf, OFF, staffAdjust } from "./service.js";
@@ -37,7 +37,7 @@ export const balance: Command = {
   async execute(interaction, ctx) {
     if (tooFast(interaction.user.id)) return void (await interaction.reply(SLOW));
     const config = await economyOf(ctx, interaction.guildId);
-    if (!config.enabled) return void (await interaction.reply({ content: OFF, ...ephemeral }));
+    if (!config.enabled) return void (await interaction.reply(notice(OFF, "intel")));
     const user = interaction.options.getUser("member") ?? interaction.user;
     const wallet = await getWallet(ctx.db, interaction.guildId, user.id);
     const rank = await walletRank(ctx.db, interaction.guildId, wallet.balance);
@@ -68,12 +68,9 @@ export const daily: Command = {
   async execute(interaction, ctx) {
     if (tooFast(interaction.user.id)) return void (await interaction.reply(SLOW));
     const config = await economyOf(ctx, interaction.guildId);
-    if (!config.enabled) return void (await interaction.reply({ content: OFF, ...ephemeral }));
+    if (!config.enabled) return void (await interaction.reply(notice(OFF, "intel")));
     if (!config.earn.daily.on)
-      return void (await interaction.reply({
-        content: "This server has no daily claim.",
-        ...ephemeral,
-      }));
+      return void (await interaction.reply(notice("This server has no daily claim.", "intel")));
     const result = await claimDaily(
       ctx.db,
       interaction.guildId,
@@ -81,14 +78,18 @@ export const daily: Command = {
       config.earn.daily,
     );
     if (!result.ok)
-      return void (await interaction.reply({
-        content: `You've claimed today's. Next one <t:${Math.floor(result.next.getTime() / 1000)}:R>.`,
-        ...ephemeral,
-      }));
-    await interaction.reply({
-      content: `+${money(config.currency, result.amount)}${result.streak > 1 ? ` · ${result.streak}-day streak` : ""}. You have ${money(config.currency, result.balance)}.`,
-      ...ephemeral,
-    });
+      return void (await interaction.reply(
+        notice(
+          `You've claimed today's. Next one <t:${Math.floor(result.next.getTime() / 1000)}:R>.`,
+          "caution",
+        ),
+      ));
+    await interaction.reply(
+      notice(
+        `+${money(config.currency, result.amount)}${result.streak > 1 ? ` · ${result.streak}-day streak` : ""}. You have ${money(config.currency, result.balance)}.`,
+        "go",
+      ),
+    );
   },
 };
 
@@ -102,24 +103,17 @@ export const pay: Command = {
   async execute(interaction, ctx) {
     if (tooFast(interaction.user.id)) return void (await interaction.reply(SLOW));
     const config = await economyOf(ctx, interaction.guildId);
-    if (!config.enabled) return void (await interaction.reply({ content: OFF, ...ephemeral }));
+    if (!config.enabled) return void (await interaction.reply(notice(OFF, "intel")));
     if (!config.earn.pay.on)
-      return void (await interaction.reply({
-        content: "Paying other members is off here.",
-        ...ephemeral,
-      }));
+      return void (await interaction.reply(notice("Paying other members is off here.", "alert")));
     const to = interaction.options.getUser("member", true);
     if (to.bot || to.id === interaction.user.id)
-      return void (await interaction.reply({
-        content: "Pay another member, not a bot or yourself.",
-        ...ephemeral,
-      }));
+      return void (await interaction.reply(
+        notice("Pay another member, not a bot or yourself.", "alert"),
+      ));
     const amount = parseAmount(interaction.options.getString("amount", true));
     if (!amount)
-      return void (await interaction.reply({
-        content: "Pay a whole amount, 1 or more.",
-        ...ephemeral,
-      }));
+      return void (await interaction.reply(notice("Pay a whole amount, 1 or more.", "caution")));
     const result = await payMember(ctx.db, {
       guildId: interaction.guildId,
       from: { id: interaction.user.id, name: interaction.user.username },
@@ -128,13 +122,14 @@ export const pay: Command = {
       dailyCap: config.earn.pay.dailyCap,
     });
     if (!result.ok)
-      return void (await interaction.reply({
-        content:
+      return void (await interaction.reply(
+        notice(
           result.reason === "cap"
             ? `You can pay ${money(config.currency, result.left)} more today.`
             : `You have ${money(config.currency, result.balance)}.`,
-        ...ephemeral,
-      }));
+          "intel",
+        ),
+      ));
     await interaction.reply({
       content: `${interaction.user} paid ${to} ${money(config.currency, amount)}.`,
       allowedMentions: { users: [to.id] },
@@ -146,14 +141,11 @@ export const shop: Command = {
   data: guildCommand("shop", "See what the server's shop sells.", null).toJSON(),
   async execute(interaction, ctx) {
     const config = await economyOf(ctx, interaction.guildId);
-    if (!config.enabled) return void (await interaction.reply({ content: OFF, ...ephemeral }));
+    if (!config.enabled) return void (await interaction.reply(notice(OFF, "intel")));
     const limit = entitlements(await getGuildPlan(ctx.db, interaction.guildId))["economy.items"];
     const items = config.shop.slice(0, limit);
     if (!items.length)
-      return void (await interaction.reply({
-        content: "The shop is empty for now.",
-        ...ephemeral,
-      }));
+      return void (await interaction.reply(notice("The shop is empty for now.", "intel")));
     const lines = items.map((i) => {
       const what =
         i.kind === "role"
@@ -247,10 +239,9 @@ export const moneyCommand: Command = {
     const user = interaction.options.getUser("member", true);
     const amount = parseAmount(interaction.options.getString("amount", true));
     if (!amount || user.bot)
-      return void (await interaction.reply({
-        content: "A whole amount, to a member (not a bot).",
-        ...ephemeral,
-      }));
+      return void (await interaction.reply(
+        notice("A whole amount, to a member (not a bot).", "caution"),
+      ));
     const sign = interaction.options.getSubcommand() === "take" ? -1 : 1;
     const result = await staffAdjust(
       ctx,
@@ -262,7 +253,7 @@ export const moneyCommand: Command = {
       },
       { id: interaction.user.id, name: interaction.user.username },
     );
-    await interaction.reply({ content: result.message, ...ephemeral });
+    await interaction.reply(notice(result.message, "intel"));
   },
 };
 
@@ -286,10 +277,9 @@ export const purchaseButtons: ButtonHandler = {
       !interaction.member.permissions.has(PermissionFlagsBits.ManageGuild) &&
       !interaction.member.permissions.has(PermissionFlagsBits.ManageRoles)
     )
-      return void (await interaction.reply({
-        content: "Only staff (Manage Server or Manage Roles) can decide on purchases.",
-        ...ephemeral,
-      }));
+      return void (await interaction.reply(
+        notice("Only staff (Manage Server or Manage Roles) can decide on purchases.", "alert"),
+      ));
     await interaction.deferReply(ephemeral);
     const result = await decidePurchase(ctx, interaction.guild, id ?? "", choice === "done", {
       id: interaction.user.id,

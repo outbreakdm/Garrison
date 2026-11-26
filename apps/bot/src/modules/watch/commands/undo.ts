@@ -1,8 +1,7 @@
 import type { ButtonHandler } from "../../../commands/types.js";
-import { cardEdit } from "../../../lib/card.js";
+import { cardEdit, notice } from "../../../lib/card.js";
 import { caseCard, UNDO_PREFIX, undoButton as undoCaseButton } from "../embeds.js";
 import { undoCase } from "../service.js";
-import { ephemeral } from "./shared.js";
 
 export const undoButton: ButtonHandler = {
   prefix: UNDO_PREFIX,
@@ -13,7 +12,7 @@ export const undoButton: ButtonHandler = {
     await interaction.deferUpdate();
     const result = await undoCase(ctx, interaction.guild, caseNumber, interaction.member);
     if (!result.ok) {
-      await interaction.followUp({ content: result.error, ...ephemeral });
+      await interaction.followUp(notice(result.error, "alert"));
       return;
     }
     // The confirmation may predate the switch to V2: edit it in its own format.

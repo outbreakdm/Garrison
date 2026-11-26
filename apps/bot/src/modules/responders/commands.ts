@@ -1,6 +1,7 @@
 import { findTag } from "@garrison/db";
-import { ephemeral, guildCommand } from "../../commands/builders.js";
+import { guildCommand } from "../../commands/builders.js";
 import type { Command } from "../../commands/types.js";
+import { notice } from "../../lib/card.js";
 import { serverResponders } from "./service.js";
 
 /**
@@ -22,10 +23,12 @@ export const tag: Command = {
     const name = interaction.options.getString("name", true);
     const found = findTag(await serverResponders(ctx, interaction.guildId), name);
     if (!found) {
-      await interaction.reply({
-        content: `This server has no tag called "${name.slice(0, 32)}". Staff add tags on the dashboard's Messages page.`,
-        ...ephemeral,
-      });
+      await interaction.reply(
+        notice(
+          `This server has no tag called "${name.slice(0, 32)}". Staff add tags on the dashboard's Messages page.`,
+          "intel",
+        ),
+      );
       return;
     }
     await interaction.reply({ content: found.reply, allowedMentions: { parse: [] } });

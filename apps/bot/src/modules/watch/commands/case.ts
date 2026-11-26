@@ -1,10 +1,10 @@
 import { getCase } from "@garrison/db";
 import { PermissionFlagsBits } from "discord.js";
 import type { Command } from "../../../commands/types.js";
-import { cardReply } from "../../../lib/card.js";
+import { cardReply, notice } from "../../../lib/card.js";
 import { canUndo } from "../copy.js";
 import { caseCard, undoButton } from "../embeds.js";
-import { ephemeral, watchCommand } from "./shared.js";
+import { watchCommand } from "./shared.js";
 
 export const caseCommand: Command = {
   data: watchCommand(
@@ -20,10 +20,7 @@ export const caseCommand: Command = {
     const number = interaction.options.getInteger("number", true);
     const c = await getCase(ctx.db, interaction.guild.id, number);
     if (!c) {
-      await interaction.reply({
-        content: `There is no case #${number} in this server.`,
-        ...ephemeral,
-      });
+      await interaction.reply(notice(`There is no case #${number} in this server.`, "alert"));
       return;
     }
     await interaction.reply(

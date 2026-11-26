@@ -1,6 +1,6 @@
 import { ephemeral } from "../../commands/builders.js";
 import type { ButtonHandler, ModalHandler, SelectHandler } from "../../commands/types.js";
-import { cardEdit, cardReply } from "../../lib/card.js";
+import { cardEdit, cardReply, notice } from "../../lib/card.js";
 import {
   itemsForSale,
   SHOP_BUY_PREFIX,
@@ -22,13 +22,13 @@ export const shopPickSelects: SelectHandler = {
   async execute(interaction, ctx) {
     const config = await economyOf(ctx, interaction.guildId);
     if (!config.enabled) {
-      await interaction.reply({ content: OFF, ...ephemeral });
+      await interaction.reply(notice(OFF, "intel"));
       return;
     }
     const items = await itemsForSale(ctx, interaction.guildId, config);
     const item = items.find((i) => i.id === interaction.values[0]);
     if (!item) {
-      await interaction.reply({ content: "That item isn't in the shop anymore.", ...ephemeral });
+      await interaction.reply(notice("That item isn't in the shop anymore.", "alert"));
       return;
     }
     if (item.question) {

@@ -337,3 +337,27 @@ export function patchButton(
     ? { components }
     : { components, flags: MessageFlags.IsComponentsV2 as const, allowedMentions: QUIET };
 }
+
+/** The tone a short notice takes: done, heads-up, blocked, or plain information. */
+export type NoticeTone = "go" | "caution" | "alert" | "intel";
+
+/**
+ * A short private reply ("Saved.", "That group is gone.") drawn as a slim card:
+ * the tone's color bar, the first sentence in bold when more follows, and the rest
+ * as normal text. Ephemeral and mention-safe, like the rest of Garrison's replies.
+ */
+export function notice(text: string, tone: NoticeTone = "intel") {
+  const match = text.match(/^(.+?[.!?:])\s+([\s\S]+)$/);
+  // Bold a lead sentence only when it's plain prose: no markup or mentions to break.
+  const lead = match?.[1];
+  const body = lead && !/[*`<[]/.test(lead) ? `**${lead}**\n${match?.[2] ?? ""}` : text;
+  return {
+    components: [
+      new ContainerBuilder()
+        .setAccentColor(embedColors[tone])
+        .addTextDisplayComponents(new TextDisplayBuilder().setContent(body.slice(0, TEXT_MAX))),
+    ],
+    flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+    allowedMentions: QUIET,
+  } as const;
+}

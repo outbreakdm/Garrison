@@ -1,6 +1,7 @@
 import { findOpenLfgByHost, getLfgPanel, LFG_PANEL } from "@garrison/db";
 import { ephemeral } from "../../commands/builders.js";
 import type { ButtonHandler, ModalHandler } from "../../commands/types.js";
+import { notice } from "../../lib/card.js";
 import { doCreateLfg } from "../dashboard/more.js";
 import { safeText } from "./card.js";
 import { LFG_FORM_PREFIX, LFG_OTHER, LFG_PANEL_PREFIX, lfgForm } from "./panel.js";
@@ -33,7 +34,7 @@ export const lfgPanelButtons: ButtonHandler = {
               ? "You already have an open group. Close it with `/lfg close` first."
               : null;
     if (why) {
-      await interaction.reply({ content: why, ...ephemeral });
+      await interaction.reply(notice(why, "intel"));
       return;
     }
     await interaction.showModal(lfgForm(template));
@@ -60,7 +61,7 @@ export const lfgPanelModals: ModalHandler = {
     const slots = text("slots");
     const size = slots && /^\d+$/.test(slots) ? Number(slots) : null;
     if (size !== null && (size < 2 || size > 40)) {
-      await interaction.reply({ content: "Groups are 2 to 40 players.", ...ephemeral });
+      await interaction.reply(notice("Groups are 2 to 40 players.", "caution"));
       return;
     }
     await interaction.deferReply(ephemeral);

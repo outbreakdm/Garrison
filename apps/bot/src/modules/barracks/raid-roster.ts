@@ -16,9 +16,8 @@ import {
   WOW_CLASSES,
 } from "@garrison/db";
 import type { AutocompleteInteraction, ChatInputCommandInteraction } from "discord.js";
-import { ephemeral } from "../../commands/builders.js";
 import type { BotContext } from "../../commands/types.js";
-import { capped, cardReply } from "../../lib/card.js";
+import { capped, cardReply, notice } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { safeText } from "../../lib/text.js";
 
@@ -35,10 +34,9 @@ const describe = (c: Parameters<typeof describeCharacter>[0]) => safeText(descri
 export async function rosterTeam(interaction: Chat, ctx: BotContext) {
   const teams = await listRosterTeams(ctx.db, interaction.guildId);
   if (!teams.length) {
-    await interaction.reply({
-      content: "This server has no roster teams yet. Officers add them on the dashboard.",
-      ...ephemeral,
-    });
+    await interaction.reply(
+      notice("This server has no roster teams yet. Officers add them on the dashboard.", "intel"),
+    );
     return;
   }
   const asked = interaction.options.getString("team");
@@ -47,7 +45,7 @@ export async function rosterTeam(interaction: Chat, ctx: BotContext) {
     teams.find((t) => asked && t.name.toLowerCase() === asked.toLowerCase()) ??
     (asked ? null : teams[0]);
   if (!team) {
-    await interaction.reply({ content: "There's no team by that name.", ...ephemeral });
+    await interaction.reply(notice("There's no team by that name.", "intel"));
     return;
   }
   const members = await listRosterMembers(ctx.db, interaction.guildId, [team.id]);
@@ -110,7 +108,7 @@ export async function rosterAdd(interaction: Chat, ctx: BotContext) {
     await rosterGame(ctx.db, interaction.guildId),
   );
   if (!fields.ok) {
-    await interaction.reply({ content: fields.error, ...ephemeral });
+    await interaction.reply(notice(fields.error, "alert"));
     return;
   }
   const r = await addRosterCharacter(
@@ -120,10 +118,12 @@ export async function rosterAdd(interaction: Chat, ctx: BotContext) {
     fields.value,
     interaction.options.getBoolean("main") ?? false,
   );
-  await interaction.reply({
-    content: r.ok ? `Added ${describe(r.value)}${r.value.main ? " as your main" : ""}.` : r.error,
-    ...ephemeral,
-  });
+  await interaction.reply(
+    notice(
+      r.ok ? `Added ${describe(r.value)}${r.value.main ? " as your main" : ""}.` : r.error,
+      "intel",
+    ),
+  );
 }
 
 /** The member's own character from the option: its id when picked from the list, or its name. */
@@ -141,24 +141,26 @@ export async function rosterRemove(interaction: Chat, ctx: BotContext) {
   const c = await ownCharacter(interaction, ctx);
   const removed =
     c && (await removeRosterCharacter(ctx.db, interaction.guildId, c.id, interaction.user.id));
-  await interaction.reply({
-    content:
+  await interaction.reply(
+    notice(
       removed && c ? `Removed ${safeText(c.name)}.` : "You have no character by that name here.",
-    ...ephemeral,
-  });
+      "intel",
+    ),
+  );
 }
 
 export async function rosterMain(interaction: Chat, ctx: BotContext) {
   const c = await ownCharacter(interaction, ctx);
   const done =
     c && (await setMainCharacter(ctx.db, interaction.guildId, c.id, interaction.user.id));
-  await interaction.reply({
-    content:
+  await interaction.reply(
+    notice(
       done && c
         ? `${safeText(c.name)} is your main now.`
         : "You have no character by that name here.",
-    ...ephemeral,
-  });
+      "intel",
+    ),
+  );
 }
 
 export async function rosterMine(interaction: Chat, ctx: BotContext) {
@@ -174,7 +176,7 @@ export async function rosterMine(interaction: Chat, ctx: BotContext) {
       ? `Teams: ${teams.map((t) => `${safeText(t.team.name)} (${ROSTER_STATUS_LABELS[t.status as "core"] ?? t.status})`).join(", ")}`
       : "Not on a team yet. Officers put people on teams on the dashboard.",
   ];
-  await interaction.reply({ content: lines.join("\n\n"), ...ephemeral });
+  await interaction.reply(notice(lines.join("\n\n"), "intel"));
 }
 
 /** Suggestions for /roster: teams, the WoW classes and specs when a team plays WoW, roles, your characters. */

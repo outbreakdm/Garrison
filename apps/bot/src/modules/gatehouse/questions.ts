@@ -27,7 +27,7 @@ import {
 } from "discord.js";
 import { ephemeral } from "../../commands/builders.js";
 import type { BotContext, ButtonHandler, ModalHandler } from "../../commands/types.js";
-import { cardMessage, ts } from "../../lib/card.js";
+import { cardMessage, notice, ts } from "../../lib/card.js";
 import { safeText } from "../../lib/text.js";
 import { accountAgeDays, describeAccountAge } from "./plan.js";
 import { verifyReady } from "./service.js";
@@ -245,10 +245,9 @@ export const decideButtons: ButtonHandler = {
     const [, choice, id] = interaction.customId.split(":");
     const settings = await getGatehouseSettings(ctx.db, interaction.guildId);
     if (!isStaff(interaction.member, settings)) {
-      await interaction.reply({
-        content: "Only staff (Manage Roles, or a staff role) can decide on answers.",
-        ...ephemeral,
-      });
+      await interaction.reply(
+        notice("Only staff (Manage Roles, or a staff role) can decide on answers.", "alert"),
+      );
       return;
     }
     await interaction.deferReply(ephemeral);

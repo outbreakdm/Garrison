@@ -19,6 +19,7 @@ import {
 } from "discord.js";
 import { ephemeral } from "../../commands/builders.js";
 import type { BotContext, SelectHandler } from "../../commands/types.js";
+import { notice } from "../../lib/card.js";
 import { safeText } from "../../lib/text.js";
 import { OPS_PREFIX } from "./card.js";
 import { refreshOpsCard } from "./service.js";
@@ -136,7 +137,7 @@ export async function answerButton(
   if (!isAvailability(status)) return;
   const event = await getOpsEvent(ctx.db, interaction.guild.id, eventId);
   if (event?.status !== "scheduled") {
-    await interaction.reply({ content: "This raid is closed.", ...ephemeral });
+    await interaction.reply(notice("This raid is closed.", "alert"));
     return;
   }
   const userId = interaction.user.id;

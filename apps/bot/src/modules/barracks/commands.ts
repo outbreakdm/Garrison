@@ -8,7 +8,7 @@ import {
 } from "@garrison/db";
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { Command } from "../../commands/types.js";
-import { capped, cardReply } from "../../lib/card.js";
+import { capped, cardReply, notice } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { safeText } from "../../lib/text.js";
 import { describeLink, providerLabel } from "./format.js";
@@ -103,12 +103,14 @@ export const link: Command = {
 
     if (sub === "accounts") {
       const url = dashboardUrl("/account");
-      await interaction.reply({
-        content: url
-          ? `Link verified accounts on your Garrison account page: ${url}\nSign in with Discord, then choose what to link. Garrison never keeps your Discord or Battle.net password or token.`
-          : "Verified linking needs the Garrison dashboard, which isn't set up on this bot yet.",
-        ...ephemeral,
-      });
+      await interaction.reply(
+        notice(
+          url
+            ? `Link verified accounts on your Garrison account page: ${url}\nSign in with Discord, then choose what to link. Garrison never keeps your Discord or Battle.net password or token.`
+            : "Verified linking needs the Garrison dashboard, which isn't set up on this bot yet.",
+          "alert",
+        ),
+      );
       return;
     }
 
@@ -116,12 +118,14 @@ export const link: Command = {
       const visible = interaction.options.getBoolean("visible", true);
       await setRosterShare(ctx.db, interaction.guild.id, user.id, user.username, visible);
       await syncStatRolesFor(ctx, interaction.guild, user.id);
-      await interaction.reply({
-        content: visible
-          ? "Your linked accounts now show in this server's roster."
-          : "Your linked accounts are hidden from this server's roster.",
-        ...ephemeral,
-      });
+      await interaction.reply(
+        notice(
+          visible
+            ? "Your linked accounts now show in this server's roster."
+            : "Your linked accounts are hidden from this server's roster.",
+          "intel",
+        ),
+      );
       return;
     }
 
@@ -145,15 +149,17 @@ export const link: Command = {
 
     // osrs or rs3
     if (rateLimited(user.id)) {
-      await interaction.reply({ content: "One lookup every 10 s.", ...ephemeral });
+      await interaction.reply(notice("One lookup every 10 s.", "caution"));
       return;
     }
     const name = interaction.options.getString("name", true);
     if (!isValidRsn(name)) {
-      await interaction.reply({
-        content: "RuneScape names are 1 to 12 letters, numbers, spaces, hyphens or underscores.",
-        ...ephemeral,
-      });
+      await interaction.reply(
+        notice(
+          "RuneScape names are 1 to 12 letters, numbers, spaces, hyphens or underscores.",
+          "caution",
+        ),
+      );
       return;
     }
     await interaction.deferReply(ephemeral);
@@ -228,12 +234,14 @@ export const unlink: Command = {
     const note = discordConnectionProviders.includes(provider)
       ? " It came from your Discord Connections, so it comes back if you link accounts again while it's still connected in Discord."
       : "";
-    await interaction.reply({
-      content: n
-        ? `Removed your ${providerLabel(provider)} link${n === 1 ? "" : "s"}.${note}`
-        : `You have no ${providerLabel(provider)} link.`,
-      ...ephemeral,
-    });
+    await interaction.reply(
+      notice(
+        n
+          ? `Removed your ${providerLabel(provider)} link${n === 1 ? "" : "s"}.${note}`
+          : `You have no ${providerLabel(provider)} link.`,
+        "intel",
+      ),
+    );
   },
 };
 
@@ -322,7 +330,7 @@ export const roster: Command = {
     const sub = interaction.options.getSubcommand();
     // The public views post a card; each person gets one every 10 s.
     if ((sub === "team" || sub === "accounts") && rateLimited(interaction.user.id)) {
-      await interaction.reply({ content: "One roster view every 10 s.", ...ephemeral });
+      await interaction.reply(notice("One roster view every 10 s.", "caution"));
       return;
     }
     if (sub === "team") return rosterTeam(interaction, ctx);

@@ -28,9 +28,9 @@ import {
   TextInputStyle,
   type User,
 } from "discord.js";
-import { ephemeral, guildCommand } from "../../commands/builders.js";
+import { guildCommand } from "../../commands/builders.js";
 import type { BotContext, Command, ModalHandler } from "../../commands/types.js";
-import { cardReply } from "../../lib/card.js";
+import { cardReply, notice } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
 import { safeText } from "../../lib/text.js";
 import { plainLink } from "../barracks/format.js";
@@ -59,17 +59,17 @@ export const rank: Command = {
     .toJSON(),
   async execute(interaction, ctx) {
     if (rateLimited(interaction.user.id)) {
-      await interaction.reply({ content: "One rank lookup every 10 s.", ...ephemeral });
+      await interaction.reply(notice("One rank lookup every 10 s.", "caution"));
       return;
     }
     if (!(await cachedRanksSettings(ctx, interaction.guild.id)).enabled) {
-      await interaction.reply({ content: OFF, ...ephemeral });
+      await interaction.reply(notice(OFF, "intel"));
       return;
     }
     const user = interaction.options.getUser("user") ?? interaction.user;
     const r = await getMemberRank(ctx.db, interaction.guild.id, user.id);
     if (!r) {
-      await interaction.reply({ content: `<@${user.id}> hasn't earned any XP yet.`, ...ephemeral });
+      await interaction.reply(notice(`<@${user.id}> hasn't earned any XP yet.`, "intel"));
       return;
     }
     const { intoLevel, needed } = levelForXp(r.xp);
@@ -160,18 +160,20 @@ export const rankcard: Command = {
       getGuildPlan(ctx.db, interaction.guild.id),
     ]);
     if (!settings.enabled) {
-      await interaction.reply({ content: OFF, ...ephemeral });
+      await interaction.reply(notice(OFF, "intel"));
       return;
     }
     const style = rankCardForPlan(readRankCard(settings.card), entitlements(plan));
     const typed = memberFields(style.fields);
     if (!typed.length) {
-      await interaction.reply({
-        content: style.fields.length
-          ? "This server's rank card reads your details from game accounts you share here. Link one with `/link`."
-          : "This server's rank cards have no details to fill in.",
-        ...ephemeral,
-      });
+      await interaction.reply(
+        notice(
+          style.fields.length
+            ? "This server's rank card reads your details from game accounts you share here. Link one with `/link`."
+            : "This server's rank cards have no details to fill in.",
+          "intel",
+        ),
+      );
       return;
     }
     const answers = await getRankDetails(ctx.db, interaction.guild.id, interaction.user.id);
@@ -219,7 +221,7 @@ export const rankcardModals: ModalHandler = {
       interaction.user.id,
       cleanRankDetails(typed, raw),
     );
-    await interaction.reply({ content: "Saved. Your card shows them on `/rank`.", ...ephemeral });
+    await interaction.reply(notice("Saved. Your card shows them on `/rank`.", "go"));
   },
 };
 
@@ -235,13 +237,13 @@ export const leaderboard: Command = {
     .toJSON(),
   async execute(interaction, ctx) {
     if (rateLimited(interaction.user.id)) {
-      await interaction.reply({ content: "One rank lookup every 10 s.", ...ephemeral });
+      await interaction.reply(notice("One rank lookup every 10 s.", "caution"));
       return;
     }
     if (interaction.options.getString("by") === "money") {
       const board = await moneyBoard(ctx, interaction.guild.id);
       if (!board) {
-        await interaction.reply({ content: ECONOMY_OFF, ...ephemeral });
+        await interaction.reply(notice(ECONOMY_OFF, "intel"));
         return;
       }
       await interaction.reply(
@@ -259,12 +261,12 @@ export const leaderboard: Command = {
       return;
     }
     if (!(await cachedRanksSettings(ctx, interaction.guild.id)).enabled) {
-      await interaction.reply({ content: OFF, ...ephemeral });
+      await interaction.reply(notice(OFF, "intel"));
       return;
     }
     const top = await getLeaderboard(ctx.db, interaction.guild.id, 10);
     if (!top.length) {
-      await interaction.reply({ content: "Nobody has XP yet. Start talking.", ...ephemeral });
+      await interaction.reply(notice("Nobody has XP yet. Start talking.", "intel"));
       return;
     }
     const lines = top.map(
@@ -362,10 +364,7 @@ export const ranks: Command = {
         !channel &&
         !(await cachedRanksSettings(ctx, guild.id)).announceChannelId
       ) {
-        await interaction.reply({
-          content: "Pick the channel with announce_channel.",
-          ...ephemeral,
-        });
+        await interaction.reply(notice("Pick the channel with announce_channel.", "caution"));
         return;
       }
       const s = Object.keys(patch).length
@@ -406,30 +405,29 @@ export const ranks: Command = {
       };
       const problem = rewardProblem(facts, guild.roles.everyone.id, me.roles.highest.position);
       if (problem) {
-        await interaction.reply({ content: rewardProblemText(problem, facts), ...ephemeral });
+        await interaction.reply(notice(rewardProblemText(problem, facts), "intel"));
         return;
       }
       await setRankReward(ctx.db, guild.id, level, role.id);
-      await interaction.reply({
-        content: `Saved. Members get <@&${role.id}> at level ${level}.`,
-        ...ephemeral,
-      });
+      await interaction.reply(notice(`Saved. Members get <@&${role.id}> at level ${level}.`, "go"));
       return;
     }
 
     if (sub === "unreward") {
       const level = interaction.options.getInteger("level", true);
       await setRankReward(ctx.db, guild.id, level, null);
-      await interaction.reply({ content: `Saved. No reward at level ${level}.`, ...ephemeral });
+      await interaction.reply(notice(`Saved. No reward at level ${level}.`, "go"));
       return;
     }
 
     const rewards = await listRankRewards(ctx.db, guild.id);
-    await interaction.reply({
-      content: rewards.length
-        ? rewards.map((r) => `Level ${r.level}: <@&${r.roleId}>`).join("\n")
-        : "No level rewards. Add one with `/ranks reward`.",
-      ...ephemeral,
-    });
+    await interaction.reply(
+      notice(
+        rewards.length
+          ? rewards.map((r) => `Level ${r.level}: <@&${r.roleId}>`).join("\n")
+          : "No level rewards. Add one with `/ranks reward`.",
+        "intel",
+      ),
+    );
   },
 };

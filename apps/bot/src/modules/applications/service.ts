@@ -30,7 +30,7 @@ import {
 import { z } from "zod";
 import { ephemeral } from "../../commands/builders.js";
 import type { BotContext, ButtonHandler, ModalHandler } from "../../commands/types.js";
-import { cardMessage, ts } from "../../lib/card.js";
+import { cardMessage, notice, ts } from "../../lib/card.js";
 import { safeText } from "../../lib/text.js";
 import { DANGEROUS_PERMISSIONS } from "../gatehouse/nuke.js";
 
@@ -284,17 +284,16 @@ export const applyButtons: ButtonHandler = {
     const formId = interaction.customId.split(":")[1] ?? "";
     const loaded = await loadForm(ctx, interaction.guildId, formId);
     if (!loaded?.open) {
-      await interaction.reply({
-        content: "This form isn't taking applications right now.",
-        ...ephemeral,
-      });
+      await interaction.reply(notice("This form isn't taking applications right now.", "alert"));
       return;
     }
     if (await waitingApplication(ctx.db, interaction.guildId, formId, interaction.user.id)) {
-      await interaction.reply({
-        content: "Your application is with the staff already. You'll hear back here or in a DM.",
-        ...ephemeral,
-      });
+      await interaction.reply(
+        notice(
+          "Your application is with the staff already. You'll hear back here or in a DM.",
+          "intel",
+        ),
+      );
       return;
     }
     await interaction.showModal(applicationModal(loaded.form));
@@ -325,10 +324,9 @@ export const decideApplicationButtons: ButtonHandler = {
   async execute(interaction, ctx) {
     const [, choice, id] = interaction.customId.split(":");
     if (!isStaff(interaction.member)) {
-      await interaction.reply({
-        content: "Only staff (Manage Roles or Manage Server) can decide on applications.",
-        ...ephemeral,
-      });
+      await interaction.reply(
+        notice("Only staff (Manage Roles or Manage Server) can decide on applications.", "alert"),
+      );
       return;
     }
     await interaction.deferReply(ephemeral);

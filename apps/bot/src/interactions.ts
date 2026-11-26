@@ -2,6 +2,7 @@ import { brand, inviteUrl } from "@garrison/brand";
 import { type Interaction, MessageFlags } from "discord.js";
 import { buttons, commandsByName, modals, selects } from "./commands/index.js";
 import type { BotContext } from "./commands/types.js";
+import { notice } from "./lib/card.js";
 import { onModmailPick } from "./modules/tickets/modmail.js";
 
 // Angle brackets stop Discord unfurling the invite into a large card.
@@ -77,9 +78,9 @@ export async function handleInteraction(interaction: Interaction, ctx: BotContex
     });
     try {
       if (interaction.deferred || interaction.replied) {
-        await interaction.followUp({ content: FAILURE, flags: MessageFlags.Ephemeral });
+        await interaction.followUp(notice(FAILURE, "alert"));
       } else {
-        await interaction.reply({ content: FAILURE, flags: MessageFlags.Ephemeral });
+        await interaction.reply(notice(FAILURE, "alert"));
       }
     } catch {
       // The interaction token may have expired; nothing more we can do.

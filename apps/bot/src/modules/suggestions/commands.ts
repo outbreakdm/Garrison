@@ -1,8 +1,8 @@
 import { getSuggestionSettings, SUGGESTION_LIMITS, suggestionQuestions } from "@garrison/db";
-import { type Interaction, MessageFlags } from "discord.js";
+import type { Interaction } from "discord.js";
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { BotContext, ButtonHandler, Command, ModalHandler } from "../../commands/types.js";
-import { cardEdit, cardReply } from "../../lib/card.js";
+import { cardEdit, cardReply, notice } from "../../lib/card.js";
 import {
   doSuggest,
   parseSuggestionId,
@@ -43,7 +43,7 @@ async function openForm(
       ? `One suggestion a minute. Try again in ${wait}s.`
       : null;
   if (why) {
-    await interaction.reply({ content: why, flags: MessageFlags.Ephemeral });
+    await interaction.reply(notice(why, "intel"));
     return;
   }
   await interaction.showModal(suggestionModal(config));
@@ -107,7 +107,7 @@ export const suggestionButtons: ButtonHandler = {
     if (!press) return;
     const result = await pressVote(ctx, interaction.guild.id, interaction.user.id, press);
     if (!result.ok) {
-      await interaction.reply({ content: result.message, flags: MessageFlags.Ephemeral });
+      await interaction.reply(notice(result.message, "intel"));
       return;
     }
     await interaction.update(cardEdit(interaction.message, suggestionCard(result.suggestion)));

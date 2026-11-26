@@ -9,7 +9,7 @@ import {
 import { ButtonBuilder, ButtonStyle, PermissionFlagsBits } from "discord.js";
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { ButtonHandler, Command } from "../../commands/types.js";
-import { type Card, cardEdit, cardMessage, cardReply, ts } from "../../lib/card.js";
+import { type Card, cardEdit, cardMessage, cardReply, notice, ts } from "../../lib/card.js";
 import { safeText } from "../../lib/text.js";
 import { describeEdits } from "./edits.js";
 import { describeOrders, describePlan, type ServerSnapshot } from "./plan.js";
@@ -132,10 +132,7 @@ export const qm: Command = {
         interaction.options.getInteger("version", true),
       );
       if (!build || (build.status !== "applied" && build.status !== "failed")) {
-        await interaction.reply({
-          content: "There's no applied build with that version.",
-          ...ephemeral,
-        });
+        await interaction.reply(notice("There's no applied build with that version.", "intel"));
         return;
       }
       const channels = build.created.filter(
@@ -175,7 +172,7 @@ export const qm: Command = {
     }
 
     if (!ctx.planner) {
-      await interaction.reply({ content: NOT_SET_UP, ...ephemeral });
+      await interaction.reply(notice(NOT_SET_UP, "intel"));
       return;
     }
     const request = interaction.options.getString("request", true).trim();
@@ -204,12 +201,12 @@ export const qmButtons: ButtonHandler = {
     if (!id || !UUID.test(id)) return;
     // Re-checked on every click: the message may outlive someone's permissions.
     if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageGuild)) {
-      await interaction.reply({ content: "You need Manage Server to do that.", ...ephemeral });
+      await interaction.reply(notice("You need Manage Server to do that.", "alert"));
       return;
     }
     const build = await getQmBuild(ctx.db, interaction.guild.id, id);
     if (!build) {
-      await interaction.reply({ content: "That build doesn't exist.", ...ephemeral });
+      await interaction.reply(notice("That build doesn't exist.", "alert"));
       return;
     }
 
@@ -230,10 +227,9 @@ export const qmButtons: ButtonHandler = {
 
     if (action === "apply") {
       if (interaction.user.id !== build.requestedById) {
-        await interaction.reply({
-          content: "Only the person who asked for this plan can apply it.",
-          ...ephemeral,
-        });
+        await interaction.reply(
+          notice("Only the person who asked for this plan can apply it.", "alert"),
+        );
         return;
       }
       await interaction.deferUpdate();

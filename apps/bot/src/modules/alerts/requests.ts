@@ -40,7 +40,7 @@ import {
 import { z } from "zod";
 import { ephemeral } from "../../commands/builders.js";
 import type { BotContext, ButtonHandler, ModalHandler } from "../../commands/types.js";
-import { cardMessage, ts } from "../../lib/card.js";
+import { cardMessage, notice, ts } from "../../lib/card.js";
 import { placePanel } from "../../lib/panels.js";
 import { safeText } from "../../lib/text.js";
 
@@ -321,7 +321,7 @@ export const streamPanelButtons: ButtonHandler = {
   async execute(interaction, ctx) {
     const config = await getStreamRequests(ctx.db, interaction.guildId);
     if (!config.requestsEnabled) {
-      await interaction.reply({ content: CLOSED, ...ephemeral });
+      await interaction.reply(notice(CLOSED, "intel"));
       return;
     }
     await interaction.showModal(streamForm());
@@ -359,10 +359,12 @@ export const streamDecideButtons: ButtonHandler = {
   async execute(interaction, ctx) {
     const [, choice, id] = interaction.customId.split(":");
     if (!isStaff(interaction.member)) {
-      await interaction.reply({
-        content: "Only staff (Manage Server or Manage Channels) can decide on stream requests.",
-        ...ephemeral,
-      });
+      await interaction.reply(
+        notice(
+          "Only staff (Manage Server or Manage Channels) can decide on stream requests.",
+          "alert",
+        ),
+      );
       return;
     }
     await interaction.deferReply(ephemeral);

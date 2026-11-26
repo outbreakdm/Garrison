@@ -2,7 +2,7 @@ import { getActiveLockdown } from "@garrison/db";
 import { PermissionFlagsBits } from "discord.js";
 import { ephemeral, guildCommand } from "../../../commands/builders.js";
 import type { Command } from "../../../commands/types.js";
-import { cardMessage, cardReply } from "../../../lib/card.js";
+import { cardMessage, cardReply, notice } from "../../../lib/card.js";
 import { formatDuration, parseDuration } from "../../../lib/duration.js";
 import { lockdownEndedCard, lockdownStartedCard, noLockdownCard } from "../embeds.js";
 import { lockGuild, unlockGuild } from "../service.js";
@@ -67,10 +67,12 @@ export const lockdown: Command = {
     if (rawDuration) {
       const seconds = parseDuration(rawDuration);
       if (!seconds || seconds < 60 || seconds > MAX_LOCKDOWN_SECONDS) {
-        await interaction.reply({
-          content: `Use a duration between 1 min and ${formatDuration(MAX_LOCKDOWN_SECONDS)}, like 30m or 2h.`,
-          ...ephemeral,
-        });
+        await interaction.reply(
+          notice(
+            `Use a duration between 1 min and ${formatDuration(MAX_LOCKDOWN_SECONDS)}, like 30m or 2h.`,
+            "caution",
+          ),
+        );
         return;
       }
       durationMinutes = Math.ceil(seconds / 60);

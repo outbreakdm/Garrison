@@ -24,7 +24,7 @@ import type {
   ModalHandler,
   SelectHandler,
 } from "../../commands/types.js";
-import { type Card, cardEdit, cardMessage, cardReply } from "../../lib/card.js";
+import { type Card, cardEdit, cardMessage, cardReply, notice } from "../../lib/card.js";
 
 /**
  * A voice room's controls, posted in the room's own chat when it's made: Rename and Limit (a
@@ -209,7 +209,7 @@ export const roomButtons: ButtonHandler = {
           { reason: `Voice room ${on ? action : `un${action}`}ed by its owner` },
         );
       } catch {
-        await interaction.reply({ content: REFUSED, ...ephemeral });
+        await interaction.reply(notice(REFUSED, "alert"));
         return;
       }
       await interaction.update(cardEdit(interaction.message, roomPanel(channel, room.ownerId)));
@@ -218,7 +218,7 @@ export const roomButtons: ButtonHandler = {
     if (action === "kick" || action === "hand") {
       const people = others(channel, room.ownerId);
       if (!people.length) {
-        await interaction.reply({ content: "Nobody else is in the room.", ...ephemeral });
+        await interaction.reply(notice("Nobody else is in the room.", "intel"));
         return;
       }
       await interaction.reply(

@@ -4,9 +4,9 @@ import {
   updateGatehouseSettings,
 } from "@garrison/db";
 import { ChannelType, PermissionFlagsBits } from "discord.js";
-import { ephemeral, guildCommand } from "../../../commands/builders.js";
+import { guildCommand } from "../../../commands/builders.js";
 import type { Command } from "../../../commands/types.js";
-import { cardReply } from "../../../lib/card.js";
+import { cardReply, notice } from "../../../lib/card.js";
 import { ensureGuild } from "../../../lib/guild-registry.js";
 import { settingsCard } from "../embeds.js";
 import { invalidateGatehouseSettings } from "../service.js";
@@ -132,17 +132,18 @@ export const security: Command = {
       let roles = current.staffRoleIds.filter((id) => id !== remove?.id);
       if (add && !roles.includes(add.id)) {
         if (add.id === interaction.guild.roles.everyone.id) {
-          await interaction.reply({
-            content: "@everyone can't be a staff role: lockdowns would lock nobody.",
-            ...ephemeral,
-          });
+          await interaction.reply(
+            notice("@everyone can't be a staff role: lockdowns would lock nobody.", "alert"),
+          );
           return;
         }
         if (roles.length >= MAX_STAFF_ROLES) {
-          await interaction.reply({
-            content: `You can exempt ${MAX_STAFF_ROLES} staff roles at most. Remove one first.`,
-            ...ephemeral,
-          });
+          await interaction.reply(
+            notice(
+              `You can exempt ${MAX_STAFF_ROLES} staff roles at most. Remove one first.`,
+              "caution",
+            ),
+          );
           return;
         }
         roles = [...roles, add.id];
@@ -159,10 +160,12 @@ export const security: Command = {
     ];
     if (nukeOptions.some((name) => o.get(name) !== null)) {
       if (interaction.user.id !== interaction.guild.ownerId) {
-        await interaction.reply({
-          content: "Only the server owner can change anti-nuke settings. Nothing was saved.",
-          ...ephemeral,
-        });
+        await interaction.reply(
+          notice(
+            "Only the server owner can change anti-nuke settings. Nothing was saved.",
+            "alert",
+          ),
+        );
         return;
       }
       const antiNuke = o.getBoolean("anti_nuke");
@@ -177,10 +180,9 @@ export const security: Command = {
         let trusted = current.antiNukeTrustedIds.filter((id) => id !== trustRemove?.id);
         if (trustAdd && !trusted.includes(trustAdd.id)) {
           if (trusted.length >= MAX_TRUSTED) {
-            await interaction.reply({
-              content: `You can trust ${MAX_TRUSTED} users at most. Remove one first.`,
-              ...ephemeral,
-            });
+            await interaction.reply(
+              notice(`You can trust ${MAX_TRUSTED} users at most. Remove one first.`, "caution"),
+            );
             return;
           }
           trusted = [...trusted, trustAdd.id];

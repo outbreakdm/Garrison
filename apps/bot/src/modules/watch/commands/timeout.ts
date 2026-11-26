@@ -1,7 +1,8 @@
 import { PermissionFlagsBits } from "discord.js";
 import type { Command } from "../../../commands/types.js";
+import { notice } from "../../../lib/card.js";
 import { formatDuration, MAX_TIMEOUT_SECONDS, parseDuration } from "../../../lib/duration.js";
-import { ephemeral, REASON_MAX, runMemberAction, watchCommand } from "./shared.js";
+import { REASON_MAX, runMemberAction, watchCommand } from "./shared.js";
 
 export const timeout: Command = {
   data: watchCommand(
@@ -28,17 +29,21 @@ export const timeout: Command = {
     const raw = interaction.options.getString("duration", true);
     const seconds = parseDuration(raw);
     if (!seconds) {
-      await interaction.reply({
-        content: `I can't read "${raw}" as a duration. Use a number and a unit, like 10m, 1h or 2d.`,
-        ...ephemeral,
-      });
+      await interaction.reply(
+        notice(
+          `I can't read "${raw}" as a duration. Use a number and a unit, like 10m, 1h or 2d.`,
+          "alert",
+        ),
+      );
       return;
     }
     if (seconds > MAX_TIMEOUT_SECONDS) {
-      await interaction.reply({
-        content: `Timeouts can last ${formatDuration(MAX_TIMEOUT_SECONDS)} at most. For longer, use /ban.`,
-        ...ephemeral,
-      });
+      await interaction.reply(
+        notice(
+          `Timeouts can last ${formatDuration(MAX_TIMEOUT_SECONDS)} at most. For longer, use /ban.`,
+          "caution",
+        ),
+      );
       return;
     }
     await runMemberAction(interaction, ctx, "timeout", { durationSeconds: seconds });
