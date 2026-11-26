@@ -1,6 +1,7 @@
 import { ChannelType, Collection, type Guild } from "discord.js";
 import { describe, expect, it } from "vitest";
-import { helloChannel } from "./hello.js";
+import { cardMessage, cardTexts } from "./card.js";
+import { helloCard, helloChannel } from "./hello.js";
 
 const channel = (id: string, position: number, canPost: boolean, type = ChannelType.GuildText) => ({
   id,
@@ -43,5 +44,43 @@ describe("where Garrison says hello", () => {
 
   it("says nothing when it can post nowhere", () => {
     expect(helloChannel(guild({ channels: [channel("locked", 0, false)] }))).toBeNull();
+  });
+});
+
+describe("the starting guide", () => {
+  const links = (payload: ReturnType<typeof cardMessage>) =>
+    JSON.stringify(payload.components.map((c) => c.toJSON())).match(/https:[^"]+/g) ?? [];
+
+  it("puts the setup steps in order, each with a button to the page that does it", () => {
+    const payload = cardMessage(helloCard("123", "https://dash.example.com/"));
+    const all = cardTexts(payload).join("\n");
+    const order = [
+      "1. Turn on protection",
+      "2. Pick a staff log channel",
+      "3. Welcome new members",
+      "4. Build the rest with AI",
+    ];
+    const at = order.map((step) => all.indexOf(step));
+    expect(at.every((i) => i >= 0)).toBe(true);
+    expect([...at].sort((a, b) => a - b)).toEqual(at);
+    expect(links(payload)).toEqual(
+      expect.arrayContaining([
+        "https://dash.example.com/servers/123#setup",
+        "https://dash.example.com/servers/123/watch",
+        "https://dash.example.com/servers/123/herald",
+        "https://dash.example.com/servers/123/quartermaster",
+        "https://dash.example.com/servers/123",
+      ]),
+    );
+    expect(all).toContain("Made for your community");
+    expect(all).toContain("[Support server]");
+  });
+
+  it("keeps the steps without a dashboard, minus their buttons", () => {
+    const payload = cardMessage(helloCard("123", undefined));
+    const all = cardTexts(payload).join("\n");
+    expect(all).toContain("1. Turn on protection");
+    expect(all).not.toContain("[Protect]");
+    expect(links(payload).every((url) => url.startsWith("https://discord.gg/"))).toBe(true);
   });
 });
