@@ -138,7 +138,10 @@ describe("every dashboard entry point checks who's asking", () => {
     for (const path of files(join(APP, "servers", "[guildId]"), (p) => /\.tsx?$/.test(p))) {
       const id = rel(path);
       const area = id.split("/")[2] ?? "";
-      if (!id.includes("/", "servers/[guildId]/".length) || ["plan", "help", "search"].includes(area))
+      if (
+        !id.includes("/", "servers/[guildId]/".length) ||
+        ["plan", "help", "search"].includes(area)
+      )
         continue;
       const source = readFileSync(path, "utf8");
       for (const m of source.matchAll(/\b(requireGuildAccess|checkGuildAccess)\(/g)) {
