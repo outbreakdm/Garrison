@@ -17,6 +17,7 @@ import { sayHello } from "./lib/hello.js";
 import { watchDatabase } from "./lib/liveness.js";
 import { createLogger } from "./lib/logger.js";
 import { Metrics, maybePruneOperations } from "./lib/metrics.js";
+import { rememberCommandIds } from "./lib/slash.js";
 import { maybePruneStreamRequests } from "./modules/alerts/requests.js";
 import { sweepAlerts } from "./modules/alerts/service.js";
 import { sweepSubRoles } from "./modules/alerts/sub-roles.js";
@@ -252,6 +253,13 @@ client.once(Events.ClientReady, async (ready) => {
         .catch((error) => logger.error("Metrics flush failed", { error })),
     SWEEP_INTERVAL_MS,
   );
+  // Command ids, so replies can name commands as clickable mentions (lib/slash.ts).
+  await step("Command ids", async () => {
+    const list = env.DISCORD_DEV_GUILD_ID
+      ? await ready.application.commands.fetch({ guildId: env.DISCORD_DEV_GUILD_ID })
+      : await ready.application.commands.fetch();
+    rememberCommandIds(list.values());
+  });
   await step("Load tickets", () => loadOpenTickets(ctx));
   for (const guild of ready.guilds.cache.values()) {
     await step("Register guild", () => ensureGuild(ctx, guild));

@@ -7,6 +7,7 @@ import {
   PermissionFlagsBits,
 } from "discord.js";
 import { cardMessage } from "./card.js";
+import { slash } from "./slash.js";
 
 /**
  * Where Garrison says hello when it first joins: the server's system channel (where Discord
@@ -51,7 +52,7 @@ export async function sayHello(guild: Guild, appUrl: string | undefined) {
         {
           text: setup
             ? "Set it up in three clicks: turn on protection, pick a welcome channel, then let the AI assistant build the rest. Anyone with Manage Server can open the dashboard."
-            : "Run `/help` to see what Garrison can do.",
+            : `Run ${slash("health")} to check Garrison's permissions and setup here.`,
         },
       ],
       actions: setup

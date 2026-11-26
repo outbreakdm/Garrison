@@ -9,6 +9,7 @@ import {
 import { guildCommand } from "../../commands/builders.js";
 import type { Command } from "../../commands/types.js";
 import { cardReply } from "../../lib/card.js";
+import { slash } from "../../lib/slash.js";
 
 /**
  * /birthday: members save their own birthday in this server (month and day only, never the
@@ -121,7 +122,7 @@ export const birthday: Command = {
           {
             text: next.length
               ? next.map((b) => `${when(b.month, b.day)}: <@${b.userId}>`).join("\n")
-              : "Nobody has saved a birthday here yet. Save yours with /birthday set.",
+              : `Nobody has saved a birthday here yet. Save yours with ${slash("birthday set")}.`,
           },
         ],
         lead: mine ? `Yours: ${when(mine.month, mine.day)}` : undefined,

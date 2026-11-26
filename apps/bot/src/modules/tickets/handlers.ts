@@ -157,7 +157,7 @@ export const ticket: Command = {
     const t = open ? await getTicket(ctx.db, interaction.guildId, open.ticketId) : null;
     if (t?.status !== "open") {
       await interaction.reply(
-        cardReply(note("Not a ticket", "Use /ticket inside an open ticket's channel.")),
+        cardReply(note("Not a ticket", "Run this inside an open ticket's channel.")),
       );
       return;
     }

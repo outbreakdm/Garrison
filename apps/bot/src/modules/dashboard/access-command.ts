@@ -5,17 +5,15 @@ import {
   getDashboardAccess,
   resolveAccess,
 } from "@garrison/db";
-import { MessageFlags, PermissionFlagsBits } from "discord.js";
+import { ButtonBuilder, ButtonStyle, PermissionFlagsBits } from "discord.js";
 import { guildCommand } from "../../commands/builders.js";
 import type { Command } from "../../commands/types.js";
+import { type Card, type CardFact, cardReply } from "../../lib/card.js";
 
 /**
  * /access: what you can do on this server's dashboard, privately. Read-only; managers change
  * access on the dashboard (Settings → Access). Discord's own permissions still decide commands.
  */
-/** Private, and without a big preview of the dashboard link under the reply. */
-const QUIET = MessageFlags.Ephemeral | MessageFlags.SuppressEmbeds;
-
 export const accessCommand: Command = {
   data: guildCommand(
     "access",
@@ -24,50 +22,73 @@ export const accessCommand: Command = {
   ).toJSON(),
   async execute(interaction, ctx) {
     const base = process.env.APP_URL?.replace(/\/$/, "");
-    const link =
-      base && /^https?:\/\//.test(base) ? `\n${base}/servers/${interaction.guildId}` : "";
+    const url = base && /^https?:\/\//.test(base) ? `${base}/servers/${interaction.guildId}` : null;
+    const open = url
+      ? [new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("Open dashboard").setURL(url)]
+      : [];
+    const reply = (card: Omit<Card, "title">) =>
+      interaction.reply(cardReply({ title: "Your dashboard access", ...card }));
+
     const member = interaction.member;
     if (
       interaction.guild.ownerId === member.id ||
       member.permissions.has(PermissionFlagsBits.ManageGuild)
     ) {
-      await interaction.reply({
-        content: `You have Manage Server, so the whole dashboard is yours, including who else gets in.${link}`,
-        flags: QUIET,
+      await reply({
+        tone: "go",
+        status: "Full access",
+        blocks: [
+          {
+            text: "You have Manage Server, so the whole dashboard is yours, including who else gets in.",
+          },
+        ],
+        actions: open,
       });
       return;
     }
     const { grants, groups } = await getDashboardAccess(ctx.db, interaction.guildId);
     const access = resolveAccess(grants, groups, member.id, [...member.roles.cache.keys()]);
     if (!access) {
-      await interaction.reply({
-        content:
-          "You don't have access to this server's dashboard. Someone with Manage Server can give it to you on the dashboard (Settings → Access).",
-        flags: QUIET,
+      await reply({
+        tone: "caution",
+        status: "No access",
+        blocks: [
+          {
+            text: "Someone with Manage Server can give it to you on the dashboard, under Settings → Access.",
+          },
+        ],
       });
       return;
     }
-    const lines: string[] = [];
-    if (access.level)
-      lines.push(
-        access.level === "editor"
-          ? "**Editor:** you can change settings and post everywhere on the dashboard."
-          : "**Viewer:** you can see everything on the dashboard, and change nothing.",
-      );
+    const facts: CardFact[] = [];
     if (access.groups.length) {
       const entries = Object.entries(access.areas) as [AccessArea, "view" | "edit"][];
       const edit = entries.filter(([, l]) => l === "edit").map(([a]) => ACCESS_AREAS[a]);
       const view = entries.filter(([, l]) => l === "view").map(([a]) => ACCESS_AREAS[a]);
-      lines.push(`**Groups:** ${access.groups.join(", ")}`);
+      facts.push({ label: "Groups", value: access.groups.join(", ") });
       if (!access.level) {
-        if (edit.length) lines.push(`Change: ${edit.join(", ")}`);
-        if (view.length) lines.push(`View: ${view.join(", ")}`);
+        facts.push({ label: "Can change", value: edit.join(", ") });
+        facts.push({ label: "Can view", value: view.join(", ") });
       }
-      if (access.switches.length)
-        lines.push(
-          `Trusted with: ${access.switches.map((s) => ACCESS_SWITCHES[s].label.toLowerCase()).join(", ")}`,
-        );
+      facts.push({
+        label: "Trusted with",
+        value: access.switches.map((s) => ACCESS_SWITCHES[s].label.toLowerCase()).join(", "),
+      });
     }
-    await interaction.reply({ content: `${lines.join("\n")}${link}`, flags: QUIET });
+    await reply({
+      status: access.level === "editor" ? "Editor" : access.level ? "Viewer" : "Some areas",
+      blocks: access.level
+        ? [
+            {
+              text:
+                access.level === "editor"
+                  ? "You can change settings and post everywhere on the dashboard."
+                  : "You can see everything on the dashboard, and change nothing.",
+            },
+          ]
+        : [],
+      facts,
+      actions: open,
+    });
   },
 };

@@ -19,6 +19,7 @@ import { guildCommand } from "../../commands/builders.js";
 import type { BotContext, ButtonHandler, Command } from "../../commands/types.js";
 import { cardEdit, cardReply, notice } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
+import { slash } from "../../lib/slash.js";
 import { lfgCard, RALLY_PREFIX, safeText } from "./card.js";
 import { hostButton } from "./host.js";
 import { keepLfgPanelLast } from "./panel.js";
@@ -106,7 +107,9 @@ export const lfg: Command = {
     if (sub === "list") {
       const posts = await listOpenLfg(ctx.db, guild.id);
       if (!posts.length) {
-        await interaction.reply(notice("No open groups. Post one with `/lfg create`.", "intel"));
+        await interaction.reply(
+          notice(`No open groups. Post one with ${slash("lfg create")}.`, "intel"),
+        );
         return;
       }
       const lines = await Promise.all(
@@ -223,7 +226,10 @@ export const lfg: Command = {
     });
     if (!post) {
       await interaction.reply(
-        notice("You already have an open group. Close it with `/lfg close` first.", "caution"),
+        notice(
+          `You already have an open group. Close it with ${slash("lfg close")} first.`,
+          "caution",
+        ),
       );
       return;
     }

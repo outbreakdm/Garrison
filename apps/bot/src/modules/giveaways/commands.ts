@@ -9,6 +9,13 @@ import { doGiveawayAction, doStartGiveaway } from "./service.js";
  * /giveaway: start, draw or redraw one from Discord. The same checks as the
  * dashboard: entry rules, bonus entries and repeating are set on the dashboard.
  */
+const DONE_TITLES: Record<string, string> = {
+  start: "Giveaway started",
+  end: "Winners drawn",
+  reroll: "New winners drawn",
+  cancel: "Giveaway canceled",
+};
+
 export const giveaway: Command = {
   data: guildCommand("giveaway", "Run giveaways.", PermissionFlagsBits.ManageGuild)
     .addSubcommand((s) =>
@@ -84,7 +91,7 @@ export const giveaway: Command = {
     await interaction.editReply(
       cardReply({
         tone: outcome.ok ? "go" : "caution",
-        title: outcome.ok ? "Done" : "Not done",
+        title: outcome.ok ? (DONE_TITLES[sub] ?? "Done") : "Couldn't do that",
         blocks: [{ text: outcome.message }],
         module: "spoils",
       }),

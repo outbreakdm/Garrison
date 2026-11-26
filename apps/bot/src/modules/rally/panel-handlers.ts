@@ -2,6 +2,7 @@ import { findOpenLfgByHost, getLfgPanel, LFG_PANEL } from "@garrison/db";
 import { ephemeral } from "../../commands/builders.js";
 import type { ButtonHandler, ModalHandler } from "../../commands/types.js";
 import { notice } from "../../lib/card.js";
+import { slash } from "../../lib/slash.js";
 import { doCreateLfg } from "../dashboard/more.js";
 import { safeText } from "./card.js";
 import { LFG_FORM_PREFIX, LFG_OTHER, LFG_PANEL_PREFIX, lfgForm } from "./panel.js";
@@ -27,11 +28,11 @@ export const lfgPanelButtons: ButtonHandler = {
       kind === "t" && !template
         ? "That template was removed. Ask staff to post the panel again."
         : kind === LFG_OTHER && !config.lfgPanelOther
-          ? `The "${LFG_PANEL.other}" button is off here. Pick a template, or use /lfg create.`
+          ? `The "${LFG_PANEL.other}" button is off here. Pick a template, or use ${slash("lfg create")}.`
           : template?.channelIds.length && !template.channelIds.includes(interaction.channelId)
             ? `${safeText(template.name)} groups go in ${template.channelIds.map((c) => `<#${c}>`).join(", ")}.`
             : open
-              ? "You already have an open group. Close it with `/lfg close` first."
+              ? `You already have an open group. Close it with ${slash("lfg close")} first.`
               : null;
     if (why) {
       await interaction.reply(notice(why, "intel"));

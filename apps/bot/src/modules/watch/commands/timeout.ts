@@ -2,6 +2,7 @@ import { PermissionFlagsBits } from "discord.js";
 import type { Command } from "../../../commands/types.js";
 import { notice } from "../../../lib/card.js";
 import { formatDuration, MAX_TIMEOUT_SECONDS, parseDuration } from "../../../lib/duration.js";
+import { slash } from "../../../lib/slash.js";
 import { REASON_MAX, runMemberAction, watchCommand } from "./shared.js";
 
 export const timeout: Command = {
@@ -40,7 +41,7 @@ export const timeout: Command = {
     if (seconds > MAX_TIMEOUT_SECONDS) {
       await interaction.reply(
         notice(
-          `Timeouts can last ${formatDuration(MAX_TIMEOUT_SECONDS)} at most. For longer, use /ban.`,
+          `Timeouts can last ${formatDuration(MAX_TIMEOUT_SECONDS)} at most. For longer, use ${slash("ban")}.`,
           "caution",
         ),
       );

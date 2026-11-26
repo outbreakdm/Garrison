@@ -20,6 +20,7 @@ import {
 import { ephemeral } from "../../commands/builders.js";
 import type { BotContext, SelectHandler } from "../../commands/types.js";
 import { notice } from "../../lib/card.js";
+import { slash } from "../../lib/slash.js";
 import { safeText } from "../../lib/text.js";
 import { OPS_PREFIX } from "./card.js";
 import { refreshOpsCard } from "./service.js";
@@ -122,7 +123,7 @@ async function settle(
     roleMenu(event, status, pick.character?.id ?? null, role),
   ];
   return {
-    content: `You're **${AVAILABILITY_LABELS[status]}** as ${as}.${chars.length ? "" : " Add your characters with /roster add to bring one."}`,
+    content: `You're **${AVAILABILITY_LABELS[status]}** as ${as}.${chars.length ? "" : ` Add your characters with ${slash("roster add")} to bring one.`}`,
     components,
   };
 }

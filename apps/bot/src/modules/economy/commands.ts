@@ -15,6 +15,7 @@ import { PermissionFlagsBits } from "discord.js";
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { BotContext, ButtonHandler, Command } from "../../commands/types.js";
 import { cardReply, notice } from "../../lib/card.js";
+import { slash } from "../../lib/slash.js";
 import { safeText } from "../../lib/text.js";
 import { shopForm } from "./panel.js";
 import { buy, decidePurchase, economyOf, OFF, staffAdjust } from "./service.js";
@@ -53,7 +54,7 @@ export const balance: Command = {
                   text:
                     wallet.streak > 1
                       ? `Daily streak: ${wallet.streak} days.`
-                      : "Claim /daily once a day.",
+                      : `Claim ${slash("daily")} once a day.`,
                 },
               ]
             : [],

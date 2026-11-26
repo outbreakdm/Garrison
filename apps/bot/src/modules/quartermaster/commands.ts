@@ -10,6 +10,7 @@ import { ButtonBuilder, ButtonStyle, PermissionFlagsBits } from "discord.js";
 import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { ButtonHandler, Command } from "../../commands/types.js";
 import { type Card, cardEdit, cardMessage, cardReply, notice, ts } from "../../lib/card.js";
+import { slash } from "../../lib/slash.js";
 import { safeText } from "../../lib/text.js";
 import { describeEdits } from "./edits.js";
 import { describeOrders, describePlan, type ServerSnapshot } from "./plan.js";
@@ -116,7 +117,7 @@ export const qm: Command = {
       await interaction.reply(
         cardReply({
           title: "AI assistant builds",
-          lead: lines.length ? undefined : "No builds yet. Describe one with `/qm build`.",
+          lead: lines.length ? undefined : `No builds yet. Describe one with ${slash("qm build")}.`,
           blocks: lines.length ? [{ text: lines.join("\n") }] : [],
           module: "quartermaster",
           ref: lines.length ? `latest ${lines.length}` : undefined,

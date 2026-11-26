@@ -32,6 +32,7 @@ import { guildCommand } from "../../commands/builders.js";
 import type { BotContext, Command, ModalHandler } from "../../commands/types.js";
 import { cardReply, notice } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
+import { slash } from "../../lib/slash.js";
 import { safeText } from "../../lib/text.js";
 import { plainLink } from "../barracks/format.js";
 import { moneyBoard } from "../economy/commands.js";
@@ -51,7 +52,8 @@ function rateLimited(userId: string) {
   return false;
 }
 
-const OFF = "Ranks are off in this server. A moderator can turn them on with `/ranks settings`.";
+const off = () =>
+  `Ranks are off in this server. A moderator can turn them on with ${slash("ranks settings")}.`;
 
 export const rank: Command = {
   data: guildCommand("rank", "Show your level and XP, or someone else's.", null)
@@ -63,7 +65,7 @@ export const rank: Command = {
       return;
     }
     if (!(await cachedRanksSettings(ctx, interaction.guild.id)).enabled) {
-      await interaction.reply(notice(OFF, "intel"));
+      await interaction.reply(notice(off(), "intel"));
       return;
     }
     const user = interaction.options.getUser("user") ?? interaction.user;
@@ -160,7 +162,7 @@ export const rankcard: Command = {
       getGuildPlan(ctx.db, interaction.guild.id),
     ]);
     if (!settings.enabled) {
-      await interaction.reply(notice(OFF, "intel"));
+      await interaction.reply(notice(off(), "intel"));
       return;
     }
     const style = rankCardForPlan(readRankCard(settings.card), entitlements(plan));
@@ -169,7 +171,7 @@ export const rankcard: Command = {
       await interaction.reply(
         notice(
           style.fields.length
-            ? "This server's rank card reads your details from game accounts you share here. Link one with `/link`."
+            ? `This server's rank card reads your details from game accounts you share here. Link one with ${slash("link accounts")}.`
             : "This server's rank cards have no details to fill in.",
           "intel",
         ),
@@ -221,7 +223,7 @@ export const rankcardModals: ModalHandler = {
       interaction.user.id,
       cleanRankDetails(typed, raw),
     );
-    await interaction.reply(notice("Saved. Your card shows them on `/rank`.", "go"));
+    await interaction.reply(notice(`Saved. Your card shows them on ${slash("rank")}.`, "go"));
   },
 };
 
@@ -261,7 +263,7 @@ export const leaderboard: Command = {
       return;
     }
     if (!(await cachedRanksSettings(ctx, interaction.guild.id)).enabled) {
-      await interaction.reply(notice(OFF, "intel"));
+      await interaction.reply(notice(off(), "intel"));
       return;
     }
     const top = await getLeaderboard(ctx.db, interaction.guild.id, 10);
@@ -425,7 +427,7 @@ export const ranks: Command = {
       notice(
         rewards.length
           ? rewards.map((r) => `Level ${r.level}: <@&${r.roleId}>`).join("\n")
-          : "No level rewards. Add one with `/ranks reward`.",
+          : `No level rewards. Add one with ${slash("ranks reward")}.`,
         "intel",
       ),
     );

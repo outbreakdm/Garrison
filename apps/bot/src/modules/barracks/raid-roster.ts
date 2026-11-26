@@ -19,6 +19,7 @@ import type { AutocompleteInteraction, ChatInputCommandInteraction } from "disco
 import type { BotContext } from "../../commands/types.js";
 import { capped, cardReply, notice } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
+import { slash } from "../../lib/slash.js";
 import { safeText } from "../../lib/text.js";
 
 /**
@@ -168,15 +169,29 @@ export async function rosterMine(interaction: Chat, ctx: BotContext) {
     listRosterCharacters(ctx.db, interaction.guildId, [interaction.user.id]),
     listMemberTeams(ctx.db, interaction.guildId, interaction.user.id),
   ]);
-  const lines = [
-    mine.length
-      ? mine.map((c) => `- ${describe(c)}${c.main ? " (main)" : ""}`).join("\n")
-      : "No characters yet. Add one with /roster add.",
-    teams.length
-      ? `Teams: ${teams.map((t) => `${safeText(t.team.name)} (${ROSTER_STATUS_LABELS[t.status as "core"] ?? t.status})`).join(", ")}`
-      : "Not on a team yet. Officers put people on teams on the dashboard.",
-  ];
-  await interaction.reply(notice(lines.join("\n\n"), "intel"));
+  const standing = (t: (typeof teams)[number]) =>
+    ROSTER_STATUS_LABELS[t.status as "core"] ?? t.status;
+  await interaction.reply(
+    cardReply({
+      tone: "intel",
+      title: "Your characters",
+      status: mine.length ? `${mine.length} here` : undefined,
+      blocks: [
+        {
+          text: mine.length
+            ? mine.map((c) => `- ${describe(c)}${c.main ? " · **main**" : ""}`).join("\n")
+            : `No characters yet. Add one with ${slash("roster add")}.`,
+        },
+        "divider",
+        {
+          text: teams.length
+            ? `**Teams**\n${teams.map((t) => `- ${safeText(t.team.name)} · ${standing(t)}`).join("\n")}`
+            : "Not on a team yet. Officers put people on teams on the dashboard.",
+        },
+      ],
+      module: "barracks",
+    }),
+  );
 }
 
 /** Suggestions for /roster: teams, the WoW classes and specs when a team plays WoW, roles, your characters. */

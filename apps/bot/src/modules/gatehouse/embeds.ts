@@ -1,7 +1,8 @@
 import type { GatehouseSettings, Lockdown } from "@garrison/db";
 import { ButtonBuilder, ButtonStyle } from "discord.js";
-import { type Card, cardMessage, factLines, ts } from "../../lib/card.js";
+import { type Card, cardMessage, ts } from "../../lib/card.js";
 import { formatDuration } from "../../lib/duration.js";
+import { slash } from "../../lib/slash.js";
 import { safeText } from "../../lib/text.js";
 import { describeAccountAge } from "./plan.js";
 
@@ -20,8 +21,8 @@ export function lockdownStartedCard(
     `Posting is off in ${plural(opts.channels, "channel", "channels")}.`,
     l.invitesPaused ? "Invites are paused." : "Invites are still open.",
     l.endsAt
-      ? `Lifts ${ts(l.endsAt)}, or run \`/lockdown end\`.`
-      : "Run `/lockdown end` to lift it.",
+      ? `Lifts ${ts(l.endsAt)}, or run ${slash("lockdown end")}.`
+      : `Run ${slash("lockdown end")} to lift it.`,
   ];
   const blocks: Card["blocks"] = [{ text: lines.join("\n") }];
   if (opts.failed)
@@ -68,7 +69,7 @@ export function lockdownEndedCard(l: Lockdown, opts: { restored: number; failed:
 export const noLockdownCard = (): Card => ({
   tone: "go",
   title: "No lockdown active",
-  lead: "Everyone can post. Start one with `/lockdown start`.",
+  lead: `Everyone can post. Start one with ${slash("lockdown start")}.`,
   module: "gatehouse",
 });
 
@@ -79,7 +80,7 @@ export function raidAlertCard(joins: number, windowSeconds: number): Card {
     status: `${joins} joins in ${windowSeconds} s`,
     blocks: [
       {
-        text: "Anti-raid is set to alert only, so nothing was locked. Run `/lockdown start` to lock the server.",
+        text: `Anti-raid is set to alert only, so nothing was locked. Run ${slash("lockdown start")} to lock the server.`,
       },
     ],
     module: "gatehouse",
@@ -149,8 +150,13 @@ export function verifyPanel(
 /** Gatehouse settings, grouped the way the dashboard's Security page groups them. */
 export function settingsCard(s: GatehouseSettings, saved: boolean): Card {
   const onOff = (v: boolean) => (v ? "On" : "Off");
+  // The heading is the only bold line in each group, so the groups scan at a glance;
+  // the rows under it are quieter "Label: value" pairs.
   const group = (heading: string, facts: { label: string; value: string }[]) => ({
-    text: `**${heading}**\n${factLines(facts)}`,
+    text: `**${heading}**\n${facts
+      .filter((f) => f.value)
+      .map((f) => `${f.label}: ${f.value}`)
+      .join("\n")}`,
   });
   return {
     tone: saved ? "go" : "volt",

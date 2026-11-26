@@ -1,10 +1,5 @@
 import { getGiveaway, hasEntered } from "@garrison/db";
-import {
-  ActionRowBuilder,
-  type ButtonBuilder,
-  type ButtonInteraction,
-  MessageFlags,
-} from "discord.js";
+import { type ButtonBuilder, type ButtonInteraction, MessageFlags } from "discord.js";
 import type { ButtonHandler, ModalHandler } from "../../commands/types.js";
 import { type Card, cardContainer, cardReply } from "../../lib/card.js";
 import {
@@ -16,11 +11,14 @@ import {
   pressGiveaway,
 } from "./service.js";
 
-/** The private answer to Enter or Leave, with a Leave button after entering. */
+/** The private answer to Enter or Leave, with a Leave button inside the card after entering. */
 const answerWith = (result: { card: Card; leave?: ButtonBuilder }) => ({
   components: [
-    cardContainer(result.card),
-    ...(result.leave ? [new ActionRowBuilder<ButtonBuilder>().addComponents(result.leave)] : []),
+    cardContainer(
+      result.leave
+        ? { ...result.card, actions: [...(result.card.actions ?? []), result.leave] }
+        : result.card,
+    ),
   ],
   flags: MessageFlags.IsComponentsV2 as const,
   allowedMentions: { parse: [] as [] },

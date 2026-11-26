@@ -23,6 +23,7 @@ import {
 import type { BotContext } from "../../commands/types.js";
 import { type Card, cardMessage } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
+import { slash } from "../../lib/slash.js";
 import { altSignals } from "./alts.js";
 import {
   altWarningCard,
@@ -354,7 +355,7 @@ export async function verifyReady(
   if (!role)
     return {
       ok: false,
-      message: "The verified role was deleted. Ask a moderator to run /verify setup again.",
+      message: `The verified role was deleted. Ask a moderator to run ${slash("verify setup")} again.`,
     };
   if (member.roles.cache.has(role.id))
     return { ok: false, message: "You're already verified.", verified: true };

@@ -10,6 +10,7 @@ import { ephemeral, guildCommand } from "../../commands/builders.js";
 import type { Command } from "../../commands/types.js";
 import { capped, cardReply, notice } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
+import { slash } from "../../lib/slash.js";
 import { safeText } from "../../lib/text.js";
 import { describeLink, providerLabel } from "./format.js";
 import { fetchHiscores, isValidRsn, normalizeRsn } from "./osrs.js";
@@ -136,7 +137,7 @@ export const link: Command = {
           title: "Your linked accounts",
           lead: links.length
             ? undefined
-            : "Nothing linked yet. Try `/link accounts`, `/link osrs` or `/link rs3`.",
+            : `Nothing linked yet. Try ${slash("link accounts")}, ${slash("link osrs")} or ${slash("link rs3")}.`,
           blocks: links.length
             ? [{ text: links.map((l) => `- ${describeLink(l)}`).join("\n") }]
             : [],
@@ -351,7 +352,7 @@ export const roster: Command = {
           title: provider ? `Game accounts · ${providerLabel(provider)}` : "Game accounts",
           lead: lines.length
             ? undefined
-            : "Nobody has shared accounts here yet. Link yours with /link.",
+            : `Nobody has shared accounts here yet. Link yours with ${slash("link accounts")}.`,
           blocks: lines.length
             ? [
                 {

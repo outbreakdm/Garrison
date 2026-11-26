@@ -14,6 +14,7 @@ import { type GuildMember, PermissionFlagsBits, type Role } from "discord.js";
 import { guildCommand } from "../../commands/builders.js";
 import type { Command } from "../../commands/types.js";
 import { type Card, cardReply, ts } from "../../lib/card.js";
+import { slash } from "../../lib/slash.js";
 import { grantableRoles } from "../applications/service.js";
 
 /**
@@ -93,7 +94,7 @@ export const temprole: Command = {
                 ? rows
                     .map((r) => `<@${r.userId}> has <@&${r.roleId}> until ${ts(r.expiresAt, "f")}`)
                     .join("\n")
-                : "None running. Give one with /temprole give.",
+                : `None running. Give one with ${slash("temprole give")}.`,
             },
           ],
           module: "insignia",

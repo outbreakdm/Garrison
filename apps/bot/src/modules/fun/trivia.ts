@@ -2,7 +2,7 @@ import { randomInt } from "node:crypto";
 import { ButtonBuilder, type ButtonInteraction, ButtonStyle } from "discord.js";
 import { guildCommand } from "../../commands/builders.js";
 import type { ButtonHandler, Command } from "../../commands/types.js";
-import { type Card, cardMessage, cardReply, notice } from "../../lib/card.js";
+import { type Card, cardMessage, cardReply, notice, ts } from "../../lib/card.js";
 
 /**
  * /trivia (best bot item 12): a question with four answers; the first member to pick the right
@@ -112,6 +112,8 @@ interface Round {
   guessed: Set<string>;
   winner: string | null;
   over: boolean;
+  /** When the buttons close, shown as a live countdown. */
+  endsAt: Date;
 }
 const rounds = new Map<string, Round>();
 
@@ -130,7 +132,7 @@ function card(r: Round, id: string): Card {
   return {
     tone: r.over ? (r.winner ? "go" : "caution") : "volt",
     title: "Trivia",
-    status: r.over ? (r.winner ? "Answered" : "Time's up") : `${SECONDS} seconds`,
+    status: r.over ? (r.winner ? "Answered" : "Time's up") : `Closes ${ts(r.endsAt)}`,
     blocks: [
       { text: `**${r.question}**\n${lines}` },
       ...(r.over
@@ -171,6 +173,7 @@ export const trivia: Command = {
       guessed: new Set(),
       winner: null,
       over: false,
+      endsAt: new Date(Date.now() + SECONDS * 1000),
     };
     rounds.set(id, round);
     await interaction.reply(cardReply(card(round, id), { ephemeral: false }));

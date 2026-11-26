@@ -23,6 +23,7 @@ import { guildCommand } from "../../commands/builders.js";
 import type { ButtonHandler, Command, ModalHandler } from "../../commands/types.js";
 import { cardEdit, cardReply, notice, ts } from "../../lib/card.js";
 import { ensureGuild } from "../../lib/guild-registry.js";
+import { slash } from "../../lib/slash.js";
 import { safeText } from "../../lib/text.js";
 import { parseSlots } from "../rally/parse.js";
 import { answerButton } from "./answers.js";
@@ -140,7 +141,7 @@ export const raid: Command = {
       const events = await listUpcomingOps(ctx.db, guild.id);
       if (!events.length) {
         await interaction.reply(
-          notice("No raids scheduled. Create one with `/raid create`.", "intel"),
+          notice(`No raids scheduled. Create one with ${slash("raid create")}.`, "intel"),
         );
         return;
       }
