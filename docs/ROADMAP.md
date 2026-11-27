@@ -7,6 +7,21 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
+- **WoW Forever linking (2026-11-27), deployed (run 45951020161, `1c77353`).**
+  Forever is now a version in the Battle.net link (Your accounts → World of Warcraft → Version).
+  Ownership is proven the same way as Retail: the member signs in with Battle.net and Blizzard's
+  account list (`/profile/user/wow?namespace=profile-forever-<region>`, user token, `wow.profile`)
+  names the characters on that account. Nothing is linked from a typed name. ForeverDB's API
+  (foreverdb.net/developers) was checked first: it serves game data only (items, quests,
+  vendors...), with no accounts, characters or sign-in, so it can't prove ownership and isn't
+  used. Forever characters have no realm: they're keyed `forever:<region>:<name>-<surname>` and
+  shown as "Name Surname". No new key (reuses `BNET_CLIENT_ID`/`BNET_CLIENT_SECRET`), no
+  migration. **Still to check: link one real Forever character** and see it appear on Your
+  accounts with its level and class: Blizzard hasn't documented the Forever namespace, and the
+  account answer's fields come from community reports (`name`, `surname`, no `realm`). Characters
+  reportedly show up only from level 10, after logging out. If none come back, read the raw
+  `/profile/user/wow?namespace=profile-forever-<region>` answer and adjust `linksFromWowProfile`.
+
 - **Access groups (2026-11-24), in order, one phase per commit.** From a community suggestion
   ("let mods run giveaways on the dashboard"). The owner's choices: dashboard only (Discord
   commands keep Discord's own permissions); per-area None, View or Edit plus switches for the
@@ -1889,3 +1904,12 @@ Decided (2026-11-12, owner):
 - 2026-11-24: Deployed raid rosters and lineups (phases 1 to 4) and access groups (phases 1 to 3):
   migrations 0099 to 0103 applied to production and recorded (ids 100 to 104), then everything
   with register_commands (run 45423198122, `315adfc`).
+- 2026-11-27: WoW Forever linking through Battle.net (branch `claude/wow-forever-link`): the
+  Forever version is enabled in the Battle.net link, characters keyed by name and surname, the
+  dashboard and the bot's roster lines say "Forever". ForeverDB's API was ruled out for linking
+  (game data only, no ownership check). Tests, type-check and Biome pass. Not deployed; needs one
+  real Forever sign-in to confirm Blizzard's answer before it goes live.
+- 2026-11-27: Deployed WoW Forever linking, everything without register_commands (run
+  45951020161, `1c77353`). The live Privacy Policy shows the Forever wording. Not yet tried
+  with a real Forever sign-in. The unpushed local commit `3d6112b` (Stripe Managed Payments)
+  was left out of this deploy.

@@ -36,7 +36,7 @@ const MESSAGES: Record<string, string> = {
   "linked=discord": "Linked the game accounts from your Discord Connections.",
   "linked=wow": "Linked your World of Warcraft characters.",
   "linked=wow-none":
-    "Battle.net found no characters for that version and region. Pick the version and region you play on and try again.",
+    "Battle.net found no characters for that version and region. Pick the version and region you play on and try again. A new Forever character shows up once it reaches level 10 and you log out.",
   "removed=1": "Removed, and its name and details wiped.",
   "unshared=1": "That server's roster no longer shows your accounts.",
   "rank=saved": "Saved. /rank shows them on your card.",
@@ -217,8 +217,8 @@ export default async function AccountPage({
                     World of Warcraft <span className="g-badge g-badge--go">Verified</span>
                   </span>
                   <p>
-                    Sign in with Battle.net for your characters' level, class and realm. Link each
-                    version you play; linking one never removes another.
+                    Sign in with Battle.net for your characters' level, class and realm, Forever
+                    included. Link each version you play; linking one never removes another.
                   </p>
                   <div className="field-row">
                     <label className="g-field" htmlFor="flavor">
@@ -229,9 +229,6 @@ export default async function AccountPage({
                             {f.label}
                           </option>
                         ))}
-                        <option value="forever" disabled>
-                          Forever (not available from Blizzard yet)
-                        </option>
                       </select>
                     </label>
                     <label className="g-field" htmlFor="region">

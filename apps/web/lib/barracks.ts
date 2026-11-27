@@ -46,12 +46,14 @@ export const isWowRegion = (r: unknown): r is WowRegion =>
 
 /**
  * The versions of WoW whose characters Battle.net can list, by Blizzard API namespace.
- * WoW Forever has no public namespace yet; it's shown as unavailable until Blizzard adds one.
+ * WoW Forever's namespace isn't in Blizzard's docs yet, but its account list answers the
+ * same way: Blizzard lists the characters on the signed-in account, so each one is proven.
  */
 export const WOW_FLAVORS = {
   retail: { label: "Retail", namespace: "profile" },
   classic: { label: "Classic", namespace: "profile-classic" },
   era: { label: "Classic Era", namespace: "profile-classic1x" },
+  forever: { label: "Forever", namespace: "profile-forever" },
 } as const;
 export type WowFlavor = keyof typeof WOW_FLAVORS;
 export const isWowFlavor = (f: unknown): f is WowFlavor =>
@@ -78,17 +80,30 @@ export function linksFromWowProfile(
     if (!Array.isArray(chars)) continue;
     for (const c of chars) {
       const name = c?.name;
-      const realm = c?.realm;
-      if (typeof name !== "string" || typeof realm?.slug !== "string") continue;
+      if (typeof name !== "string" || !name) continue;
+      let key: string;
+      let displayName = name;
+      let realmName: string | null = null;
+      if (flavor === "forever") {
+        // Forever has no realms: a character is a first name and a surname, unique per region.
+        const surname = typeof c.surname === "string" && c.surname ? c.surname : null;
+        if (surname) displayName = `${name} ${surname}`;
+        key = [name, surname].filter(Boolean).join("-").toLowerCase();
+      } else {
+        const realm = c?.realm;
+        if (typeof realm?.slug !== "string") continue;
+        key = `${realm.slug}:${name.toLowerCase()}`;
+        realmName = typeof realm.name === "string" ? realm.name : realm.slug;
+      }
       out.push({
         provider: "wow",
-        accountId: `${wowAccountPrefix(region, flavor)}${realm.slug}:${name.toLowerCase()}`,
-        displayName: name.slice(0, 50),
+        accountId: `${wowAccountPrefix(region, flavor)}${key}`,
+        displayName: displayName.slice(0, 50),
         verified: true,
         details: {
           level: typeof c.level === "number" ? c.level : null,
           className: typeof c.playable_class?.name === "string" ? c.playable_class.name : null,
-          realm: typeof realm.name === "string" ? realm.name : realm.slug,
+          realm: realmName,
           faction: typeof c.faction?.name === "string" ? c.faction.name : null,
           region,
           flavor,

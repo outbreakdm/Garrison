@@ -18,6 +18,7 @@ export function plainLink(l: LinkFacts, opts: { proof?: boolean } = {}) {
     if (typeof d.realm === "string") parts.push(d.realm);
     if (d.flavor === "classic") parts.push("Classic");
     if (d.flavor === "era") parts.push("Classic Era");
+    if (d.flavor === "forever") parts.push("Forever");
   }
   if (l.provider === "steam" && typeof d.level === "number") {
     parts.push(`level ${d.level}`);
