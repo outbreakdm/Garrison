@@ -57,9 +57,11 @@ be bought. Full steps in `docs/pricing.md`, "Turning checkout on". In **live** m
       Developers, API keys, Create restricted key.
 - [ ] **Stripe identity check is overdue**: it asks for a live photo of your ID. Until it's
       done Stripe can pause payouts. Settings → Business → Verification, or the home banner.
-- [ ] Decide on Managed Payments (Stripe as seller of record, handles sales tax) or Stripe Tax
-      with your own registrations. Stripe Tax is half set up (no head office address) and no
-      checkout collects tax yet; once you decide, the checkouts get automatic tax.
+- [x] Sales tax: **Managed Payments** (decided 2026-11-27). Stripe is the seller of record and
+      collects and files sales tax, VAT and GST. Plan and supply pack checkouts set
+      `managed_payments.enabled`, and every product carries `txcd_10103000`. Customers see
+      "Sold through Link" and `LINK.COM*` on their statement; Link support can refund within 60
+      days, and escalations go to the support email in Public details.
 - [ ] Settings, Public details (dashboard only; the API can't set them on your own account): support email `support@garrisonbot.com` (empty in Stripe on
       2026-11-21), website `https://garrisonbot.com` (set), Terms
       `https://garrisonbot.com/terms`, Privacy `https://garrisonbot.com/privacy`, Refunds

@@ -117,6 +117,10 @@ export async function checkoutAction(form: FormData) {
       metadata,
       subscription_data: { metadata },
       allow_promotion_codes: true,
+      // Stripe is the seller of record and handles sales tax, VAT and GST (Managed Payments).
+      // Said here rather than left to the account default, so a settings change can't
+      // quietly turn tax off. The products carry an eligible tax code (txcd_10103000).
+      managed_payments: { enabled: true },
       // Tags these sessions in the Stripe dashboard, to compare checkout flows over time.
       integration_identifier: "garrison_plans_qhwkzmtr",
       success_url: `${base}${back}?done=checkout`,
@@ -167,6 +171,8 @@ export async function buySuppliesAction(form: FormData) {
             product_data: {
               name: `${supplies} AI assistant supplies`,
               description: `For the Garrison AI assistant on ${access.guild.name.slice(0, 60)}, used after its monthly supplies run out. They last ${SUPPLY_PACK_DAYS / 365} year.`,
+              // Software as a service, like the plans: Managed Payments needs an eligible code.
+              tax_code: "txcd_10103000",
             },
           },
         },
@@ -174,6 +180,8 @@ export async function buySuppliesAction(form: FormData) {
       client_reference_id: user,
       metadata,
       payment_intent_data: { metadata },
+      // Stripe is the seller of record and handles tax, as on the plans.
+      managed_payments: { enabled: true },
       // Tags these sessions in the Stripe dashboard, apart from plan checkouts.
       integration_identifier: "garrison_supplies_vqhtmzkd",
       success_url: `${base}${back}?done=supplies#supplies`,

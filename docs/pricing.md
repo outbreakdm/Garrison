@@ -207,7 +207,8 @@ keys.
    add your registrations before switching checkout on; until then no tax is collected.
    Stripe also switches on **Managed Payments** by default (Settings, Managed payments):
    Stripe becomes the seller of record and handles sales tax for you, for an extra fee.
-   Decide whether to keep it before going live; Garrison works either way.
+   **Kept (2026-11-27):** both checkouts set `managed_payments: { enabled: true }` and supply
+   packs carry `tax_code: txcd_10103000`, so tax doesn't depend on the account default.
 7. **GitHub secrets:** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
    `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_YEARLY`, `STRIPE_PRICE_AGENCY_MONTHLY`,
    `STRIPE_PRICE_AGENCY_YEARLY`, `BILLING_DATABASE_URL`. Then deploy.
