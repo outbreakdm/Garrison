@@ -7,7 +7,7 @@ describe("hostRedirect", () => {
   it("serves the landing and status pages on the public site", () => {
     expect(hostRedirect("garrisonbot.com", "/", "", APP)).toBeNull();
     expect(hostRedirect("garrisonbot.com", "/status", "", APP)).toBeNull();
-    for (const page of ["/terms", "/privacy", "/refunds"])
+    for (const page of ["/terms", "/privacy", "/refunds", "/riot.txt"])
       expect(hostRedirect("garrisonbot.com", page, "", APP)).toBeNull();
     expect(hostRedirect("garrisonbot.com", "/_next/static/x.js", "", APP)).toBeNull();
     expect(hostRedirect("garrisonbot.com", "/media/garrison-fix-it.mp4", "", APP)).toBeNull();

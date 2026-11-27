@@ -17,6 +17,8 @@ const PUBLIC_PATHS = new Set([
   "/icon.svg",
   "/favicon.ico",
   "/robots.txt",
+  // Riot Games checks this file to approve the production API key (League rank roles).
+  "/riot.txt",
 ]);
 
 export interface Hosts {
