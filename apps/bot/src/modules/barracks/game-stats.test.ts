@@ -89,4 +89,15 @@ describe("game stats", () => {
       }),
     ).toBe("Riot Games · Ana#EUW · League Gold II · verified");
   });
+
+  it("says a WoW character is from Forever, which has no realm", () => {
+    expect(
+      plainLink({
+        provider: "wow",
+        displayName: "Ada Brightwood",
+        verified: true,
+        details: { level: 24, className: "Priest", realm: null, flavor: "forever" },
+      }),
+    ).toBe("World of Warcraft · Ada Brightwood · 24 Priest · Forever · verified");
+  });
 });

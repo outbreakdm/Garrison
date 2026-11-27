@@ -28,8 +28,13 @@ export function GameMark({ provider, small = false }: { provider: string; small?
 }
 
 /** A non-Retail WoW character says which version it's from. */
+const WOW_VERSIONS: Record<string, string> = {
+  classic: "Classic",
+  era: "Classic Era",
+  forever: "Forever",
+};
 const wowVersion = (flavor: unknown) =>
-  flavor === "classic" ? "Classic" : flavor === "era" ? "Classic Era" : null;
+  typeof flavor === "string" ? (WOW_VERSIONS[flavor] ?? null) : null;
 
 /** Game details a link carries: OSRS levels, or a WoW character's level, class and realm. */
 export function linkDetail(d: Record<string, unknown>) {

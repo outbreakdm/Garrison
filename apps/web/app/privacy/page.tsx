@@ -106,13 +106,14 @@ const sections: LegalSection[] = [
           On the Your accounts page you can link game accounts so a server can give you roles based
           on them. This is optional and happens only when you start it. Depending on what you link,
           we receive the connections you’ve added to your Discord profile (only when you ask us to
-          read them), your Battle.net BattleTag and World of Warcraft characters (the{" "}
-          <code>wow.profile</code> scope), or a RuneScape name you type in, whose public hiscores we
-          look up. For a Steam or Riot Games account linked through Discord, we look up its Steam
-          level and how many games it owns (only if your Steam profile is public), or its League of
-          Legends ranked tier, so servers can give roles from them. A Twitch account linked through
-          Discord lets a server give you its subscriber role when you subscribe to its channel. You
-          decide which servers can see each link, and you can remove a link at any time.
+          read them), your Battle.net BattleTag and World of Warcraft characters from the version
+          you pick, WoW Forever included (the <code>wow.profile</code> scope), or a RuneScape name
+          you type in, whose public hiscores we look up. For a Steam or Riot Games account linked
+          through Discord, we look up its Steam level and how many games it owns (only if your Steam
+          profile is public), or its League of Legends ranked tier, so servers can give roles from
+          them. A Twitch account linked through Discord lets a server give you its subscriber role
+          when you subscribe to its channel. You decide which servers can see each link, and you can
+          remove a link at any time.
         </p>
         <p>
           When a streamer connects their Twitch channel to a server, we keep the Twitch user IDs of

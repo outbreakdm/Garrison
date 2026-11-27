@@ -39,6 +39,11 @@ gh secret list --repo outbreakdm/Garrison
 `BNET_CLIENT_SECRET`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and the four
 `STRIPE_PRICE_*`. Nothing to do for these.
 
+WoW Forever characters link through the same Battle.net app (`BNET_CLIENT_ID`,
+`BNET_CLIENT_SECRET`), so Forever needs no key of its own, and it hides with the rest of the
+Battle.net link when those are missing. ForeverDB's API key is not needed: its API has game data
+only and can't prove who owns a character, so Garrison doesn't use it.
+
 ## Still to set
 
 Every one of these is optional. Without it, its feature stays off and its page says so.

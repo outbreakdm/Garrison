@@ -66,7 +66,37 @@ describe("linksFromWowProfile", () => {
     expect(wowAccountPrefix("us", "retail")).toBe("us:");
     expect(wowAccountPrefix("us", "era")).toBe("era:us:");
     expect(isWowFlavor("era")).toBe(true);
-    expect(isWowFlavor("forever")).toBe(false);
+    expect(isWowFlavor("forever")).toBe(true);
+    expect(isWowFlavor("mists")).toBe(false);
+  });
+  it("keys Forever characters by first name and surname, since Forever has no realms", () => {
+    const forever = {
+      wow_accounts: [
+        {
+          characters: [
+            { name: "Ada", surname: "Brightwood", level: 24, playable_class: { name: "Priest" } },
+            { name: "Solo", level: 11 },
+            { surname: "Nameless" },
+          ],
+        },
+      ],
+    };
+    const links = linksFromWowProfile(forever, "eu", "forever");
+    expect(links.map((l) => [l.accountId, l.displayName])).toEqual([
+      ["forever:eu:ada-brightwood", "Ada Brightwood"],
+      ["forever:eu:solo", "Solo"],
+    ]);
+    expect(links[0]).toMatchObject({ verified: true });
+    expect(links[0]?.details).toMatchObject({
+      level: 24,
+      className: "Priest",
+      realm: null,
+      flavor: "forever",
+      region: "eu",
+    });
+    expect(wowAccountPrefix("eu", "forever")).toBe("forever:eu:");
+    // A realmless character in a Retail answer is still skipped.
+    expect(linksFromWowProfile(forever, "eu", "retail")).toEqual([]);
   });
   it("yields nothing for unexpected shapes, and validates regions", () => {
     expect(linksFromWowProfile({ code: 403 }, "eu")).toEqual([]);
