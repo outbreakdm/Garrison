@@ -7,7 +7,7 @@ then updates **Status** and the **Log** before stopping.
 
 ## Pick up here
 
-- **WoW Forever linking (2026-11-27), built on branch `claude/wow-forever-link`, not deployed.**
+- **WoW Forever linking (2026-11-27), deployed (run 45951020161, `1c77353`).**
   Forever is now a version in the Battle.net link (Your accounts → World of Warcraft → Version).
   Ownership is proven the same way as Retail: the member signs in with Battle.net and Blizzard's
   account list (`/profile/user/wow?namespace=profile-forever-<region>`, user token, `wow.profile`)
@@ -16,11 +16,11 @@ then updates **Status** and the **Log** before stopping.
   vendors...), with no accounts, characters or sign-in, so it can't prove ownership and isn't
   used. Forever characters have no realm: they're keyed `forever:<region>:<name>-<surname>` and
   shown as "Name Surname". No new key (reuses `BNET_CLIENT_ID`/`BNET_CLIENT_SECRET`), no
-  migration. **Before deploying, link one real Forever character** and check it appears on Your
+  migration. **Still to check: link one real Forever character** and see it appear on Your
   accounts with its level and class: Blizzard hasn't documented the Forever namespace, and the
   account answer's fields come from community reports (`name`, `surname`, no `realm`). Characters
-  reportedly show up only from level 10, after logging out. Deploy the dashboard and the bot (the
-  bot's roster line says "Forever"); no register_commands needed.
+  reportedly show up only from level 10, after logging out. If none come back, read the raw
+  `/profile/user/wow?namespace=profile-forever-<region>` answer and adjust `linksFromWowProfile`.
 
 - **Access groups (2026-11-24), in order, one phase per commit.** From a community suggestion
   ("let mods run giveaways on the dashboard"). The owner's choices: dashboard only (Discord
@@ -1909,3 +1909,7 @@ Decided (2026-11-12, owner):
   dashboard and the bot's roster lines say "Forever". ForeverDB's API was ruled out for linking
   (game data only, no ownership check). Tests, type-check and Biome pass. Not deployed; needs one
   real Forever sign-in to confirm Blizzard's answer before it goes live.
+- 2026-11-27: Deployed WoW Forever linking, everything without register_commands (run
+  45951020161, `1c77353`). The live Privacy Policy shows the Forever wording. Not yet tried
+  with a real Forever sign-in. The unpushed local commit `3d6112b` (Stripe Managed Payments)
+  was left out of this deploy.
