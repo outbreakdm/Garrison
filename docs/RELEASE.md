@@ -38,7 +38,9 @@ be bought. Full steps in `docs/pricing.md`, "Turning checkout on". In **live** m
       tax-exclusive: $8.99/mo, $79.99/yr, $34.99/mo, $349.99/yr (lookup keys
       `garrison_pro_monthly`, `garrison_pro_yearly`, `garrison_agency_monthly`,
       `garrison_agency_yearly`). Created 2026-11-15.
-- [ ] **Pro yearly is now $89.99** (2026-11-23, save 17% like Agency). A Stripe price can't
+- [x] **Pro yearly is now $89.99** (2026-11-23, save 17% like Agency). Done 2026-11-27: new
+      price `price_1UgEz9B8kUlw6ISQdYOzcW5t` holds the lookup key, the $79.99 one is archived, the
+      Pro portal offers it, the secret is set and live checkout shows $89.99/yr. A Stripe price can't
       change, so: Product catalog, Garrison Pro, Add another price, $89.99 yearly, tax-exclusive,
       and move the lookup key `garrison_pro_yearly` to it (archive the $79.99 one). Put its
       `price_...` ID in the GitHub secret `STRIPE_PRICE_PRO_YEARLY`, then deploy. Until then
@@ -58,7 +60,7 @@ be bought. Full steps in `docs/pricing.md`, "Turning checkout on". In **live** m
 - [ ] Decide on Managed Payments (Stripe as seller of record, handles sales tax) or Stripe Tax
       with your own registrations. Stripe Tax is half set up (no head office address) and no
       checkout collects tax yet; once you decide, the checkouts get automatic tax.
-- [ ] Settings, Public details: support email `support@garrisonbot.com` (empty in Stripe on
+- [ ] Settings, Public details (dashboard only; the API can't set them on your own account): support email `support@garrisonbot.com` (empty in Stripe on
       2026-11-21), website `https://garrisonbot.com` (set), Terms
       `https://garrisonbot.com/terms`, Privacy `https://garrisonbot.com/privacy`, Refunds
       `https://garrisonbot.com/refunds`.
