@@ -33,6 +33,7 @@ describe("command definitions", () => {
       "buy",
       "money",
       "health",
+      "guide",
       "lfg",
       "raid",
       "rank",

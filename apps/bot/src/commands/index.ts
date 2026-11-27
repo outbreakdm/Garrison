@@ -20,6 +20,7 @@ import { questionModals } from "../modules/gatehouse/questions.js";
 import { giveaway } from "../modules/giveaways/commands.js";
 import { giveawayButtons, giveawayForms } from "../modules/giveaways/handlers.js";
 import { health } from "../modules/health/command.js";
+import { guide } from "../modules/health/guide.js";
 import { logs } from "../modules/ledger/commands.js";
 import { opsSelects } from "../modules/ops/answers.js";
 import { opsButtons, opsModals, raid } from "../modules/ops/commands.js";
@@ -47,6 +48,7 @@ export const commands: Command[] = [
   ...gatehouseCommands,
   ...economyCommands,
   health,
+  guide,
   lfg,
   raid,
   rank,

@@ -281,6 +281,12 @@ export const COMMAND_DESCRIPTIONS: Record<string, Omit<Phrase, "en">> = {
     de: "Prüfe Garrisons Rechte, Rollenposition und Einstellungen auf diesem Server.",
     fr: "Vérifier les permissions, la position du rôle et les réglages de Garrison ici.",
   },
+  guide: {
+    es: "Publica aquí la guía de inicio de Garrison o actualiza la anterior.",
+    pt: "Publica aqui o guia inicial do Garrison ou atualiza o anterior.",
+    de: "Poste Garrisons Startanleitung hier oder aktualisiere die alte.",
+    fr: "Publier ici le guide de démarrage de Garrison ou mettre à jour l'ancien.",
+  },
   lfg: {
     es: "Busca grupo: publica una tarjeta a la que otros pueden unirse.",
     pt: "Procurar grupo: poste um cartão que outros podem entrar.",

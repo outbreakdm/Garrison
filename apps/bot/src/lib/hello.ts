@@ -47,12 +47,15 @@ const stepButton = (label: string, url: string | null) =>
  * them and a few commands to try. Without a dashboard URL the steps keep their words and
  * lose their buttons.
  */
+/** The welcome message's title, which /guide looks for to refresh an older one. */
+export const HELLO_TITLE = "Thanks for adding Garrison";
+
 export function helloCard(guildId: string, appUrl: string | undefined): Card {
   const base = appUrl ? `${appUrl.replace(/\/$/, "")}/servers/${guildId}` : null;
   const page = (path: string) => (base ? `${base}${path}` : null);
   return {
     tone: "volt",
-    title: "Thanks for adding Garrison",
+    title: HELLO_TITLE,
     status: "Ready in about 5 minutes",
     lead: "Anyone with Manage Server can set it up",
     blocks: [
